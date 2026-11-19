@@ -263,7 +263,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             var facing = camera.Facing switch { "front" => "أمامية", "back" => "خلفية", "external" => "خارجية", _ => "غير محدد" };
             Add($"Camera {camera.Id}", $"{facing} • {camera.HardwareLevel} • {camera.SensorResolution} • Focal {string.Join("/", camera.FocalLengthsMm.Select(x => x.ToString("0.0")))} mm • Flash {camera.HasFlash}");
-            if (camera.PhysicalCameraIds.Count > 0)
+            if (camera.PhysicalCameraIds.Length > 0)
                 Add($"Physical IDs {camera.Id}", string.Join(", ", camera.PhysicalCameraIds));
         }
     }
