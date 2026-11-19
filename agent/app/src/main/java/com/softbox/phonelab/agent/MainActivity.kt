@@ -202,6 +202,9 @@ class MainActivity : Activity() {
         if (requestCode == REQUEST_MIC) {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) startMicrophoneRecording()
             else saveTest("microphone", "not_tested", "لم يمنح المستخدم صلاحية الميكروفون.")
+        } else if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) runCameraTest()
+            else saveTest("camera_inventory", "not_tested", "لم يمنح المستخدم صلاحية الكاميرا.")
         }
     }
 
@@ -229,26 +232,20 @@ class MainActivity : Activity() {
     }
 
     private fun runCameraTest() {
-        try {
-            val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-            if (intent.resolveActivity(packageManager) == null) {
-                saveTest("camera", "review", "لا يوجد تطبيق كاميرا يمكن تشغيله.")
-                return
-            }
-            startActivityForResult(intent, REQUEST_CAMERA)
-        } catch (ex: Exception) {
-            saveTest("camera", "failed", "تعذر فتح تطبيق الكاميرا: ${ex.message}")
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
+            return
         }
-    }
-
-    @Deprecated("Legacy activity result used to keep the Agent dependency-free.")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CAMERA) {
-            val hasImage = data?.extras?.get("data") != null
-            val status = if (resultCode == RESULT_OK && hasImage) "passed" else "review"
-            val evidence = if (status == "passed") "عاد تطبيق الكاميرا بصورة مصغرة بعد الالتقاط." else "لم تصل صورة مصغرة؛ قد يمنع تطبيق الكاميرا ذلك. راجع الكاميرا يدويًا."
-            saveTest("camera", status, evidence)
+        try {
+            val diagnostics = CameraDiagnostics(this)
+            val cameras = diagnostics.describeAll()
+            saveTest("camera_inventory", "data_read", "Camera2 اكتشف ${cameras.length()} كاميرا/مسار كاميرا، مع خصائص العدسات المتاحة.")
+            diagnostics.runAll(
+                onResult = { id, status, evidence -> saveTest(id, status, evidence) },
+                onComplete = { saveTest("camera_inventory", "data_read", "اكتمل فحص مسارات Camera2 الظاهرة. راجع نتائج كل كاميرا منفردة.") }
+            )
+        } catch (ex: Exception) {
+            saveTest("camera_inventory", "failed", "تعذر حصر الكاميرات: ${ex.message}")
         }
     }
 
@@ -266,18 +263,39 @@ class MainActivity : Activity() {
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         val percent = if (level >= 0 && scale > 0) (level * 100 / scale) else -1
+        val voltage = batteryIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1) ?: -1
+        val temperatureRaw = batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1) ?: -1
+        val cycleCount = if (Build.VERSION.SDK_INT >= 34) batteryIntent?.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1) ?: -1 else -1
         val batteryManager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-        val chargeCounter = if (Build.VERSION.SDK_INT >= 21) batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER) else -1
+        val chargeCounter = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+        val currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
+        val currentAverage = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
+        val energyCounter = batteryManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_ENERGY_COUNTER)
+        val cameras = runCatching { CameraDiagnostics(this).describeAll() }.getOrElse { JSONArray() }
         val testObject = JSONObject()
         tests.forEach { (key, value) -> testObject.put(key, value) }
         return JSONObject()
-            .put("agentVersion", "0.1.0")
+            .put("agentVersion", "0.2.0")
             .put("manufacturer", Build.MANUFACTURER)
+            .put("brand", Build.BRAND)
             .put("model", Build.MODEL)
+            .put("product", Build.PRODUCT)
+            .put("device", Build.DEVICE)
+            .put("board", Build.BOARD)
+            .put("hardware", Build.HARDWARE)
+            .put("bootloader", Build.BOOTLOADER)
+            .put("supportedAbis", JSONArray(Build.SUPPORTED_ABIS.toList()))
             .put("androidVersion", Build.VERSION.RELEASE)
             .put("apiLevel", Build.VERSION.SDK_INT)
             .put("batteryPercent", percent)
-            .put("batteryChargeCounterMicroAh", chargeCounter)
+            .put("batteryVoltageMillivolts", if (voltage >= 0) voltage else JSONObject.NULL)
+            .put("batteryTemperatureCelsius", if (temperatureRaw >= 0) temperatureRaw / 10.0 else JSONObject.NULL)
+            .put("batteryCycleCount", if (cycleCount >= 0) cycleCount else JSONObject.NULL)
+            .put("batteryChargeCounterMicroAh", if (chargeCounter >= 0) chargeCounter else JSONObject.NULL)
+            .put("batteryCurrentNowMicroA", if (currentNow != Int.MIN_VALUE) currentNow else JSONObject.NULL)
+            .put("batteryCurrentAverageMicroA", if (currentAverage != Int.MIN_VALUE) currentAverage else JSONObject.NULL)
+            .put("batteryEnergyCounterNWh", if (energyCounter >= 0L && energyCounter != Long.MIN_VALUE) energyCounter else JSONObject.NULL)
+            .put("cameras", cameras)
             .put("sensors", JSONArray(sensorNames))
             .put("tests", testObject)
             .put("capturedAtUtc", Instant.now().toString())
@@ -285,6 +303,6 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQUEST_MIC = 7101
-        private const val REQUEST_CAMERA = 7102
+        private const val REQUEST_CAMERA_PERMISSION = 7103
     }
 }
