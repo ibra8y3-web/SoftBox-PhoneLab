@@ -31,6 +31,11 @@
      <Button Content="بحث USB" Click="Refresh_Click" Margin="0,0,8,0"/>
      <Button Content="قراءة وفحص النظام" Background="#075F94" BorderBrush="#168BCB" Click="Inspect_Click" Margin="0,0,8,0"/>
      <Button Content="تحديث Agent" Click="Agent_Click" Margin="0,0,8,0"/>
+     <Button Content="عرض شاشة الهاتف" Click="MirrorScreen_Click" Margin="0,0,7,0"/>
+     <Button Content="تحليل صورة الشاشة" Click="AnalyzeScreen_Click" Margin="0,0,7,0"/>
+     <Button Content="قاعدة الموديلات" Click="DeviceCatalog_Click" Margin="0,0,7,0"/>
+     <Button Content="أجهزة القياس" Click="MeasurementRig_Click" Margin="0,0,7,0"/>
+     <Button Content="أدلة الإصلاح" Click="RepairGuides_Click" Margin="0,0,7,0"/>
      <Button Content="تصدير التقرير" Click="Export_Click"/>
     </StackPanel>
    </Grid>
