@@ -23,6 +23,13 @@ public sealed record AgentSnapshot
     public string Manufacturer { get; init; } = "";
     public string Model { get; init; } = "";
     public string AndroidVersion { get; init; } = "";
+    public string Brand { get; init; } = "";
+    public string Product { get; init; } = "";
+    public string Device { get; init; } = "";
+    public string Board { get; init; } = "";
+    public string Hardware { get; init; } = "";
+    public string Bootloader { get; init; } = "";
+    public string[] SupportedAbis { get; init; } = [];
     public Dictionary<string, AgentTestResult> Tests { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Sensors { get; init; } = [];
 }
