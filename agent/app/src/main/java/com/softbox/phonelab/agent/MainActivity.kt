@@ -3,6 +3,7 @@ package com.softbox.phonelab.agent
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,6 +12,11 @@ import android.graphics.Typeface
 import android.media.AudioManager
 import android.media.MediaRecorder
 import android.media.ToneGenerator
+import android.hardware.camera2.CameraManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +26,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.MediaStore
 import android.view.Gravity
+import android.view.View
+import android.view.WindowManager
 import android.widget.TextView
+import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.view.WindowCompat
 import org.json.JSONArray
@@ -28,10 +38,12 @@ import org.json.JSONObject
 import java.io.File
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 class MainActivity : Activity() {
     private val tests = ConcurrentHashMap<String, JSONObject>()
-    private val sensorNames = mutableListOf<String>()
+    private val sensorNames = CopyOnWriteArrayList<String>()
+    private val hardwareFeatures = CopyOnWriteArrayList<String>()
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var server: LocalAgentServer
     private lateinit var resultView: TextView
@@ -45,7 +57,8 @@ class MainActivity : Activity() {
         val deviceInfo = findViewById<TextView>(R.id.deviceInfo)
         resultView = findViewById(R.id.results)
         deviceInfo.text = "${Build.MANUFACTURER} ${Build.MODEL}\nAndroid ${Build.VERSION.RELEASE} • API ${Build.VERSION.SDK_INT}"
-        server = LocalAgentServer { createSnapshot() }
+        hardwareFeatures.addAll(packageManager.systemAvailableFeatures.mapNotNull { it.name }.filter { it.isNotBlank() }.distinct().sorted())
+        server = LocalAgentServer({ createSnapshot() }, { command -> dispatchRemoteCommand(command) })
         findViewById<TextView>(R.id.bridgeState).text = "USB bridge: local-only 127.0.0.1:27831 • keep this app open"
 
         findViewById<android.widget.Button>(R.id.testDisplay).setOnClickListener { runDisplayTest() }
@@ -64,6 +77,27 @@ class MainActivity : Activity() {
     override fun onPause() { server.stop(); super.onPause() }
     override fun onDestroy() { stopRecorder(); server.stop(); super.onDestroy() }
 
+    private fun dispatchRemoteCommand(command: String): Boolean {
+        val allowed = setOf("display", "touch", "speaker", "earpiece", "microphone", "flashlight", "vibration", "camera", "sensors", "hardware", "battery_capacity_start", "battery_capacity_finish")
+        if (command !in allowed) return false
+        handler.post {
+            when (command) {
+                "display" -> runDisplayTest()
+                "touch" -> runTouchTest()
+                "speaker" -> runSpeakerTest()
+                "earpiece" -> runEarpieceTest()
+                "microphone" -> runMicrophoneTest()
+                "flashlight" -> runFlashlightTest()
+                "vibration" -> runVibrationTest()
+                "camera" -> runCameraTest()
+                "sensors" -> runSensorInventory()
+                "hardware" -> runHardwareInventory()
+                "battery_capacity_start" -> startBatteryCapacityObservation()
+                "battery_capacity_finish" -> finishBatteryCapacityObservation()
+            }
+        }
+        return true
+    }
     private fun saveTest(id: String, status: String, evidence: String) {
         tests[id] = JSONObject()
             .put("status", status)
@@ -81,41 +115,40 @@ class MainActivity : Activity() {
     }
 
     private fun runDisplayTest() {
-        val panel = TextView(this).apply {
-            text = "RED"; textSize = 34f; typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER; setTextColor(Color.WHITE); setBackgroundColor(Color.RED)
-            setPadding(24, 80, 24, 80)
-        }
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("اختبار ألوان الشاشة")
-            .setMessage("ستظهر ألوان أساسية بالتتابع. راجع وجود بقع أو خطوط أو مناطق غير مضيئة.")
-            .setView(panel)
-            .setPositiveButton("الألوان ظاهرة بشكل طبيعي") { _, _ ->
-                saveTest("display", "passed", "المستخدم أكد رؤية الأحمر والأخضر والأزرق؛ فحص بصري ذاتي وليس كشف بكسلات آليًا.")
-            }
-            .setNegativeButton("يوجد خلل") { _, _ ->
-                saveTest("display", "failed", "المستخدم أبلغ عن خلل بصري أثناء اختبار الألوان؛ يلزم فحص فني.")
-            }
-            .create()
-        dialog.show()
-        val sequence = listOf(
-            Triple("RED", Color.RED, 700L),
-            Triple("GREEN", Color.GREEN, 1400L),
-            Triple("BLUE", Color.BLUE, 2100L),
-            Triple("WHITE", Color.WHITE, 2800L),
-            Triple("BLACK", Color.BLACK, 3500L)
+        val dialog = Dialog(this)
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(Color.BLACK); setPadding(18,18,18,18) }
+        val label = TextView(this).apply { textSize = 28f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER; setTextColor(Color.WHITE); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
+        val controls = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+        val next = Button(this).apply { text = "اللون التالي" }
+        val pass = Button(this).apply { text = "الشاشة طبيعية"; isEnabled = false }
+        val fail = Button(this).apply { text = "يوجد عيب" }
+        controls.addView(next, LinearLayout.LayoutParams(0,58,1f)); controls.addView(pass, LinearLayout.LayoutParams(0,58,1f)); controls.addView(fail, LinearLayout.LayoutParams(0,58,1f))
+        root.addView(label); root.addView(controls); dialog.setContentView(root); dialog.setCancelable(true)
+        val patterns = listOf(
+            Triple("أحمر", Color.RED, Color.WHITE), Triple("أخضر", Color.GREEN, Color.BLACK), Triple("أزرق", Color.BLUE, Color.WHITE),
+            Triple("أبيض", Color.WHITE, Color.BLACK), Triple("أسود", Color.BLACK, Color.WHITE), Triple("رمادي 25%", Color.rgb(64,64,64), Color.WHITE),
+            Triple("رمادي 50%", Color.rgb(128,128,128), Color.BLACK), Triple("رمادي 75%", Color.rgb(192,192,192), Color.BLACK),
+            Triple("سماوي", Color.CYAN, Color.BLACK), Triple("أرجواني", Color.MAGENTA, Color.WHITE)
         )
-        sequence.forEach { (label, color, delay) ->
-            handler.postDelayed({
-                if (dialog.isShowing) {
-                    panel.text = label
-                    panel.setTextColor(if (color == Color.WHITE) Color.BLACK else Color.WHITE)
-                    panel.setBackgroundColor(color)
-                }
-            }, delay)
+        var index = 0
+        fun showPattern() {
+            val item = patterns[index]
+            root.setBackgroundColor(item.second)
+            label.text = item.first + "\n" + (index + 1) + " / " + patterns.size + "\nافحص البقع والخطوط وتفاوت الإضاءة"
+            label.setTextColor(item.third)
+            next.isEnabled = index < patterns.lastIndex
+            pass.isEnabled = index == patterns.lastIndex
         }
+        next.setOnClickListener { if (index < patterns.lastIndex) { index++; showPattern() } }
+        pass.setOnClickListener { saveTest("display", "passed", "أكمل المستخدم تسلسل 10 أنماط RGB وأبيض وأسود وتدرج رمادي وأكد عدم ملاحظة عيب. فحص بصري ذاتي."); dialog.dismiss() }
+        fail.setOnClickListener { saveTest("display", "failed", "أبلغ المستخدم عن بقع أو خطوط أو بكسلات أو مناطق غير طبيعية خلال تسلسل الألوان."); dialog.dismiss() }
+        dialog.setOnCancelListener { saveTest("display", "not_tested", "ألغى المستخدم اختبار ألوان الشاشة قبل إنهائه.") }
+        dialog.show()
+        dialog.window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+        dialog.window?.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        dialog.window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        showPattern()
     }
-
     private fun runTouchTest() {
         lateinit var dialog: AlertDialog
         val grid = TouchGridTestView(this) { count, total ->
@@ -207,6 +240,9 @@ class MainActivity : Activity() {
         } else if (requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) runCameraTest()
             else saveTest("camera_inventory", "not_tested", "لم يمنح المستخدم صلاحية الكاميرا.")
+        } else if (requestCode == REQUEST_FLASH_PERMISSION) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) runFlashlightTest()
+            else saveTest("flashlight", "not_tested", "لم يمنح المستخدم صلاحية الكاميرا لتشغيل الفلاش.")
         }
     }
 
@@ -386,15 +422,63 @@ class MainActivity : Activity() {
         )
     }
 
-    private fun runSensorInventory() {
-        val manager = getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
-        val found = manager.getSensorList(android.hardware.Sensor.TYPE_ALL)
-            .map { "${it.name} (${it.vendor})" }.distinct()
-        sensorNames.clear()
-        sensorNames.addAll(found)
-        saveTest("sensors", "data_read", "تم العثور على ${found.size} مستشعر/مستشعرات معرفة للنظام.")
+    private fun runEarpieceTest() {
+        val tone = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 85)
+        tone.startTone(ToneGenerator.TONE_PROP_BEEP, 1200)
+        val dialog = AlertDialog.Builder(this).setTitle("اختبار سماعة المكالمات")
+            .setMessage("تم تشغيل نغمة من قناة صوت المكالمات. هل سمعتها من سماعة الأذن العلوية؟")
+            .setPositiveButton("نعم، سمعتها") { _, _ -> saveTest("earpiece", "passed", "أكد المستخدم سماع النغمة من قناة سماعة المكالمات.") }
+            .setNegativeButton("لا يوجد صوت") { _, _ -> saveTest("earpiece", "failed", "أبلغ المستخدم عن عدم سماع نغمة سماعة المكالمات.") }.create()
+        dialog.setOnDismissListener { tone.release() }; dialog.show()
     }
 
+    private fun runFlashlightTest() {
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) { requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_FLASH_PERMISSION); return }
+        try {
+            val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
+            val id = cameraManager.cameraIdList.firstOrNull { cameraManager.getCameraCharacteristics(it).get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true }
+            if (id == null) { saveTest("flashlight", "not_tested", "لا يكشف Android عن وحدة فلاش LED قابلة للتحكم لهذا الجهاز."); return }
+            cameraManager.setTorchMode(id, true)
+            handler.postDelayed({
+                try { cameraManager.setTorchMode(id, false) } catch (_: Exception) {}
+                AlertDialog.Builder(this).setTitle("اختبار فلاش LED").setMessage("تم تشغيل الفلاش لمدة قصيرة. هل أضاء الفلاش فعليًا؟")
+                    .setPositiveButton("نعم، أضاء") { _, _ -> saveTest("flashlight", "passed", "أكد المستخدم إضاءة الفلاش باستخدام CameraManager.setTorchMode.") }
+                    .setNegativeButton("لم يضئ") { _, _ -> saveTest("flashlight", "failed", "أبلغ المستخدم أن الفلاش لم يضئ أثناء أمر التشغيل.") }
+                    .setOnCancelListener { saveTest("flashlight", "not_tested", "لم يؤكد المستخدم نتيجة الفلاش.") }.show()
+            }, 650L)
+        } catch (ex: Exception) { saveTest("flashlight", "review", "تعذر تشغيل الفلاش: " + ex.message) }
+    }
+
+    private fun runHardwareInventory() {
+        val found = packageManager.systemAvailableFeatures.mapNotNull { it.name }.filter { it.isNotBlank() }.distinct().sorted()
+        hardwareFeatures.clear(); hardwareFeatures.addAll(found)
+        val cameraIds = runCatching { (getSystemService(Context.CAMERA_SERVICE) as CameraManager).cameraIdList.size }.getOrDefault(0)
+        val evidence = "System features: " + found.size + "; Camera2 IDs: " + cameraIds + "; NFC=" + packageManager.hasSystemFeature(PackageManager.FEATURE_NFC) +
+            "; Fingerprint=" + packageManager.hasSystemFeature(PackageManager.FEATURE_FINGERPRINT) + "; GPS=" + packageManager.hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS) + "."
+        saveTest("hardware_features", "data_read", evidence)
+    }
+
+    private fun runSensorInventory() {
+        val manager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val found = manager.getSensorList(Sensor.TYPE_ALL)
+        sensorNames.clear(); sensorNames.addAll(found.map { "${it.name} (${it.vendor})" }.distinct())
+        val sampled = ConcurrentHashMap<Int, String>()
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                val values = event.values.take(3).joinToString(", ") { "%.3f".format(java.util.Locale.US, it) }
+                sampled[event.sensor.type] = event.sensor.name + ": " + values
+            }
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+        val registered = found.filter { manager.registerListener(listener, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        handler.postDelayed({
+            manager.unregisterListener(listener)
+            val sampleText = sampled.values.sorted().take(14).joinToString(" | ")
+            val status = if (sampled.isNotEmpty()) "data_read" else "review"
+            saveTest("sensors", status, "Sensors present: " + found.size + "; event sources: " + sampled.size + "/" + registered.size + ". " +
+                (if (sampleText.isBlank()) "لم تصل قراءات أحداث خلال فترة الرصد." else sampleText) + " وصول حدث يثبت القراءة فقط ولا يعاير دقة الحساس.")
+        }, 2800L)
+    }
     private fun createSnapshot(): JSONObject {
         val batteryIntent = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
@@ -413,7 +497,7 @@ class MainActivity : Activity() {
         val testObject = JSONObject()
         tests.forEach { (key, value) -> testObject.put(key, value) }
         return JSONObject()
-            .put("agentVersion", "0.3.0")
+            .put("agentVersion", "0.4.0")
             .put("manufacturer", Build.MANUFACTURER)
             .put("brand", Build.BRAND)
             .put("model", Build.MODEL)
@@ -423,6 +507,7 @@ class MainActivity : Activity() {
             .put("hardware", Build.HARDWARE)
             .put("bootloader", Build.BOOTLOADER)
             .put("supportedAbis", JSONArray(Build.SUPPORTED_ABIS.toList()))
+            .put("hardwareFeatures", JSONArray(hardwareFeatures.toList()))
             .put("androidVersion", Build.VERSION.RELEASE)
             .put("apiLevel", Build.VERSION.SDK_INT)
             .put("batteryPercent", percent)
@@ -447,5 +532,6 @@ class MainActivity : Activity() {
     companion object {
         private const val REQUEST_MIC = 7101
         private const val REQUEST_CAMERA_PERMISSION = 7103
+        private const val REQUEST_FLASH_PERMISSION = 7104
     }
 }

@@ -94,6 +94,75 @@ public sealed class DiagnosticEngineTests
     }
 
     [Fact]
+    public void CameraFocusIsReportedSeparatelyFromImageCapture()
+    {
+        var agent = new AgentSnapshot
+        {
+            Cameras = [new AgentCameraInfo { Id = "0", Facing = "back" }],
+            Tests = new Dictionary<string, AgentTestResult>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["camera_focus_0"] = new() { Status = "review", Evidence = "AF state was not locked." }
+            }
+        };
+
+        var results = DiagnosticEngine.Build(null, agent);
+
+        Assert.Equal(DiagnosticStatus.Review, results.Single(x => x.Id == "camera-focus").Status);
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "rear-camera").Status);
+    }
+
+    [Fact]
+    public void ExternalBenchMeasurementsPopulateComponentsAsReadDataNotPass()
+    {
+        var measurement = new ExternalMeasurementSample(
+            "BenchFixture", DateTimeOffset.UtcNow, 5.05, 3.86, 0.72, 31.5, 3.63,
+            new Dictionary<string, double> { ["VPH_PWR"] = 3.84, ["VSYS"] = 3.79 },
+            4180, 82.5);
+
+        var results = DiagnosticEngine.Build(null, null, measurement);
+
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "usb-port").Status);
+        Assert.Equal(DiagnosticStatus.Review, results.Single(x => x.Id == "battery").Status);
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "pmic").Status);
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "charge-ic").Status);
+    }
+
+    [Fact]
+    public void AndroidHardwareFeatureInventoryIsNotAFunctionalRadioTest()
+    {
+        var agent = new AgentSnapshot
+        {
+            HardwareFeatures = ["android.hardware.nfc", "android.hardware.wifi", "android.hardware.bluetooth"]
+        };
+
+        var results = DiagnosticEngine.Build(null, agent);
+
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "nfc").Status);
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "wifi").Status);
+        Assert.Equal(DiagnosticStatus.DataRead, results.Single(x => x.Id == "bluetooth").Status);
+        Assert.Equal(DiagnosticStatus.NotTested, results.Single(x => x.Id == "sim").Status);
+    }
+
+    [Fact]
+    public void FlashlightAndEarpieceRemainSeparateTests()
+    {
+        var agent = new AgentSnapshot
+        {
+            Tests = new Dictionary<string, AgentTestResult>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["flashlight"] = new() { Status = "failed", Evidence = "Torch did not illuminate." },
+                ["earpiece"] = new() { Status = "passed", Evidence = "Tone audible." }
+            }
+        };
+
+        var results = DiagnosticEngine.Build(null, agent);
+
+        Assert.Equal(DiagnosticStatus.Failed, results.Single(x => x.Id == "flashlight").Status);
+        Assert.Equal(DiagnosticStatus.Pass, results.Single(x => x.Id == "earpiece").Status);
+        Assert.Equal(DiagnosticStatus.NotTested, results.Single(x => x.Id == "speaker").Status);
+    }
+
+    [Fact]
     public void TouchPassDoesNotFalselyMarkDisplayAsPassed()
     {
         var agent = new AgentSnapshot

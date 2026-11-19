@@ -10,6 +10,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
 import android.hardware.camera2.params.OutputConfiguration
 import android.hardware.camera2.params.SessionConfiguration
 import android.media.ImageReader
@@ -41,9 +42,11 @@ class CameraDiagnostics(private val activity: Activity) {
     }
 
     fun runAll(onResult: (String, String, String) -> Unit, onComplete: () -> Unit) {
+        resultCallback = onResult
         if (activity.checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             onResult("camera", "not_tested", "لم يتم منح صلاحية الكاميرا.")
             onComplete()
+            resultCallback = null
             return
         }
         val targets = mutableListOf<CameraTarget>()
@@ -66,7 +69,7 @@ class CameraDiagnostics(private val activity: Activity) {
     }
 
     private fun testNext(targets: List<CameraTarget>, index: Int, onResult: (String, String, String) -> Unit, onComplete: () -> Unit) {
-        if (index >= targets.size) { onComplete(); return }
+        if (index >= targets.size) { onComplete(); resultCallback = null; return }
         val target = targets[index]
         captureOne(target) { status, evidence ->
             onResult("camera_" + safeKey(target.id), status, evidence)
@@ -124,7 +127,38 @@ class CameraDiagnostics(private val activity: Activity) {
                                     val request = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                                     request.addTarget(activeReader.surface)
                                     request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                                    configured.capture(request.build(), null, handler)
+                                    val availableAf = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES).orEmpty()
+                                    val preferredAf = when {
+                                        availableAf.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) -> CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+                                        availableAf.contains(CaptureRequest.CONTROL_AF_MODE_AUTO) -> CaptureRequest.CONTROL_AF_MODE_AUTO
+                                        availableAf.contains(CaptureRequest.CONTROL_AF_MODE_MACRO) -> CaptureRequest.CONTROL_AF_MODE_MACRO
+                                        else -> null
+                                    }
+                                    if (preferredAf == null) {
+                                        onResultFocus(target, "data_read", "لا يوجد Auto Focus معلن؛ قد تكون هذه الوحدة Fixed Focus.")
+                                        configured.capture(request.build(), null, handler)
+                                    } else {
+                                        request.set(CaptureRequest.CONTROL_AF_MODE, preferredAf)
+                                        request.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START)
+                                        configured.capture(request.build(), object : CameraCaptureSession.CaptureCallback() {
+                                            override fun onCaptureCompleted(session: CameraCaptureSession, request: CaptureRequest, result: android.hardware.camera2.TotalCaptureResult) {
+                                                val state = result.get(CaptureResult.CONTROL_AF_STATE)
+                                                val focused = state == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED || state == CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED
+                                                val stateName = when (state) {
+                                                    CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED -> "FOCUSED_LOCKED"
+                                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED -> "PASSIVE_FOCUSED"
+                                                    CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED -> "NOT_FOCUSED_LOCKED"
+                                                    CaptureResult.CONTROL_AF_STATE_ACTIVE_SCAN -> "ACTIVE_SCAN"
+                                                    CaptureResult.CONTROL_AF_STATE_PASSIVE_SCAN -> "PASSIVE_SCAN"
+                                                    else -> "UNKNOWN"
+                                                }
+                                                onResultFocus(target, if (focused) "passed" else "review", "AF state=" + stateName + ". نتيجة AF برمجية وليست قياس حدة بصري.")
+                                            }
+                                            override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: android.hardware.camera2.CaptureFailure) {
+                                                onResultFocus(target, "review", "فشل الحصول على نتيجة autofocus: " + failure.reason + ".")
+                                            }
+                                        }, handler)
+                                    }
                                 } catch (ex: Exception) {
                                     finish("failed", "فشل التقاط الكاميرا " + target.id + ": " + ex.message)
                                 }
@@ -173,6 +207,18 @@ class CameraDiagnostics(private val activity: Activity) {
             CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
             else -> "UNKNOWN"
         }
+        val afModes = JSONArray()
+        characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES)?.forEach { mode ->
+            afModes.put(when (mode) {
+                CaptureRequest.CONTROL_AF_MODE_AUTO -> "AUTO"
+                CaptureRequest.CONTROL_AF_MODE_MACRO -> "MACRO"
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE -> "CONTINUOUS_PICTURE"
+                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO -> "CONTINUOUS_VIDEO"
+                CaptureRequest.CONTROL_AF_MODE_EDOF -> "EDOF"
+                else -> "OFF"
+            })
+        }
+        val minimumFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE)
         val physical = JSONArray()
         if (Build.VERSION.SDK_INT >= 28) runCatching { characteristics.physicalCameraIds.forEach { physical.put(it) } }
         return JSONObject()
@@ -181,8 +227,16 @@ class CameraDiagnostics(private val activity: Activity) {
             .put("facing", facing).put("hardwareLevel", level)
             .put("hasFlash", characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true)
             .put("focalLengthsMm", focal)
+            .put("autoFocusModes", afModes)
+            .put("minimumFocusDistanceDiopters", minimumFocusDistance ?: JSONObject.NULL)
             .put("sensorResolution", if (sensor == null) "" else sensor.width.toString() + "x" + sensor.height)
             .put("physicalCameraIds", physical).put("isPhysicalOnly", physicalOnly)
+    }
+
+    @Volatile private var resultCallback: ((String, String, String) -> Unit)? = null
+
+    private fun onResultFocus(target: CameraTarget, status: String, evidence: String) {
+        resultCallback?.invoke("camera_focus_" + safeKey(target.id), status, evidence)
     }
 
     private fun safeKey(id: String) = id.replace(Regex("[^A-Za-z0-9_-]"), "_")

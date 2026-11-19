@@ -58,3 +58,7 @@ Native OpenBoardView formats are not all decoded directly by PhoneLab yet. The u
 ## Revision matching
 
 PhoneLab reads common Android properties when the vendor exposes them, including ro.boot.hardware.revision, ro.boot.hwrev, ro.boot.revision, ro.boot.board.revision and ro.boot.board_version. Many devices hide revision identifiers. A map that requires a revision will be rejected if the phone does not report the exact required value.
+
+## Native BoardView files
+
+PhoneLab can launch the separate MIT-licensed TRACE Boardviewer 1.3.3 Windows portable viewer for supported original board files. It downloads the viewer on first use, verifies the published SHA-256, then passes the local board file as a process argument. It does not upload the board file. TRACE supports selected variants of BRD/BRD2/BVR and other documented formats; unsupported variants remain unsupported. This native viewer is separate from the PhoneLab JSON placement-map importer and does not create model-specific board coordinates when source files are absent.

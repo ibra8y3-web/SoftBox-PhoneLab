@@ -26,6 +26,8 @@ public sealed record AgentCameraInfo
     public string HardwareLevel { get; init; } = "";
     public bool HasFlash { get; init; }
     public double[] FocalLengthsMm { get; init; } = [];
+    public string[] AutoFocusModes { get; init; } = [];
+    public double? MinimumFocusDistanceDiopters { get; init; }
     public string SensorResolution { get; init; } = "";
     public string[] PhysicalCameraIds { get; init; } = [];
     public bool IsPhysicalOnly { get; init; }
@@ -55,6 +57,7 @@ public sealed record AgentSnapshot
     public List<AgentCameraInfo> Cameras { get; init; } = [];
     public Dictionary<string, AgentTestResult> Tests { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Sensors { get; init; } = [];
+    public List<string> HardwareFeatures { get; init; } = [];
 }
 
 public sealed record ComponentDiagnostic

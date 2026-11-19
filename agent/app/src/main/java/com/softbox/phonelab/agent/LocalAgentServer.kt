@@ -8,8 +8,11 @@ import java.net.ServerSocket
 import java.net.Socket
 import kotlin.concurrent.thread
 
-/** Local-only HTTP bridge. Windows connects by ADB port forwarding. */
-class LocalAgentServer(private val snapshotProvider: () -> JSONObject) {
+/** Local-only HTTP bridge. The server binds to loopback; Windows reaches it only through ADB forward. */
+class LocalAgentServer(
+    private val snapshotProvider: () -> JSONObject,
+    private val commandHandler: (String) -> Boolean
+) {
     @Volatile private var running = false
     @Volatile private var server: ServerSocket? = null
     private var worker: Thread? = null
@@ -24,13 +27,9 @@ class LocalAgentServer(private val snapshotProvider: () -> JSONObject) {
                     try {
                         val client = server?.accept() ?: break
                         thread(name = "PhoneLab-Agent-Request", isDaemon = true) { handle(client) }
-                    } catch (_: Exception) {
-                        if (running) continue else break
-                    }
+                    } catch (_: Exception) { if (running) continue else break }
                 }
-            } catch (_: Exception) {
-                running = false
-            }
+            } catch (_: Exception) { running = false }
         }
     }
 
@@ -47,20 +46,59 @@ class LocalAgentServer(private val snapshotProvider: () -> JSONObject) {
                 client.soTimeout = 3000
                 val reader = BufferedReader(InputStreamReader(client.getInputStream(), Charsets.UTF_8))
                 val request = reader.readLine() ?: return
+                val parts = request.split(" ")
+                val method = parts.getOrNull(0) ?: "GET"
+                val endpoint = (parts.getOrNull(1) ?: "/").substringBefore("?")
+                var contentLength = 0
                 while (true) {
-                    val header = reader.readLine() ?: break
-                    if (header.isEmpty()) break
+                    val headerLine = reader.readLine() ?: break
+                    if (headerLine.isEmpty()) break
+                    if (headerLine.startsWith("Content-Length:", ignoreCase = true))
+                        contentLength = headerLine.substringAfter(":").trim().toIntOrNull()?.coerceIn(0, 4096) ?: 0
                 }
-                val endpoint = (request.split(" ").getOrNull(1) ?: "/").substringBefore("?")
-                val body = when (endpoint) {
-                    "/health" -> JSONObject().put("status", "ok").put("agentVersion", "0.3.0")
-                    "/snapshot" -> snapshotProvider()
-                    else -> JSONObject().put("error", "not_found")
-                }.toString()
-                val status = if (endpoint == "/health" || endpoint == "/snapshot") "200 OK" else "404 Not Found"
-                val bytes = body.toByteArray(Charsets.UTF_8)
-                val header = "HTTP/1.1 $status\r\nContent-Type: application/json; charset=utf-8\r\n" +
-                    "Content-Length: ${bytes.size}\r\nConnection: close\r\n\r\n"
+                val body = if (contentLength > 0) {
+                    val chars = CharArray(contentLength)
+                    var offset = 0
+                    while (offset < chars.size) {
+                        val count = reader.read(chars, offset, chars.size - offset)
+                        if (count <= 0) break
+                        offset += count
+                    }
+                    String(chars, 0, offset)
+                } else ""
+
+                val statusCode: Int
+                val statusText: String
+                val response: JSONObject
+                when {
+                    method == "GET" && endpoint == "/health" -> {
+                        statusCode = 200; statusText = "OK"
+                        response = JSONObject().put("status", "ok").put("agentVersion", "0.4.0")
+                    }
+                    method == "GET" && endpoint == "/snapshot" -> {
+                        statusCode = 200; statusText = "OK"
+                        response = snapshotProvider()
+                    }
+                    method == "POST" && endpoint == "/command" -> {
+                        val command = runCatching { JSONObject(body).optString("command") }.getOrDefault("")
+                        val accepted = body.isNotBlank() && runCatching { commandHandler(command) }.getOrDefault(false)
+                        statusCode = if (accepted) 202 else 400
+                        statusText = if (accepted) "Accepted" else "Bad Request"
+                        response = JSONObject().put("accepted", accepted).put("command", command)
+                    }
+                    method != "GET" && method != "POST" -> {
+                        statusCode = 405; statusText = "Method Not Allowed"
+                        response = JSONObject().put("error", "method_not_allowed")
+                    }
+                    else -> {
+                        statusCode = 404; statusText = "Not Found"
+                        response = JSONObject().put("error", "not_found")
+                    }
+                }
+                val bytes = response.toString().toByteArray(Charsets.UTF_8)
+                val header = "HTTP/1.1 " + statusCode + " " + statusText + "\r\n" +
+                    "Content-Type: application/json; charset=utf-8\r\n" +
+                    "Content-Length: " + bytes.size + "\r\nConnection: close\r\n\r\n"
                 val output = client.getOutputStream()
                 output.write(header.toByteArray(Charsets.US_ASCII))
                 output.write(bytes)

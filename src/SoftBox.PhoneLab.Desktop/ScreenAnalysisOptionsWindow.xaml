@@ -1,0 +1,26 @@
+<Window x:Class="SoftBox.PhoneLab.Desktop.ScreenAnalysisOptionsWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="إعداد تحليل الشاشة" Width="480" Height="310"
+ WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+ Background="#0B1727" Foreground="#EAF3FF" FlowDirection="RightToLeft" FontFamily="Segoe UI">
+ <Grid Margin="20">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <TextBlock Text="اختر اللون الذي كان ظاهرًا على شاشة الهاتف وقت التقاط الصورة" FontSize="15" FontWeight="Bold" TextWrapping="Wrap"/>
+  <ComboBox x:Name="PatternCombo" Grid.Row="1" Margin="0,14,0,0" Height="38" Background="#13263D" Foreground="#EAF3FF">
+   <ComboBoxItem Content="أبيض — فحص البكسلات الداكنة والشوائب" Tag="white" IsSelected="True"/>
+   <ComboBoxItem Content="أسود — فحص البكسلات المضيئة" Tag="black"/>
+   <ComboBoxItem Content="أحمر — فحص قناة الأحمر" Tag="red"/>
+   <ComboBoxItem Content="أخضر — فحص قناة الأخضر" Tag="green"/>
+   <ComboBoxItem Content="أزرق — فحص قناة الأزرق" Tag="blue"/>
+   <ComboBoxItem Content="رمادي — فحص التدرج والبقع" Tag="gray"/>
+   <ComboBoxItem Content="غير معروف — تحليل عام" Tag="unknown"/>
+  </ComboBox>
+  <TextBlock Grid.Row="2" Text="ضع الكاميرا أمام الشاشة عموديًا، املأ إطار الصورة بمساحة الشاشة، ثبّت التركيز، وأوقف الفلاش التلقائي." FontSize="10" Foreground="#9CB3CC" TextWrapping="Wrap" Margin="0,13,0,0"/>
+  <TextBlock Grid.Row="3" Text="التقرير يعرض نقاطًا مرشحة فقط. انعكاسات الزجاج والمواريه والتركيز والتعريض قد تنتج نتائج كاذبة." Foreground="#F1C17B" FontSize="10" TextWrapping="Wrap" VerticalAlignment="Bottom"/>
+  <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,16,0,0">
+   <Button Content="تحليل الصورة" Width="130" Click="Analyze_Click" Background="#075F94" BorderBrush="#168BCB"/>
+   <Button Content="إلغاء" Width="90" Margin="8,0,0,0" IsCancel="True"/>
+  </StackPanel>
+ </Grid>
+</Window>

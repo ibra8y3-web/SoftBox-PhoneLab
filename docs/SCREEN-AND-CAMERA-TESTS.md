@@ -1,29 +1,21 @@
-# Screen, camera and battery tests
+# Screen and camera tests
 
-## Screen mirroring
-The Windows app downloads the official scrcpy Windows archive on first use, verifies its SHA-256 against the publisher's Windows documentation, and launches a live USB mirror. This is a separate scrcpy window and does not replace the phone's physical display.
+## Display pattern sequence
+The Android Agent provides a full-screen sequence of 10 patterns: red, green, blue, white, black, 25% gray, 50% gray, 75% gray, cyan and magenta. The user advances each pattern and confirms the screen only after inspecting all of them. A user-reported defect is recorded as failure; cancelling remains not-tested.
 
-## Physical panel inspection
-A normal Android screenshot is generated before the physical display panel. It cannot prove that a physical OLED/LCD pixel lights correctly. To screen for physical panel defects:
-1. Use PhoneLab Agent to display a uniform red, green, blue, white or black pattern.
-2. Photograph the physical panel with a fixed-focus camera under controlled exposure, angle and room lighting.
-3. Use the Windows image analyzer on that camera photo.
-4. Review suspected outlier pixels and regional luminance/color variation. The analyzer reports candidates, not automatic confirmed failures; moiré, reflections and exposure can create false positives.
+## Camera-photo pixel screening
+PhoneLab can analyze a camera photograph of the physical phone display. Before analysis the technician selects which uniform pattern (white, black, red, green, blue, gray or unknown) was shown. The analyzer compares each sampled pixel against a local 3×3 neighborhood and reports separate dark, bright and color-outlier candidates plus luminance uniformity.
 
-## Individual cameras
-The Agent enumerates Android Camera2 logical camera IDs, focal lengths, sensor dimensions, flash and physical camera IDs exposed by the vendor. It requests a real still JPEG from each camera route it can open, including physical routes exposed by the Camera2 multi-camera API. Camera modules hidden by vendor firmware or not exposed to third-party Camera2 apps cannot be tested by this path.
+This is deliberately a candidate detector, not an automatic certified dead-pixel count. Reflections, moire, focus, perspective, exposure, camera sensor artifacts and glass contamination can generate false results. Capture the panel nearly perpendicular, use a stable exposure/focus, turn off flash and fill the image with the active display area.
 
-## Battery telemetry
-When Android exposes them, PhoneLab reads charge counter (microampere-hours), instantaneous and average battery current (microamperes), remaining energy (nanowatt-hours), voltage, temperature and API 34+ cycle count. These are fuel-gauge reports, not a certified full-capacity or internal-resistance test. A full capacity test requires a controlled charge/discharge cycle or an external battery analyzer.
+## Camera2 inventory and autofocus
+The Android Agent enumerates logical camera IDs and exposed physical camera routes. For each accessible route it:
+- Records facing direction, focal lengths, sensor pixel dimensions, flash flag and advertised autofocus modes.
+- Attempts a JPEG capture through Camera2.
+- Reads the reported AF state for autofocus-capable routes and records it separately from image capture.
+- Records fixed-focus/no-AF routes as data-read, not failures.
 
-## References
-- Android BatteryManager: https://developer.android.com/reference/android/os/BatteryManager
-- Android multi-camera API: https://developer.android.com/media/camera/camera2/multi-camera
-- Official scrcpy Windows instructions: https://github.com/Genymobile/scrcpy/blob/master/doc/windows.md
+A Camera2 route may map to several user-facing lenses or modes. Vendor firmware may hide routes or allow only a logical-camera path. AF state is not equivalent to chart sharpness; OIS/EIS, macro quality, dust, scratches and optical alignment require a physical target and inspection.
 
-
-## Battery capacity observation
-The Android Agent offers a start/end observation. It stores the initial fuel-gauge charge counter and state of charge locally, then estimates full-charge capacity from the measured change after at least 10 percentage points of discharge and 15 minutes. Use the phone under its normal expected workload without charging during the observation. The result is always marked for review and is not a calibrated capacity or internal-resistance measurement. Phones that do not expose a valid charge counter require an external battery analyzer.
-
-
-The Agent's observation flow refuses to start while the phone is charging or when the reported battery temperature is at least 43°C. It requires a measurable charge-counter delta, a discharge of at least 10 percentage points and at least 15 minutes. The end sample is not accepted while the phone is charging or when its reported temperature is at least 45°C. These guards reduce misleading estimates; they do not make a fuel-gauge estimate laboratory-grade.
+## Other phone-side tests
+The Windows Remote Test panel can dispatch display, touch, speaker, earpiece, microphone, flashlight, vibration, camera, live sensors, hardware inventory and battery observation tests. Confirmation and permission prompts stay on the phone. The phone Agent must be foregrounded and connected through USB/ADB.

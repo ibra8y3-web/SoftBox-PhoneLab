@@ -26,6 +26,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly BoardMapCatalog _maps = new();
     private readonly DeviceProfileCatalog _deviceProfiles = new();
     private readonly ScreenMirrorService _screenMirror = new();
+    private readonly TraceBoardViewerService _traceBoardViewer = new();
+    private ExternalMeasurementSample? _measurementSnapshot;
     private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
     private readonly DispatcherTimer _timer;
@@ -168,6 +170,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _snapshot = await _inspection.InspectAsync(selected.Serial);
             _agentSnapshot = null;
+            _measurementSnapshot = null;
             _profileMatch = await _deviceProfiles.MatchAsync(_snapshot);
             _boardMap = await _maps.LoadBestMapAsync(_snapshot, _profileMatch.Profile);
             ApplyDeviceFacts();
@@ -270,6 +273,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             var facing = camera.Facing switch { "front" => "أمامية", "back" => "خلفية", "external" => "خارجية", _ => "غير محدد" };
             Add($"Camera {camera.Id}", $"{facing} • {camera.HardwareLevel} • {camera.SensorResolution} • Focal {string.Join("/", camera.FocalLengthsMm.Select(x => x.ToString("0.0")))} mm • Flash {camera.HasFlash}");
+            Add($"Camera AF {camera.Id}", camera.AutoFocusModes.Length == 0 ? "غير معلن / ثابت التركيز" : string.Join(", ", camera.AutoFocusModes));
             if (camera.PhysicalCameraIds.Length > 0)
                 Add($"Physical IDs {camera.Id}", string.Join(", ", camera.PhysicalCameraIds));
         }
@@ -278,7 +282,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void RebuildDiagnostics()
     {
         Components.Clear();
-        foreach (var diagnostic in DiagnosticEngine.Build(_snapshot, _agentSnapshot))
+        foreach (var diagnostic in DiagnosticEngine.Build(_snapshot, _agentSnapshot, _measurementSnapshot))
             Components.Add(new ComponentViewModel(diagnostic));
         ComponentsList.SelectedItem = Components.FirstOrDefault(x => x.Id == _selectedComponent?.Id)
             ?? Components.FirstOrDefault();
@@ -289,7 +293,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ClearDevice(string message)
     {
-        _snapshot = null; _agentSnapshot = null;
+        _snapshot = null; _agentSnapshot = null; _measurementSnapshot = null;
         DeviceFacts.Clear();
         RebuildDiagnostics();
         ScanStatus = "بانتظار جهاز";
@@ -325,20 +329,61 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Filter = "Screen photo|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff"
         };
         if (dialog.ShowDialog(this) != true) return;
+        var options = new ScreenAnalysisOptionsWindow { Owner = this };
+        if (options.ShowDialog() != true) return;
+
         try
         {
-            var result = await Task.Run(() => ScreenImageAnalyzer.AnalyzePhysicalScreenPhoto(dialog.FileName));
+            var result = await Task.Run(() => ScreenImageAnalyzer.AnalyzePhysicalScreenPhoto(dialog.FileName, options.PatternKind));
             var reportPath = dialog.FileName + ".phonelab-analysis.json";
             await File.WriteAllTextAsync(reportPath, System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
-            StatusMessage = $"تحليل الصورة انتهى: {result.SuspectedOutlierPixels} بكسل مرشح، تفاوت إضاءة {result.UniformityDeviationPercent:0.0}%.";
+            StatusMessage = $"تحليل {options.PatternKind}: {result.SuspectedOutlierPixels} مرشح (داكن {result.DarkCandidatePixels} / مضيء {result.BrightCandidatePixels} / لوني {result.ColorCandidatePixels})، تفاوت إضاءة {result.UniformityDeviationPercent:0.0}%.";
             Notify(nameof(StatusMessage));
             MessageBox.Show(this,
-                $"المقاس: {result.Width} × {result.Height}\nمرشحات اختلاف بكسل: {result.SuspectedOutlierPixels}\nتفاوت الإضاءة بين المناطق: {result.UniformityDeviationPercent:0.0}%\n\n{result.Interpretation}\n\nالتقرير: {reportPath}",
-                "تحليل صورة الشاشة — نتيجة أولية", MessageBoxButton.OK, MessageBoxImage.Information);
+                $"النمط: {result.PatternKind}\nالمقاس المحلل: {result.Width} × {result.Height}\nمرشحات اختلاف: {result.SuspectedOutlierPixels}\nمرشحات داكنة: {result.DarkCandidatePixels}\nمرشحات مضيئة: {result.BrightCandidatePixels}\nمرشحات لونية: {result.ColorCandidatePixels}\nتفاوت الإضاءة: {result.UniformityDeviationPercent:0.0}%\n\n{result.Interpretation}\n\nالتقرير: {reportPath}",
+                "تحليل صورة الشاشة — مرشحات أولية", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) { StatusMessage = "تعذر تحليل الصورة: " + ex.Message; Notify(nameof(StatusMessage)); }
     }
 
+    private async void OpenBoardView_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "فتح ملف BoardView / PCB أصلي",
+            Filter = "BoardView / PCB|*.brd;*.brd2;*.bdv;*.bvr;*.bv;*.cad;*.gcd;*.pcb;*.kicad_pcb;*.PcbDoc;*.asc;*.fz;*.tvw;*.cae|All files|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            StatusMessage = "جارٍ تثبيت TRACE Boardviewer الرسمي والتحقق من SHA-256 (التنزيل الأول يقارب 102 MB)...";
+            Notify(nameof(StatusMessage));
+            await _traceBoardViewer.OpenAsync(dialog.FileName);
+            StatusMessage = "تم فتح ملف اللوحة محليًا في TRACE Boardviewer. الملفات لا تُرفع إلى الإنترنت.";
+        }
+        catch (Exception ex) { StatusMessage = "تعذر فتح ملف BoardView: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
+    private void PhoneTests_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized) { StatusMessage = "اختر هاتفًا مصرحًا به أولًا."; Notify(nameof(StatusMessage)); return; }
+        var window = new PhoneTestWindow(
+            selected.DisplayName,
+            command => _agentBridge.SendCommandAsync(selected.Serial, command),
+            async () =>
+            {
+                var latest = await _agentBridge.ReadSnapshotAsync(selected.Serial);
+                if (latest is not null)
+                {
+                    await Dispatcher.InvokeAsync(() => { _agentSnapshot = latest; ApplyDeviceFacts(); ApplyAgentFacts(latest); RebuildDiagnostics(); });
+                }
+                return latest;
+            }) { Owner = this };
+        window.Show();
+    }
     private async void ImportBoardMap_Click(object sender, RoutedEventArgs e)
     {
         if (_snapshot is null)
@@ -395,7 +440,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     private void MeasurementRig_Click(object sender, RoutedEventArgs e)
-        => new MeasurementWindow { Owner = this }.Show();
+    {
+        var window = new MeasurementWindow { Owner = this };
+        window.SampleReceived += sample => Dispatcher.InvokeAsync(() =>
+        {
+            _measurementSnapshot = sample;
+            ApplyDeviceFacts();
+            Add("قياس USB الخارجي", sample.UsbVoltageV is null ? "غير متاح" : $"{sample.UsbVoltageV:0.000} V");
+            Add("جهد البطارية الخارجي", sample.BatteryVoltageV is null ? "غير متاح" : $"{sample.BatteryVoltageV:0.000} V");
+            Add("تيار البطارية الخارجي", sample.BatteryCurrentA is null ? "غير متاح" : $"{sample.BatteryCurrentA:0.000} A");
+            Add("سعة البطارية من جهاز القياس", sample.BatteryCapacityMah is null ? "غير متاحة" : $"{sample.BatteryCapacityMah:0} mAh");
+            Add("المقاومة الداخلية للبطارية", sample.BatteryInternalResistanceMilliOhm is null ? "غير متاحة" : $"{sample.BatteryInternalResistanceMilliOhm:0.0} mΩ");
+            RebuildDiagnostics();
+            StatusMessage = "تم ربط عينة القياس الخارجية بمكونات USB والبطارية ودوائر الطاقة.";
+            Notify(nameof(StatusMessage));
+        });
+        window.Show();
+    }
 
     private async void RepairGuides_Click(object sender, RoutedEventArgs e)
     {
@@ -469,7 +530,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             FileName = $"PhoneLab-{_snapshot.Manufacturer}-{_snapshot.Model}-{DateTime.Now:yyyyMMdd-HHmmss}.json"
         };
         if (dialog.ShowDialog(this) != true) return;
-        await _reports.ExportAsync(dialog.FileName, _snapshot, _agentSnapshot, Components.Select(x => x.Diagnostic).ToList());
+        await _reports.ExportAsync(dialog.FileName, _snapshot, _agentSnapshot, Components.Select(x => x.Diagnostic).ToList(), _measurementSnapshot);
         StatusMessage = "تم حفظ التقرير: " + dialog.FileName;
         Notify(nameof(StatusMessage));
     }
