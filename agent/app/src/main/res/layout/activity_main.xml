@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#081321"
+    android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="22dp">
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SOFTBOX PHONELAB AGENT"
+            android:textColor="#70D7FF"
+            android:textSize="12sp"
+            android:textStyle="bold"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="مساعد اختبارات الهاتف"
+            android:textColor="#FFFFFF"
+            android:textSize="25sp"
+            android:textStyle="bold"
+            android:layout_marginTop="8dp"/>
+        <TextView
+            android:id="@+id/deviceInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="جارٍ قراءة معلومات الجهاز..."
+            android:textColor="#A9BED6"
+            android:textSize="13sp"
+            android:layout_marginTop="9dp"
+            android:layout_marginBottom="20dp"/>
+        <TextView
+            android:id="@+id/bridgeState"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="خادم USB المحلي: جارٍ التشغيل"
+            android:textColor="#8FD9FF"
+            android:textSize="12sp"
+            android:background="#13283E"
+            android:padding="13dp"
+            android:layout_marginBottom="18dp"/>
+        <Button android:id="@+id/testDisplay" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار ألوان الشاشة"/>
+        <Button android:id="@+id/testTouch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار تغطية اللمس"/>
+        <Button android:id="@+id/testSpeaker" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار السماعة"/>
+        <Button android:id="@+id/testMicrophone" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار الميكروفون"/>
+        <Button android:id="@+id/testVibration" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار الاهتزاز"/>
+        <Button android:id="@+id/testCamera" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار الكاميرا"/>
+        <Button android:id="@+id/testSensors" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="فحص المستشعرات"/>
+        <TextView
+            android:id="@+id/results"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="نتائج الاختبارات ستظهر هنا."
+            android:textColor="#D9E7F6"
+            android:textSize="12sp"
+            android:background="#101F32"
+            android:padding="15dp"
+            android:layout_marginTop="18dp"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="اترك التطبيق مفتوحًا أثناء مزامنة النتائج مع برنامج Windows. الاتصال محلي عبر USB ولا يرفع بياناتك إلى الإنترنت."
+            android:textColor="#7891AD"
+            android:textSize="11sp"
+            android:layout_marginTop="18dp"/>
+    </LinearLayout>
+</ScrollView>

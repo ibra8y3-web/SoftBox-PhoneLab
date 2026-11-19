@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>SoftBox.PhoneLab.Desktop</RootNamespace>
+    <AssemblyName>SoftBox-PhoneLab</AssemblyName>
+    <Version>0.1.0</Version>
+    <Authors>SoftBox</Authors>
+    <Description>Intelligent smartphone diagnostics workstation</Description>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SoftBox.PhoneLab.Core\SoftBox.PhoneLab.Core.csproj" />
+    <Content Include="..\..\data\boardmaps\**\*.json" Link="Data\boardmaps\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

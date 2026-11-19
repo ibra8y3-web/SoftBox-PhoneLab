@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PhoneLab.Core", "src\SoftBox.PhoneLab.Core\SoftBox.PhoneLab.Core.csproj", "{9A0DA0C3-6C8C-4C0B-AF15-22FC3B77C280}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PhoneLab.Desktop", "src\SoftBox.PhoneLab.Desktop\SoftBox.PhoneLab.Desktop.csproj", "{8B6BAE97-5C73-4B3B-A75A-3A6C7866E921}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PhoneLab.Tests", "tests\SoftBox.PhoneLab.Tests\SoftBox.PhoneLab.Tests.csproj", "{5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}"
+EndProject
+Global
+  GlobalSection(SolutionConfigurationPlatforms) = preSolution
+    Debug|Any CPU = Debug|Any CPU
+    Release|Any CPU = Release|Any CPU
+  EndGlobalSection
+  GlobalSection(ProjectConfigurationPlatforms) = postSolution
+    {9A0DA0C3-6C8C-4C0B-AF15-22FC3B77C280}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {9A0DA0C3-6C8C-4C0B-AF15-22FC3B77C280}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {9A0DA0C3-6C8C-4C0B-AF15-22FC3B77C280}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {9A0DA0C3-6C8C-4C0B-AF15-22FC3B77C280}.Release|Any CPU.Build.0 = Release|Any CPU
+    {8B6BAE97-5C73-4B3B-A75A-3A6C7866E921}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {8B6BAE97-5C73-4B3B-A75A-3A6C7866E921}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {8B6BAE97-5C73-4B3B-A75A-3A6C7866E921}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {8B6BAE97-5C73-4B3B-A75A-3A6C7866E921}.Release|Any CPU.Build.0 = Release|Any CPU
+    {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Release|Any CPU.Build.0 = Release|Any CPU
+  EndGlobalSection
+EndGlobal

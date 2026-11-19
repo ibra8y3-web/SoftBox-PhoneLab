@@ -1,0 +1,30 @@
+{
+  "id": "generic-android-exploded-v1",
+  "displayName": "Generic Android exploded handset",
+  "manufacturer": "",
+  "modelPattern": "",
+  "isVerifiedForModel": false,
+  "accuracyNotice": "مخطط ثلاثي الأبعاد تعليمي عام — ليس PCB View معتمدًا لهذا الموديل. الخرائط الدقيقة تحتاج مصدرًا موثقًا لكل نسخة.",
+  "parts": [
+    {"id":"frame","name":"هيكل الهاتف","x":0,"y":0,"z":-0.10,"width":6.7,"height":13.5,"depth":0.42,"baseColor":"#30465E"},
+    {"id":"battery","name":"البطارية","x":0,"y":-0.35,"z":0.18,"width":4.25,"height":7.1,"depth":0.30,"baseColor":"#64748B"},
+    {"id":"mainboard","name":"اللوحة الأم","x":0,"y":3.55,"z":0.60,"width":5.45,"height":3.2,"depth":0.26,"baseColor":"#64748B"},
+    {"id":"processor","name":"المعالج / SoC","x":-0.72,"y":3.55,"z":0.89,"width":1.35,"height":1.30,"depth":0.20,"baseColor":"#64748B"},
+    {"id":"ram","name":"ذاكرة RAM","x":0.85,"y":3.35,"z":0.89,"width":0.94,"height":0.84,"depth":0.18,"baseColor":"#64748B"},
+    {"id":"storage","name":"شريحة التخزين","x":-2.02,"y":3.95,"z":0.89,"width":0.86,"height":0.80,"depth":0.18,"baseColor":"#64748B"},
+    {"id":"pmic","name":"آيسي إدارة الطاقة","x":1.76,"y":4.45,"z":0.89,"width":0.72,"height":0.68,"depth":0.18,"baseColor":"#64748B"},
+    {"id":"charge-ic","name":"آيسي الشحن","x":-1.82,"y":2.60,"z":0.89,"width":0.72,"height":0.70,"depth":0.18,"baseColor":"#64748B"},
+    {"id":"rear-camera","name":"الكاميرا الخلفية","x":-1.70,"y":5.55,"z":0.96,"width":1.12,"height":1.24,"depth":0.36,"baseColor":"#64748B"},
+    {"id":"front-camera","name":"الكاميرا الأمامية","x":0,"y":6.25,"z":1.68,"width":0.44,"height":0.44,"depth":0.16,"baseColor":"#64748B"},
+    {"id":"sensors","name":"مجموعة المستشعرات","x":-2.35,"y":4.85,"z":1.05,"width":0.58,"height":0.48,"depth":0.15,"baseColor":"#64748B"},
+    {"id":"rf","name":"وحدة الاتصال RF","x":2.10,"y":2.45,"z":0.90,"width":0.90,"height":0.72,"depth":0.16,"baseColor":"#64748B"},
+    {"id":"usb-port","name":"منفذ USB-C","x":0,"y":-6.60,"z":0.48,"width":0.86,"height":0.34,"depth":0.42,"baseColor":"#64748B"},
+    {"id":"speaker","name":"السماعة السفلية","x":1.54,"y":-5.92,"z":0.42,"width":1.34,"height":0.38,"depth":0.18,"baseColor":"#64748B"},
+    {"id":"microphone","name":"الميكروفون","x":-1.48,"y":-5.92,"z":0.42,"width":0.42,"height":0.42,"depth":0.18,"baseColor":"#64748B"},
+    {"id":"vibrator","name":"محرك الاهتزاز","x":2.10,"y":-3.65,"z":0.38,"width":0.72,"height":0.84,"depth":0.25,"baseColor":"#64748B"},
+    {"id":"sim","name":"قارئ SIM","x":2.95,"y":0.35,"z":0.10,"width":0.30,"height":1.25,"depth":0.16,"baseColor":"#64748B"},
+    {"id":"touch","name":"طبقة اللمس","x":0,"y":0,"z":1.57,"width":6.18,"height":12.98,"depth":0.08,"baseColor":"#64748B"},
+    {"id":"display","name":"الشاشة","x":0,"y":0,"z":1.42,"width":6.16,"height":12.95,"depth":0.12,"baseColor":"#64748B"},
+    {"id":"charging-board","name":"لوحة الشحن السفلية","x":0,"y":-5.65,"z":0.36,"width":4.3,"height":0.72,"depth":0.18,"baseColor":"#64748B"}
+  ]
+}
