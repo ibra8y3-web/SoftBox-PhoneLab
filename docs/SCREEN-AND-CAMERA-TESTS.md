@@ -24,3 +24,6 @@ When Android exposes them, PhoneLab reads charge counter (microampere-hours), in
 
 ## Battery capacity observation
 The Android Agent offers a start/end observation. It stores the initial fuel-gauge charge counter and state of charge locally, then estimates full-charge capacity from the measured change after at least 10 percentage points of discharge and 15 minutes. Use the phone under its normal expected workload without charging during the observation. The result is always marked for review and is not a calibrated capacity or internal-resistance measurement. Phones that do not expose a valid charge counter require an external battery analyzer.
+
+
+The Agent's observation flow refuses to start while the phone is charging or when the reported battery temperature is at least 43°C. It requires a measurable charge-counter delta, a discharge of at least 10 percentage points and at least 15 minutes. The end sample is not accepted while the phone is charging or when its reported temperature is at least 45°C. These guards reduce misleading estimates; they do not make a fuel-gauge estimate laboratory-grade.

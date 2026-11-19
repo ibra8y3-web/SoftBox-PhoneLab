@@ -82,6 +82,15 @@ public static class DiagnosticEngine
                 results["battery"] = results["battery"] with { Status = DiagnosticStatus.DataRead, Evidence = evidence };
             }
             ApplyAgent(results, agent, "battery_capacity", "battery");
+            if (agent.BatteryCapacityEstimateMah is double capacityEstimate)
+            {
+                var currentBattery = results["battery"];
+                results["battery"] = currentBattery with
+                {
+                    Status = currentBattery.Status == DiagnosticStatus.Failed ? DiagnosticStatus.Failed : DiagnosticStatus.Review,
+                    Evidence = $"Fuel Gauge capacity estimate: {capacityEstimate:0} mAh. This remains a review-only estimate, including after Agent restart. " + currentBattery.Evidence
+                };
+            }
             if (agent.Sensors.Count > 0)
                 results["sensors"] = results["sensors"] with
                 {

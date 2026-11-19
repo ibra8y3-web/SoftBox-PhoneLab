@@ -26,6 +26,7 @@ The curated catalog is a starter set. The additional community model-code databa
 
 ### Battery and electrical measurements
 - Reads Android fuel-gauge information when exposed: charge counter, current now/average, remaining energy, voltage, temperature and API 34+ cycle count.
+- Agent start/end battery observation estimates capacity from charge-counter delta and state-of-charge drop. It requires at least 10% discharge and 15 minutes, rejects charging/hot samples, and always reports the estimate as review-only.
 - Adds a serial measurement dashboard for compatible USB/bench instruments using the read-only JSON-Lines v1 protocol documented in docs/MEASUREMENT-RIG-PROTOCOL.md.
 - Supports measurement values for USB input, battery voltage/current, board temperature, power and named rails when the connected instrument provides them.
 - It does not issue voltage/current setpoints or power commands.
