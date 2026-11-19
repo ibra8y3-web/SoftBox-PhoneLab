@@ -270,7 +270,8 @@ class MainActivity : Activity() {
         val chargeCounter = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
         val currentNow = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW)
         val currentAverage = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE)
-        val energyCounter = batteryManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_ENERGY_COUNTER)
+        val energyCounter = if (Build.VERSION.SDK_INT >= 28)
+            batteryManager.getLongProperty(BatteryManager.BATTERY_PROPERTY_ENERGY_COUNTER) else Long.MIN_VALUE
         val cameras = runCatching { CameraDiagnostics(this).describeAll() }.getOrElse { JSONArray() }
         val testObject = JSONObject()
         tests.forEach { (key, value) -> testObject.put(key, value) }
