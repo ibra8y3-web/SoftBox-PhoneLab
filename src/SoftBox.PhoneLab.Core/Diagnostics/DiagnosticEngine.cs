@@ -67,6 +67,21 @@ public static class DiagnosticEngine
             ApplyAgent(results, agent, "microphone", "microphone");
             ApplyAgent(results, agent, "vibration", "vibrator");
             ApplyAgent(results, agent, "camera", "rear-camera");
+            ApplyAgent(results, agent, "display", "display");
+            if (agent.Cameras.Count > 0)
+            {
+                ApplyCameraGroup(results, agent, "front");
+                ApplyCameraGroup(results, agent, "back");
+            }
+            if (agent.BatteryChargeCounterMicroAh.HasValue || agent.BatteryCurrentNowMicroA.HasValue ||
+                agent.BatteryCurrentAverageMicroA.HasValue || agent.BatteryCycleCount.HasValue)
+            {
+                var evidence = $"Charge counter: {agent.BatteryChargeCounterMicroAh?.ToString() ?? "N/A"} µAh; " +
+                    $"current now: {agent.BatteryCurrentNowMicroA?.ToString() ?? "N/A"} µA; " +
+                    $"average: {agent.BatteryCurrentAverageMicroA?.ToString() ?? "N/A"} µA; " +
+                    $"cycles: {agent.BatteryCycleCount?.ToString() ?? "N/A"}. قيم Fuel Gauge من Android وليست اختبار سعة معاير.";
+                results["battery"] = results["battery"] with { Status = DiagnosticStatus.DataRead, Evidence = evidence };
+            }
             if (agent.Sensors.Count > 0)
                 results["sensors"] = results["sensors"] with
                 {
@@ -76,6 +91,48 @@ public static class DiagnosticEngine
         }
 
         return Catalog.Select(x => results[x.Id]).ToList();
+    }
+
+    private static void ApplyCameraGroup(Dictionary<string, ComponentDiagnostic> values, AgentSnapshot agent, string facing)
+    {
+        var cameras = agent.Cameras.Where(x => x.Facing.Equals(facing, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (cameras.Count == 0) return;
+
+        var outcomes = new List<DiagnosticStatus>();
+        var evidence = new List<string>();
+        foreach (var camera in cameras)
+        {
+            var id = "camera_" + Regex.Replace(camera.Id, "[^A-Za-z0-9_-]", "_");
+            if (agent.Tests.TryGetValue(id, out var test))
+            {
+                var status = test.Status.ToLowerInvariant() switch
+                {
+                    "passed" or "pass" => DiagnosticStatus.Pass,
+                    "failed" or "fail" => DiagnosticStatus.Failed,
+                    "review" or "warning" => DiagnosticStatus.Review,
+                    "data_read" => DiagnosticStatus.DataRead,
+                    _ => DiagnosticStatus.NotTested
+                };
+                outcomes.Add(status);
+                evidence.Add($"ID {camera.Id}: {status} — {test.Evidence}");
+            }
+            else
+            {
+                outcomes.Add(DiagnosticStatus.DataRead);
+                evidence.Add($"ID {camera.Id}: تعرف Camera2، ولم يجر اختبار التقاط منفصل بعد.");
+            }
+        }
+
+        var combined = outcomes.Contains(DiagnosticStatus.Failed) ? DiagnosticStatus.Failed :
+            outcomes.All(x => x == DiagnosticStatus.Pass) ? DiagnosticStatus.Pass :
+            outcomes.Contains(DiagnosticStatus.Review) ? DiagnosticStatus.Review :
+            outcomes.Any(x => x == DiagnosticStatus.Pass) ? DiagnosticStatus.Pass : DiagnosticStatus.DataRead;
+        var target = facing == "front" ? "front-camera" : "rear-camera";
+        values[target] = values[target] with
+        {
+            Status = combined,
+            Evidence = string.Join(" | ", evidence)
+        };
     }
 
     private static void Read(Dictionary<string, ComponentDiagnostic> values, string id, bool available, string evidence)
