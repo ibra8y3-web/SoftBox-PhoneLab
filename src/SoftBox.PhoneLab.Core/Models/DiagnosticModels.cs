@@ -17,6 +17,20 @@ public sealed record AgentTestResult
     public DateTimeOffset? CompletedAtUtc { get; init; }
 }
 
+public sealed record AgentCameraInfo
+{
+    public string Id { get; init; } = "";
+    public string ParentId { get; init; } = "";
+    public string? PhysicalId { get; init; }
+    public string Facing { get; init; } = "unknown";
+    public string HardwareLevel { get; init; } = "";
+    public bool HasFlash { get; init; }
+    public double[] FocalLengthsMm { get; init; } = [];
+    public string SensorResolution { get; init; } = "";
+    public string[] PhysicalCameraIds { get; init; } = [];
+    public bool IsPhysicalOnly { get; init; }
+}
+
 public sealed record AgentSnapshot
 {
     public string AgentVersion { get; init; } = "";
@@ -30,6 +44,14 @@ public sealed record AgentSnapshot
     public string Hardware { get; init; } = "";
     public string Bootloader { get; init; } = "";
     public string[] SupportedAbis { get; init; } = [];
+    public long? BatteryChargeCounterMicroAh { get; init; }
+    public int? BatteryCurrentNowMicroA { get; init; }
+    public int? BatteryCurrentAverageMicroA { get; init; }
+    public long? BatteryEnergyCounterNWh { get; init; }
+    public int? BatteryCycleCount { get; init; }
+    public int? BatteryVoltageMillivolts { get; init; }
+    public double? BatteryTemperatureCelsius { get; init; }
+    public List<AgentCameraInfo> Cameras { get; init; } = [];
     public Dictionary<string, AgentTestResult> Tests { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Sensors { get; init; } = [];
 }

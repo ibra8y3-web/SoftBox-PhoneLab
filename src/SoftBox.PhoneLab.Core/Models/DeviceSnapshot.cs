@@ -5,8 +5,12 @@ public sealed record DeviceSnapshot
     public string Serial { get; init; } = "";
     public string Manufacturer { get; init; } = "غير متاح";
     public string Model { get; init; } = "غير متاح";
+    public string ModelNumber { get; init; } = "غير متاح";
     public string Product { get; init; } = "غير متاح";
     public string DeviceCode { get; init; } = "غير متاح";
+    public string HardwareSku { get; init; } = "غير متاح";
+    public string BuildFingerprint { get; init; } = "غير متاح";
+    public string Bootloader { get; init; } = "غير متاح";
     public string Board { get; init; } = "غير متاح";
     public string Soc { get; init; } = "غير متاح";
     public string CpuDescription { get; init; } = "غير متاح";

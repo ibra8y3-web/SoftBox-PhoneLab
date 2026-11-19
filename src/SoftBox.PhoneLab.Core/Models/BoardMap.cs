@@ -6,6 +6,16 @@ public sealed class BoardMap
     public string DisplayName { get; init; } = "Generic Android handset";
     public string Manufacturer { get; init; } = "";
     public string ModelPattern { get; init; } = "";
+    public string[] ModelNumbers { get; init; } = [];
+    public string[] DeviceCodes { get; init; } = [];
+    public string HardwareRevision { get; init; } = "";
+    public string BoardRevision { get; init; } = "";
+    public string SourceName { get; init; } = "";
+    public string SourceUri { get; init; } = "";
+    public string SourceDocumentId { get; init; } = "";
+    public string VerifiedBy { get; init; } = "";
+    public DateTimeOffset? VerifiedAtUtc { get; init; }
+    public string AccuracyLevel { get; init; } = "generic";
     public bool IsVerifiedForModel { get; init; }
     public string AccuracyNotice { get; init; } = "Generic educational schematic. Not an exact PCB map.";
     public List<BoardPart> Parts { get; init; } = [];

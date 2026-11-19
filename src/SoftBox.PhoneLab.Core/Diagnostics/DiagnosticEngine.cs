@@ -7,17 +7,17 @@ public static class DiagnosticEngine
 {
     private static readonly (string Id, string Name, string Description)[] Catalog =
     [
-        ("display", "الشاشة", "اختبار ألوان بصري بموافقة المستخدم؛ لا يكشف كل البكسلات آليًا."),
+        ("display", "الشاشة", "اختبار ألوان بصري بموافقة المستخدم؛ تحليل صورة فعلية يعطي مؤشرات مرشحة فقط."),
         ("touch", "طبقة اللمس", "اختبار شبكة تغطية لمس تفاعلي؛ لا يقيس قوة الضغط أو كل مستويات الحساسية."),
-        ("front-camera", "الكاميرا الأمامية", "تحتاج فتح الكاميرا الأمامية واختبار صورة لكل عدسة."),
-        ("rear-camera", "الكاميرات الخلفية", "تحتاج اختبار كل وحدة وعدسة على حدة."),
+        ("front-camera", "الكاميرا الأمامية", "Camera2 inventory and independent still-capture by camera route."),
+        ("rear-camera", "الكاميرات الخلفية", "Camera2 inventory and independent still-capture by camera route."),
         ("mainboard", "اللوحة الأم", "بيانات اللوحة لا تثبت سلامة المسارات أو اللحام."),
         ("processor", "المعالج / SoC", "قراءة هوية المعالج لا تثبت السلامة الكهربائية."),
         ("ram", "ذاكرة RAM", "قراءة الذاكرة المتاحة لا تعادل اختبار خلايا RAM."),
         ("storage", "التخزين الداخلي", "المساحة المتاحة لا تعادل فحص NAND/UFS."),
-        ("pmic", "آيسي إدارة الطاقة PMIC", "يتطلب قياسًا كهربائيًا على اللوحة."),
+        ("pmic", "آيسي إدارة الطاقة PMIC", "يتطلب قياسًا كهربائيًا على اللوحة عبر أداة متوافقة."),
         ("charge-ic", "آيسي الشحن", "يتطلب اختبار مسار الشحن وقياس التيار والفولتية."),
-        ("battery", "البطارية", "بيانات Android ليست اختبار سعة أو مقاومة داخلية."),
+        ("battery", "البطارية", "بيانات Fuel Gauge ليست اختبار سعة أو مقاومة داخلية."),
         ("usb-port", "منفذ USB", "نجاح ADB يثبت عمل جزء من مسار البيانات فقط."),
         ("speaker", "السماعة", "يتطلب نغمة اختبار وتأكيد المستخدم."),
         ("microphone", "الميكروفون", "يتطلب تسجيلًا ومراجعة عينة صوت."),
@@ -33,22 +33,19 @@ public static class DiagnosticEngine
     {
         var results = Catalog.Select(item => new ComponentDiagnostic
         {
-            Id = item.Id,
-            Name = item.Name,
-            Description = item.Description,
-            Status = DiagnosticStatus.NotTested,
-            Evidence = "لم يتم إجراء اختبار وظيفي موثق."
+            Id = item.Id, Name = item.Name, Description = item.Description,
+            Status = DiagnosticStatus.NotTested, Evidence = "لم يتم إجراء اختبار وظيفي موثق."
         }).ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
         if (device is not null)
         {
             Read(results, "processor", device.Soc != "غير متاح" || device.CpuDescription != "غير متاح",
-                $"SoC: {device.Soc}; CPU: {device.CpuDescription}; cores: {device.CpuCores}. هذه قراءة تعريفية فقط.");
-            Read(results, "ram", device.RamGiB.HasValue, device.RamGiB.HasValue ? $"RAM reported: {device.RamGiB.Value:0.0} GiB. لم يتم اختبار الذاكرة." : "");
+                $"SoC: {device.Soc}; CPU: {device.CpuDescription}; cores: {device.CpuCores}. قراءة تعريفية فقط.");
+            Read(results, "ram", device.RamGiB.HasValue, device.RamGiB.HasValue ? $"RAM reported: {device.RamGiB.Value:0.0} GiB. لم يتم اختبار خلايا الذاكرة." : "");
             Read(results, "storage", device.DataTotalKiB.HasValue,
                 device.DataTotalKiB.HasValue ? $"قسم /data: {device.DataUsedKiB / 1024d / 1024d:0.0} / {device.DataTotalKiB / 1024d / 1024d:0.0} GiB." : "");
             Read(results, "display", device.DisplayResolution != "غير متاح",
-                $"الدقة: {device.DisplayResolution}، الكثافة: {device.DisplayDensity}. لا يوجد اختبار بكسلات/لمس بعد.");
+                $"الدقة: {device.DisplayResolution}، الكثافة: {device.DisplayDensity}. لا يثبت ذلك سلامة البكسلات.");
             Read(results, "mainboard", device.Board != "غير متاح", $"Board identifier: {device.Board}. لا يثبت سلامة اللوحة.");
             Read(results, "battery", device.BatteryPercent.HasValue || device.BatteryVoltageMillivolts.HasValue,
                 $"Level: {device.BatteryPercent?.ToString() ?? "N/A"}%; voltage: {device.BatteryVoltageMillivolts?.ToString() ?? "N/A"} mV; temperature: {device.BatteryTemperatureCelsius?.ToString("0.0") ?? "N/A"} °C; health: {device.BatteryHealth}.");
@@ -68,18 +65,20 @@ public static class DiagnosticEngine
             ApplyAgent(results, agent, "microphone", "microphone");
             ApplyAgent(results, agent, "vibration", "vibrator");
             ApplyAgent(results, agent, "camera", "rear-camera");
+
             if (agent.Cameras.Count > 0)
             {
                 ApplyCameraGroup(results, agent, "front");
                 ApplyCameraGroup(results, agent, "back");
             }
+
             if (agent.BatteryChargeCounterMicroAh.HasValue || agent.BatteryCurrentNowMicroA.HasValue ||
                 agent.BatteryCurrentAverageMicroA.HasValue || agent.BatteryCycleCount.HasValue)
             {
                 var evidence = $"Charge counter: {agent.BatteryChargeCounterMicroAh?.ToString() ?? "N/A"} µAh; " +
                     $"current now: {agent.BatteryCurrentNowMicroA?.ToString() ?? "N/A"} µA; " +
                     $"average: {agent.BatteryCurrentAverageMicroA?.ToString() ?? "N/A"} µA; " +
-                    $"cycles: {agent.BatteryCycleCount?.ToString() ?? "N/A"}. قيم Fuel Gauge من Android وليست اختبار سعة معاير.";
+                    $"cycles: {agent.BatteryCycleCount?.ToString() ?? "N/A"}. Fuel Gauge telemetry only; not a calibrated capacity test.";
                 results["battery"] = results["battery"] with { Status = DiagnosticStatus.DataRead, Evidence = evidence };
             }
             if (agent.Sensors.Count > 0)
@@ -89,7 +88,6 @@ public static class DiagnosticEngine
                     Evidence = "Sensors exposed by Android: " + string.Join(", ", agent.Sensors)
                 };
         }
-
         return Catalog.Select(x => results[x.Id]).ToList();
     }
 
@@ -97,7 +95,6 @@ public static class DiagnosticEngine
     {
         var cameras = agent.Cameras.Where(x => x.Facing.Equals(facing, StringComparison.OrdinalIgnoreCase)).ToList();
         if (cameras.Count == 0) return;
-
         var outcomes = new List<DiagnosticStatus>();
         var evidence = new List<string>();
         foreach (var camera in cameras)
@@ -105,55 +102,43 @@ public static class DiagnosticEngine
             var id = "camera_" + Regex.Replace(camera.Id, "[^A-Za-z0-9_-]", "_");
             if (agent.Tests.TryGetValue(id, out var test))
             {
-                var status = test.Status.ToLowerInvariant() switch
-                {
-                    "passed" or "pass" => DiagnosticStatus.Pass,
-                    "failed" or "fail" => DiagnosticStatus.Failed,
-                    "review" or "warning" => DiagnosticStatus.Review,
-                    "data_read" => DiagnosticStatus.DataRead,
-                    _ => DiagnosticStatus.NotTested
-                };
+                var status = MapStatus(test.Status);
                 outcomes.Add(status);
                 evidence.Add($"ID {camera.Id}: {status} — {test.Evidence}");
             }
             else
             {
                 outcomes.Add(DiagnosticStatus.DataRead);
-                evidence.Add($"ID {camera.Id}: تعرف Camera2، ولم يجر اختبار التقاط منفصل بعد.");
+                evidence.Add($"ID {camera.Id}: تم التعرف على مسار الكاميرا ولم يُسجّل اختبار التقاط له.");
             }
         }
 
         var combined = outcomes.Contains(DiagnosticStatus.Failed) ? DiagnosticStatus.Failed :
-            outcomes.All(x => x == DiagnosticStatus.Pass) ? DiagnosticStatus.Pass :
             outcomes.Contains(DiagnosticStatus.Review) ? DiagnosticStatus.Review :
-            outcomes.Any(x => x == DiagnosticStatus.Pass) ? DiagnosticStatus.Pass : DiagnosticStatus.DataRead;
+            outcomes.All(x => x == DiagnosticStatus.Pass) ? DiagnosticStatus.Pass :
+            DiagnosticStatus.DataRead;
         var target = facing == "front" ? "front-camera" : "rear-camera";
-        values[target] = values[target] with
-        {
-            Status = combined,
-            Evidence = string.Join(" | ", evidence)
-        };
+        values[target] = values[target] with { Status = combined, Evidence = string.Join(" | ", evidence) };
     }
+
+    private static DiagnosticStatus MapStatus(string raw) => raw.ToLowerInvariant() switch
+    {
+        "passed" or "pass" => DiagnosticStatus.Pass,
+        "failed" or "fail" => DiagnosticStatus.Failed,
+        "review" or "warning" => DiagnosticStatus.Review,
+        "data_read" => DiagnosticStatus.DataRead,
+        _ => DiagnosticStatus.NotTested
+    };
 
     private static void Read(Dictionary<string, ComponentDiagnostic> values, string id, bool available, string evidence)
     {
-        if (available)
-            values[id] = values[id] with { Status = DiagnosticStatus.DataRead, Evidence = evidence };
+        if (available) values[id] = values[id] with { Status = DiagnosticStatus.DataRead, Evidence = evidence };
     }
 
     private static void ApplyAgent(Dictionary<string, ComponentDiagnostic> values, AgentSnapshot agent, string testId, string componentId)
     {
-        if (!agent.Tests.TryGetValue(testId, out var test) || string.IsNullOrWhiteSpace(test.Status))
-            return;
-
-        var status = test.Status.ToLowerInvariant() switch
-        {
-            "passed" or "pass" => DiagnosticStatus.Pass,
-            "failed" or "fail" => DiagnosticStatus.Failed,
-            "review" or "warning" => DiagnosticStatus.Review,
-            "data_read" => DiagnosticStatus.DataRead,
-            _ => DiagnosticStatus.NotTested
-        };
+        if (!agent.Tests.TryGetValue(testId, out var test) || string.IsNullOrWhiteSpace(test.Status)) return;
+        var status = MapStatus(test.Status);
         if (status != DiagnosticStatus.NotTested)
             values[componentId] = values[componentId] with
             {
