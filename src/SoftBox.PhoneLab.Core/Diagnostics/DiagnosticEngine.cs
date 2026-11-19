@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using SoftBox.PhoneLab.Core.Models;
 
 namespace SoftBox.PhoneLab.Core.Diagnostics;
@@ -67,7 +68,6 @@ public static class DiagnosticEngine
             ApplyAgent(results, agent, "microphone", "microphone");
             ApplyAgent(results, agent, "vibration", "vibrator");
             ApplyAgent(results, agent, "camera", "rear-camera");
-            ApplyAgent(results, agent, "display", "display");
             if (agent.Cameras.Count > 0)
             {
                 ApplyCameraGroup(results, agent, "front");
