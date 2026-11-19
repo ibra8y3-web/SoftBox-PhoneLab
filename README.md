@@ -9,10 +9,10 @@ PhoneLab discovers authorized Android phones over ADB, reads available device id
 ### Device detection and model profiles
 - ADB auto-discovery every 3 seconds.
 - Reads manufacturer, marketing model, model number, product, device codename, hardware SKU, build fingerprint, board, SoC, bootloader, CPU and ABI.
-- Matches a bundled device-identity catalog and can update it from this repository.
+- Matches a bundled curated catalog and automatically adds the Apache-2.0 community model-code mapping generated from Google's public Play supported-device list. The community catalog updates upstream daily and is cached locally by PhoneLab.
 - Shows match confidence and evidence; an identity profile is not treated as a boardview file.
 
-The current bundled identity catalog is a starter set, not a complete list of every phone. Unknown model variants are displayed as unknown rather than guessed.
+The curated catalog is a starter set. The additional community model-code database greatly broadens Android model-name matching, but it is not guaranteed to contain every regional variant or every phone ever sold. Community-only matches are shown as likely, not confirmed.
 
 ### 3D component workspace
 - Interactive exploded smartphone schematic with component selection and test-state colors.

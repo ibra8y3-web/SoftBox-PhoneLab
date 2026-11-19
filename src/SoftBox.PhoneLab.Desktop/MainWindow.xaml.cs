@@ -230,6 +230,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("Bootloader", _snapshot.Bootloader);
         Add("Board / Hardware", _snapshot.Board);
         Add("قاعدة الموديلات", _profileMatch.Profile is null ? "غير مدرج — تم استخدام معرفات النظام" : $"{_profileMatch.DisplayName} • {_profileMatch.Confidence} • Score {_profileMatch.Score}");
+        if (_profileMatch.Profile is not null)
+            Add("مصدر التعرف", _profileMatch.Profile.IdentitySource);
         if (_profileMatch.Profile?.DesignBatteryCapacityMah is int designCapacity)
             Add("سعة البطارية الاسمية", $"{designCapacity} mAh (مواصفة ملف الموديل، ليست قياسًا حاليًا)");
         Add("SoC", _snapshot.Soc);
