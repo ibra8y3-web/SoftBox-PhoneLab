@@ -55,6 +55,8 @@ class MainActivity : Activity() {
         findViewById<android.widget.Button>(R.id.testVibration).setOnClickListener { runVibrationTest() }
         findViewById<android.widget.Button>(R.id.testCamera).setOnClickListener { runCameraTest() }
         findViewById<android.widget.Button>(R.id.testSensors).setOnClickListener { runSensorInventory() }
+        findViewById<android.widget.Button>(R.id.startBatteryCapacity).setOnClickListener { startBatteryCapacityObservation() }
+        findViewById<android.widget.Button>(R.id.finishBatteryCapacity).setOnClickListener { finishBatteryCapacityObservation() }
         renderResults()
     }
 
@@ -249,6 +251,141 @@ class MainActivity : Activity() {
         }
     }
 
+
+    private data class BatteryObservation(
+        val percent: Int,
+        val chargeCounterMicroAh: Int,
+        val currentNowMicroA: Int,
+        val currentAverageMicroA: Int,
+        val voltageMillivolts: Int,
+        val temperatureCelsius: Double?,
+        val isPluggedIn: Boolean
+    )
+
+    private fun readBatteryObservation(): BatteryObservation? {
+        val intent = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return null
+        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
+        if (level < 0 || scale <= 0) return null
+        val manager = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        val charge = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+        if (charge < 0) return null
+        val temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, -1)
+        return BatteryObservation(
+            percent = level * 100 / scale,
+            chargeCounterMicroAh = charge,
+            currentNowMicroA = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW),
+            currentAverageMicroA = manager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE),
+            voltageMillivolts = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1),
+            temperatureCelsius = if (temperature >= 0) temperature / 10.0 else null,
+            isPluggedIn = intent.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0 ||
+                intent.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN) in
+                    listOf(BatteryManager.BATTERY_STATUS_CHARGING, BatteryManager.BATTERY_STATUS_FULL)
+        )
+    }
+
+    private fun startBatteryCapacityObservation() {
+        val sample = readBatteryObservation()
+        if (sample == null) {
+            saveTest("battery_capacity", "not_tested", "هذا الهاتف لا يعرض Charge Counter صالحًا من Android؛ استخدم محلل بطارية خارجيًا.")
+            return
+        }
+        if (sample.isPluggedIn) {
+            saveTest("battery_capacity", "review", "افصل الشاحن قبل بدء الرصد؛ لا يمكن تقدير التفريغ أثناء توصيل الهاتف بالطاقة.")
+            return
+        }
+        if (sample.temperatureCelsius != null && sample.temperatureCelsius >= 43.0) {
+            saveTest("battery_capacity", "review", "حرارة البطارية الحالية ${sample.temperatureCelsius}°C. اترك الهاتف يبرد قبل بدء الرصد.")
+            return
+        }
+        val preferences = getSharedPreferences("phonelab_battery_capacity", Context.MODE_PRIVATE)
+        preferences.edit()
+            .remove("capacity_estimate_tenth_mah")
+            .remove("capacity_estimate_at_epoch_ms")
+            .putInt("start_percent", sample.percent)
+            .putInt("start_charge_micro_ah", sample.chargeCounterMicroAh)
+            .putInt("start_current_micro_a", sample.currentNowMicroA)
+            .putLong("start_at_epoch_ms", System.currentTimeMillis())
+            .apply()
+        saveTest(
+            "battery_capacity",
+            "data_read",
+            "تم حفظ نقطة البداية: " + sample.percent + "%، Charge Counter " +
+                sample.chargeCounterMicroAh + " µAh. استخدم الهاتف بشكل طبيعي/تحت حملك المعتاد، ولا توصله بالشاحن. أنهِ الرصد بعد انخفاض 10 نقاط مئوية على الأقل."
+        )
+        AlertDialog.Builder(this)
+            .setTitle("بدء رصد سعة البطارية")
+            .setMessage("تم حفظ نقطة البداية. استخدم الهاتف كما تستخدمه عادةً تحت حملك المعتاد، ثم عد واضغط إنهاء الرصد بعد انخفاض الشحن 10% على الأقل. لا يلزم تشغيل حمل اصطناعي أو إجهاد الهاتف.")
+            .setPositiveButton("حسنًا", null)
+            .show()
+    }
+
+    private fun finishBatteryCapacityObservation() {
+        val preferences = getSharedPreferences("phonelab_battery_capacity", Context.MODE_PRIVATE)
+        if (!preferences.contains("start_at_epoch_ms")) {
+            saveTest("battery_capacity", "not_tested", "لا توجد نقطة بداية محفوظة. اضغط بدء رصد سعة البطارية أولًا.")
+            return
+        }
+        val sample = readBatteryObservation()
+        if (sample == null) {
+            saveTest("battery_capacity", "review", "تعذر قراءة Charge Counter في نهاية الرصد. نقطة البداية ما زالت محفوظة لإعادة المحاولة.")
+            return
+        }
+        if (sample.isPluggedIn) {
+            saveTest("battery_capacity", "review", "الهاتف متصل بالشاحن الآن؛ افصله ثم أعد إنهاء الرصد. نقطة البداية ما زالت محفوظة.")
+            return
+        }
+        if (sample.temperatureCelsius != null && sample.temperatureCelsius >= 45.0) {
+            saveTest("battery_capacity", "review", "حرارة البطارية ${sample.temperatureCelsius}°C مرتفعة لاعتبار العينة صالحة. اترك الهاتف يبرد ثم أعد المحاولة.")
+            return
+        }
+
+        val startPercent = preferences.getInt("start_percent", -1)
+        val startCharge = preferences.getInt("start_charge_micro_ah", -1)
+        val startCurrent = preferences.getInt("start_current_micro_a", Int.MIN_VALUE)
+        val startAt = preferences.getLong("start_at_epoch_ms", 0L)
+        val elapsedMinutes = ((System.currentTimeMillis() - startAt).coerceAtLeast(0L) / 60000L)
+        val dischargedPercent = startPercent - sample.percent
+        val dischargedMicroAh = startCharge - sample.chargeCounterMicroAh
+
+        if (elapsedMinutes < 15 || dischargedPercent < 10 || dischargedMicroAh <= 0) {
+            saveTest(
+                "battery_capacity",
+                "review",
+                "العينة غير كافية بعد: المدة " + elapsedMinutes + " دقيقة، فرق الشحن " +
+                    dischargedPercent + "%، فرق Charge Counter " + dischargedMicroAh +
+                    " µAh. اترك نقطة البداية محفوظة، استخدم الهاتف دون شحن، ثم أعد المحاولة بعد 10% تفريغ و15 دقيقة على الأقل."
+            )
+            return
+        }
+
+        val estimatedMah = dischargedMicroAh * 100.0 / dischargedPercent / 1000.0
+        if (!estimatedMah.isFinite() || estimatedMah !in 250.0..20000.0) {
+            saveTest("battery_capacity", "review", "قيمة تقدير السعة خارج النطاق المتوقع: " + estimatedMah + " mAh. لا تعتمد عليها؛ افحص Fuel Gauge بمحلل بطارية.")
+            return
+        }
+
+        preferences.edit()
+            .putLong("capacity_estimate_tenth_mah", (estimatedMah * 10.0).toLong())
+            .putLong("capacity_estimate_at_epoch_ms", System.currentTimeMillis())
+            .remove("start_percent")
+            .remove("start_charge_micro_ah")
+            .remove("start_current_micro_a")
+            .remove("start_at_epoch_ms")
+            .apply()
+
+        val startCurrentText = if (startCurrent == Int.MIN_VALUE) "غير متاح" else startCurrent.toString() + " µA"
+        val endCurrentText = if (sample.currentNowMicroA == Int.MIN_VALUE) "غير متاح" else sample.currentNowMicroA.toString() + " µA"
+        saveTest(
+            "battery_capacity",
+            "review",
+            "تقدير Fuel Gauge ≈ " + "%.0f".format(java.util.Locale.US, estimatedMah) +
+                " mAh بعد " + elapsedMinutes + " دقيقة وتفريغ " + dischargedPercent +
+                "%. التيار اللحظي: " + startCurrentText + " → " + endCurrentText +
+                ". هذا تقدير رصدي تحت استخدامك الفعلي، وليس اختبار سعة معايرًا أو قياس مقاومة داخلية."
+        )
+    }
+
     private fun runSensorInventory() {
         val manager = getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
         val found = manager.getSensorList(android.hardware.Sensor.TYPE_ALL)
@@ -276,7 +413,7 @@ class MainActivity : Activity() {
         val testObject = JSONObject()
         tests.forEach { (key, value) -> testObject.put(key, value) }
         return JSONObject()
-            .put("agentVersion", "0.2.0")
+            .put("agentVersion", "0.3.0")
             .put("manufacturer", Build.MANUFACTURER)
             .put("brand", Build.BRAND)
             .put("model", Build.MODEL)
@@ -296,6 +433,11 @@ class MainActivity : Activity() {
             .put("batteryCurrentNowMicroA", if (currentNow != Int.MIN_VALUE) currentNow else JSONObject.NULL)
             .put("batteryCurrentAverageMicroA", if (currentAverage != Int.MIN_VALUE) currentAverage else JSONObject.NULL)
             .put("batteryEnergyCounterNWh", if (energyCounter >= 0L && energyCounter != Long.MIN_VALUE) energyCounter else JSONObject.NULL)
+            .put("batteryCapacityEstimateMah", run {
+                val tenths = getSharedPreferences("phonelab_battery_capacity", Context.MODE_PRIVATE)
+                    .getLong("capacity_estimate_tenth_mah", 0L)
+                if (tenths > 0L) tenths / 10.0 else JSONObject.NULL
+            })
             .put("cameras", cameras)
             .put("sensors", JSONArray(sensorNames))
             .put("tests", testObject)

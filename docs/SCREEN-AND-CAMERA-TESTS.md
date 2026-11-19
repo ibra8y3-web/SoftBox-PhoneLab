@@ -20,3 +20,7 @@ When Android exposes them, PhoneLab reads charge counter (microampere-hours), in
 - Android BatteryManager: https://developer.android.com/reference/android/os/BatteryManager
 - Android multi-camera API: https://developer.android.com/media/camera/camera2/multi-camera
 - Official scrcpy Windows instructions: https://github.com/Genymobile/scrcpy/blob/master/doc/windows.md
+
+
+## Battery capacity observation
+The Android Agent offers a start/end observation. It stores the initial fuel-gauge charge counter and state of charge locally, then estimates full-charge capacity from the measured change after at least 10 percentage points of discharge and 15 minutes. Use the phone under its normal expected workload without charging during the observation. The result is always marked for review and is not a calibrated capacity or internal-resistance measurement. Phones that do not expose a valid charge counter require an external battery analyzer.

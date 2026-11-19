@@ -213,6 +213,7 @@ public sealed class DeviceProfileCatalog
 
     private sealed class CommunityDeviceModel
     {
+        public CommunityDeviceModel() { }
         public string? Brand { get; init; }
         public string? Name { get; init; }
     }

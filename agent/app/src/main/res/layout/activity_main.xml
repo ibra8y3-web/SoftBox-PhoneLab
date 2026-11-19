@@ -30,6 +30,8 @@
         <Button android:id="@+id/testVibration" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار الاهتزاز"/>
         <Button android:id="@+id/testCamera" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="جرد واختبار كل الكاميرات والعدسات"/>
         <Button android:id="@+id/testSensors" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="فحص المستشعرات"/>
+        <Button android:id="@+id/startBatteryCapacity" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="بدء رصد سعة البطارية"/>
+        <Button android:id="@+id/finishBatteryCapacity" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="إنهاء الرصد وحساب تقدير السعة"/>
         <TextView android:id="@+id/results" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="نتائج الاختبارات ستظهر هنا."
             android:textColor="#D9E7F6" android:textSize="12sp"

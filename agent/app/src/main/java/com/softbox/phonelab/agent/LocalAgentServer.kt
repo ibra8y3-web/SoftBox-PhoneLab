@@ -53,7 +53,7 @@ class LocalAgentServer(private val snapshotProvider: () -> JSONObject) {
                 }
                 val endpoint = (request.split(" ").getOrNull(1) ?: "/").substringBefore("?")
                 val body = when (endpoint) {
-                    "/health" -> JSONObject().put("status", "ok").put("agentVersion", "0.1.0")
+                    "/health" -> JSONObject().put("status", "ok").put("agentVersion", "0.3.0")
                     "/snapshot" -> snapshotProvider()
                     else -> JSONObject().put("error", "not_found")
                 }.toString()

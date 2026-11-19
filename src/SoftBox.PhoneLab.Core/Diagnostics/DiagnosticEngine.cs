@@ -81,6 +81,7 @@ public static class DiagnosticEngine
                     $"cycles: {agent.BatteryCycleCount?.ToString() ?? "N/A"}. Fuel Gauge telemetry only; not a calibrated capacity test.";
                 results["battery"] = results["battery"] with { Status = DiagnosticStatus.DataRead, Evidence = evidence };
             }
+            ApplyAgent(results, agent, "battery_capacity", "battery");
             if (agent.Sensors.Count > 0)
                 results["sensors"] = results["sensors"] with
                 {

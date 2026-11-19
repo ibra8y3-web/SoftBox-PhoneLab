@@ -261,6 +261,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("Battery current average", agent.BatteryCurrentAverageMicroA is null ? "غير متاح" : $"{agent.BatteryCurrentAverageMicroA / 1000d:0.0} mA");
         Add("Battery remaining energy", agent.BatteryEnergyCounterNWh is null ? "غير متاح" : $"{agent.BatteryEnergyCounterNWh / 1_000_000d:0.0} mWh");
         Add("Battery cycle count", agent.BatteryCycleCount is null ? "غير مدعوم / غير مكشوف" : agent.BatteryCycleCount.ToString()!);
+        Add("تقدير السعة من التفريغ", agent.BatteryCapacityEstimateMah is null ? "لم يتم قياسه" : $"{agent.BatteryCapacityEstimateMah:0} mAh — تقدير Fuel Gauge يحتاج مراجعة");
+        if (agent.BatteryCapacityEstimateMah is double estimated && _profileMatch.Profile?.DesignBatteryCapacityMah is int design && design > 0)
+            Add("مقارنة السعة الاسمية", $"{estimated / design * 100:0}% من السعة الاسمية المسجلة للموديل (مقارنة تقريبية)");
         foreach (var camera in agent.Cameras)
         {
             var facing = camera.Facing switch { "front" => "أمامية", "back" => "خلفية", "external" => "خارجية", _ => "غير محدد" };

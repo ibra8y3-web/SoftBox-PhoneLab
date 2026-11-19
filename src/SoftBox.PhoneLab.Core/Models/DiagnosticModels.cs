@@ -51,6 +51,7 @@ public sealed record AgentSnapshot
     public int? BatteryCycleCount { get; init; }
     public int? BatteryVoltageMillivolts { get; init; }
     public double? BatteryTemperatureCelsius { get; init; }
+    public double? BatteryCapacityEstimateMah { get; init; }
     public List<AgentCameraInfo> Cameras { get; init; } = [];
     public Dictionary<string, AgentTestResult> Tests { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Sensors { get; init; } = [];
