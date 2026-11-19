@@ -1,4 +1,6 @@
 using Microsoft.Win32;
+using System.Diagnostics;
+using System.IO;
 using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Models;
@@ -22,6 +24,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
+    private readonly DeviceProfileCatalog _deviceProfiles = new();
+    private readonly ScreenMirrorService _screenMirror = new();
+    private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
     private readonly DispatcherTimer _timer;
     private bool _busy;
@@ -35,6 +40,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private DeviceSnapshot? _snapshot;
     private AgentSnapshot? _agentSnapshot;
     private BoardMap _boardMap = new();
+    private DeviceProfileMatch _profileMatch = DeviceProfileMatch.Unknown;
     private ComponentViewModel? _selectedComponent;
     private readonly Dictionary<ModelVisual3D, string> _visualParts = new();
 
@@ -51,7 +57,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string DeviceTitle => _snapshot is null ? SelectedDevice?.DisplayName ?? "لا يوجد هاتف متصل" : $"{_snapshot.Manufacturer} {_snapshot.Model}".Trim();
     public string DeviceSubtitle => _snapshot is null
         ? "بانتظار جهاز Android عبر USB"
-        : $"Android {_snapshot.AndroidVersion} • {_snapshot.Product} • {_snapshot.DeviceCode}";
+        : $"Android {_snapshot.AndroidVersion} • {_snapshot.ModelNumber} • {_snapshot.DeviceCode}" +
+          (_profileMatch.Profile is null ? " • قاعدة الموديلات: غير مدرج" : $" • {_profileMatch.DisplayName} ({_profileMatch.Confidence})");
     public string ScanStatus { get; private set; } = "بانتظار جهاز";
     public string StatusMessage { get; private set; } = "PhoneLab جاهز لاكتشاف أجهزة Android المصرّح بها.";
     public string BoardMapNotice => _boardMap.AccuracyNotice;
@@ -87,11 +94,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
         Loaded += async (_, _) =>
         {
-            _boardMap = await _maps.LoadBestMapAsync("", "");
+            await _deviceProfiles.LoadAsync();
+            _boardMap = await _maps.LoadBestMapAsync(new DeviceSnapshot(), null);
             Notify(nameof(BoardMapNotice));
             BuildScene();
             await RefreshDevicesAsync();
             _timer.Start();
+            _ = SyncDeviceCatalogQuietlyAsync();
         };
         Closed += (_, _) => _timer.Stop();
         Notify(nameof(EngineStatus));
@@ -159,7 +168,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _snapshot = await _inspection.InspectAsync(selected.Serial);
             _agentSnapshot = null;
-            _boardMap = await _maps.LoadBestMapAsync(_snapshot.Manufacturer, _snapshot.Model);
+            _profileMatch = await _deviceProfiles.MatchAsync(_snapshot);
+            _boardMap = await _maps.LoadBestMapAsync(_snapshot, _profileMatch.Profile);
             ApplyDeviceFacts();
             RebuildDiagnostics();
             ScanStatus = "تمت قراءة بيانات الهاتف";
@@ -193,8 +203,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(AgentStatus)); return;
             }
             _agentSnapshot = agent;
+            ApplyDeviceFacts();
+            ApplyAgentFacts(agent);
             RebuildDiagnostics();
-            AgentStatus = $"Agent {agent.AgentVersion}: {agent.Tests.Count} نتيجة اختبار، {agent.Sensors.Count} مستشعر/مستشعرات مكتشفة.";
+            AgentStatus = $"Agent {agent.AgentVersion}: {agent.Tests.Count} نتيجة اختبار، {agent.Cameras.Count} كاميرا/مسار كاميرا، {agent.Sensors.Count} مستشعر/مستشعرات.";
             StatusMessage = "تمت مزامنة نتائج الاختبارات التفاعلية من الهاتف.";
             Notify(nameof(AgentStatus)); Notify(nameof(StatusMessage));
         }
@@ -211,8 +223,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         DeviceFacts.Clear();
         Add("الشركة", _snapshot.Manufacturer);
         Add("الموديل", _snapshot.Model);
+        Add("رقم الموديل", _snapshot.ModelNumber);
         Add("Product / Device", $"{_snapshot.Product} / {_snapshot.DeviceCode}");
+        Add("Hardware SKU", _snapshot.HardwareSku);
+        Add("Build fingerprint", _snapshot.BuildFingerprint);
+        Add("Bootloader", _snapshot.Bootloader);
         Add("Board / Hardware", _snapshot.Board);
+        Add("قاعدة الموديلات", _profileMatch.Profile is null ? "غير مدرج — تم استخدام معرفات النظام" : $"{_profileMatch.DisplayName} • {_profileMatch.Confidence} • Score {_profileMatch.Score}");
+        if (_profileMatch.Profile?.DesignBatteryCapacityMah is int designCapacity)
+            Add("سعة البطارية الاسمية", $"{designCapacity} mAh (مواصفة ملف الموديل، ليست قياسًا حاليًا)");
         Add("SoC", _snapshot.Soc);
         Add("وصف CPU", _snapshot.CpuDescription);
         Add("أنوية CPU", _snapshot.CpuCores > 0 ? _snapshot.CpuCores.ToString() : "غير متاح");
@@ -231,6 +250,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("حرارة البطارية", _snapshot.BatteryTemperatureCelsius is null ? "غير متاح" : $"{_snapshot.BatteryTemperatureCelsius:0.0} °C");
         Add("Battery health", _snapshot.BatteryHealth);
         Add("حالة الشحن", _snapshot.BatteryStatus);
+    }
+
+    private void ApplyAgentFacts(AgentSnapshot agent)
+    {
+        Add("Battery charge counter", agent.BatteryChargeCounterMicroAh is null ? "غير متاح" : $"{agent.BatteryChargeCounterMicroAh / 1000d:0} mAh reported");
+        Add("Battery current now", agent.BatteryCurrentNowMicroA is null ? "غير متاح" : $"{agent.BatteryCurrentNowMicroA / 1000d:0.0} mA");
+        Add("Battery current average", agent.BatteryCurrentAverageMicroA is null ? "غير متاح" : $"{agent.BatteryCurrentAverageMicroA / 1000d:0.0} mA");
+        Add("Battery remaining energy", agent.BatteryEnergyCounterNWh is null ? "غير متاح" : $"{agent.BatteryEnergyCounterNWh / 1_000_000d:0.0} mWh");
+        Add("Battery cycle count", agent.BatteryCycleCount is null ? "غير مدعوم / غير مكشوف" : agent.BatteryCycleCount.ToString()!);
+        foreach (var camera in agent.Cameras)
+        {
+            var facing = camera.Facing switch { "front" => "أمامية", "back" => "خلفية", "external" => "خارجية", _ => "غير محدد" };
+            Add($"Camera {camera.Id}", $"{facing} • {camera.HardwareLevel} • {camera.SensorResolution} • Focal {string.Join("/", camera.FocalLengthsMm.Select(x => x.ToString("0.0")))} mm • Flash {camera.HasFlash}");
+            if (camera.PhysicalCameraIds.Count > 0)
+                Add($"Physical IDs {camera.Id}", string.Join(", ", camera.PhysicalCameraIds));
+        }
     }
 
     private void RebuildDiagnostics()
@@ -259,6 +294,106 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
     private async void Inspect_Click(object sender, RoutedEventArgs e) => await InspectSelectedAsync();
     private async void Agent_Click(object sender, RoutedEventArgs e) => await RefreshAgentAsync();
+
+    private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized) { StatusMessage = "اختر هاتفًا مصرحًا به أولًا."; Notify(nameof(StatusMessage)); return; }
+        try
+        {
+            StatusMessage = "جارٍ تجهيز scrcpy الرسمي والتحقق من SHA-256...";
+            Notify(nameof(StatusMessage));
+            await _screenMirror.StartAsync(selected.Serial, _snapshot?.Model ?? selected.DisplayName);
+            StatusMessage = "تم تشغيل عرض شاشة الهاتف الحقيقية في نافذة مستقلة.";
+        }
+        catch (Exception ex) { StatusMessage = "تعذر تشغيل عرض الشاشة: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
+    private async void AnalyzeScreen_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختر صورة ملتقطة بالكاميرا الفعلية لشاشة الهاتف أثناء اختبار لون موحد",
+            Filter = "Screen photo|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var result = await Task.Run(() => ScreenImageAnalyzer.AnalyzePhysicalScreenPhoto(dialog.FileName));
+            var reportPath = dialog.FileName + ".phonelab-analysis.json";
+            await File.WriteAllTextAsync(reportPath, System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            StatusMessage = $"تحليل الصورة انتهى: {result.SuspectedOutlierPixels} بكسل مرشح، تفاوت إضاءة {result.UniformityDeviationPercent:0.0}%.";
+            Notify(nameof(StatusMessage));
+            MessageBox.Show(this,
+                $"المقاس: {result.Width} × {result.Height}\nمرشحات اختلاف بكسل: {result.SuspectedOutlierPixels}\nتفاوت الإضاءة بين المناطق: {result.UniformityDeviationPercent:0.0}%\n\n{result.Interpretation}\n\nالتقرير: {reportPath}",
+                "تحليل صورة الشاشة — نتيجة أولية", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) { StatusMessage = "تعذر تحليل الصورة: " + ex.Message; Notify(nameof(StatusMessage)); }
+    }
+
+    private async void DeviceCatalog_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var count = await _deviceProfiles.UpdateAsync();
+            if (_snapshot is not null)
+            {
+                _profileMatch = await _deviceProfiles.MatchAsync(_snapshot);
+                _boardMap = await _maps.LoadBestMapAsync(_snapshot, _profileMatch.Profile);
+                ApplyDeviceFacts();
+                Notify(nameof(DeviceSubtitle)); Notify(nameof(BoardMapNotice));
+                BuildScene();
+            }
+            StatusMessage = $"تم تحديث قاعدة هوية الأجهزة: {count} ملف موديل.";
+        }
+        catch (Exception ex) { StatusMessage = "تعذر تحديث قاعدة الموديلات: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
+    private void MeasurementRig_Click(object sender, RoutedEventArgs e)
+        => new MeasurementWindow { Owner = this }.Show();
+
+    private async void RepairGuides_Click(object sender, RoutedEventArgs e)
+    {
+        if (_snapshot is null) { StatusMessage = "وصّل هاتفًا واقرأ هويته أولًا."; Notify(nameof(StatusMessage)); return; }
+        try
+        {
+            var query = $"{_snapshot.Manufacturer} {_snapshot.ModelNumber} {_snapshot.Model} phone repair";
+            var results = await _repairKnowledge.SearchAsync(query);
+            if (results.Count == 0) { StatusMessage = "لم يعثر مصدر الإصلاح على دليل مطابق."; Notify(nameof(StatusMessage)); return; }
+            var first = results[0];
+            var list = string.Join("\n", results.Take(6).Select((x, i) => $"{i + 1}. [{x.Kind}] {x.Title}"));
+            var answer = MessageBox.Show(this, $"نتائج أدلة إصلاح خارجية للموديل:\n\n{list}\n\nفتح أول نتيجة؟", "Repair Knowledge", MessageBoxButton.YesNo, MessageBoxImage.Information);
+            if (answer == MessageBoxResult.Yes)
+                Process.Start(new ProcessStartInfo(first.Url) { UseShellExecute = true });
+            StatusMessage = $"تم العثور على {results.Count} نتيجة من iFixit. الروابط تفتح المصدر الأصلي.";
+        }
+        catch (Exception ex) { StatusMessage = "تعذر البحث في أدلة الإصلاح: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
+    private async Task SyncDeviceCatalogQuietlyAsync()
+    {
+        try
+        {
+            var count = await _deviceProfiles.UpdateAsync();
+            if (_snapshot is not null)
+            {
+                _profileMatch = await _deviceProfiles.MatchAsync(_snapshot);
+                _boardMap = await _maps.LoadBestMapAsync(_snapshot, _profileMatch.Profile);
+                ApplyDeviceFacts();
+                Notify(nameof(DeviceSubtitle)); Notify(nameof(BoardMapNotice));
+                BuildScene();
+            }
+            StatusMessage = $"قاعدة الموديلات محدثة تلقائيًا ({count} ملف).";
+            Notify(nameof(StatusMessage));
+        }
+        catch
+        {
+            // Keep the bundled/offline catalog. Manual update reports the network error.
+        }
+    }
 
     private void Devices_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
