@@ -127,7 +127,7 @@ class CameraDiagnostics(private val activity: Activity) {
                                     val request = device.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
                                     request.addTarget(activeReader.surface)
                                     request.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                                    val availableAf = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES).orEmpty()
+                                    val availableAf = characteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES) ?: intArrayOf()
                                     val preferredAf = when {
                                         availableAf.contains(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE) -> CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
                                         availableAf.contains(CaptureRequest.CONTROL_AF_MODE_AUTO) -> CaptureRequest.CONTROL_AF_MODE_AUTO
