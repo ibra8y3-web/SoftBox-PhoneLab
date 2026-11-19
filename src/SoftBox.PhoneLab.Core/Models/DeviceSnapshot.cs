@@ -12,6 +12,8 @@ public sealed record DeviceSnapshot
     public string BuildFingerprint { get; init; } = "غير متاح";
     public string Bootloader { get; init; } = "غير متاح";
     public string Board { get; init; } = "غير متاح";
+    public string HardwareRevision { get; init; } = "غير متاح";
+    public string BoardRevision { get; init; } = "غير متاح";
     public string Soc { get; init; } = "غير متاح";
     public string CpuDescription { get; init; } = "غير متاح";
     public int CpuCores { get; init; }

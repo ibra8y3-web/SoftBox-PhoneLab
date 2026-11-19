@@ -229,6 +229,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("Build fingerprint", _snapshot.BuildFingerprint);
         Add("Bootloader", _snapshot.Bootloader);
         Add("Board / Hardware", _snapshot.Board);
+        Add("Hardware revision", _snapshot.HardwareRevision);
+        Add("Board revision", _snapshot.BoardRevision);
         Add("قاعدة الموديلات", _profileMatch.Profile is null ? "غير مدرج — تم استخدام معرفات النظام" : $"{_profileMatch.DisplayName} • {_profileMatch.Confidence} • Score {_profileMatch.Score}");
         if (_profileMatch.Profile is not null)
             Add("مصدر التعرف", _profileMatch.Profile.IdentitySource);
@@ -335,6 +337,42 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 "تحليل صورة الشاشة — نتيجة أولية", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) { StatusMessage = "تعذر تحليل الصورة: " + ex.Message; Notify(nameof(StatusMessage)); }
+    }
+
+    private async void ImportBoardMap_Click(object sender, RoutedEventArgs e)
+    {
+        if (_snapshot is null)
+        {
+            StatusMessage = "اقرأ هوية هاتف متصل أولًا حتى نتحقق من تطابق الخريطة معه.";
+            Notify(nameof(StatusMessage));
+            return;
+        }
+        var dialog = new OpenFileDialog
+        {
+            Title = "استيراد خريطة PCB / BoardView موثقة لهذا الموديل",
+            Filter = "PhoneLab board map JSON (*.json)|*.json",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            var path = await _maps.ImportVerifiedMapAsync(dialog.FileName, _snapshot);
+            _boardMap = await _maps.LoadBestMapAsync(_snapshot, _profileMatch.Profile);
+            Notify(nameof(BoardMapNotice));
+            BuildScene();
+            StatusMessage = "تم استيراد خريطة الجهاز المطابقة: " + Path.GetFileName(path);
+            MessageBox.Show(this,
+                "تم استيراد الخريطة بعد مطابقة الموديل والمصدر وبيانات المراجعة وصحة الإحداثيات. " +
+                "الاستيراد يتحقق من البيانات الوصفية والبنية؛ مسؤولية مراجعة أصل الملف وترخيصه ودقته الفنية تظل على المستورد.",
+                "تم استيراد خريطة PCB", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "رفض استيراد الخريطة: " + ex.Message;
+            MessageBox.Show(this, StatusMessage, "تعذر استيراد الخريطة", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        Notify(nameof(StatusMessage));
     }
 
     private async void DeviceCatalog_Click(object sender, RoutedEventArgs e)

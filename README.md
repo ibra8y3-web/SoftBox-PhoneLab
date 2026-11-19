@@ -91,7 +91,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 
 ## Important engineering limits
 
-- This project does not yet contain model-specific internal PCB/boardview files for every phone. Exact board coordinates, IC positions and socket placements cannot be fabricated from an Android model string.
+- This project does not yet contain model-specific internal PCB/boardview files for every phone. It currently imports PhoneLab JSON map bundles; it does not directly decode every native BRD/BDV/FZ/BVR/GenCAD file. Exact board coordinates, IC positions and socket placements cannot be fabricated from an Android model string.
 - The current identity database is only a starter set. We need to grow it with verified manufacturer model identifiers and licensed repair documentation.
 - Camera2 cannot expose every proprietary camera path on every vendor firmware, and an image capture alone is not an optical-quality test.
 - Full battery capacity, internal resistance, PMIC rail and charging-IC pin measurements require appropriate test equipment and safe model-specific connections.

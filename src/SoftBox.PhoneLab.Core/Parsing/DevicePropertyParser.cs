@@ -48,6 +48,8 @@ public static partial class DevicePropertyParser
             BuildFingerprint = First(Get(p, "ro.build.fingerprint"), Get(p, "ro.vendor.build.fingerprint")),
             Bootloader = First(Get(p, "ro.bootloader"), Get(p, "ro.boot.bootloader")),
             Board = First(Get(p, "ro.product.board"), Get(p, "ro.board.platform"), Get(p, "ro.hardware")),
+            HardwareRevision = First(Get(p, "ro.boot.hardware.revision"), Get(p, "ro.boot.hwrev"), Get(p, "ro.boot.revision")),
+            BoardRevision = First(Get(p, "ro.boot.board.revision"), Get(p, "ro.boot.board_version")),
             Soc = First(Get(p, "ro.soc.model"), Get(p, "ro.vendor.qti.soc_name")),
             CpuDescription = cpuDescription,
             CpuCores = coreCount,
