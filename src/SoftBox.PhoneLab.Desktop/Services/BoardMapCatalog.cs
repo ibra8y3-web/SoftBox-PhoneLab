@@ -18,6 +18,7 @@ public sealed class BoardMapCatalog
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SoftBox", "PhoneLab", "boardmaps")
         };
 
+        var matchingMaps = new Dictionary<string, BoardMap>(StringComparer.OrdinalIgnoreCase);
         foreach (var root in roots.Where(Directory.Exists))
         {
             foreach (var file in Directory.GetFiles(root, "*.json", SearchOption.AllDirectories))
@@ -26,12 +27,18 @@ public sealed class BoardMapCatalog
                 {
                     var map = JsonSerializer.Deserialize<BoardMap>(await File.ReadAllTextAsync(file), _options);
                     if (map is not null && IsVerifiedForDevice(map, device))
-                        return map;
+                        matchingMaps.TryAdd(map.Id, map);
                 }
                 catch (JsonException) { }
                 catch (IOException) { }
             }
         }
+
+        if (matchingMaps.Count == 1)
+            return matchingMaps.Values.Single();
+        var mapNotice = matchingMaps.Count > 1
+            ? $"توجد {matchingMaps.Count} خرائط PCB موثقة مطابقة للموديل، لكن لا توجد مطابقة فريدة لنسخة اللوحة؛ لم يتم اختيار واحدة عشوائيًا."
+            : $"لا توجد خريطة PCB موثقة للموديل {device.ModelNumber}/{device.DeviceCode}. المعروض مخطط عام للتوضيح فقط.";
 
         var genericPath = Path.Combine(AppContext.BaseDirectory, "Data", "boardmaps", "generic-android.json");
         if (File.Exists(genericPath))
@@ -48,7 +55,7 @@ public sealed class BoardMapCatalog
                         ModelPattern = generic.ModelPattern,
                         IsVerifiedForModel = false,
                         AccuracyLevel = "generic",
-                        AccuracyNotice = $"لا توجد خريطة PCB موثقة للموديل {device.ModelNumber}/{device.DeviceCode}. المعروض مخطط عام للتوضيح فقط.",
+                        AccuracyNotice = mapNotice,
                         Parts = generic.Parts
                     };
             }
@@ -87,7 +94,10 @@ public sealed class BoardMapCatalog
 
     public static bool IsVerifiedForDevice(BoardMap map, DeviceSnapshot device)
     {
-        if (!map.IsVerifiedForModel || !ExactAccuracyLevels.Contains(map.AccuracyLevel, StringComparer.OrdinalIgnoreCase))
+        if (map is null || map.ModelNumbers is null || map.DeviceCodes is null || map.Parts is null ||
+            string.IsNullOrWhiteSpace(map.Id) ||
+            !map.IsVerifiedForModel ||
+            !ExactAccuracyLevels.Contains(map.AccuracyLevel, StringComparer.OrdinalIgnoreCase))
             return false;
 
         var sourceValid = Uri.TryCreate(map.SourceUri, UriKind.Absolute, out var source) &&
@@ -117,6 +127,10 @@ public sealed class BoardMapCatalog
 
         if (map.Parts.Count is 0 or > 20_000) return false;
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in map.Parts)
+        {
+            if (part is null) return false;
+        }
         foreach (var part in map.Parts)
         {
             if (string.IsNullOrWhiteSpace(part.Id) || !ids.Add(part.Id) ||
