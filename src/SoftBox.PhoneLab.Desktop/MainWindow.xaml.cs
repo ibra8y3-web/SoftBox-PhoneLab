@@ -387,7 +387,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 _snapshot.Model,
                 "HardwareDiagnostics",
                 $"تم استلام {agent.Tests.Count} نتيجة اختبار من Agent بإذن المستخدم.",
-                string.Join("; ", agent.Tests.Take(20).Select(test => $"{test.Name}: {test.Status}")));
+                string.Join("; ", agent.Tests.Take(20).Select(test => $"{test.Key}: {test.Value.Status}")));
             await _activity.AddNotificationAsync(
                 "diagnostic", "اكتملت مزامنة الاختبارات", $"استلم SoftBox نتائج {agent.Tests.Count} اختبار من الهاتف.",
                 "hardware-diagnostics", selected.Serial);
