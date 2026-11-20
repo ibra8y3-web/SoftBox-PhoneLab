@@ -39,7 +39,7 @@ public sealed class WorkshopInventoryIntegrationTests
             var snapshot = await store.GetSnapshotAsync();
             var savedOrder = Assert.Single(snapshot.RepairOrders);
             var item = Assert.Single(snapshot.Inventory);
-            var movement = Assert.Single(snapshot.InventoryMovements.Where(entry => entry.RepairOrderId == order.Id));
+            var movement = Assert.Single(snapshot.InventoryMovements, entry => entry.RepairOrderId == order.Id);
 
             Assert.Equal(3, item.Quantity);
             Assert.Equal("BAT-A525", usage.Sku);
@@ -120,7 +120,7 @@ public sealed class WorkshopInventoryIntegrationTests
             var store = new WorkshopStore(root);
             var snapshot = await store.GetSnapshotAsync();
 
-            Assert.Equal(1, snapshot.RepairOrders.Count);
+            Assert.Single(snapshot.RepairOrders);
             Assert.Equal("SB-OLD-001", snapshot.RepairOrders[0].TicketNumber);
             Assert.Empty(snapshot.RepairOrders[0].PartsUsed);
             Assert.Equal(0m, snapshot.RepairOrders[0].PartsCostEgp);
