@@ -239,6 +239,8 @@ public sealed class WorkshopStore
             await EnsureLoadedLockedAsync(cancellationToken);
             var order = _cache!.RepairOrders.FirstOrDefault(item => item.Id == orderId)
                 ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
+            if (order.Status is "تم التسليم" or "ملغي")
+                throw new InvalidOperationException("لا يمكن صرف قطع لأمر صيانة تم تسليمه أو إلغاؤه.");
             var stock = _cache.Inventory.FirstOrDefault(item => item.Sku.Equals(sku.Trim(), StringComparison.OrdinalIgnoreCase))
                 ?? throw new KeyNotFoundException("قطعة الغيار غير موجودة في المخزون.");
             if (stock.Quantity < quantity)
