@@ -785,9 +785,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             case "OpenDeviceCapabilityCenter":
             {
-                var selected = SelectedDevice;
-                if (selected is null || _snapshot is null ||
-                    !_snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal))
+                var capabilitySelectedDevice = SelectedDevice;
+                if (capabilitySelectedDevice is null || _snapshot is null ||
+                    !_snapshot.Serial.Equals(capabilitySelectedDevice.Serial, StringComparison.Ordinal))
                 {
                     MessageBox.Show(this,
                         "اختر جهازًا، ثم نفّذ قراءة خصائصه أولًا لفتح محرك القدرات والتوافق.",
@@ -798,7 +798,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new DeviceCapabilityCenterWindow(
                     _adb,
                     _snapshot,
-                    selected.IsAuthorized,
+                    capabilitySelectedDevice.IsAuthorized,
                     _agentSnapshot is not null)
                 {
                     Owner = this
