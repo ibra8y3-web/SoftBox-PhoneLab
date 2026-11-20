@@ -6,7 +6,11 @@ public sealed record AndroidRuntimePermission(
     string Name,
     bool? IsGranted,
     string Flags,
-    bool IsConflicting);
+    bool IsConflicting)
+{
+    public override string ToString()
+        => $"{Name} — {(IsConflicting ? "متعارض" : IsGranted == true ? "ممنوحة" : IsGranted == false ? "مرفوضة" : "غير معروفة")}";
+}
 
 /// <summary>
 /// Extracts only permissions explicitly requested by an app and represented in the
@@ -106,6 +110,6 @@ public static class AndroidRuntimePermissionParser
     public static bool IsSafePermissionName(string? value)
         => !string.IsNullOrWhiteSpace(value) &&
            value.Length <= 255 &&
-           value.Contains('.', StringComparison.Ordinal) &&
+           value.Contains('.') &&
            Regex.IsMatch(value, @"^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$", RegexOptions.CultureInvariant);
 }
