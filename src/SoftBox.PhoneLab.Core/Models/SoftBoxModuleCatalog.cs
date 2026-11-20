@@ -301,12 +301,13 @@ public static class SoftBoxModuleCatalog
                 new("audit-user", "قفل الجلسة وسجل عمليات حسب هوية المستخدم", "Session locking and per-user audit", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
             ]),
         new("update-center", 31, "النظام والحماية", "مركز التحديثات", "Update Center",
-            "تحديث كتالوج الموديلات موجود عبر الإنترنت؛ لا يوجد محدّث ذاتي لتطبيق SoftBox أو حزم موثقة.",
-            ModuleImplementationStatus.Planned,
+            "يفحص إصدارات Stable/Beta من GitHub Releases ويعرض رقم الإصدار والملاحظات والملفات المنشورة دون تنزيل أو تثبيت تلقائي.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("catalog-update", "تحديث كتالوج الموديلات", "Device catalog refresh", "يحدّث بيانات الموديلات ويخزن نسخة محلية؛ مدخل التحديث في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("application-updater", "تحديث تطبيق SoftBox والتحقق من التوقيع", "Application updater", "لا يوجد تنزيل وتوقيع وتثبيت ذاتي للتطبيق.", ModuleImplementationStatus.Planned),
-                new("release-channels", "قنوات Stable/Beta والرجوع الآمن", "Release channels", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
+                new("release-check", "فحص إصدارات SoftBox الرسمية Stable/Beta", "Official release channel check", "يقرأ metadata من GitHub API، يقارن SemVer، ويقبل صفحة الإصدار وروابط الأصول من مستودع SoftBox الرسمي فقط؛ لا ينزّل أو ينفذ ملفات.", ModuleImplementationStatus.Implemented, "OpenUpdateCenter"),
+                new("application-updater", "تنزيل وتحقق توقيع وتثبيت تحديث SoftBox", "Signed application updater", "لم يتم تنفيذ الثقة بجذر توقيع أو تحديث ذاتي؛ يلزم توقيع ملفات الإصدار قبل تفعيل التثبيت.", ModuleImplementationStatus.Planned),
+                new("release-channels", "قنوات Stable/Beta وسياسة الرجوع الآمن", "Release channels and rollback", "اختيار قناة الفحص Stable/Beta متاح؛ تثبيت إصدار سابق أو rollback لم يبدأ.", ModuleImplementationStatus.InDevelopment, "OpenUpdateCenter")
             ]),
         new("notification-center", 32, "النظام والحماية", "مركز الإشعارات", "Notification Center",
             "صندوق إشعارات محلي محفوظ لأحداث اتصال الأجهزة ونتائج الفحص وتصدير التقارير، مع تعليم الإشعار كمقروء.",
@@ -349,7 +350,7 @@ public static class SoftBoxModuleCatalog
 
     public static IReadOnlySet<string> SupportedActionIds { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenScreenRecording", "OpenPhoneTests",
+        "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenUpdateCenter", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
