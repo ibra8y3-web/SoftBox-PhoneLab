@@ -52,7 +52,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("adb-discovery", "اكتشاف ADB تلقائيًا", "Automatic ADB discovery", "فحص دوري كل 3 ثوانٍ مع التمييز بين الجهاز المصرح به وغير المصرح.", ModuleImplementationStatus.Implemented, "RefreshDevices"),
                 new("multi-device-list", "عرض أكثر من جهاز", "Multi-device list", "يمكن عرض عدة أجهزة واختيار جهاز للفحص؛ التنفيذ الجماعي المتوازي لم يبدأ.", ModuleImplementationStatus.Implemented),
-                new("wireless-adb", "اتصال ADB لاسلكي", "Wireless ADB", "لا توجد واجهة مستقلة لإدارة الاقتران اللاسلكي حاليًا.", ModuleImplementationStatus.Planned)
+                new("wireless-adb", "اقتران ADB لاسلكيًا برمز الهاتف", "Wireless ADB pairing", "يربط الهاتف عبر adb pair ثم adb connect باستخدام IP ومنفذي الاقتران والاتصال اللذين يعرضهما Android Wireless debugging. يعمل على الشبكة المحلية، ويمسح رمز الاقتران بعد قراءته؛ يلزم اختبار اتصال فعلي لكل جهاز.", ModuleImplementationStatus.Implemented, "OpenWirelessAdbPairing")
             ]),
         new("device-intelligence", 3, "مركز الأجهزة", "ذكاء الأجهزة", "Device Intelligence",
             "تحليل بيانات Android ومطابقتها مع ملفات تعريف الموديلات المتاحة.",
@@ -356,7 +356,7 @@ public static class SoftBoxModuleCatalog
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
-        "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
+        "OpenWorkshopBackup", "OpenGlobalWorkshopHistory", "OpenWirelessAdbPairing",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement"
     };
 
