@@ -109,6 +109,24 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
             cancellationToken);
     }
 
+    public async Task<string> InstallApkAsync(
+        string serial,
+        string apkFilePath,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAuthorizedSerial(serial);
+        if (string.IsNullOrWhiteSpace(apkFilePath) || !File.Exists(apkFilePath))
+            throw new FileNotFoundException("ملف APK المحلي غير موجود.", apkFilePath);
+        if (!Path.GetExtension(apkFilePath).Equals(".apk", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("حدد ملف APK بامتداد صحيح.", nameof(apkFilePath));
+
+        return await adb.RunForDeviceAsync(
+            serial,
+            ["install", "-r", Path.GetFullPath(apkFilePath)],
+            cancellationToken,
+            TimeSpan.FromMinutes(10));
+    }
+
     public async Task<string> RunReadOnlyPresetAsync(
         string serial,
         string presetId,
