@@ -698,7 +698,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             MessageBox.Show(this,
-                "تعذر تسجيل العملية في سجل التدقيق المحلي، لذلك لم يتم تشغيل الأداة.\\n\\n" + ex.Message,
+                "تعذر تسجيل العملية في سجل التدقيق المحلي، لذلك لم يتم تشغيل الأداة.\n\n" + ex.Message,
                 "سجل الأمان • SoftBox",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
