@@ -174,7 +174,6 @@ public sealed class NetworkDiagnosticsService
         if (IPAddress.TryParse(value, out _))
             return true;
 
-        return Uri.CheckHostName(value) == UriHostNameType.Dns &&
-               value.Contains('.');
+        return Uri.CheckHostName(value) == UriHostNameType.Dns;
     }
 }
