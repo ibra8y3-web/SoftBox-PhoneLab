@@ -15,6 +15,14 @@ PhoneLab discovers authorized Android phones over ADB, reads available device id
 
 The curated catalog is a starter set. The additional community model-code database greatly broadens Android model-name matching, but it is not guaranteed to contain every regional variant or every phone ever sold. Community-only matches are shown as likely, not confirmed.
 
+### Android App Manager
+- Reads installed third-party packages and package details from the selected authorized phone.
+- Installs or updates a selected local APK only after Manifest inspection and explicit confirmation.
+- Removes only a selected package that SoftBox re-confirms in Android's `pm list packages -3` output, after showing the package name and an explicit warning that local app data will be deleted.
+- SoftBox reports uninstall success only when ADB returns `Success`; system packages and arbitrary package names are rejected. Split APK workflows and private app-data management remain unsupported.
+- See [Android App Manager safeguards](docs/ANDROID-APP-MANAGER.md).
+
+
 ### 3D component workspace
 - Interactive exploded smartphone schematic with component selection and test-state colors.
 - Imports model-specific board-map JSON files only when they identify an exact model/codename and include HTTPS source, reviewer and verification timestamp.
