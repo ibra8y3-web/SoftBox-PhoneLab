@@ -222,11 +222,11 @@ public static class SoftBoxModuleCatalog
                 new("batch-runner", "تنفيذ متوازٍ محدود لأوامر قراءة فقط", "Bounded read-only batch runner", "ينفذ أوامر الكتالوج الآمنة بحد أقصى 3 أجهزة متزامنة مع إلغاء مشترك ونتيجة مستقلة لكل جهاز.", ModuleImplementationStatus.Implemented, "OpenAndroidBatchTools")
             ]),
         new("repair-history", 22, "إدارة مركز الصيانة", "سجل الصيانة", "Repair History",
-            "سجل أوامر وفعاليات المركز موجود؛ سجل تاريخي موحد لكل جهاز وتشخيصاته غير مكتمل.",
+            "سجل محلي مستمر لأحداث اتصال الجهاز وفحوص النظام ومزامنة Agent وتصدير التقارير، بالإضافة إلى سجل أوامر المركز.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("workshop-events", "سجل فعاليات وأوامر مركز الصيانة", "Workshop activity history", "يحفظ محليًا آخر 5000 فعالية مرتبطة بالعملاء والأوامر والمخزون؛ يفتح تبويب العمليات والسجل في الإدارة العالمية.", ModuleImplementationStatus.Implemented, "OpenGlobalWorkshopHistory"),
-                new("device-history", "تاريخ الفحوص والأجهزة والتقارير لكل Serial", "Per-device repair history", "لم يتم ربط جميع جلسات التشخيص بسجل جهاز مستمر بعد.", ModuleImplementationStatus.Planned)
+                new("device-history", "تاريخ الفحوص والأجهزة والتقارير لكل جهاز", "Per-device repair history", "يحفظ الأحداث محليًا ويربطها ببصمة SHA-256 لمعرف الجهاز بدل تخزين Serial الخام؛ يعرض الرقم مقنّعًا ويمكن فلترة السجل حسب الجهاز.", ModuleImplementationStatus.Implemented, "OpenDeviceHistory")
             ]),
         new("workshop-manager", 23, "إدارة مركز الصيانة", "إدارة مركز الصيانة", "Workshop Manager",
             "إدارة العملاء وأوامر الإصلاح والحالات وتكاليف العمل والضمان وبيانات المركز متاحة محليًا.",
@@ -302,11 +302,11 @@ public static class SoftBoxModuleCatalog
                 new("release-channels", "قنوات Stable/Beta والرجوع الآمن", "Release channels", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
             ]),
         new("notification-center", 32, "النظام والحماية", "مركز الإشعارات", "Notification Center",
-            "رسالة الحالة الحالية متاحة؛ لا يوجد صندوق إشعارات محفوظ وقابل للقراءة والتصفية.",
-            ModuleImplementationStatus.Planned,
+            "صندوق إشعارات محلي محفوظ لأحداث اتصال الأجهزة ونتائج الفحص وتصدير التقارير، مع تعليم الإشعار كمقروء.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("status-text", "رسالة حالة فورية للعمليات", "Immediate status text", "يعرض StatusMessage نتيجة آخر إجراء، وليس سجل إشعارات.", ModuleImplementationStatus.Implemented),
-                new("notification-inbox", "مركز إشعارات محفوظ مع انتقال للقسم", "Persistent notification inbox", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
+                new("notification-inbox", "صندوق إشعارات محفوظ مع حالات القراءة", "Persistent notification inbox", "يحفظ وقت الإشعار ونوعه وعنوانه ورسالة مختصرة والقسم المرتبط وبصمة الجهاز الاختيارية؛ يدعم القراءة الفردية أو الجماعية.", ModuleImplementationStatus.Implemented, "OpenNotificationCenter")
             ]),
         new("help-center", 33, "النظام والحماية", "مركز المساعدة", "Help Center",
             "تعليمات الاتصال وAgent وأدلة المشروع متاحة جزئيًا.",
@@ -344,7 +344,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
