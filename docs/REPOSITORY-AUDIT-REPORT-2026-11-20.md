@@ -219,3 +219,16 @@ The current catalog statuses are implementation classifications, not a completio
 - CI run #258 completed successfully: 150 passed, 0 failed, 0 skipped; Restore, Windows x64 self-contained publish, Android Agent build/upload, offline tool packaging and artifact upload passed.
 - Artifact (227,398,186 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
 - The feature branch remained in its pull request for integration into `main` after this successful check; no hardware verification is implied.
+
+
+## Follow-up PR #2 — User & Technician Management
+
+- Pull request: https://github.com/ibra8y3-web/SoftBox-PhoneLab/pull/2
+- Branch: `feature/user-technician-management`.
+- The previously Planned section 30 now contains real local account bootstrap/authentication, three fixed roles, PBKDF2 password verifiers, lockout, account administration, session re-authentication and a local audit trail.
+- Authorization is fail-closed for all 53 catalog action IDs. Module launch is recorded against the authenticated user. Read-only roles cannot invoke interactive screen control or device-write/workshop/admin actions.
+- Account data is stored within the current Windows user's LocalAppData profile. This is not domain identity, Windows Hello, dedicated ACL/DPAPI enforcement, or a central multi-workstation identity platform.
+- PR #2 CI run #264 passed 165 tests, Restore, Windows x64 publish, Android Agent build and offline bundle packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44784653573
+- Windows x64 artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44784653573/artifacts/14653526981
+- Follow-up hardening (per-invocation audit, read-only workflow/batch permissions and blocking automatic interactive mirroring) is part of the current PR head and must pass its next CI run before merge.
+- PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged.

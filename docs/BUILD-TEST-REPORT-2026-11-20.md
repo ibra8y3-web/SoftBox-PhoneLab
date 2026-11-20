@@ -108,3 +108,22 @@ CI uses generated unit-test fixtures and hosted build runners. It does not const
 - No CS* compiler or xUnit analyzer warnings were present in the build log.
 
 This CI run includes the catalog/reorganization/build report updates. The tested application source remains the same as run #257; the additional commit updates documentation only. Neither run exercised physical handsets or vendor low-level servicing protocols.
+
+
+## Follow-up verification — local accounts, RBAC and session security (CI run #264)
+
+- Workflow: PhoneLab CI, run #264; result: **Success**.
+- Tested source commit: `2b13abedff8689d614d6a07721888d3e10206839`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44784653573
+- Restore: passed.
+- Unit tests: **165 passed, 0 failed, 0 skipped**.
+- Windows self-contained x64 publish: passed.
+- Android Agent Gradle build/upload: passed.
+- Offline USB, scrcpy and TRACE Boardviewer bundling: passed.
+- Windows x64 artifact: **227,450,369 bytes**, artifact ID `14653526981`.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44784653573/artifacts/14653526981
+- No CS* compiler or xUnit analyzer warnings were present in the build log.
+
+The added account tests cover first-admin bootstrap, PBKDF2 verifier storage (not the password), login, admin/technician/read-only account creation, non-admin denial, repeated-failure lockout, last-admin protection, password reset/change, disabled-account rejection, local audit redaction and corrupted-store fail-closed behavior. Authorization tests validate all 53 catalog ActionIds and role restrictions.
+
+This run is hosted Windows CI with temporary account-store fixtures. It does not validate Windows ACL/DPAPI deployment policy, domain accounts, multi-workstation synchronization or physical Android hardware. The subsequent permission hardening and invocation-audit extension are tracked in the newer PR head and require the next CI run before merge.
