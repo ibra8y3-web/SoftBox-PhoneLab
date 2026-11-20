@@ -403,15 +403,16 @@ public sealed class GlobalWorkshopWindow : Window
     private void RefreshAnalytics()
     {
         var report = WorkshopAnalyticsService.Analyze(_data, DateTimeOffset.UtcNow);
-        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings?.CurrencyCode);
+        var settings = _data.Settings ?? new WorkshopSettings();
+        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(settings.CurrencyCode);
         var averageDuration = report.AverageDeliveryHours.HasValue
             ? report.AverageDeliveryHours.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ساعة"
             : "لا تتوفر مدة تسليم صالحة";
 
         _analyticsSummary.Text =
             $"إجمالي الأوامر: {report.TotalOrders}  |  مفتوح: {report.OpenOrders}  |  تم التسليم: {report.DeliveredOrders}  |  ملغي: {report.CancelledOrders}\n" +
-            $"الإيراد المسجل للأوامر المسلمة: {WorkshopInternationalRules.FormatMoney(report.RecordedDeliveredRevenue, currency, _data.Settings?.CultureName)}  |  تقديرات الأعمال المفتوحة: {WorkshopInternationalRules.FormatMoney(report.EstimatedOpenWorkValue, currency, _data.Settings?.CultureName)}\n" +
-            $"تكلفة قطع الغيار المسجلة: {WorkshopInternationalRules.FormatMoney(report.RecordedPartsCost, currency, _data.Settings?.CultureName)}  |  قيمة المخزون بالتكلفة: {WorkshopInternationalRules.FormatMoney(report.InventoryValueAtCost, currency, _data.Settings?.CultureName)}  |  مخزون منخفض: {report.LowStockItems}\n" +
+            $"الإيراد المسجل للأوامر المسلمة: {WorkshopInternationalRules.FormatMoney(report.RecordedDeliveredRevenue, currency, settings.CultureName)}  |  تقديرات الأعمال المفتوحة: {WorkshopInternationalRules.FormatMoney(report.EstimatedOpenWorkValue, currency, settings.CultureName)}\n" +
+            $"تكلفة قطع الغيار المسجلة: {WorkshopInternationalRules.FormatMoney(report.RecordedPartsCost, currency, settings.CultureName)}  |  قيمة المخزون بالتكلفة: {WorkshopInternationalRules.FormatMoney(report.InventoryValueAtCost, currency, settings.CultureName)}  |  مخزون منخفض: {report.LowStockItems}\n" +
             $"متوسط المدة من الاستلام إلى التسليم: {averageDuration}";
 
         _analyticsFaults.ItemsSource = report.FrequentReportedFaults;
