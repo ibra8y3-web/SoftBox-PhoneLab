@@ -156,3 +156,10 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Firmware Center now includes an inspect-only Safe Recovery preflight. It re-hashes the selected local firmware immediately before evaluating it and compares manufacturer/model text against the selected authorized device snapshot.
 - The preflight reports explicit Passed/Failed/Unknown/Blocked evidence and always denies proceeding while publisher authenticity, signed device compatibility, anti-rollback policy or verified backup evidence is unavailable. No flashing action is enabled.
 - Automated tests cover matching local hash with trust blockers, model/manufacturer mismatch and missing authorized device identity.
+## Supplier purchase receipt workflow — Workshop schema v4
+
+- Added a supplier purchase receipt ledger to workshop data schema v4; migration upgrades existing schema 1–3 JSON records without discarding customers, repair orders, inventory or movement history.
+- Added stock receipt for an existing SKU, including supplier, invoice reference, quantity, purchase unit cost and receiving technician.
+- Receipts update stock quantity and weighted-average unit cost and create a matching positive inventory movement. The operation is serialized and persisted in one store write; in-memory changes roll back if persistence fails.
+- Parts Inventory now provides supplier receipt entry and CSV export for receipt history. Multi-line purchase orders, payment tracking and approval workflows remain unimplemented.
+- Integration tests cover weighted-average cost, stock balance, invoice linkage, invalid supplier rejection and v2-to-v4 migration.
