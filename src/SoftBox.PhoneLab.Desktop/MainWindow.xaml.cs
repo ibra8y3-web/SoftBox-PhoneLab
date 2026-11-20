@@ -789,6 +789,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenSamsungOdinAssistant":
                 new SamsungOdinAssistantWindow { Owner = this }.Show();
                 break;
+            case "OpenSamsungServiceOperations":
+                OpenSamsungServiceOperations();
+                break;
             case "OpenDeviceCapabilityCenter":
             {
                 var capabilitySelectedDevice = SelectedDevice;
