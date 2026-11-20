@@ -76,7 +76,8 @@ public sealed class PartsInventoryWindow : Window
         actions.Children.Add(ButtonControl("قطعة جديدة", "#14517A", NewItem_Click));
         actions.Children.Add(ButtonControl("حفظ الصنف", "#176044", SaveItem_Click));
         actions.Children.Add(ButtonControl("حركة مخزون", "#243B56", AdjustStock_Click));
-        actions.Children.Add(ButtonControl("تصدير CSV", "#243B56", ExportCsv_Click));
+        actions.Children.Add(ButtonControl("تصدير الأصناف CSV", "#243B56", ExportCsv_Click));
+        actions.Children.Add(ButtonControl("تصدير الحركات CSV", "#243B56", ExportMovements_Click));
         actions.Children.Add(ButtonControl("تحديث", "#243B56", async (_, _) => await RefreshAsync()));
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -168,7 +169,7 @@ public sealed class PartsInventoryWindow : Window
             foreach (var movement in snapshot.InventoryMovements.OrderByDescending(item => item.AtUtc).Take(500))
                 _movements.Add(new MovementDisplay(movement));
             _list.SelectedItem = _items.FirstOrDefault(item => item.Sku.Equals(selectedSku, StringComparison.OrdinalIgnoreCase));
-            _status.Text = $"المخزون: {_items.Count:N0} صنف | الحركات المعروضة: {_movements.Count:N0}.";
+            _status.Text = $"المخزون: {_items.Count:N0} صنف | منخفض المخزون: {_items.Count(item => item.NeedsRestock):N0} | الحركات المعروضة: {_movements.Count:N0}.";
             if (_list.SelectedItem is null && _items.Count > 0)
                 _list.SelectedIndex = 0;
         }
@@ -306,6 +307,42 @@ public sealed class PartsInventoryWindow : Window
         catch (Exception ex)
         {
             _status.Text = "فشل تصدير المخزون: " + ex.Message;
+        }
+    }
+
+    private async void ExportMovements_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var snapshot = await _store.GetSnapshotAsync();
+            var rows = new List<string>
+            {
+                Csv("AtUtc", "SKU", "ItemName", "Delta", "BalanceAfter", "UnitCost", "Reason", "RepairTicket", "Technician")
+            };
+            rows.AddRange(snapshot.InventoryMovements.OrderBy(item => item.AtUtc).Select(item => Csv(
+                item.AtUtc.ToString("O"),
+                item.Sku,
+                item.ItemName,
+                item.Delta.ToString(CultureInfo.InvariantCulture),
+                item.BalanceAfter.ToString(CultureInfo.InvariantCulture),
+                item.UnitCostEgp.ToString(CultureInfo.InvariantCulture),
+                item.Reason,
+                item.RepairTicketNumber,
+                item.TechnicianName)));
+            var dialog = new SaveFileDialog
+            {
+                Title = "تصدير سجل حركات المخزون",
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = "SoftBox-Inventory-Movements.csv"
+            };
+            if (dialog.ShowDialog(this) != true)
+                return;
+            await File.WriteAllTextAsync(dialog.FileName, string.Join(Environment.NewLine, rows), new UTF8Encoding(true));
+            _status.Text = "تم تصدير سجل الحركات: " + dialog.FileName;
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "فشل تصدير سجل الحركات: " + ex.Message;
         }
     }
 
