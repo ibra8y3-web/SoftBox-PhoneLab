@@ -251,3 +251,17 @@ The current catalog statuses are implementation classifications, not a completio
 The Offline Readiness feature has been added to the existing section 28 and classified Tested after CI #279. The overall section remains In Development because the larger Offline Center scope (Internet reachability, trusted source hashes/signatures, package repair/install and full local dependency inventory) is not implemented.
 
 No hardware compatibility is claimed. No package is downloaded or installed by the Offline Center. The local SHA-256 shown is computed from the current file bytes only.
+
+
+
+## Additive follow-up — Wireless ADB and Android Network Diagnostics
+
+- Branch: feature/wireless-adb-pairing; all changes preserve the existing WPF/.NET 10 and Kotlin Agent projects.
+- Device Center now exposes the existing authenticated ADB pairing service through a dedicated window. It uses the existing Android Platform-Tools binary and separates pairing IP/port from connection IP/port. The temporary six-digit code is cleared and never saved.
+- Added IPv4/IPv6 endpoint and pairing-code validation tests plus role checks. Administrator and Technician can pair; ReadOnly cannot.
+- Network Diagnostics now has a second, device-scoped Android read-only tool. It reads global IP addresses, default route/gateway/interface, Wi-Fi enabled and airplane-mode toggles over a serial-scoped ADB call.
+- The Android network tool never collects SSIDs, Wi-Fi passwords, application traffic or private app data. Unsupported or empty responses are displayed as unavailable; no values are synthesized.
+- Added parser tests for route/address parsing, unavailable values, loopback/link-local exclusion, Wi-Fi toggles and serial validation. The existing Windows DNS/ICMP tests and host-network tool remain unchanged.
+- Added one unique catalog action per tool and explicit fail-closed authorization entries. Current catalog navigation: 36 sections, 56 executable action IDs; no duplicate action IDs.
+- No new NuGet packages, drivers, OEM firmware, external executables or runtime payloads were added. The installed ADB binary is reused.
+- CI and physical-device verification are pending for this follow-up. Both features remain Implemented, not Verified, until CI and real handset checks are completed.
