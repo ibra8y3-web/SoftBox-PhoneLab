@@ -122,3 +122,11 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Empty or unavailable properties are reported as unavailable rather than replaced with guessed values.
 - Reports can be saved locally as JSON with a masked device serial.
 - No Download Mode, EDL/BROM protocol, bootloader unlock, FRP, security bypass or flashing action was added.
+## Smart Backup authenticated encryption
+
+- Added a streaming `.sbx` container using AES-256-CBC encryption with encrypt-then-HMAC-SHA256 authentication and PBKDF2-HMAC-SHA256 (600,000 iterations, random 16-byte salt and IV).
+- Authentication is checked before any plaintext is written during decryption.
+- Android shared-storage backups can be created directly as encrypted SBX: ZIP is built in a temporary directory, encrypted, then the staging directory is removed.
+- Encrypted verification decrypts only to a temporary ZIP, re-runs the per-file SHA-256 Manifest checks, then removes the temporary plaintext archive.
+- Passwords are not stored in settings or operation logs. The legacy ordinary ZIP option remains available and is explicitly marked unencrypted.
+- Automated tests cover round-trip restore, plaintext absence in the encrypted bytes, wrong-password rejection, tamper rejection and password policy.
