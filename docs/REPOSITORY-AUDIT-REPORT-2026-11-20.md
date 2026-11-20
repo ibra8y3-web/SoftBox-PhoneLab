@@ -96,3 +96,12 @@ These are catalog status counts, not a percentage of product completion. `Verifi
 - Windows artifact (227,167,411 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968/artifacts/14636852748
 
 This is CI verification using generated local test fixtures and a Windows runner. It is not a physical-handset compatibility claim.
+## Workshop inventory integration — additive implementation
+
+- Workshop schema upgraded from version 2 to 3 while preserving existing customers, repair orders and inventory records.
+- Added per-order parts usage snapshots and calculated parts cost.
+- Added inventory movement ledger with delta, resulting balance, unit cost, reason, technician and optional repair-order/ticket linkage.
+- Stock consumption is performed under the WorkshopStore lock and committed through one atomic JSON replacement; insufficient stock, delivered orders and cancelled orders are rejected.
+- Global workshop repair-order editor exposes a parts-consumption dialog; the advanced Parts Inventory window manages category, supplier, cost price, sale price, reorder threshold, manual adjustments and CSV export.
+- Repair-order text, HTML and CSV reports now include used parts and parts cost.
+- Added tests for successful consumption, insufficient stock protection and schema-v2 migration.
