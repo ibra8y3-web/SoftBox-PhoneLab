@@ -26,6 +26,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenApkLab"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenNetworkDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenWirelessAdbPairing"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenAndroidNetworkDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenAndroidFileManager"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenAndroidAppManager"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenAndroidCommandCenter"] = SoftBoxAccountPermission.DeviceRead,
