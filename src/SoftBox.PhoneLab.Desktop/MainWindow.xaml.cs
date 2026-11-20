@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Core.Activity;
+using SoftBox.PhoneLab.Core.Settings;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
@@ -36,6 +37,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
     private readonly LocalActivityStore _activity = new();
+    private readonly PhoneLabSettingsService _settingsService = new();
+    private PhoneLabSettings _settings = new();
     private readonly DispatcherTimer _timer;
     private bool _busy;
     private bool _dragging;
@@ -105,12 +108,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
         Loaded += async (_, _) =>
         {
+            try
+            {
+                _settings = await _settingsService.LoadAsync();
+            }
+            catch (Exception ex)
+            {
+                _settings = new PhoneLabSettings();
+                StatusMessage = "تعذر قراءة إعدادات SoftBox؛ تم استخدام القيم الافتراضية لهذه الجلسة: " + ex.Message;
+                Notify(nameof(StatusMessage));
+            }
+
+            _timer.Interval = TimeSpan.FromSeconds(_settings.DiscoveryIntervalSeconds);
             await _deviceProfiles.LoadAsync();
             _boardMap = await _maps.LoadBestMapAsync(new DeviceSnapshot(), null);
             Notify(nameof(BoardMapNotice));
             BuildScene();
             await RefreshDevicesAsync();
-            _timer.Start();
+            if (_settings.AutoDiscoverDevices)
+                _timer.Start();
             _ = SyncDeviceCatalogQuietlyAsync();
         };
         Closed += (_, _) => { _timer.Stop(); _screenMirror.Dispose(); };
@@ -246,35 +262,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _preparedSerials.Add(selected.Serial);
             await PrepareConnectedDeviceAsync(selected);
         }
-        if (SelectedDevice?.Serial == selected.Serial) await InspectSelectedAsync();
+        if (_settings.AutoInspectOnConnect && SelectedDevice?.Serial == selected.Serial)
+            await InspectSelectedAsync();
     }
 
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
-        try
+        if (_settings.AutoOpenScreenMirror)
         {
-            WorkspaceTabs.SelectedIndex = 1;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-            var deadline = DateTime.UtcNow.AddSeconds(6);
-            while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
-                await Task.Delay(100);
-            if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero) throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف.");
-            await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
-            MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
+            try
+            {
+                WorkspaceTabs.SelectedIndex = 1;
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                var deadline = DateTime.UtcNow.AddSeconds(6);
+                while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
+                    await Task.Delay(100);
+                if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero) throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف.");
+                await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
+                MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
+            }
+            catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
         }
-        catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
+        else
+        {
+            MirrorStatus = "فتح شاشة الهاتف تلقائيًا معطّل من الإعدادات. يمكنك تشغيله يدويًا من Phone Link Studio.";
+        }
         Notify(nameof(MirrorStatus));
-        try
+
+        if (_settings.AutoInstallAgent)
         {
-            await _agentInstaller.InstallAndRequestConsentAsync(selected.Serial);
-            AgentStatus = "تم تثبيت Agent وإرسال طلب الموافقة. وافق على شاشة الهاتف لتفعيل الاختبارات.";
-            _ = WatchForAgentConsentAsync(selected.Serial);
+            try
+            {
+                await _agentInstaller.InstallAndRequestConsentAsync(selected.Serial);
+                AgentStatus = "تم تثبيت Agent وإرسال طلب الموافقة. وافق على شاشة الهاتف لتفعيل الاختبارات.";
+                _ = WatchForAgentConsentAsync(selected.Serial);
+            }
+            catch (Exception ex)
+            {
+                AgentStatus = "تعذر تجهيز Agent تلقائيًا: " + ex.Message + " قد تحتاج إلى السماح بالتثبيت عبر USB في إعدادات الشركة المصنّعة.";
+            }
         }
-        catch (Exception ex)
+        else
         {
-            AgentStatus = "تعذر تجهيز Agent تلقائيًا: " + ex.Message + " قد تحتاج إلى السماح بالتثبيت عبر USB في إعدادات الشركة المصنّعة.";
+            AgentStatus = "تثبيت Agent التلقائي معطّل من الإعدادات. يمكنك تهيئته يدويًا من زر تحديث Agent.";
         }
-        StatusMessage = "الاتصال الأساسي جاهز. وافق على طلب PhoneLab الظاهر على الهاتف لتفعيل الاختبارات.";
+        StatusMessage = "الاتصال الأساسي جاهز. راجع حالة تصريح ADB وموافقة Agent.";
         Notify(nameof(AgentStatus)); Notify(nameof(StatusMessage));
     }
 
@@ -648,6 +680,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenHelpCenter":
                 new HelpCenterWindow { Owner = this }.Show();
                 break;
+            case "OpenApplicationSettings":
+                new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.Show();
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
@@ -770,6 +805,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Trace.TraceWarning("SoftBox notification was not persisted: {0}", ex.Message);
         }
+    }
+
+    private void ApplyApplicationSettings(PhoneLabSettings settings)
+    {
+        _settings = PhoneLabSettingsService.Validate(settings);
+        _timer.Interval = TimeSpan.FromSeconds(_settings.DiscoveryIntervalSeconds);
+        if (_settings.AutoDiscoverDevices)
+        {
+            if (!_timer.IsEnabled)
+                _timer.Start();
+        }
+        else
+        {
+            _timer.Stop();
+        }
+        StatusMessage = "تم تطبيق إعدادات اكتشاف الأجهزة وعمليات الاتصال. التغييرات محفوظة للمرة القادمة.";
+        Notify(nameof(StatusMessage));
     }
 
     private void OpenActivityCenter(int initialTab, bool filterToSelectedDevice)
