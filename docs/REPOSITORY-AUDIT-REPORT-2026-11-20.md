@@ -115,3 +115,10 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Added an order-linked parts usage dialog, advanced parts catalog editor, low-stock summary and CSV exports for inventory and movements.
 - Repair-order text/HTML/CSV reports include parts usage and parts cost.
 - Added integration tests for stock deduction and order linkage, insufficient stock protection and schema-v2 migration.
+## Vendor-specific diagnostics — additive implementation
+
+- Added a fixed allow-list of Android `getprop` keys for Samsung (One UI, CSC, PDA, bootloader, Verified Boot), Xiaomi/Redmi/POCO (model, market name, MIUI/HyperOS version, region, hardware country, Verified Boot), and generic Android brands.
+- Vendor diagnostics require an authorized ADB device and do not accept arbitrary property names or shell commands from the user.
+- Empty or unavailable properties are reported as unavailable rather than replaced with guessed values.
+- Reports can be saved locally as JSON with a masked device serial.
+- No Download Mode, EDL/BROM protocol, bootloader unlock, FRP, security bypass or flashing action was added.
