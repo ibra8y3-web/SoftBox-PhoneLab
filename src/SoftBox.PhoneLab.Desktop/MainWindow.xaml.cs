@@ -640,6 +640,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "MirrorScreen":
                 MirrorScreen_Click(this, new RoutedEventArgs());
                 break;
+            case "OpenScreenRecording":
+                OpenScreenRecordingWindow();
+                break;
             case "AnalyzeScreen":
                 AnalyzeScreen_Click(this, new RoutedEventArgs());
                 break;
@@ -1005,6 +1008,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void Inspect_Click(object sender, RoutedEventArgs e) => await InspectSelectedAsync();
     private async void Agent_Click(object sender, RoutedEventArgs e) => await RefreshAgentAsync();
+
+    private void OpenScreenRecordingWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.",
+                "تسجيل شاشة الهاتف", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new ScreenRecordingWindow(
+            _screenMirror,
+            selected.Serial,
+            selected.Model ?? selected.DisplayName)
+        {
+            Owner = this
+        }.Show();
+    }
 
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
     {
