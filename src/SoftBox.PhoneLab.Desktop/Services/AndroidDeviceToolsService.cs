@@ -187,7 +187,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
 
         var value = remotePath.Trim();
         if (value.Length > 1024 || value.Any(char.IsControl) ||
-            value.Contains('\0') || !value.StartsWith('/', StringComparison.Ordinal))
+            value.Contains('\0') || !value.StartsWith("/", StringComparison.Ordinal))
             throw new ArgumentException("يجب أن يكون المسار مطلقًا وصالحًا.", nameof(remotePath));
 
         var allowedRoots = new[] { "/sdcard", "/storage/emulated/0", "/storage/self/primary" };
