@@ -199,7 +199,12 @@ public sealed class EncryptedBackupService
         try
         {
             await DecryptAsync(encryptedPath, temporaryZip, password, cancellationToken);
-            return await new BackupArchiveService().VerifyArchiveAsync(temporaryZip, cancellationToken);
+            var result = await new BackupArchiveService().VerifyArchiveAsync(temporaryZip, cancellationToken);
+            var warnings = result.Warnings
+                .Where(warning => !warning.Contains("غير مشفرة", StringComparison.Ordinal))
+                .Append("تمت مصادقة حاوية SBX المشفرة. فُك ZIP الداخلي مؤقتًا للتحقق من SHA-256 ثم حُذف.")
+                .ToArray();
+            return result with { Warnings = warnings };
         }
         finally
         {
