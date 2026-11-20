@@ -208,6 +208,18 @@ public sealed class AndroidBackupWindow : Window
 
     private async void Backup_Click(object sender, RoutedEventArgs e)
     {
+        var encrypted = _encryptBackup.IsChecked == true;
+        if (encrypted)
+        {
+            try { EncryptedBackupService.ValidatePassword(_password.Password); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, ex.Message, "كلمة مرور النسخ المشفر",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(_archivePath.Text))
         {
             BrowseArchive_Click(sender, e);
@@ -215,26 +227,36 @@ public sealed class AndroidBackupWindow : Window
                 return;
         }
 
-        await RunOperationAsync("جارٍ نسخ مجلد Android وإنشاء بصمات SHA-256...", async token =>
-        {
-            var progress = new Progress<string>(message => _status.Text = message);
-            var manifest = await _service.BackupSharedDirectoryAsync(
-                _serial, _remotePath.Text, _archivePath.Text, progress, token);
+        await RunOperationAsync(
+            encrypted ? "جارٍ نسخ مجلد Android وتشفير الأرشيف..." : "جارٍ نسخ مجلد Android وإنشاء بصمات SHA-256...",
+            async token =>
+            {
+                var progress = new Progress<string>(message => _status.Text = message);
+                var manifest = encrypted
+                    ? await _service.BackupSharedDirectoryEncryptedAsync(
+                        _serial, _remotePath.Text, _archivePath.Text, _password.Password, progress, token)
+                    : await _service.BackupSharedDirectoryAsync(
+                        _serial, _remotePath.Text, _archivePath.Text, progress, token);
 
-            var summary = new StringBuilder();
-            summary.AppendLine("BACKUP: SUCCESS");
-            summary.AppendLine("SOURCE DEVICE: " + manifest.SourceDevice);
-            summary.AppendLine("SOURCE PATH: " + manifest.SourcePath);
-            summary.AppendLine("CREATED UTC: " + manifest.CreatedAtUtc.ToString("O"));
-            summary.AppendLine("FILES: " + manifest.FileCount);
-            summary.AppendLine("TOTAL BYTES: " + manifest.TotalBytes);
-            summary.AppendLine("ARCHIVE: " + _archivePath.Text);
-            summary.AppendLine();
-            summary.AppendLine(manifest.SecurityNotice);
-            summary.AppendLine("SHA-256 manifest written for every backed-up file.");
-            _output.Text = summary.ToString();
-            return $"اكتملت النسخة: {manifest.FileCount:N0} ملف، {manifest.TotalBytes:N0} بايت.";
-        });
+                var summary = new StringBuilder();
+                summary.AppendLine("BACKUP: SUCCESS");
+                summary.AppendLine("SOURCE DEVICE: " + manifest.SourceDevice);
+                summary.AppendLine("SOURCE PATH: " + manifest.SourcePath);
+                summary.AppendLine("CREATED UTC: " + manifest.CreatedAtUtc.ToString("O"));
+                summary.AppendLine("FILES: " + manifest.FileCount);
+                summary.AppendLine("TOTAL BYTES: " + manifest.TotalBytes);
+                summary.AppendLine("ARCHIVE: " + _archivePath.Text);
+                summary.AppendLine("ENCRYPTION: " + (encrypted
+                    ? "AES-256-CBC + HMAC-SHA256; PBKDF2-HMAC-SHA256 (600,000 iterations). Password is not saved."
+                    : "Not encrypted. Store this ZIP in a private location."));
+                summary.AppendLine();
+                summary.AppendLine(manifest.SecurityNotice);
+                summary.AppendLine("SHA-256 manifest written for every backed-up file.");
+                _output.Text = summary.ToString();
+                return encrypted
+                    ? $"اكتملت النسخة المشفرة: {manifest.FileCount:N0} ملف، {manifest.TotalBytes:N0} بايت."
+                    : $"اكتملت النسخة غير المشفرة: {manifest.FileCount:N0} ملف، {manifest.TotalBytes:N0} بايت.";
+            });
     }
 
     private async void Verify_Click(object sender, RoutedEventArgs e)
@@ -242,17 +264,32 @@ public sealed class AndroidBackupWindow : Window
         var dialog = new OpenFileDialog
         {
             Title = "اختيار نسخة SoftBox للتحقق منها",
-            Filter = "SoftBox Backup (*.zip)|*.zip|All files (*.*)|*.*",
+            Filter = "SoftBox Backup (*.zip;*.sbx)|*.zip;*.sbx|All files (*.*)|*.*",
             CheckFileExists = true
         };
         if (dialog.ShowDialog(this) != true)
             return;
 
-        await RunOperationAsync("جارٍ فحص Manifest ومطابقة بصمات SHA-256 لكل ملف...", async token =>
+        var encrypted = Path.GetExtension(dialog.FileName).Equals(".sbx", StringComparison.OrdinalIgnoreCase);
+        if (encrypted)
         {
-            var result = await _service.VerifyArchiveAsync(dialog.FileName, token);
+            try { EncryptedBackupService.ValidatePassword(_password.Password); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "أدخل كلمة مرور SBX في الحقل المخصص أولًا. " + ex.Message,
+                    "التحقق من النسخة المشفرة", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+        }
+
+        await RunOperationAsync("جارٍ مصادقة النسخة وفحص Manifest وبصمات الملفات...", async token =>
+        {
+            var result = encrypted
+                ? await _service.VerifyEncryptedBackupAsync(dialog.FileName, _password.Password, token)
+                : await _service.VerifyArchiveAsync(dialog.FileName, token);
             var summary = new StringBuilder();
             summary.AppendLine("BACKUP VERIFICATION: " + (result.IsValid ? "VALID" : "FAILED"));
+            summary.AppendLine("CONTAINER: " + (encrypted ? "Encrypted SBX" : "ZIP"));
             summary.AppendLine("VERIFIED FILES: " + result.VerifiedFiles);
             summary.AppendLine("VERIFIED BYTES: " + result.VerifiedBytes);
             summary.AppendLine();
@@ -263,19 +300,23 @@ public sealed class AndroidBackupWindow : Window
             _output.Text = summary.ToString();
             if (!result.IsValid)
                 throw new InvalidDataException($"النسخة غير صالحة: {result.Errors.Count} مشكلة.");
-            return $"نجح التحقق من {result.VerifiedFiles:N0} ملف بمطابقة SHA-256.";
+            return encrypted
+                ? $"نجحت مصادقة SBX والتحقق من {result.VerifiedFiles:N0} ملف."
+                : $"نجح التحقق من {result.VerifiedFiles:N0} ملف بمطابقة SHA-256.";
         });
     }
 
     private void BrowseArchive_Click(object sender, RoutedEventArgs e)
     {
+        var encrypted = _encryptBackup.IsChecked == true;
+        var extension = encrypted ? ".sbx" : ".zip";
         var dialog = new SaveFileDialog
         {
             Title = "حفظ النسخة الاحتياطية",
-            Filter = "SoftBox Backup (*.zip)|*.zip",
-            FileName = $"SoftBox-Android-Backup-{DateTime.Now:yyyyMMdd-HHmmss}.zip",
+            Filter = encrypted ? "Encrypted SoftBox Backup (*.sbx)|*.sbx" : "SoftBox Backup (*.zip)|*.zip",
+            FileName = $"SoftBox-Android-Backup-{DateTime.Now:yyyyMMdd-HHmmss}{extension}",
             AddExtension = true,
-            DefaultExt = ".zip"
+            DefaultExt = extension
         };
         if (dialog.ShowDialog(this) == true)
             _archivePath.Text = dialog.FileName;
@@ -316,7 +357,21 @@ public sealed class AndroidBackupWindow : Window
         _progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         _backupButton.IsEnabled = !busy;
         _verifyButton.IsEnabled = !busy;
+        _encryptBackup.IsEnabled = !busy;
+        _password.IsEnabled = !busy;
         _cancelButton.IsEnabled = busy;
+    }
+
+    private void UpdateEncryptionVisibility()
+    {
+        var visible = _encryptBackup.IsChecked == true;
+        _passwordLabel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        _password.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        var extension = visible ? ".sbx" : ".zip";
+        if (!string.IsNullOrWhiteSpace(_archivePath.Text) &&
+            (Path.GetExtension(_archivePath.Text).Equals(".zip", StringComparison.OrdinalIgnoreCase) ||
+             Path.GetExtension(_archivePath.Text).Equals(".sbx", StringComparison.OrdinalIgnoreCase)))
+            _archivePath.Text = Path.ChangeExtension(_archivePath.Text, extension);
     }
 
     private static void AddLabel(Grid grid, string text, int row)
