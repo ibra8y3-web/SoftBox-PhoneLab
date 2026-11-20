@@ -143,3 +143,9 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Archive paths are validated against traversal, absolute paths, Windows-incompatible names and reserved device names before local staging. Staging files are removed after transfer.
 - Per-file transfer failures are reported; a connection interruption may leave partial files in the new restore directory. No destructive rollback is attempted.
 - Added unit tests for safe/unsafe restore paths. Real-phone restore and OEM storage permissions still require hardware validation.
+## Phone Link Studio — screen recording
+
+- Added a user-driven recording window for the selected ADB-authorized Android device.
+- Reuses the existing shared ScreenMirrorService and verified scrcpy binary; recording uses the scrcpy `--record` argument and supports MP4/MKV output chosen by the user.
+- Stop sends WM_CLOSE to the scrcpy window, waits for process exit and confirms that the output file exists and has non-zero length. This does not prove every codec/audio combination on every handset; physical device validation remains pending.
+- The recording is the Android device stream, not a capture of the Windows desktop. Ending the recording also ends the current scrcpy mirror session.
