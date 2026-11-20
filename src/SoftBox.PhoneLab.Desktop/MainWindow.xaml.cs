@@ -755,6 +755,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenNetworkDiagnostics":
                 new NetworkDiagnosticsWindow { Owner = this }.Show();
                 break;
+            case "OpenAndroidNetworkDiagnostics":
+            {
+                if (SelectedDevice is not { IsAuthorized: true } networkDevice)
+                {
+                    MessageBox.Show(this, "اختر جهاز Android متصلًا ومصرحًا به عبر ADB أولًا.",
+                        "تشخيص شبكة Android", MessageBoxButton.OK, MessageBoxImage.Information);
+                    break;
+                }
+
+                new AndroidNetworkDiagnosticsWindow(
+                    _adb,
+                    networkDevice.Serial,
+                    networkDevice.Model ?? networkDevice.DisplayName)
+                {
+                    Owner = this
+                }.Show();
+                break;
+            }
             case "OpenWirelessAdbPairing":
                 new WirelessAdbPairingWindow(_adb) { Owner = this }.Show();
                 break;
