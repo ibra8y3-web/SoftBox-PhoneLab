@@ -743,7 +743,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var authorized = Devices.Where(device => device.IsAuthorized)
             .Select(device => device.Serial).ToArray();
-        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized) { Owner = this }.Show();
+        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency) { Owner = this }.Show();
     }
 
     private void OpenAndroidWorkflowWindow()
