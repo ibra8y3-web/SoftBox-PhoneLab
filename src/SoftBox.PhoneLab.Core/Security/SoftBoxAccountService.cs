@@ -468,7 +468,7 @@ public sealed class SoftBoxAccountService
         }
     }
 
-    private static StoredSoftBoxUserAccount CreateAccount(string userName, string displayName, SoftBoxUserRole role, string password)
+    private StoredSoftBoxUserAccount CreateAccount(string userName, string displayName, SoftBoxUserRole role, string password)
     {
         var account = new StoredSoftBoxUserAccount
         {
