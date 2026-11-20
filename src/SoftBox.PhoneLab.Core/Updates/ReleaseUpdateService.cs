@@ -42,7 +42,7 @@ public sealed class ReleaseUpdateService
     public const string ReleasesApiUrl = "https://api.github.com/repos/ibra8y3-web/SoftBox-PhoneLab/releases?per_page=30";
     private const int MaximumResponseBytes = 2 * 1024 * 1024;
     private static readonly Regex SemanticVersionPattern = new(
-        @"^[vV]?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$",
+        @"^[vV]?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly HttpClient _http;
 
