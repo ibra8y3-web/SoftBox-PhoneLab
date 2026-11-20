@@ -59,3 +59,7 @@ Future moves should occur only when a specific existing tool has a proven owners
 
 - Plugin Manifest validation and ZIP package safety checks are implemented in the shared Core layer; the Plugin Store UI calls the same inspector.
 - No plugin DLL is loaded by the inspector. Signature trust, install, update, uninstall and runtime execution remain separate planned capabilities.
+## Backup restore path
+
+- Restore is an additive operation on the existing AndroidBackupService and AndroidDeviceToolsService. It reuses the central ADB client, the existing archive verifier and SBX authentication service.
+- Restore always generates a separate destination folder and pushes only verified files; it does not call delete, overwrite, format or private-app-data APIs.
