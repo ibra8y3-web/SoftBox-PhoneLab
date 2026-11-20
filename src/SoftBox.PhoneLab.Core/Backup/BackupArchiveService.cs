@@ -64,32 +64,6 @@ public sealed class BackupArchiveService
 
         var records = new List<BackupFileEntry>(files.Count);
         long totalBytes = 0;
-        foreach (var file in files)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var info = new FileInfo(file);
-            totalBytes = checked(totalBytes + info.Length);
-            if (totalBytes > MaximumTotalBytes)
-                throw new InvalidDataException("الحجم الإجمالي يتجاوز الحد الآمن البالغ 20 GiB.");
-
-            await using var input = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read,
-                128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-            var hash = Convert.ToHexString(await SHA256.HashDataAsync(input, cancellationToken)).ToLowerInvariant();
-            var relative = Path.GetRelativePath(sourceRoot, file).Replace(Path.DirectorySeparatorChar, '/');
-            ValidateArchivePath(relative);
-            records.Add(new BackupFileEntry(relative, info.Length, hash));
-        }
-
-        var manifest = new BackupArchiveManifest(
-            "SoftBox",
-            1,
-            DateTimeOffset.UtcNow,
-            sourceDevice,
-            sourcePath,
-            records.Count,
-            totalBytes,
-            records,
-            "This archive is not encrypted. It contains only files accessible through the selected source path; Android-private app/system data is not included.");
 
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -99,17 +73,46 @@ public sealed class BackupArchiveService
                 FileShare.None, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan))
             using (var archive = new ZipArchive(fileStream, ZipArchiveMode.Create, leaveOpen: true))
             {
-                foreach (var record in records)
+                foreach (var file in files)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var sourceFile = Path.Combine(sourceRoot,
-                        record.Path.Replace('/', Path.DirectorySeparatorChar));
-                    var entry = archive.CreateEntry(record.Path, CompressionLevel.Optimal);
-                    await using var input = new FileStream(sourceFile, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    var relative = Path.GetRelativePath(sourceRoot, file).Replace(Path.DirectorySeparatorChar, '/');
+                    ValidateArchivePath(relative);
+                    var entry = archive.CreateEntry(relative, CompressionLevel.Optimal);
+                    await using var input = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read,
                         128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
                     await using var output = entry.Open();
-                    await input.CopyToAsync(output, 128 * 1024, cancellationToken);
+                    using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                    var buffer = new byte[128 * 1024];
+                    long fileBytes = 0;
+                    while (true)
+                    {
+                        var read = await input.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+                        if (read == 0)
+                            break;
+                        fileBytes = checked(fileBytes + read);
+                        totalBytes = checked(totalBytes + read);
+                        if (totalBytes > MaximumTotalBytes)
+                            throw new InvalidDataException("الحجم الإجمالي يتجاوز الحد الآمن البالغ 20 GiB.");
+                        hash.AppendData(buffer, 0, read);
+                        await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    }
+                    records.Add(new BackupFileEntry(
+                        relative,
+                        fileBytes,
+                        Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant()));
                 }
+
+                var manifest = new BackupArchiveManifest(
+                    "SoftBox",
+                    1,
+                    DateTimeOffset.UtcNow,
+                    sourceDevice,
+                    sourcePath,
+                    records.Count,
+                    totalBytes,
+                    records,
+                    "This archive is not encrypted. It contains only files accessible through the selected source path; Android-private app/system data is not included.");
 
                 var manifestEntry = archive.CreateEntry(ManifestEntryName, CompressionLevel.Optimal);
                 await using var manifestStream = manifestEntry.Open();
@@ -117,7 +120,10 @@ public sealed class BackupArchiveService
             }
 
             File.Move(temporary, target, overwrite: true);
-            return manifest;
+            return new BackupArchiveManifest(
+                "SoftBox", 1, DateTimeOffset.UtcNow, sourceDevice, sourcePath,
+                records.Count, totalBytes, records,
+                "This archive is not encrypted. It contains only files accessible through the selected source path; Android-private app/system data is not included.");
         }
         catch
         {
