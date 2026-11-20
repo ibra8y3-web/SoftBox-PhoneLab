@@ -19,6 +19,7 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly string _serial;
     private readonly IReadOnlyList<string> _authorizedSerials;
     private readonly int _maximumBatchConcurrency;
+    private readonly int _selectedTabIndex;
     private readonly TextBox _remoteDirectory = new();
     private readonly TextBox _remoteFile = new();
     private readonly TextBox _folderName = new();
@@ -59,6 +60,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         if (maximumBatchConcurrency is < 1 or > 8)
             throw new ArgumentOutOfRangeException(nameof(maximumBatchConcurrency));
         _maximumBatchConcurrency = maximumBatchConcurrency;
+        _selectedTabIndex = selectedTabIndex;
         _authorizedSerials = authorizedSerials.Where(AdbClient.IsSafeSerial)
             .Distinct(StringComparer.Ordinal).ToArray();
         if (!_authorizedSerials.Contains(serial, StringComparer.Ordinal))
@@ -148,7 +150,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         tabs.Items.Add(BuildPackageTab());
         tabs.Items.Add(BuildCommandTab());
         tabs.Items.Add(BuildBatchTab());
-        tabs.SelectedIndex = Math.Clamp(selectedTabIndex, 0, tabs.Items.Count - 1);
+        tabs.SelectedIndex = Math.Clamp(_selectedTabIndex, 0, tabs.Items.Count - 1);
         root.Children.Add(tabs);
         return root;
     }
