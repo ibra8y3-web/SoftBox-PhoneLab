@@ -201,6 +201,9 @@ public sealed class WorkshopStore
     public async Task AdjustStockAsync(string sku, int delta, string reason, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(sku) || delta == 0) throw new ArgumentException("حدد كود الصنف وكمية تغيير غير صفرية.");
+        reason = (reason ?? "").Trim();
+        if (reason.Length is < 2 or > 300 || reason.Any(char.IsControl))
+            throw new ArgumentException("سبب حركة المخزون مطلوب وبحد أقصى 300 حرف.");
         await _gate.WaitAsync(cancellationToken);
         try
         {
@@ -366,6 +369,9 @@ public sealed class WorkshopStore
             $"Results after repair: {order.ResultsAfterRepair}",
             $"Estimated cost {currency}: {order.EstimatedCostEgp:0.00}",
             $"Final cost {currency}: {order.FinalCostEgp:0.00}",
+            $"Parts cost {currency}: {order.PartsCostEgp:0.00}",
+            "Parts used:",
+            .. (order.PartsUsed ?? []).Select(part => $"- {part.Sku} | {part.PartName} | Qty: {part.Quantity} | Unit: {part.UnitCostEgp:0.00} | Total: {part.TotalCostEgp:0.00} | Technician: {part.TechnicianName}"),
             $"Warranty months: {order.WarrantyMonths}",
             $"Warranty ends UTC: {order.WarrantyEndsAtUtc:O}",
             "",
@@ -450,6 +456,8 @@ public sealed class WorkshopStore
         foreach (var order in data.RepairOrders)
         {
             order.Timeline ??= [];
+            order.PartsUsed ??= [];
+            order.PartsCostEgp = order.PartsUsed.Sum(part => part.TotalCostEgp);
             if (order.WarrantyMonths is < 0 or > 120) order.WarrantyMonths = data.Settings.DefaultWarrantyMonths;
             if (order.DeliveredAtUtc is not null && order.WarrantyEndsAtUtc is null)
                 order.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(order.DeliveredAtUtc, order.WarrantyMonths);
