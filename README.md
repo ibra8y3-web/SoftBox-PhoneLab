@@ -16,7 +16,7 @@ The curated catalog is a starter set. The additional community model-code databa
 
 ### Wireless ADB pairing
 - Device Center includes a dedicated pairing-code workflow using the already bundled Android Platform-Tools binary.
-- Enter the IP address, pairing port and temporary code from Android's **Pair device with pairing code** dialog, plus the separate connection port from the main **Wireless debugging** screen.
+- Enter the pairing IP/port and temporary code from Android's **Pair device with pairing code** dialog, plus the connection IP/port from the main **Wireless debugging** screen. SoftBox accepts separate addresses for both endpoints.
 - SoftBox runs `adb pair` then `adb connect`, clears the code field, bounds each operation and supports cancellation. The code is not stored in SoftBox preferences, logs or reports.
 - Requires Android 11+ on phones and the phone/computer on the same Wi-Fi network. Hardware success depends on the phone, current network and ADB Platform-Tools; no physical phone was used for this code change.
 - See [Wireless ADB setup and limitations](docs/WIRELESS-ADB.md).
