@@ -14,6 +14,14 @@ PhoneLab discovers authorized Android phones over ADB, reads available device id
 
 The curated catalog is a starter set. The additional community model-code database greatly broadens Android model-name matching, but it is not guaranteed to contain every regional variant or every phone ever sold. Community-only matches are shown as likely, not confirmed.
 
+### Wireless ADB pairing
+- Device Center includes a dedicated pairing-code workflow using the already bundled Android Platform-Tools binary.
+- Enter the IP address, pairing port and temporary code from Android's **Pair device with pairing code** dialog, plus the separate connection port from the main **Wireless debugging** screen.
+- SoftBox runs `adb pair` then `adb connect`, clears the code field, bounds each operation and supports cancellation. The code is not stored in SoftBox preferences, logs or reports.
+- Requires Android 11+ on phones and the phone/computer on the same Wi-Fi network. Hardware success depends on the phone, current network and ADB Platform-Tools; no physical phone was used for this code change.
+- See [Wireless ADB setup and limitations](docs/WIRELESS-ADB.md).
+
+
 ### 3D component workspace
 - Interactive exploded smartphone schematic with component selection and test-state colors.
 - Imports model-specific board-map JSON files only when they identify an exact model/codename and include HTTPS source, reviewer and verification timestamp.
