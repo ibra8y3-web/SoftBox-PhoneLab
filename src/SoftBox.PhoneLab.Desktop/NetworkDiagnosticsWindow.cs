@@ -232,7 +232,7 @@ public sealed class NetworkDiagnosticsWindow : Window
             text.AppendLine();
             text.AppendLine("Ping target: " + result.PingAddress);
             text.AppendLine("ICMP status: " + result.PingStatus);
-            text.AppendLine("Round-trip: " + (result.RoundtripMilliseconds?.ToString() + " ms" ?? "غير متاح"));
+            text.AppendLine("Round-trip: " + (result.RoundtripMilliseconds is long roundtrip ? $"{roundtrip} ms" : "غير متاح"));
             text.AppendLine("TTL: " + (result.TimeToLive?.ToString() ?? "غير متاح"));
             _results.Text = text.ToString();
             _status.Text = "انتهى الاختبار. نجاح DNS مستقل عن استجابة ICMP.";
