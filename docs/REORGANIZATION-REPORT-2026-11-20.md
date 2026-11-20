@@ -21,7 +21,7 @@ No pre-existing tool was moved in this pass. The repository already had a 36-sec
 
 | Section | New item | Navigation link | Notes |
 |---|---|---|---|
-| 05 — APK Lab | Local APK inspector | `OpenApkLab` | Reads APK metadata and archive entries; signature discovery only, not cryptographic verification |
+| 05 — APK Lab | Local APK inspector and two-file version comparison | `OpenApkLab` | Reads APK metadata, compares version fields/permissions/archive paths; signature discovery only, not cryptographic verification |
 | 16 — Network Diagnostics | Local Windows network diagnostics | `OpenNetworkDiagnostics` | Reads local adapters and makes only a user-requested DNS/one-host ICMP probe; Android-private Wi-Fi is not inferred |
 
 ## Files changed for navigation and ownership
