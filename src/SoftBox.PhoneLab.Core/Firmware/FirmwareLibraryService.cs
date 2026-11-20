@@ -155,7 +155,16 @@ public sealed class FirmwareLibraryService
                 notes);
 
             _items.Add(item);
-            await SaveLockedAsync(cancellationToken);
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                _items.Remove(item);
+                try { File.Delete(destination); } catch { }
+                throw;
+            }
             return item;
         }
         finally { _gate.Release(); }
@@ -236,14 +245,22 @@ public sealed class FirmwareLibraryService
     private async Task SaveLockedAsync(CancellationToken cancellationToken)
     {
         var document = new FirmwareLibraryDocument(SchemaVersion, DateTimeOffset.UtcNow, _items!);
-        var temporary = _indexPath + ".tmp";
-        await using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None,
-            32 * 1024, FileOptions.Asynchronous))
+        var temporary = _indexPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken);
-            await stream.FlushAsync(cancellationToken);
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                32 * 1024, FileOptions.Asynchronous))
+            {
+                await JsonSerializer.SerializeAsync(stream, document, JsonOptions, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+            }
+            File.Move(temporary, _indexPath, overwrite: true);
         }
-        File.Move(temporary, _indexPath, overwrite: true);
+        catch
+        {
+            try { File.Delete(temporary); } catch { }
+            throw;
+        }
     }
 
     private string ResolveItemPath(FirmwareLibraryItem item)
