@@ -1,10 +1,11 @@
 using System.Net;
-using SoftBox.PhoneLab.Desktop.Services;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 public sealed record WirelessAdbPairingResult(
     string Host,
+    string PairingHost,
+    string ConnectionHost,
     string PairingEndpoint,
     string ConnectEndpoint,
     string PairOutput,
@@ -12,7 +13,7 @@ public sealed record WirelessAdbPairingResult(
 
 /// <summary>
 /// Uses Android Platform-Tools' authenticated wireless debugging pairing protocol.
-/// Pairing codes are validated and passed only to the adb process; they are never persisted.
+/// Pairing codes are passed only to the ADB process and are never persisted by SoftBox.
 /// </summary>
 public sealed class WirelessAdbPairingService(IAdbCommandRunner adb)
 {
@@ -32,18 +33,30 @@ public sealed class WirelessAdbPairingService(IAdbCommandRunner adb)
     public static bool IsValidPairingCode(string? pairingCode)
         => pairingCode is { Length: 6 } && pairingCode.All(char.IsAsciiDigit);
 
-    public async Task<WirelessAdbPairingResult> PairAndConnectAsync(
+    /// <summary>Backward-compatible overload for phones exposing both endpoints on the same IP.</summary>
+    public Task<WirelessAdbPairingResult> PairAndConnectAsync(
         string host,
         int pairingPort,
         string pairingCode,
         int connectionPort,
         CancellationToken cancellationToken = default)
+        => PairAndConnectAsync(host, pairingPort, pairingCode, host, connectionPort, cancellationToken);
+
+    public async Task<WirelessAdbPairingResult> PairAndConnectAsync(
+        string pairingHost,
+        int pairingPort,
+        string pairingCode,
+        string connectionHost,
+        int connectionPort,
+        CancellationToken cancellationToken = default)
     {
         if (!IsValidPairingCode(pairingCode))
-            throw new ArgumentException("رمز الاقتران يجب أن يتكون من 6 أرقام كما يظهر على الهاتف.", nameof(pairingCode));
+            throw new ArgumentException("رمز الاقتران يجب أن يتكون من 6 أرقام ASCII كما يظهر على الهاتف.", nameof(pairingCode));
 
-        var pairingEndpoint = FormatEndpoint(host, pairingPort);
-        var connectEndpoint = FormatEndpoint(host, connectionPort);
+        var pairingEndpoint = FormatEndpoint(pairingHost, pairingPort);
+        var connectEndpoint = FormatEndpoint(connectionHost, connectionPort);
+        var normalizedPairingHost = IPAddress.Parse(pairingHost.Trim()).ToString();
+        var normalizedConnectionHost = IPAddress.Parse(connectionHost.Trim()).ToString();
 
         var pairOutput = await adb.RunAsync(
             ["pair", pairingEndpoint, pairingCode],
@@ -68,7 +81,9 @@ public sealed class WirelessAdbPairingService(IAdbCommandRunner adb)
                 "نجح الاقتران لكن لم يؤكد ADB اتصال الجهاز على منفذ Wireless debugging. مخرجات ADB: " + connectOutput);
 
         return new WirelessAdbPairingResult(
-            IPAddress.Parse(host.Trim()).ToString(),
+            normalizedConnectionHost,
+            normalizedPairingHost,
+            normalizedConnectionHost,
             pairingEndpoint,
             connectEndpoint,
             pairOutput.Trim(),
