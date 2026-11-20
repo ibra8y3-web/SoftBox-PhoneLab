@@ -130,12 +130,20 @@ public sealed class WorkshopStore
             var current = _cache!.RepairOrders.FirstOrDefault(x => x.Id == order.Id)
                 ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
             var previousStatus = current.Status;
+            var nextEstimated = Math.Max(0, order.EstimatedCostEgp);
+            var nextFinal = Math.Max(0, order.FinalCostEgp);
+            var nextPaymentTarget = nextFinal > 0 ? nextFinal : nextEstimated;
+            var alreadyPaid = (current.Payments ?? []).Sum(payment => payment.AmountEgp);
+            if (alreadyPaid > nextPaymentTarget)
+                throw new InvalidOperationException("لا يمكن خفض إجمالي أمر الصيانة إلى أقل من الدفعات المسجلة. سجّل تسوية مالية منفصلة قبل تعديل القيمة.");
+            if (order.Status == "ملغي" && alreadyPaid > 0)
+                throw new InvalidOperationException("لا يمكن إلغاء أمر يحتوي على دفعات مسجلة قبل تنفيذ تسوية أو رد دفعة موثق.");
             current.Status = order.Status;
             current.FindingsBeforeRepair = order.FindingsBeforeRepair;
             current.WorkPerformed = order.WorkPerformed;
             current.ResultsAfterRepair = order.ResultsAfterRepair;
-            current.EstimatedCostEgp = Math.Max(0, order.EstimatedCostEgp);
-            current.FinalCostEgp = Math.Max(0, order.FinalCostEgp);
+            current.EstimatedCostEgp = nextEstimated;
+            current.FinalCostEgp = nextFinal;
             current.SerialOrImeiNote = order.SerialOrImeiNote;
             current.TechnicianName = order.TechnicianName;
             if (order.WarrantyMonths is < 0 or > 120) throw new ArgumentOutOfRangeException(nameof(order));
@@ -152,6 +160,148 @@ public sealed class WorkshopStore
             AddEvent("أمر صيانة", current.TicketNumber,
                 previousStatus == current.Status ? "تحديث تفاصيل ونتيجة الإصلاح." : $"تغيير الحالة من «{previousStatus}» إلى «{current.Status}».");
             await SaveLockedAsync(cancellationToken);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<CustomerQuoteDecisionRecord> RecordQuoteDecisionAsync(
+        Guid orderId,
+        CustomerQuoteDecision decision,
+        string contactMethod,
+        string recordedBy,
+        string? note = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(decision))
+            throw new ArgumentOutOfRangeException(nameof(decision), "قرار العميل غير صالح.");
+
+        contactMethod = (contactMethod ?? "").Trim();
+        recordedBy = (recordedBy ?? "").Trim();
+        note = (note ?? "").Trim();
+        if (contactMethod.Length is < 2 or > 80 || contactMethod.Any(char.IsControl))
+            throw new ArgumentException("طريقة توثيق تواصل العميل مطلوبة وبحد أقصى 80 حرفًا.", nameof(contactMethod));
+        if (recordedBy.Length is < 2 or > 120 || recordedBy.Any(char.IsControl))
+            throw new ArgumentException("اسم الفني الذي يسجل القرار مطلوب وبحد أقصى 120 حرفًا.", nameof(recordedBy));
+        if (note.Length > 1000 || note.Any(char.IsControl))
+            throw new ArgumentException("ملاحظة القرار غير صالحة أو أطول من 1000 حرف.", nameof(note));
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureLoadedLockedAsync(cancellationToken);
+            var order = _cache!.RepairOrders.FirstOrDefault(item => item.Id == orderId)
+                ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
+            order.QuoteDecisionHistory ??= [];
+            order.Timeline ??= [];
+
+            var quotedAmount = order.CurrentQuoteAmountEgp;
+            if (quotedAmount <= 0 || quotedAmount > 100_000_000m)
+                throw new InvalidOperationException("يجب تسجيل قيمة عرض سعر موجبة وصالحة قبل توثيق قرار العميل.");
+
+            var alreadyPaid = (order.Payments ?? []).Sum(payment => payment.AmountEgp);
+            if (decision == CustomerQuoteDecision.Rejected && alreadyPaid > 0)
+                throw new InvalidOperationException("لا يمكن تسجيل رفض العرض بعد استلام دفعات. سجّل تسوية أو رد دفعة موثق أولًا.");
+            if (decision == CustomerQuoteDecision.Approved && quotedAmount < alreadyPaid)
+                throw new InvalidOperationException("قيمة العرض الجديد أقل من الدفعات المسجلة بالفعل.");
+
+            var decisionRecord = new CustomerQuoteDecisionRecord
+            {
+                Decision = decision,
+                QuotedAmountEgp = quotedAmount,
+                ContactMethod = contactMethod,
+                Note = note,
+                RecordedBy = recordedBy,
+                RecordedAtUtc = DateTimeOffset.UtcNow
+            };
+
+            order.QuoteDecisionHistory.Add(decisionRecord);
+            order.UpdatedAtUtc = decisionRecord.RecordedAtUtc;
+            order.Timeline.Add(new RepairOrderNote
+            {
+                AtUtc = decisionRecord.RecordedAtUtc,
+                TechnicianName = recordedBy,
+                Note = decision == CustomerQuoteDecision.Approved
+                    ? $"تم تسجيل موافقة العميل على العرض بقيمة {decisionRecord.QuotedAmountEgp:0.00} عبر {contactMethod}."
+                    : $"تم تسجيل رفض العميل للعرض بقيمة {decisionRecord.QuotedAmountEgp:0.00} عبر {contactMethod}."
+            });
+            AddEvent("قرار عرض سعر", order.TicketNumber,
+                $"{decision} | {contactMethod} | بواسطة {recordedBy}");
+            await SaveLockedAsync(cancellationToken);
+            return decisionRecord;
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<RepairPaymentRecord> RecordPaymentAsync(
+        Guid orderId,
+        decimal amountEgp,
+        string method,
+        string recordedBy,
+        string? reference = null,
+        string? note = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (amountEgp <= 0 || amountEgp > 100_000_000m || decimal.Round(amountEgp, 2) != amountEgp)
+            throw new ArgumentOutOfRangeException(nameof(amountEgp), "قيمة الدفعة يجب أن تكون موجبة وبحد أقصى منزلتين عشريتين.");
+        method = (method ?? "").Trim();
+        recordedBy = (recordedBy ?? "").Trim();
+        reference = (reference ?? "").Trim();
+        note = (note ?? "").Trim();
+        if (method.Length is < 2 or > 80 || method.Any(char.IsControl))
+            throw new ArgumentException("طريقة الدفع مطلوبة وبحد أقصى 80 حرفًا.", nameof(method));
+        if (recordedBy.Length is < 2 or > 120 || recordedBy.Any(char.IsControl))
+            throw new ArgumentException("اسم الفني الذي يسجل الدفعة مطلوب وبحد أقصى 120 حرفًا.", nameof(recordedBy));
+        if (reference.Length > 100 || reference.Any(char.IsControl))
+            throw new ArgumentException("مرجع الدفع غير صالح أو أطول من 100 حرف.", nameof(reference));
+        if (note.Length > 500 || note.Any(char.IsControl))
+            throw new ArgumentException("ملاحظة الدفع غير صالحة أو أطول من 500 حرف.", nameof(note));
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureLoadedLockedAsync(cancellationToken);
+            var order = _cache!.RepairOrders.FirstOrDefault(item => item.Id == orderId)
+                ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
+            if (order.Status.Equals("ملغي", StringComparison.OrdinalIgnoreCase) ||
+                order.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("لا يمكن تسجيل دفعة على أمر صيانة ملغي.");
+            if (!order.HasCurrentQuoteApproval)
+                throw new InvalidOperationException("يجب تسجيل موافقة العميل على السعر الحالي قبل تسجيل دفعة.");
+
+            var paymentTarget = order.PaymentTargetEgp;
+            var alreadyPaid = (order.Payments ?? []).Sum(payment => payment.AmountEgp);
+            var remaining = paymentTarget - alreadyPaid;
+            if (paymentTarget <= 0)
+                throw new InvalidOperationException("سجّل قيمة عرض السعر قبل تسجيل الدفعات.");
+            if (remaining <= 0)
+                throw new InvalidOperationException("تم سداد القيمة المعتمدة بالكامل بالفعل.");
+            if (amountEgp > remaining)
+                throw new InvalidOperationException($"قيمة الدفعة تتجاوز الرصيد المتبقي ({remaining:0.00}).");
+
+            order.Payments ??= [];
+            order.Timeline ??= [];
+            var payment = new RepairPaymentRecord
+            {
+                AmountEgp = amountEgp,
+                Method = method,
+                Reference = reference,
+                Note = note,
+                RecordedBy = recordedBy,
+                ReceivedAtUtc = DateTimeOffset.UtcNow,
+                BalanceAfterPaymentEgp = remaining - amountEgp
+            };
+            order.Payments.Add(payment);
+            order.UpdatedAtUtc = payment.ReceivedAtUtc;
+            order.Timeline.Add(new RepairOrderNote
+            {
+                AtUtc = payment.ReceivedAtUtc,
+                TechnicianName = recordedBy,
+                Note = $"تم تسجيل دفعة بقيمة {amountEgp:0.00} عبر {method}. الرصيد بعد الدفعة: {payment.BalanceAfterPaymentEgp:0.00}."
+            });
+            AddEvent("دفعة أمر صيانة", order.TicketNumber,
+                $"{amountEgp:0.00} {method} | المتبقي {payment.BalanceAfterPaymentEgp:0.00} | بواسطة {recordedBy}");
+            await SaveLockedAsync(cancellationToken);
+            return payment;
         }
         finally { _gate.Release(); }
     }
@@ -543,7 +693,7 @@ public sealed class WorkshopStore
         }
 
         // Close the legacy database handle before replacing the file during schema migration (required on Windows).
-        var schemaNeedsUpgrade = _cache.SchemaVersion != 4;
+        var schemaNeedsUpgrade = _cache.SchemaVersion != 5;
         MigrateAndValidate(_cache);
         if (schemaNeedsUpgrade) await SaveLockedAsync(cancellationToken);
     }
@@ -571,7 +721,7 @@ public sealed class WorkshopStore
 
     private static void MigrateAndValidate(WorkshopData data)
     {
-        if (data.SchemaVersion is < 1 or > 4) throw new InvalidDataException($"Unsupported workshop database schema: {data.SchemaVersion}.");
+        if (data.SchemaVersion is < 1 or > 5) throw new InvalidDataException($"Unsupported workshop database schema: {data.SchemaVersion}.");
         data.Settings ??= new WorkshopSettings();
         data.Settings.CurrencyCode = WorkshopInternationalRules.NormalizeCurrencyCode(data.Settings.CurrencyCode);
         data.Settings.CultureName = WorkshopInternationalRules.NormalizeCultureName(data.Settings.CultureName);
@@ -580,12 +730,20 @@ public sealed class WorkshopStore
         {
             order.Timeline ??= [];
             order.PartsUsed ??= [];
+            order.QuoteDecisionHistory ??= [];
+            order.Payments ??= [];
+            if (order.QuoteDecisionHistory.Count > 10000 || order.Payments.Count > 100000)
+                throw new InvalidDataException("Repair order commercial history exceeds safe size limits.");
+            if (order.QuoteDecisionHistory.Any(decision => !Enum.IsDefined(decision.Decision) || decision.QuotedAmountEgp < 0 || decision.QuotedAmountEgp > 100_000_000m))
+                throw new InvalidDataException("Repair order contains an invalid quote decision.");
+            if (order.Payments.Any(payment => payment.AmountEgp <= 0 || payment.AmountEgp > 100_000_000m || decimal.Round(payment.AmountEgp, 2) != payment.AmountEgp))
+                throw new InvalidDataException("Repair order contains an invalid recorded payment amount.");
             order.PartsCostEgp = order.PartsUsed.Sum(part => part.TotalCostEgp);
             if (order.WarrantyMonths is < 0 or > 120) order.WarrantyMonths = data.Settings.DefaultWarrantyMonths;
             if (order.DeliveredAtUtc is not null && order.WarrantyEndsAtUtc is null)
                 order.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(order.DeliveredAtUtc, order.WarrantyMonths);
         }
-        if (data.SchemaVersion < 4) data.SchemaVersion = 4;
+        if (data.SchemaVersion < 5) data.SchemaVersion = 5;
         if (data.Customers.Count > 100000 || data.RepairOrders.Count > 100000 || data.Inventory.Count > 100000 || data.InventoryMovements.Count > 500000 || data.InventoryPurchaseReceipts.Count > 500000)
             throw new InvalidDataException("Workshop database exceeds safe size limits.");
     }

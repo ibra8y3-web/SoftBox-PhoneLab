@@ -22,7 +22,9 @@ public sealed class GlobalWorkshopWindow : Window
     private readonly DataGrid _orders = GridView();
     private readonly DataGrid _timeline = GridView();
     private readonly DataGrid _partsUsed = GridView();
+    private readonly DataGrid _payments = GridView();
     private readonly TextBlock _partsCost = new() { Foreground = Brush("#9FC7E8"), Margin = new Thickness(6, 4, 6, 4) };
+    private readonly TextBlock _financeSummary = new() { Foreground = Brush("#B7DDF7"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(5, 2, 5, 4) };
     private readonly TextBlock _analyticsSummary = new() { Foreground = Brush("#B7DDF7"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 10, 6, 10) };
     private readonly DataGrid _analyticsFaults = GridView();
     private readonly DataGrid _analyticsModels = GridView();
@@ -125,7 +127,7 @@ public sealed class GlobalWorkshopWindow : Window
         editor.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(.8, GridUnitType.Star) });
         editor.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         editor.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
-        editor.RowDefinitions.Add(new RowDefinition { Height = new GridLength(115) });
+        editor.RowDefinitions.Add(new RowDefinition { Height = new GridLength(155) });
         editor.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         AddEditorField(editor, "نتائج الفحص قبل الإصلاح", _before, 0);
         AddEditorField(editor, "الأعمال المنفذة", _work, 1);
@@ -135,6 +137,7 @@ public sealed class GlobalWorkshopWindow : Window
         side.Children.Add(Field("الفني المسؤول", _technician));
         side.Children.Add(Field("مدة الضمان بالشهور", _warrantyMonths));
         side.Children.Add(Field("التكلفة النهائية بعملة المركز", _finalCost));
+        side.Children.Add(_financeSummary);
         Grid.SetColumn(side, 3);
         Grid.SetRowSpan(side, 2);
         editor.Children.Add(side);
@@ -146,14 +149,34 @@ public sealed class GlobalWorkshopWindow : Window
         Grid.SetRow(_timeline, 1);
         editor.Children.Add(_timeline);
 
-        _partsUsed.Columns.Add(Column("كود الصنف", nameof(RepairOrderPartUsage.Sku), 1));
-        _partsUsed.Columns.Add(Column("القطعة", nameof(RepairOrderPartUsage.PartName), 1.7));
-        _partsUsed.Columns.Add(Column("الكمية", nameof(RepairOrderPartUsage.Quantity), .6));
-        _partsUsed.Columns.Add(Column("تكلفة الوحدة", nameof(RepairOrderPartUsage.UnitCostEgp), .8));
-        _partsUsed.Columns.Add(Column("الإجمالي", nameof(RepairOrderPartUsage.TotalCostEgp), .8));
-        Grid.SetRow(_partsUsed, 2);
-        Grid.SetColumnSpan(_partsUsed, 4);
-        editor.Children.Add(_partsUsed);
+        _partsUsed.Columns.Add(Column("كود الصنف", nameof(RepairOrderPartUsage.Sku), .9));
+        _partsUsed.Columns.Add(Column("القطعة", nameof(RepairOrderPartUsage.PartName), 1.4));
+        _partsUsed.Columns.Add(Column("الكمية", nameof(RepairOrderPartUsage.Quantity), .5));
+        _partsUsed.Columns.Add(Column("تكلفة الوحدة", nameof(RepairOrderPartUsage.UnitCostEgp), .7));
+        _partsUsed.Columns.Add(Column("الإجمالي", nameof(RepairOrderPartUsage.TotalCostEgp), .7));
+        _payments.Columns.Add(Column("تاريخ التسجيل", nameof(RepairPaymentRecord.ReceivedAtUtc), 1));
+        _payments.Columns.Add(Column("المبلغ", nameof(RepairPaymentRecord.AmountEgp), .6));
+        _payments.Columns.Add(Column("الطريقة", nameof(RepairPaymentRecord.Method), .7));
+        _payments.Columns.Add(Column("المرجع", nameof(RepairPaymentRecord.Reference), .8));
+        _payments.Columns.Add(Column("المتبقي بعد الدفعة", nameof(RepairPaymentRecord.BalanceAfterPaymentEgp), .8));
+        var financePanel = new Grid { Margin = new Thickness(0, 3, 0, 0) };
+        financePanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        financePanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        financePanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(22) });
+        financePanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        var partsLabel = new TextBlock { Text = "قطع الغيار المصروفة", Foreground = Brush("#7DD3FC"), FontWeight = FontWeights.SemiBold };
+        var paymentsLabel = new TextBlock { Text = "دفعات العميل المسجلة", Foreground = Brush("#7DD3FC"), FontWeight = FontWeights.SemiBold };
+        Grid.SetColumn(paymentsLabel, 1);
+        financePanel.Children.Add(partsLabel);
+        financePanel.Children.Add(paymentsLabel);
+        Grid.SetRow(_partsUsed, 1);
+        financePanel.Children.Add(_partsUsed);
+        Grid.SetRow(_payments, 1);
+        Grid.SetColumn(_payments, 1);
+        financePanel.Children.Add(_payments);
+        Grid.SetRow(financePanel, 2);
+        Grid.SetColumnSpan(financePanel, 4);
+        editor.Children.Add(financePanel);
 
         var actions = new WrapPanel();
         actions.Children.Add(Button("حفظ تغييرات العملية", async (_, _) => await SaveOrderAsync()));
@@ -163,6 +186,10 @@ public sealed class GlobalWorkshopWindow : Window
         actions.Children.Add(Button("إيصال استلام", async (_, _) => await ExportSelectedDocumentAsync(WorkshopDocumentKind.IntakeReceipt)));
         actions.Children.Add(Button("عرض سعر", async (_, _) => await ExportSelectedDocumentAsync(WorkshopDocumentKind.EstimateQuote)));
         actions.Children.Add(Button("فاتورة خدمة", async (_, _) => await ExportSelectedDocumentAsync(WorkshopDocumentKind.ServiceInvoice)));
+        actions.Children.Add(Button("موافقة العميل على العرض", async (_, _) => await RecordQuoteDecisionAsync(CustomerQuoteDecision.Approved)));
+        actions.Children.Add(Button("رفض العميل للعرض", async (_, _) => await RecordQuoteDecisionAsync(CustomerQuoteDecision.Rejected)));
+        actions.Children.Add(Button("تسجيل دفعة", async (_, _) => await RecordPaymentAsync()));
+        actions.Children.Add(Button("إيصال الدفعة المحددة", async (_, _) => await ExportSelectedPaymentReceiptAsync()));
         Grid.SetRow(_partsCost, 3);
         actions.Children.Add(_partsCost);
         Grid.SetRow(actions, 3);
@@ -296,7 +323,12 @@ public sealed class GlobalWorkshopWindow : Window
         _finalCost.Text = _selectedOrder.FinalCostEgp.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
         _timeline.ItemsSource = (_selectedOrder.Timeline ?? []).OrderByDescending(x => x.AtUtc).ToList();
         _partsUsed.ItemsSource = (_selectedOrder.PartsUsed ?? []).OrderByDescending(x => x.UsedAtUtc).ToList();
-        _partsCost.Text = $"تكلفة قطع الغيار المسجلة: {_selectedOrder.PartsCostEgp:0.00} {WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings.CurrencyCode)}";
+        _payments.ItemsSource = (_selectedOrder.Payments ?? []).OrderByDescending(x => x.ReceivedAtUtc).ToList();
+        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings.CurrencyCode);
+        _partsCost.Text = $"تكلفة قطع الغيار المسجلة: {_selectedOrder.PartsCostEgp:0.00} {currency}";
+        _financeSummary.Text =
+            $"موافقة العرض: {_selectedOrder.PaymentStatus}  |  قيمة العرض المعتمدة: {WorkshopInternationalRules.FormatMoney(_selectedOrder.PaymentTargetEgp, currency, _data.Settings.CultureName)}\n" +
+            $"المدفوع: {WorkshopInternationalRules.FormatMoney(_selectedOrder.TotalPaidEgp, currency, _data.Settings.CultureName)}  |  المتبقي: {WorkshopInternationalRules.FormatMoney(_selectedOrder.OutstandingBalanceEgp, currency, _data.Settings.CultureName)}";
     }
 
     private async Task OpenPartsUsageAsync()
@@ -361,6 +393,120 @@ public sealed class GlobalWorkshopWindow : Window
         catch (Exception ex) { SetResult("تعذرت إضافة الملاحظة: " + ex.Message); }
     }
 
+    private async Task RecordQuoteDecisionAsync(CustomerQuoteDecision decision)
+    {
+        if (_selectedOrder is null) { SetResult("اختر أمر صيانة أولًا."); return; }
+        var technician = (_technician.Text ?? "").Trim();
+        if (technician.Length < 2)
+        {
+            SetResult("اكتب اسم الفني المسؤول أولًا لتوثيق قرار العميل.");
+            return;
+        }
+
+        var contactMethod = TextEntry(this, "طريقة توثيق التواصل", "مثال: حضور العميل بالمركز / مكالمة هاتفية / رسالة موثقة");
+        if (contactMethod is null) return;
+        var note = TextEntry(this, "ملاحظة قرار العميل (اختياري)", "اكتب أي شروط أو ملاحظات ذكرها العميل...");
+        if (note is null) return;
+
+        var decisionLabel = decision == CustomerQuoteDecision.Approved ? "موافقة" : "رفض";
+        var amount = WorkshopInternationalRules.FormatMoney(
+            _selectedOrder.CurrentQuoteAmountEgp,
+            WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings.CurrencyCode),
+            _data.Settings.CultureName);
+        if (MessageBox.Show(
+            this,
+            $"سيتم تسجيل {decisionLabel} العميل على عرض السعر {amount} عبر: {contactMethod}. هذا سجل يدوي وليس توقيعًا إلكترونيًا. هل تؤكد؟",
+            "تأكيد قرار العميل",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+
+        var id = _selectedOrder.Id;
+        try
+        {
+            await _store.RecordQuoteDecisionAsync(id, decision, contactMethod, technician, note);
+            await RefreshAsync();
+            _orders.SelectedItem = _data.RepairOrders.FirstOrDefault(item => item.Id == id);
+            SetResult($"تم حفظ قرار العميل: {decisionLabel}. القرار محفوظ كسجل تاريخي ولا يمثل توقيعًا إلكترونيًا.");
+        }
+        catch (Exception ex) { SetResult("تعذر تسجيل قرار العميل: " + ex.Message); }
+    }
+
+    private async Task RecordPaymentAsync()
+    {
+        if (_selectedOrder is null) { SetResult("اختر أمر صيانة أولًا."); return; }
+        if (!_selectedOrder.HasCurrentQuoteApproval)
+        {
+            SetResult("لا يمكن تسجيل دفعة قبل اعتماد قيمة العرض الحالية من العميل.");
+            return;
+        }
+        var technician = (_technician.Text ?? "").Trim();
+        if (technician.Length < 2)
+        {
+            SetResult("اكتب اسم الفني المسؤول أولًا لتوثيق الدفعة.");
+            return;
+        }
+
+        var amountText = TextEntry(this, "قيمة الدفعة", "اكتب مبلغ الدفعة بالأرقام وبحد أقصى منزلتين عشريتين.");
+        if (amountText is null) return;
+        if (!decimal.TryParse(amountText, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.CurrentCulture, out var amount) &&
+            !decimal.TryParse(amountText, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out amount))
+        {
+            SetResult("قيمة الدفعة غير صالحة.");
+            return;
+        }
+        var method = TextEntry(this, "طريقة الدفع", "مثال: نقدًا / تحويل بنكي / محفظة إلكترونية");
+        if (method is null) return;
+        var reference = TextEntry(this, "مرجع الدفع (اختياري)", "رقم إيصال أو مرجع التحويل إن وجد...");
+        if (reference is null) return;
+        var note = TextEntry(this, "ملاحظة الدفعة (اختياري)", "ملاحظة داخلية عن الدفعة...");
+        if (note is null) return;
+
+        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings.CurrencyCode);
+        if (MessageBox.Show(
+            this,
+            $"سيتم تسجيل دفعة {WorkshopInternationalRules.FormatMoney(amount, currency, _data.Settings.CultureName)} بطريقة {method}. الرصيد الحالي {_selectedOrder.OutstandingBalanceEgp:0.00} {currency}. التسجيل يدوي ولا يتحقق من وصول الأموال لمزود الدفع. هل تؤكد؟",
+            "تأكيد تسجيل الدفعة",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+
+        var id = _selectedOrder.Id;
+        try
+        {
+            var payment = await _store.RecordPaymentAsync(id, amount, method, technician, reference, note);
+            await RefreshAsync();
+            _orders.SelectedItem = _data.RepairOrders.FirstOrDefault(item => item.Id == id);
+            SetResult($"تم تسجيل الدفعة. الرصيد بعد الدفعة: {payment.BalanceAfterPaymentEgp:0.00} {currency}. لم يتم التحقق خارجيًا من التحصيل.");
+        }
+        catch (Exception ex) { SetResult("تعذر تسجيل الدفعة: " + ex.Message); }
+    }
+
+    private async Task ExportSelectedPaymentReceiptAsync()
+    {
+        if (_selectedOrder is null) { SetResult("اختر أمر صيانة أولًا."); return; }
+        if (_payments.SelectedItem is not RepairPaymentRecord payment)
+        {
+            SetResult("حدد دفعة من سجل الدفعات أولًا.");
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Payment record receipt",
+            Filter = "HTML|*.html",
+            FileName = _selectedOrder.TicketNumber + "-PAY-" + payment.Id.ToString("N")[..8] + ".html"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            await WorkshopServiceDocumentExporter.ExportPaymentReceiptAsync(_data, _selectedOrder, payment, dialog.FileName);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dialog.FileName) { UseShellExecute = true });
+            SetResult("تم إنشاء إيصال سجل الدفعة وفتحه للطباعة. الإيصال لا يمثل تحققًا من مزود الدفع.");
+        }
+        catch (Exception ex) { SetResult("تعذر تصدير إيصال الدفعة: " + ex.Message); }
+    }
+
     private async Task SaveSettingsAsync()
     {
         try
@@ -413,6 +559,7 @@ public sealed class GlobalWorkshopWindow : Window
             $"إجمالي الأوامر: {report.TotalOrders}  |  مفتوح: {report.OpenOrders}  |  تم التسليم: {report.DeliveredOrders}  |  ملغي: {report.CancelledOrders}\n" +
             $"الإيراد المسجل للأوامر المسلمة: {WorkshopInternationalRules.FormatMoney(report.RecordedDeliveredRevenue, currency, settings.CultureName)}  |  تقديرات الأعمال المفتوحة: {WorkshopInternationalRules.FormatMoney(report.EstimatedOpenWorkValue, currency, settings.CultureName)}\n" +
             $"تكلفة قطع الغيار المسجلة: {WorkshopInternationalRules.FormatMoney(report.RecordedPartsCost, currency, settings.CultureName)}  |  قيمة المخزون بالتكلفة: {WorkshopInternationalRules.FormatMoney(report.InventoryValueAtCost, currency, settings.CultureName)}  |  مخزون منخفض: {report.LowStockItems}\n" +
+            $"الدفعات المسجلة يدويًا: {WorkshopInternationalRules.FormatMoney(report.TotalRecordedPayments, currency, settings.CultureName)}  |  أرصدة العروض المعتمدة المتبقية: {WorkshopInternationalRules.FormatMoney(report.ApprovedOutstandingBalance, currency, settings.CultureName)}\n" +
             $"متوسط المدة من الاستلام إلى التسليم: {averageDuration}";
 
         _analyticsFaults.ItemsSource = report.FrequentReportedFaults;
