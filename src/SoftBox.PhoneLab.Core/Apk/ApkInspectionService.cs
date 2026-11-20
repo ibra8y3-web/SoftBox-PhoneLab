@@ -265,7 +265,7 @@ public sealed class ApkInspectionService
     private static Dictionary<string, string?> GetAttributes(XElement element)
         => element.Attributes()
             .GroupBy(attribute => attribute.Name.LocalName, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Last().Value, StringComparer.Ordinal);
+            .ToDictionary(group => group.Key, group => (string?)group.Last().Value, StringComparer.Ordinal);
 
     private static ManifestInfo ParseBinaryManifest(byte[] bytes)
     {
@@ -277,7 +277,7 @@ public sealed class ApkInspectionService
             throw new InvalidDataException("حجم Android Binary XML غير صالح.");
 
         var documentLength = checked((int)declaredSize);
-        var offset = ReadUInt16(bytes, 2);
+        var offset = (int)ReadUInt16(bytes, 2);
         if (offset < 8 || offset > documentLength)
             throw new InvalidDataException("حجم ترويسة Android Binary XML غير صالح.");
 
