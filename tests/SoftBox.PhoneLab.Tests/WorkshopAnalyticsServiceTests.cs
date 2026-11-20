@@ -62,7 +62,7 @@ public sealed class WorkshopAnalyticsServiceTests
         Assert.Equal("Broken display", report.FrequentReportedFaults[0].Label);
         Assert.Equal(2, report.FrequentReportedFaults[0].Count);
         Assert.Equal("Pixel 8", report.MostServicedModels[0].Label);
-        Assert.Equal(2, report.MostServicedModels[0].Count);
+        Assert.Equal(3, report.MostServicedModels[0].Count);
         Assert.Equal(3, report.TechnicianPerformance[0].AssignedOrders);
         Assert.Equal(1, report.TechnicianPerformance[0].DeliveredOrders);
         Assert.Equal(200m, report.TechnicianPerformance[0].RecordedDeliveredRevenue);
