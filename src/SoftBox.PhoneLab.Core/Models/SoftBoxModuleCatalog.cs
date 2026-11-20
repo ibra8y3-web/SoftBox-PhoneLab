@@ -186,7 +186,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("host-network-interfaces", "قراءة واجهات Windows وعناوين IP والبوابات وDNS", "Windows network interfaces", "يقرأ بيانات واجهات الشبكة المحلية المتاحة من النظام دون إرسال طلبات خارجية.", ModuleImplementationStatus.Implemented),
                 new("host-network-probe", "حل DNS واختبار ICMP لهدف يختاره المستخدم", "User-selected DNS and ICMP probe", "يجري حل DNS ثم طلب Ping واحدًا لعنوان واحد؛ قد يحجب الجدار الناري ICMP ولا يعني فشل DNS.", ModuleImplementationStatus.Implemented, "OpenNetworkDiagnostics"),
-                new("phone-network", "قراءة معلومات الشبكة المسموح بها من الهاتف", "Android network observations", "قراءة حالة Wi-Fi وعناوين الشبكة من الهاتف لم تُنفذ بعد؛ لا تعرض SoftBox بيانات شبكة هاتف خاصة أو نتائج غير متاحة.", ModuleImplementationStatus.Planned)
+                new("phone-network", "قراءة واجهات ومسارات الشبكة من Android", "Android network interface and route observations", "يقرأ عناوين واجهات الشبكة ومسارات IP التي يعرضها Android عبر ADB للجهاز المصرح به؛ لا يدّعي قراءة كلمات مرور Wi-Fi أو بيانات خاصة، ولا يثبت اتصال الإنترنت.", ModuleImplementationStatus.Implemented)
             ]),
         new("smart-repair-ai", 17, "الذكاء والمعرفة", "مساعد الإصلاح الذكي", "Smart Repair AI",
             "يتضمن الآن محرك استدلال محليًا قائمًا على قواعد وأدلة فعلية؛ لا يدّعي أنه نموذج AI أو تشخيص مادي نهائي.",
