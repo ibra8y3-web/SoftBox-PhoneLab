@@ -32,7 +32,7 @@ public sealed class SupportBundleService
         @"(?im)\b(password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization)\b(\s*[:=]\s*)([^\s,;]+)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex AuthorizationHeader = new(
-        @"(?im)(\\b(?:authorization|proxy-authorization)\\b\\s*[:=]\\s*)(?:Bearer|Basic)\\s+[^\\r\\n,;]+",
+        @"(?im)(\b(?:authorization|proxy-authorization)\b\s*[:=]\s*)(?:Bearer|Basic)\s+[^\r\n,;]+",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex BearerSecret = new(
         @"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}",
