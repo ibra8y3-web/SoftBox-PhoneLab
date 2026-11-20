@@ -14,7 +14,7 @@ public sealed class DeviceRepairAdvisorTests
         var item = Assert.Single(report.Advice);
         Assert.Equal("adb-not-authorized", item.Id);
         Assert.Equal(AdviceSeverity.Review, item.Severity);
-        Assert.Contains("ليست عطلًا ماديًا", item.Limitation);
+        Assert.Contains("ليست دليلًا على عطل مادي", item.Limitation);
     }
 
     [Fact]
