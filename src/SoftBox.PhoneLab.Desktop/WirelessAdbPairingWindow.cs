@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Media;\nusing SoftBox.PhoneLab.Desktop.Services;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -86,7 +86,7 @@ public sealed class WirelessAdbPairingWindow : Window
         root.Children.Add(instructions);
 
         var fields = new Grid { Margin = new Thickness(0, 0, 0, 12) };
-        fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, Star) });
+        fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, Star) });
         fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
