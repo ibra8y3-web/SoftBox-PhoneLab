@@ -91,3 +91,20 @@ The two added APK comparison tests cover version metadata, same/different packag
 The catalog test now enforces one unique executable ActionId per canonical tool entry, with every action registered in the supported-action set. Android file browsing, app inspection, read-only commands and batch inspection open their specific tabs in the same authorized-device workspace. Qualcomm and MediaTek open Windows PnP inventory views filtered to the common USB identity hints 05C6:9008 and 0E8D:0003 respectively. These USB identities do not implement or verify EDL/BROM service protocols.
 
 CI uses generated unit-test fixtures and hosted build runners. It does not constitute physical handset, USB chipset, firmware, EDL/BROM or board-level verification.
+
+
+## Final documentation-sync verification — CI run #258
+
+- Workflow: PhoneLab CI, run #258; result: **Success** on the documentation-updated branch head.
+- Tested commit: `526c776e6bb28e7a4f7e7e141e02bac3f0fc879b`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062
+- Restore: passed.
+- Unit tests: **150 passed, 0 failed, 0 skipped**.
+- Windows self-contained x64 publish: passed.
+- Android Agent Gradle build/upload: passed.
+- Offline tool bundling: passed.
+- Windows x64 artifact: **227,398,186 bytes**, artifact ID `14652362018`.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
+- No CS* compiler or xUnit analyzer warnings were present in the build log.
+
+This CI run includes the catalog/reorganization/build report updates. The tested application source remains the same as run #257; the additional commit updates documentation only. Neither run exercised physical handsets or vendor low-level servicing protocols.

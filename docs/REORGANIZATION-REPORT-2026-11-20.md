@@ -80,3 +80,8 @@ Future moves should occur only when a specific existing tool has a proven owners
 - The catalog contains 52 unique executable ActionIds. All 52 have explicit MainWindow handlers; no repeated ActionId remains in the feature rows.
 - A total of 84 pull-request files were reviewed; none had status `removed`. This is a navigation correction, not a deletion of old tool implementations.
 - Latest CI run #257 passed 150/150 unit tests, Windows x64 self-contained publishing, Android Agent build/upload and offline tool bundling: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644
+
+
+## Documentation revision — CI run #258
+
+The inventory, navigation ownership and build report were synchronized to the final 165-entry catalog and 52 unique executable routes. Documentation-updated branch CI #258 succeeded with 150 tests, Windows x64 publish, Android Agent build and offline packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018

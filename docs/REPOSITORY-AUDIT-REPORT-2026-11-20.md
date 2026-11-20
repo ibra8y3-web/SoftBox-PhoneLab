@@ -209,3 +209,11 @@ The current catalog statuses are implementation classifications, not a completio
 - Windows artifact (227,398,184 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
 - No CS* compiler or xUnit analyzer warnings appeared in the latest run logs.
 - No physical Android handset, Qualcomm/MediaTek USB interface, firmware flash or board-level fixture was tested by this CI run.
+
+
+## Final documentation revision — CI run #258
+
+- The final report set was committed on the feature branch at `526c776e6bb28e7a4f7e7e141e02bac3f0fc879b`.
+- CI run #258 completed successfully: 150 passed, 0 failed, 0 skipped; Restore, Windows x64 self-contained publish, Android Agent build/upload, offline tool packaging and artifact upload passed.
+- Artifact (227,398,186 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
+- The feature branch remained in its pull request for integration into `main` after this successful check; no hardware verification is implied.

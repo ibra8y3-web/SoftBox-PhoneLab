@@ -136,3 +136,13 @@ The latest catalog is audited at 52 unique executable actions. Android file, app
 Latest CI for the implementation branch: run #257 — 150 passed, 0 failed, 0 skipped; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
 
 No physical handset, USB chipset, EDL/BROM protocol, firmware flash or board-level test is claimed. Do not change any feature to Verified without recorded target-environment evidence.
+
+
+## Final catalog/documentation checkpoint — CI #258
+
+- Catalog: 36 sections, 129 child features, 165 entries; 35 sections In Development, 1 Planned.
+- Entry statuses: 24 Planned, 38 In Development, 95 Implemented, 6 Tested, 0 Verified and 2 Unsupported.
+- 52 unique executable actions; all have main-window routes.
+- CI run #258 on the documentation-updated branch passed all 150 unit tests, Restore, Windows x64 publish, Android Agent build/upload, offline dependency bundling and artifact upload.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
+- No physical-device verification is claimed.
