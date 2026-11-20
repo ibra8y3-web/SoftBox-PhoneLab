@@ -68,7 +68,7 @@ public sealed class FirmwareDownloadServiceTests
                 return response;
             }
 
-            Assert.Equal(firstPartLength, request.Headers.Range?.Ranges.Single().From);
+            Assert.Equal((long?)firstPartLength, request.Headers.Range?.Ranges.Single().From);
             Assert.Equal("\"firmware-v1\"", request.Headers.IfRange?.EntityTag?.Tag);
             var remaining = payload[firstPartLength..];
             var resumed = new HttpResponseMessage(HttpStatusCode.PartialContent)
@@ -115,6 +115,59 @@ public sealed class FirmwareDownloadServiceTests
             Assert.Equal(2, requestCount);
             Assert.Single(await library.GetItemsAsync());
             Assert.False(File.Exists(partialPath));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ServerIgnoringRangeRestartsFromZeroInsteadOfAppendingNewBytes()
+    {
+        var root = CreateTempDirectory();
+        var payload = CreatePayload(5000);
+        var expected = Hash(payload);
+        var calls = 0;
+        var handler = new DelegateHandler(request =>
+        {
+            calls++;
+            if (calls == 1)
+            {
+                var first = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(new ThrowAfterBytesStream(payload, 1200))
+                };
+                first.Content.Headers.ContentLength = payload.Length;
+                first.Headers.ETag = new EntityTagHeaderValue("\"old-version\"");
+                return first;
+            }
+
+            Assert.Equal((long?)1200, request.Headers.Range?.Ranges.Single().From);
+            var fresh = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(payload)
+            };
+            fresh.Content.Headers.ContentLength = payload.Length;
+            fresh.Headers.ETag = new EntityTagHeaderValue("\"new-version\"");
+            return fresh;
+        });
+        using var client = new HttpClient(handler);
+        var library = new FirmwareLibraryService(Path.Combine(root, "library"));
+        using var downloader = new FirmwareDownloadService(library, client, Path.Combine(root, "downloads"));
+
+        try
+        {
+            await Assert.ThrowsAsync<IOException>(() => downloader.DownloadAndImportAsync(
+                new Uri("https://vendor.example/full.zip"), expected,
+                "Vendor", "Device", "", "", ""));
+
+            var result = await downloader.DownloadAndImportAsync(
+                new Uri("https://vendor.example/full.zip"), expected,
+                "Vendor", "Device", "", "", "");
+
+            Assert.False(result.Resumed);
+            Assert.Equal(payload.LongLength, result.DownloadedBytes);
+            var item = Assert.Single(await library.GetItemsAsync());
+            var integrity = await library.VerifyAsync(item.Id);
+            Assert.True(integrity.Sha256Matches);
         }
         finally { Directory.Delete(root, recursive: true); }
     }

@@ -78,6 +78,7 @@ public sealed class FirmwareDownloadService
         string region,
         string version,
         string notes,
+        string? sourceDescription = null,
         IProgress<FirmwareDownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -93,6 +94,7 @@ public sealed class FirmwareDownloadService
         var partialExists = File.Exists(partialPath);
 
         if (partialExists && (metadata is null ||
+                              string.IsNullOrWhiteSpace(metadata.SourceFingerprint) ||
                               !CryptographicOperations.FixedTimeEquals(
                                   Encoding.ASCII.GetBytes(metadata.SourceFingerprint),
                                   Encoding.ASCII.GetBytes(sourceFingerprint))))
@@ -128,9 +130,10 @@ public sealed class FirmwareDownloadService
         }
         else
         {
-            if (currentLength > 0 && metadata is not null &&
-                string.IsNullOrWhiteSpace(metadata.ETag) &&
-                string.IsNullOrWhiteSpace(metadata.LastModifiedUtc))
+            if (currentLength > 0 &&
+                (metadata is null ||
+                 (string.IsNullOrWhiteSpace(metadata.ETag) &&
+                  string.IsNullOrWhiteSpace(metadata.LastModifiedUtc))))
             {
                 // Without a validator, a resumed range could combine two different server versions.
                 TryDelete(partialPath);
@@ -165,6 +168,7 @@ public sealed class FirmwareDownloadService
                 totalBytes = await SaveResponseAsync(
                     response, sourceFingerprint, metadataPath, partialPath,
                     currentLength, resumed, progress, timeout.Token);
+                resumed = currentLength > 0 && response.StatusCode == HttpStatusCode.PartialContent;
             }
 
             finalLength = File.Exists(partialPath) ? new FileInfo(partialPath).Length : 0;
@@ -201,7 +205,9 @@ public sealed class FirmwareDownloadService
                 model,
                 region,
                 version,
-                $"User-supplied HTTPS source ({sourceUri.IdnHost}); SHA-256 verified against the supplied checksum.",
+                $"User-supplied HTTPS source ({sourceUri.IdnHost})" +
+                    (string.IsNullOrWhiteSpace(sourceDescription) ? "" : "; " + sourceDescription.Trim()) +
+                    "; SHA-256 verified against the supplied checksum.",
                 notes,
                 cancellationToken);
             TryDelete(stagePath);
@@ -243,7 +249,7 @@ public sealed class FirmwareDownloadService
                      DateTimeOffset.TryParse(
                          metadata.LastModifiedUtc,
                          CultureInfo.InvariantCulture,
-                         DateTimeStyles.RoundtripKind,
+                         DateTimeStyles.None,
                          out var lastModified))
             {
                 request.Headers.IfRange = new RangeConditionHeaderValue(lastModified);
@@ -303,8 +309,8 @@ public sealed class FirmwareDownloadService
                 throw new InvalidDataException("ترويسة Content-Range لا تطابق موضع الاستكمال؛ رُفض ضم أجزاء غير متطابقة.");
             }
 
-            if (range.To < range.From ||
-                range.To - range.From + 1 > MaximumDownloadBytes)
+            if (!range.To.HasValue || range.To.Value < range.From.Value ||
+                range.To.Value - range.From.Value + 1 > MaximumDownloadBytes)
                 throw new InvalidDataException("نطاق التنزيل الذي أرسله الخادم غير صالح أو أكبر من الحد الآمن.");
 
             if (response.Content.Headers.ContentLength.HasValue &&
@@ -396,6 +402,9 @@ public sealed class FirmwareDownloadService
             !string.IsNullOrEmpty(uri.UserInfo) ||
             !string.IsNullOrEmpty(uri.Fragment) ||
             string.IsNullOrWhiteSpace(uri.Host) ||
+            uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||
+            uri.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase) ||
+            uri.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) ||
             System.Net.IPAddress.TryParse(uri.Host, out _))
             throw new ArgumentException(
                 "مصدر Firmware يجب أن يكون رابط HTTPS مباشرًا على المنفذ 443، دون بيانات دخول أو IP مباشر أو Fragment. احصل عليه من بوابة الشركة المصنعة الرسمية.",

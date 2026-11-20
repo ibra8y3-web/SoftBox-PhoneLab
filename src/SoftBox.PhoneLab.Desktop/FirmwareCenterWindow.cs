@@ -19,6 +19,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class FirmwareCenterWindow : Window
 {
     private readonly FirmwareLibraryService _library = new();
+    private readonly FirmwareDownloadService _downloadService;
     private readonly ObservableCollection<FirmwareLibraryItem> _items = [];
     private readonly ListBox _list = new();
     private readonly TextBox _manufacturer = new();
@@ -27,6 +28,8 @@ public sealed class FirmwareCenterWindow : Window
     private readonly TextBox _version = new();
     private readonly TextBox _source = new();
     private readonly TextBox _notes = new();
+    private readonly TextBox _downloadUrl = new();
+    private readonly TextBox _expectedSha256 = new();
     private readonly TextBox _details = new();
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
@@ -34,9 +37,12 @@ public sealed class FirmwareCenterWindow : Window
     private readonly Button _verifyButton;
     private readonly Button _inspectButton;
     private readonly Button _preflightButton;
+    private readonly Button _downloadButton;
+    private readonly Button _cancelButton;
     private readonly DeviceSnapshot? _deviceSnapshot;
     private readonly bool _adbAuthorized;
     private CancellationTokenSource? _operation;
+    private bool _closed;
 
     public FirmwareCenterWindow(DeviceSnapshot? deviceSnapshot = null, bool adbAuthorized = false)
     {
@@ -56,11 +62,20 @@ public sealed class FirmwareCenterWindow : Window
         _verifyButton = ButtonControl("إعادة التحقق من SHA-256", "#176044", Verify_Click);
         _inspectButton = ButtonControl("فحص الأرشيف", "#243B56", Inspect_Click);
         _preflightButton = ButtonControl("فحص الاستعادة الآمنة", "#704B20", Preflight_Click);
+        _downloadButton = ButtonControl("تنزيل / استكمال Firmware", "#14517A", Download_Click);
+        _cancelButton = ButtonControl("إلغاء العملية", "#713B43", Cancel_Click);
+        _cancelButton.IsEnabled = false;
+        _downloadService = new FirmwareDownloadService(_library);
 
         Content = BuildContent();
         _list.SelectionChanged += (_, _) => ShowSelected();
         Loaded += async (_, _) => await LoadItemsAsync();
-        Closed += (_, _) => _operation?.Cancel();
+        Closed += (_, _) =>
+        {
+            _closed = true;
+            if (_operation is not null) _operation.Cancel();
+            else _downloadService.Dispose();
+        };
     }
 
     private UIElement BuildContent()
@@ -77,14 +92,14 @@ public sealed class FirmwareCenterWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "OFFLINE FIRMWARE LIBRARY • LOCAL IMPORT • SHA-256 REVALIDATION",
+            Text = "FIRMWARE LIBRARY • RESUMABLE HTTPS DOWNLOAD • SHA-256 VERIFICATION",
             FontSize = 10,
             Foreground = Brush("#8199B5"),
             Margin = new Thickness(0, 4, 0, 0)
         });
         header.Children.Add(new TextBlock
         {
-            Text = "يستورد ملفات Firmware التي تختارها من الكمبيوتر إلى مكتبة محلية مصنفة حسب الشركة والموديل والمنطقة والإصدار. يعيد حساب SHA-256 للتحقق من عدم تغير الملف منذ الاستيراد. تطابق البصمة لا يثبت الناشر أو توافق الملف مع الهاتف.",
+            Text = "يدير مكتبة Firmware المحلية ويتيح تنزيل رابط HTTPS مباشر مع استكمال الأجزاء المتوقفة تلقائيًا، ثم يتحقق من SHA-256 الذي تحصل عليه من المصدر الرسمي قبل إدخال الملف إلى المكتبة. لا يوجد تفليش أو تثبيت تلقائي.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -103,7 +118,7 @@ public sealed class FirmwareCenterWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             Child = new TextBlock
             {
-                Text = "لا يوجد تنزيل تلقائي من مصادر خارجية في هذه النسخة، ولا توجد عملية تفليش. لا تستخدم الملف لمجرد تطابق SHA-256 المحلي؛ يلزم التحقق من مصدر رسمي وطراز الجهاز والمنطقة وقيود الإصدار قبل أي استعادة.",
+                Text = "استخدم رابط الملف المباشر من بوابة الشركة المصنعة، وأدخل SHA-256 المنشور من المصدر نفسه. لا يتبع SoftBox التحويلات Redirect تلقائيًا، ولا يثبت أن المصدر رسمي لمجرد HTTPS أو تطابق البصمة. التنزيل لا يعني توافق Firmware مع الجهاز، ولا توجد عملية Flash أو Unlock أو Wipe.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -197,11 +212,29 @@ public sealed class FirmwareCenterWindow : Window
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.Children.Add(_notes);
 
+        for (var row = 0; row < 4; row++)
+            form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        AddLabel(form, "رابط HTTPS مباشر من المصدر الرسمي", 8, 0);
+        ConfigureInput(_downloadUrl);
+        _downloadUrl.ToolTip = "الرابط النهائي للملف مع الامتداد المدعوم؛ يجب ألا يحتاج إلى تحويل Redirect.";
+        Grid.SetRow(_downloadUrl, 9);
+        Grid.SetColumnSpan(_downloadUrl, 2);
+        form.Children.Add(_downloadUrl);
+
+        AddLabel(form, "SHA-256 المنشور من المصدر (64 رقمًا سداسيًا)", 10, 0);
+        ConfigureInput(_expectedSha256);
+        _expectedSha256.ToolTip = "البصمة الأصلية التي تحصل عليها من صفحة الشركة المصنعة أو قناة موثوقة مستقلة.";
+        Grid.SetRow(_expectedSha256, 11);
+        Grid.SetColumnSpan(_expectedSha256, 2);
+        form.Children.Add(_expectedSha256);
+
         var buttons = new WrapPanel { Margin = new Thickness(0, 6, 0, 10) };
         buttons.Children.Add(_importButton);
         buttons.Children.Add(_verifyButton);
         buttons.Children.Add(_inspectButton);
         buttons.Children.Add(_preflightButton);
+        buttons.Children.Add(_downloadButton);
+        buttons.Children.Add(_cancelButton);
         DockPanel.SetDock(buttons, Dock.Top);
         right.Children.Add(buttons);
 
@@ -258,6 +291,64 @@ public sealed class FirmwareCenterWindow : Window
             _status.Text = "تعذر قراءة المكتبة المحلية: " + ex.Message;
         }
     }
+
+
+    private async void Download_Click(object sender, RoutedEventArgs e)
+    {
+        if (!Uri.TryCreate(_downloadUrl.Text.Trim(), UriKind.Absolute, out var sourceUri))
+        {
+            _status.Text = "أدخل رابط HTTPS مباشرًا لملف Firmware.";
+            return;
+        }
+
+        var progress = new Progress<FirmwareDownloadProgress>(update =>
+        {
+            _status.Text = update.Status;
+            if (update.TotalBytes is > 0)
+            {
+                _progress.IsIndeterminate = false;
+                _progress.Maximum = update.TotalBytes.Value;
+                _progress.Value = Math.Min(update.BytesReceived, update.TotalBytes.Value);
+            }
+            else
+            {
+                _progress.IsIndeterminate = true;
+            }
+        });
+
+        await RunOperationAsync("جارٍ تجهيز تنزيل Firmware والتحقق من المصدر...", async token =>
+        {
+            var result = await _downloadService.DownloadAndImportAsync(
+                sourceUri,
+                _expectedSha256.Text,
+                _manufacturer.Text,
+                _model.Text,
+                _region.Text,
+                _version.Text,
+                _notes.Text,
+                _source.Text,
+                progress,
+                token);
+
+            await LoadItemsAsync();
+            _list.SelectedItem = _items.FirstOrDefault(candidate => candidate.Id == result.LibraryItem.Id);
+            ShowSelected();
+            _details.Text += Environment.NewLine + Environment.NewLine +
+                "DOWNLOAD RESULT: Imported into the local Firmware library." + Environment.NewLine +
+                "VERIFIED SHA-256: " + result.VerifiedSha256 + Environment.NewLine +
+                "BYTES: " + result.DownloadedBytes.ToString("N0") + Environment.NewLine +
+                "RESUMED: " + result.Resumed + Environment.NewLine +
+                "PUBLISHER AUTHENTICITY: NOT ESTABLISHED" + Environment.NewLine +
+                "DEVICE COMPATIBILITY: NOT ESTABLISHED";
+            _progress.IsIndeterminate = false;
+            _progress.Maximum = 100;
+            _progress.Value = 100;
+            return $"اكتمل {(result.Resumed ? "استكمال " : "")}تنزيل Firmware والتحقق من SHA-256، وأُضيف الملف إلى المكتبة: {result.LibraryItem.FileName}";
+        });
+    }
+
+    private void Cancel_Click(object sender, RoutedEventArgs e)
+        => _operation?.Cancel();
 
     private async void Import_Click(object sender, RoutedEventArgs e)
     {
@@ -453,6 +544,7 @@ public sealed class FirmwareCenterWindow : Window
             _operation.Dispose();
             _operation = null;
             SetBusy(false, _status.Text);
+            if (_closed) _downloadService.Dispose();
         }
     }
 
@@ -463,6 +555,14 @@ public sealed class FirmwareCenterWindow : Window
         _importButton.IsEnabled = !busy;
         _verifyButton.IsEnabled = !busy;
         _inspectButton.IsEnabled = !busy;
+        _preflightButton.IsEnabled = !busy;
+        _downloadButton.IsEnabled = !busy;
+        _cancelButton.IsEnabled = busy;
+        if (!busy)
+        {
+            _progress.IsIndeterminate = true;
+            _progress.Value = 0;
+        }
     }
 
     private static void AddLabel(Grid grid, string text, int row, int column)
