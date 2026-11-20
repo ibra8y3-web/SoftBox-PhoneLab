@@ -162,11 +162,11 @@ public static class SoftBoxModuleCatalog
                 new("backup-scheduler", "جدولة النسخ اليومي/الأسبوعي وعند توصيل جهاز", "Scheduled automatic backups", "لم يبدأ التنفيذ؛ لا توجد مهام Windows مجدولة أو سياسة إعادة اتصال.", ModuleImplementationStatus.Planned)
             ]),
         new("phone-link", 14, "الاتصال والتشخيص", "استوديو الهاتف", "Phone Link Studio",
-            "عرض شاشة Android عبر scrcpy مدمج في مساحة العمل؛ تسجيل الشاشة وتعدد الجلسات غير مكتمل.",
+            "عرض وتحكم مباشر في شاشة Android عبر scrcpy مع تسجيل MP4/MKV إلى ملف محلي؛ إدارة عدة جلسات عرض مستقلة ما زالت غير مكتملة.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("screen-mirror", "عرض والتحكم في شاشة هاتف مصرح به", "Authorized screen mirroring and control", "يستخدم scrcpy الرسمي؛ يحتاج اتصال ADB مصرحًا به.", ModuleImplementationStatus.Implemented, "MirrorScreen"),
-                new("screen-record", "تسجيل الشاشة وإدارة التسجيلات", "Screen recording", "لا توجد واجهة تسجيل مدمجة بعد.", ModuleImplementationStatus.Planned),
+                new("screen-record", "تسجيل شاشة الهاتف الفعلية وحفظ MP4/MKV", "Android screen recording", "يشغّل scrcpy على الجهاز المحدد مع خيار --record إلى مسار يختاره المستخدم؛ عند الإيقاف يتم إرسال WM_CLOSE لإنهاء الحاوية والتحقق من وجود ملف غير فارغ.", ModuleImplementationStatus.Implemented, "OpenScreenRecording"),
                 new("multi-session", "إدارة عدة جلسات عرض مستقلة", "Multi-device screen sessions", "الاكتشاف المتعدد موجود، لكن إدارة عدة عروض مستقلة غير منفذة.", ModuleImplementationStatus.Planned)
             ]),
         new("hardware-diagnostics", 15, "الاتصال والتشخيص", "تشخيص العتاد", "Hardware Diagnostics",
@@ -349,7 +349,7 @@ public static class SoftBoxModuleCatalog
 
     public static IReadOnlySet<string> SupportedActionIds { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
+        "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
