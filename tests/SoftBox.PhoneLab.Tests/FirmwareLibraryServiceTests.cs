@@ -24,7 +24,7 @@ public sealed class FirmwareLibraryServiceTests
             Assert.Single(all);
             Assert.Equal("Samsung", all[0].Manufacturer);
             Assert.Equal("SM-A525F", all[0].Model);
-            Assert.Equal(5, item.SizeBytes);
+            Assert.Equal(5L, item.SizeBytes);
             Assert.Matches("^[0-9a-f]{64}$", item.Sha256);
             Assert.True(verify.FileExists);
             Assert.True(verify.SizeMatches);
