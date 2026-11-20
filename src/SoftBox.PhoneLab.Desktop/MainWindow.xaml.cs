@@ -488,6 +488,98 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var window = new WorkshopCenterWindow { Owner = this };
         window.Show();
     }
+    private void ModuleNavigation_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element || element.Tag is not string moduleId)
+            return;
+
+        var module = SoftBoxModuleCatalog.Find(moduleId);
+        if (module is null)
+        {
+            StatusMessage = "تعذر العثور على تعريف القسم في كتالوج SoftBox.";
+            Notify(nameof(StatusMessage));
+            return;
+        }
+
+        var window = new ModuleSectionWindow(module, OpenModuleAction) { Owner = this };
+        window.Show();
+    }
+
+    private void OpenModuleAction(string actionId)
+    {
+        switch (actionId)
+        {
+            case "RefreshDevices":
+                _ = RefreshDevicesAsync();
+                break;
+            case "InspectDevice":
+                Inspect_Click(this, new RoutedEventArgs());
+                break;
+            case "UpdateDeviceCatalog":
+                DeviceCatalog_Click(this, new RoutedEventArgs());
+                break;
+            case "OpenPhoneTests":
+                PhoneTests_Click(this, new RoutedEventArgs());
+                break;
+            case "AndroidLogs":
+                AndroidLogs_Click(this, new RoutedEventArgs());
+                break;
+            case "InstallSamsungDriver":
+                InstallSamsungUsbDriver_Click(this, new RoutedEventArgs());
+                break;
+            case "InspectFirmware":
+                FirmwareInspect_Click(this, new RoutedEventArgs());
+                break;
+            case "UsbTransport":
+                UsbTransport_Click(this, new RoutedEventArgs());
+                break;
+            case "OpenWorkshop":
+                WorkshopCenter_Click(this, new RoutedEventArgs());
+                break;
+            case "MirrorScreen":
+                MirrorScreen_Click(this, new RoutedEventArgs());
+                break;
+            case "AnalyzeScreen":
+                AnalyzeScreen_Click(this, new RoutedEventArgs());
+                break;
+            case "MeasurementRig":
+                MeasurementRig_Click(this, new RoutedEventArgs());
+                break;
+            case "RepairGuides":
+                RepairGuides_Click(this, new RoutedEventArgs());
+                break;
+            case "OpenGlobalWorkshop":
+                GlobalWorkshop_Click(this, new RoutedEventArgs());
+                break;
+            case "ExportDeviceReport":
+                Export_Click(this, new RoutedEventArgs());
+                break;
+            case "ConnectionHelp":
+                ConnectionHelp_Click(this, new RoutedEventArgs());
+                break;
+            case "AgentHelp":
+                AgentHelp_Click(this, new RoutedEventArgs());
+                break;
+            case "UpdateAgent":
+                Agent_Click(this, new RoutedEventArgs());
+                break;
+            case "SetupUsb":
+                SetupUsb_Click(this, new RoutedEventArgs());
+                break;
+            case "ImportBoardMap":
+                ImportBoardMap_Click(this, new RoutedEventArgs());
+                break;
+            case "OpenBoardView":
+                OpenBoardView_Click(this, new RoutedEventArgs());
+                break;
+            default:
+                MessageBox.Show(this,
+                    "لا يوجد إجراء تنفيذي مربوط بهذا المعرف. لم يتم تشغيل أي عملية.",
+                    "إجراء غير متاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                break;
+        }
+    }
+
 
     private void GlobalWorkshop_Click(object sender, RoutedEventArgs e)
     {

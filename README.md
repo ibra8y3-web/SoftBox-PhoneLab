@@ -63,6 +63,14 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - New modules follow the convention in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
 - International workshop administration adds per-business locale/currency settings, warranty tracking, technician notes, printable HTML and UTF-8 CSV exports.
 
+
+## SoftBox 36-section product architecture
+
+- The left navigation follows all 36 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
+- Existing services are shared and linked from the correct section instead of being cloned. Planned features are listed without fake executable buttons.
+- The detailed audit, missing-feature matrix, module ownership and staged implementation order are in [docs/SOFTBOX-MASTER-MODULE-STATUS.md](docs/SOFTBOX-MASTER-MODULE-STATUS.md).
+- Navigation and module addition rules are in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
+
 ## Repository modules
 
 | Module | Purpose |
