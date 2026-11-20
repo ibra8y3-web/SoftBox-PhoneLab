@@ -34,7 +34,7 @@ public sealed record ApkInspectionResult(
     IReadOnlyList<string> Permissions,
     IReadOnlyList<string> SignatureMetadataFiles,
     bool ApkSigningBlockDetected,
-    bool ArchiveIntegrityChecked,
+    bool ArchiveEntriesReadable,
     ApkManifestFormat ManifestFormat,
     IReadOnlyList<string> Warnings)
 {
@@ -200,7 +200,7 @@ public sealed class ApkInspectionService
             manifestInfo.Permissions.OrderBy(x => x, StringComparer.Ordinal).ToArray(),
             signatureEntries,
             signingBlockDetected,
-            ArchiveIntegrityChecked: true,
+            ArchiveEntriesReadable: true,
             manifestFormat,
             warnings);
     }
