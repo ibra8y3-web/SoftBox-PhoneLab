@@ -40,12 +40,12 @@ public sealed class SupportBundleServiceTests
             var result = await service.CreateAsync(archivePath, [log], "User notes password=my-secret");
             Assert.True(File.Exists(archivePath));
             Assert.Equal(1, result.IncludedFileCount);
-            Assert.Equal(1, result.Files.Count);
+            Assert.Single(result.Files);
             Assert.Matches("^[0-9a-f]{64}$", result.Files[0].Sha256);
 
             using var archive = ZipFile.OpenRead(archivePath);
             Assert.Contains(archive.Entries, entry => entry.FullName == "system-diagnostics.txt");
-            var logEntry = Assert.Single(archive.Entries.Where(entry => entry.FullName.StartsWith("user-logs/", StringComparison.Ordinal)));
+            var logEntry = Assert.Single(archive.Entries, entry => entry.FullName.StartsWith("user-logs/", StringComparison.Ordinal));
             using var reader = new StreamReader(logEntry.Open());
             var content = await reader.ReadToEndAsync();
 
