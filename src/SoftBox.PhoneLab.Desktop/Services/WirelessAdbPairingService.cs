@@ -14,7 +14,7 @@ public sealed record WirelessAdbPairingResult(
 /// Uses Android Platform-Tools' authenticated wireless debugging pairing protocol.
 /// Pairing codes are validated and passed only to the adb process; they are never persisted.
 /// </summary>
-public sealed class WirelessAdbPairingService(AdbClient adb)
+public sealed class WirelessAdbPairingService(IAdbCommandRunner adb)
 {
     public static string FormatEndpoint(string host, int port)
     {
