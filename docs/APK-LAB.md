@@ -36,6 +36,8 @@ ApkInspectionServiceTests covers:
 - Detection of v1 signature metadata without claiming cryptographic validation.
 - Valid ZIP inspection when the manifest is missing.
 - Rejection of corrupt ZIP data and non-APK file extensions.
+- Two-file comparison of version metadata, SHA-256 equality, permission additions/removals and archive entry-name additions/removals.
+- Explicit mismatch warning when package names differ.
 
 The generated test fixtures validate parser behavior; they are not claimed to be real handset or vendor firmware compatibility tests.
 ## CI evidence — 20 November 2026
@@ -48,3 +50,11 @@ The added APK tests run only against generated local fixtures. No physical-devic
 ## APK version comparison
 
 Select a first and a second APK to compare package identity, version metadata, SHA-256 equality, newly declared/removed permissions, and added/removed archive entry names. The tool warns when package names differ or required metadata is missing. It does not claim that files with the same package name came from the same publisher, and it does not compare the contents of every ZIP entry.
+
+## Latest CI evidence — APK comparison
+
+PhoneLab CI run #65 succeeded with 53 tests passed, 0 failed and 0 skipped. Windows x64 publish, Android Agent build, offline tool bundling and Windows artifact upload also passed.
+
+Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968
+
+Windows artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968/artifacts/14636852748
