@@ -93,12 +93,14 @@ public static class SoftBoxModuleCatalog
                 new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات والملفات", "APK version and permission comparison", "يقارن اسم الحزمة وبيانات الإصدار وSHA-256 والصلاحيات وأسماء مدخلات الأرشيف بين ملفين محليين؛ لا يقارن محتوى كل ملف ولا يثبت صحة التوقيع.", ModuleImplementationStatus.Tested)
             ]),
         new("samsung-tools", 6, "الشركات والمعالجات", "أدوات Samsung", "Samsung Tools",
-            "يتضمن تعريف USB الرسمي الاختياري وقراءة خصائص One UI وCSC وPDA وBootloader عبر ADB؛ لا يدعم Download Mode أو التفليش.",
+            "قراءة خصائص Samsung والدخول إلى Download Mode على الأجهزة التي تسمح بأمر ADB، مع مساعد Odin لتجهيز حزم BL/AP/CP/CSC وفتح نسخة Odin يحددها المستخدم. لا يتم تضمين Odin أو أتمتة التفليش داخله.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("samsung-driver", "مثبت تعريف Samsung USB الرسمي الاختياري", "Samsung USB driver installer", "مضمن في حزمة Windows مع تحقق مثبت التعريف؛ مكان تشغيله الأساسي قسم طبيب USB، ولا يعني دعم Download Mode أو التفليش.", ModuleImplementationStatus.Implemented),
+                new("samsung-driver", "مثبت تعريف Samsung USB الرسمي الاختياري", "Samsung USB driver installer", "مضمن في حزمة Windows مع تحقق مثبت التعريف؛ مكان تشغيله الأساسي قسم طبيب USB.", ModuleImplementationStatus.Implemented),
                 new("samsung-adb", "قراءة خصائص One UI وCSC وPDA وBootloader", "Samsung vendor property diagnostics", "يقرأ مجموعة getprop ثابتة على الجهاز المصرح به ويعرض الخصائص المتاحة والفارغة مع حفظ تقرير JSON.", ModuleImplementationStatus.Implemented, "OpenSamsungDiagnostics"),
-                new("samsung-service", "أدوات Download Mode وعمليات Samsung الخاصة", "Samsung service operations", "غير منفذة؛ لا يوجد دعم تفليش أو تجاوز حماية.", ModuleImplementationStatus.Planned)
+                new("samsung-download-mode", "الدخول إلى Samsung Download Mode", "Samsung Download Mode entry", "يرسل adb reboot download فقط بعد إعادة التحقق من حالة ADB وقراءة manufacturer/brand والتأكد من Samsung. لا يبدأ التفليش ولا يضمن توفر الأمر على كل إصدار أو موديل.", ModuleImplementationStatus.Implemented),
+                new("samsung-odin-assistant", "مساعد Odin وتجهيز حزم Firmware", "Samsung Odin handoff assistant", "يفحص وجود حزم BL/AP/CP/CSC أو HOME_CSC وبصمات SHA-256، ويفتح ملف Odin التنفيذي الذي يحدده المستخدم. تحميل الحزم داخل Odin وبدء التفليش يظلان يدويين من واجهة Odin؛ لا يدّعي SoftBox التحقق من المصدر أو التوافق.", ModuleImplementationStatus.Implemented, "OpenSamsungOdinAssistant"),
+                new("samsung-service", "عمليات Download Mode وOdin المتقدمة", "Samsung service workflow", "لا توجد أتمتة لواجهة Odin ولا بروتوكول Download Mode منخفض المستوى؛ لا يتم تجاوز الحماية أو FRP.", ModuleImplementationStatus.Planned)
             ]),
         new("xiaomi-tools", 7, "الشركات والمعالجات", "أدوات Xiaomi وRedmi وPOCO", "Xiaomi Tools",
             "يدعم قراءة خصائص Xiaomi/Redmi/POCO وMIUI/HyperOS والمنطقة ونسخة البناء من الجهاز المصرح به؛ لا يدعم عمليات Fastboot خاصة بالشركة.",
