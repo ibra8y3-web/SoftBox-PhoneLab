@@ -73,9 +73,9 @@ public static class SoftBoxModuleCatalog
                 new("agent-bridge", "تثبيت PhoneLab Agent وجلب نتائج الاختبارات", "PhoneLab Agent bridge", "اتصال محلي عبر ADB forward، ويتطلب موافقة المستخدم على الهاتف؛ واجهة الاختبارات موجودة في قسم تشخيص العتاد.", ModuleImplementationStatus.Implemented),
                 new("agent-update", "تحديث PhoneLab Agent", "PhoneLab Agent update", "يفحص ويحدّث مكوّن Agent ضمن دعم التطبيق الحالي.", ModuleImplementationStatus.Implemented, "UpdateAgent"),
                 new("logs", "قراءة سجلات Android المسموح بها", "Android logs", "يجمع حزمة أدلة محدودة؛ السجلات قد تحتوي بيانات شخصية ويجب مراجعتها قبل المشاركة. أداة جمعها في قسم الدعم والسجلات.", ModuleImplementationStatus.Implemented),
-                new("app-manager", "عرض التطبيقات الخارجية وتفاصيل الحزم", "Installed app inspection", "يعرض أسماء الحزم الخارجية وتفاصيل dumpsys دون تثبيت أو إزالة أو تعديل التطبيق؛ افتح مركز أدوات Android.", ModuleImplementationStatus.Implemented, "OpenAndroidDeviceTools"),
-                new("file-manager", "مدير ملفات Android عبر ADB", "Android shared-storage file manager", "استعراض ورفع وتنزيل ملفات وإنشاء مجلدات داخل التخزين المشترك المسموح به فقط؛ لا يصل إلى /data أو بيانات التطبيقات الخاصة.", ModuleImplementationStatus.Implemented, "OpenAndroidDeviceTools"),
-                new("command-center", "مركز أوامر Android بقائمة قراءة فقط", "Allow-listed Android command center", "أوامر getprop والبطارية والتخزين وuptime والتطبيقات والخدمات من قائمة ثابتة؛ لا يقبل أوامر Shell حرة.", ModuleImplementationStatus.Implemented, "OpenAndroidDeviceTools")
+                new("app-manager", "عرض التطبيقات الخارجية وتفاصيل الحزم", "Installed app inspection", "يعرض أسماء الحزم الخارجية وتفاصيل dumpsys دون تثبيت أو إزالة أو تعديل التطبيق؛ افتح مركز أدوات Android.", ModuleImplementationStatus.Implemented, "OpenAndroidAppManager"),
+                new("file-manager", "مدير ملفات Android عبر ADB", "Android shared-storage file manager", "استعراض ورفع وتنزيل ملفات وإنشاء مجلدات داخل التخزين المشترك المسموح به فقط؛ لا يصل إلى /data أو بيانات التطبيقات الخاصة.", ModuleImplementationStatus.Implemented, "OpenAndroidFileManager"),
+                new("command-center", "مركز أوامر Android بقائمة قراءة فقط", "Allow-listed Android command center", "أوامر getprop والبطارية والتخزين وuptime والتطبيقات والخدمات من قائمة ثابتة؛ لا يقبل أوامر Shell حرة.", ModuleImplementationStatus.Implemented, "OpenAndroidCommandCenter")
             ]),
         new("apk-lab", 5, "أدوات Android", "مختبر APK", "APK Lab",
             "تحليل محلي للملفات دون تثبيت أو تعديل: بيانات Manifest، الصلاحيات، قابلية قراءة ZIP وبصمة SHA-256.",
@@ -118,7 +118,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("qualcomm-soc", "قراءة تلميح المعالج من النظام", "SoC identification hint", "قراءة تعريفية فقط من بيانات Android، ولا تكفي لتحديد منصة EDL أو اختيار programmer؛ محرك الهوية في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("qualcomm-edl", "رصد مؤشر USB Qualcomm EDL / 9008", "Qualcomm EDL USB mode hint", "يرصد VID/PID الشائع 05C6:9008 إذا ظهر في Windows PnP؛ لا يفتح قناة EDL ولا يتحقق من programmer أو توافق الجهاز.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
+                new("qualcomm-edl", "رصد مؤشر USB Qualcomm EDL / 9008", "Qualcomm EDL USB mode hint", "يرصد VID/PID الشائع 05C6:9008 إذا ظهر في Windows PnP؛ لا يفتح قناة EDL ولا يتحقق من programmer أو توافق الجهاز.", ModuleImplementationStatus.Implemented),
                 new("qualcomm-recovery", "استعادة Qualcomm الرسمية المتوافقة", "Supported Qualcomm recovery", "غير منفذة؛ يلزم مصدر رسمي وملف مطابق للموديل وسلسلة ثقة موثقة.", ModuleImplementationStatus.Planned)
             ]),
         new("mediatek-tools", 10, "الشركات والمعالجات", "أدوات MediaTek", "MediaTek Tools",
@@ -126,7 +126,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("mediatek-soc", "قراءة تلميح المعالج من Android", "SoC identification hint", "قد يظهر تعريف المعالج ضمن خصائص الجهاز؛ لا يثبت وضع Preloader. الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("mediatek-preloader", "رصد مؤشر USB MediaTek Preloader/BROM", "MediaTek Preloader/BROM USB hint", "يرصد VID/PID الشائع 0E8D:0003 عند ظهوره في Windows PnP؛ لا يقرأ بروتوكول BROM ولا يختار DA ولا ينفذ تفليشًا.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
+                new("mediatek-preloader", "رصد مؤشر USB MediaTek Preloader/BROM", "MediaTek Preloader/BROM USB hint", "يرصد VID/PID الشائع 0E8D:0003 عند ظهوره في Windows PnP؛ لا يقرأ بروتوكول BROM ولا يختار DA ولا ينفذ تفليشًا.", ModuleImplementationStatus.Implemented),
                 new("mediatek-recovery", "الاستعادة الرسمية المتوافقة", "Supported MediaTek recovery", "غير منفذة؛ يلزم ملف DA موثوق ومتوافق ومصدر رسمي للجهاز المحدد.", ModuleImplementationStatus.Planned)
             ]),
         new("firmware-center", 11, "Firmware والاستعادة", "مركز Firmware", "Firmware Center",
@@ -135,7 +135,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("firmware-inspection", "فحص أرشيف محلي وحساب SHA-256", "Local archive inspection and SHA-256", "يقرأ بنية ZIP وعناصر OTA الشائعة فقط؛ لا يثبت المصدر أو التوافق أو سلامة التوقيع.", ModuleImplementationStatus.Implemented, "InspectFirmware"),
                 new("firmware-library", "استيراد وتنظيم مكتبة Firmware محلية", "Offline firmware library", "ينسخ ملفًا يختاره المستخدم إلى مكتبة منظمة حسب الشركة والموديل والمنطقة والإصدار ويحفظ بياناته محليًا.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
-                new("firmware-hash-verify", "إعادة حساب SHA-256 والتحقق من سلامة الملف المحلي", "Firmware hash revalidation", "يقارن SHA-256 والحجم الحاليين بسجل الاستيراد ويكشف التغيير أو الفقد؛ هذا لا يثبت مصدر الناشر أو التوافق.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
+                new("firmware-hash-verify", "إعادة حساب SHA-256 والتحقق من سلامة الملف المحلي", "Firmware hash revalidation", "يقارن SHA-256 والحجم الحاليين بسجل الاستيراد ويكشف التغيير أو الفقد؛ هذا لا يثبت مصدر الناشر أو التوافق.", ModuleImplementationStatus.Implemented),
                 new("firmware-download", "تنزيل واستكمال وإدارة التنزيلات من مصادر رسمية", "Official firmware downloads", "لم يضف تنزيل تلقائي بعد؛ يلزم مصدر رسمي موثق وسياسة روابط وتراخيص واستكمال آمن.", ModuleImplementationStatus.Planned),
                 new("firmware-compatibility", "محرك توافق موثق قبل الاستخدام", "Firmware compatibility engine", "لم يتم تنفيذ محرك يفحص الموديل والمنطقة وقيود الرجوع ومصدر الملف قبل أي استخدام.", ModuleImplementationStatus.Planned)
             ]),
@@ -145,11 +145,11 @@ public static class SoftBoxModuleCatalog
             [
                 new("usb-transports", "فحص أوضاع ADB وFastboot المتاحة", "ADB and Fastboot transport inspection", "استعلامات قراءة فقط؛ لا تكتشف كل أوضاع الشركات مثل EDL وDownload وPreloader.", ModuleImplementationStatus.Implemented, "UsbTransport"),
                 new("usb-pnp-inventory", "جرد أجهزة Windows USB وقراءة VID/PID والحالة", "Windows USB PnP inventory", "يستخدم SetupAPI وConfiguration Manager لقراءة الأجهزة الحالية ورموز المشكلة والخدمة المرتبطة دون تعديل الجهاز.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
-                new("usb-mode-hints", "تمييز مؤشرات Qualcomm وMediaTek وSamsung وGoogle", "Known USB mode hints", "كتالوج محدود لمعرفات VID/PID الشائعة؛ لا يثبت الموديل أو التوافق ولا ينفذ بروتوكول الخدمة.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
+                new("usb-mode-hints", "تمييز مؤشرات Qualcomm وMediaTek وSamsung وGoogle", "Known USB mode hints", "كتالوج محدود لمعرفات VID/PID الشائعة؛ لا يثبت الموديل أو التوافق ولا ينفذ بروتوكول الخدمة.", ModuleImplementationStatus.Implemented),
                 new("usb-setup", "إرشادات وتجهيز اتصال USB", "USB connection setup", "يفتح تعليمات إعداد أدوات USB وADB ولا يثبت تعريفات مجهولة.", ModuleImplementationStatus.Implemented, "SetupUsb"),
-                new("connection-help", "مساعدة توصيل الهاتف وحل اتصال ADB", "USB connection help", "تعليمات الاتصال الحالية في البرنامج.", ModuleImplementationStatus.Implemented, "ConnectionHelp"),
+                new("connection-help", "مساعدة توصيل الهاتف وحل اتصال ADB", "USB connection help", "تعليمات الاتصال الحالية في البرنامج.", ModuleImplementationStatus.Implemented),
                 new("samsung-driver", "تثبيت تعريف Samsung الرسمي الاختياري", "Samsung official driver", "مضمن في حزمة Windows؛ لا يعني دعم Download Mode أو عمليات صيانة خاصة.", ModuleImplementationStatus.Implemented, "InstallSamsungDriver"),
-                new("windows-driver-health", "فحص حالة PnP ومشكلات تعريف USB", "Windows PnP device health", "يعرض حالة الجهاز ورمز المشكلة المبلغ عنه من Windows؛ لا يتحقق من توقيع التعريف أو يغيره.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor")
+                new("windows-driver-health", "فحص حالة PnP ومشكلات تعريف USB", "Windows PnP device health", "يعرض حالة الجهاز ورمز المشكلة المبلغ عنه من Windows؛ لا يتحقق من توقيع التعريف أو يغيره.", ModuleImplementationStatus.Implemented)
             ]),
         new("smart-backup", 13, "الاتصال والتشخيص", "النسخ الاحتياطي الذكي", "Smart Backup",
             "نسخ مجلدات التخزين المشترك عبر ADB إلى ZIP مع SHA-256 لكل ملف، وخيار SBX مشفر ومصادق عليه، والتحقق والاستعادة إلى مجلد جديد على الهاتف دون الكتابة فوق ملفات موجودة؛ الجدولة غير مكتملة.",
@@ -157,9 +157,9 @@ public static class SoftBoxModuleCatalog
             [
                 new("workshop-backup", "نسخ واستعادة قاعدة بيانات مركز الصيانة", "Workshop database backup", "نسخ JSON محلي واستعادته؛ النسخ الحالي غير مشفر. فتح تبويب النسخ يتم من هذا القسم.", ModuleImplementationStatus.Implemented, "OpenWorkshopBackup"),
                 new("phone-backup", "نسخ مجلدات التخزين المشترك من Android", "Android shared-storage backup", "ينقل المجلد المحدد عبر ADB إلى ZIP محلي ويحسب SHA-256 لكل ملف؛ لا ينسخ بيانات التطبيقات الخاصة أو النظام.", ModuleImplementationStatus.Implemented, "OpenPhoneBackup"),
-                new("backup-verify", "التحقق من النسخة ومطابقة بصمات الملفات", "Backup archive verification", "يفحص Manifest ويعيد حساب SHA-256 ومقارنة حجم كل ملف داخل ZIP؛ مغطى باختبارات آلية.", ModuleImplementationStatus.Tested, "OpenPhoneBackup"),
-                new("backup-encryption", "تشفير النسخ بكلمة مرور ومصادقة SBX", "Authenticated password-encrypted backups", "ينشئ حاوية SBX بتشفير AES-256-CBC وHMAC-SHA256 ومفتاح PBKDF2-HMAC-SHA256 (600,000 دورة)، ويتحقق من المصادقة قبل فك مؤقت وفحص Manifest؛ ZIP العادي يظل غير مشفر.", ModuleImplementationStatus.Implemented, "OpenPhoneBackup"),
-                new("backup-restore", "استعادة الملفات بعد التحقق إلى مجلد جديد على الهاتف", "Verified restore to a new Android folder", "يتحقق من Manifest وبصمات SHA-256 أو مصادقة SBX أولًا، ثم يرسل الملفات إلى مجلد فريد في التخزين المشترك دون حذف أو استبدال الملفات الموجودة.", ModuleImplementationStatus.Implemented, "OpenPhoneBackup"),
+                new("backup-verify", "التحقق من النسخة ومطابقة بصمات الملفات", "Backup archive verification", "يفحص Manifest ويعيد حساب SHA-256 ومقارنة حجم كل ملف داخل ZIP؛ مغطى باختبارات آلية.", ModuleImplementationStatus.Tested),
+                new("backup-encryption", "تشفير النسخ بكلمة مرور ومصادقة SBX", "Authenticated password-encrypted backups", "ينشئ حاوية SBX بتشفير AES-256-CBC وHMAC-SHA256 ومفتاح PBKDF2-HMAC-SHA256 (600,000 دورة)، ويتحقق من المصادقة قبل فك مؤقت وفحص Manifest؛ ZIP العادي يظل غير مشفر.", ModuleImplementationStatus.Implemented),
+                new("backup-restore", "استعادة الملفات بعد التحقق إلى مجلد جديد على الهاتف", "Verified restore to a new Android folder", "يتحقق من Manifest وبصمات SHA-256 أو مصادقة SBX أولًا، ثم يرسل الملفات إلى مجلد فريد في التخزين المشترك دون حذف أو استبدال الملفات الموجودة.", ModuleImplementationStatus.Implemented),
                 new("backup-scheduler", "جدولة النسخ اليومي/الأسبوعي وعند توصيل جهاز", "Scheduled automatic backups", "لم يبدأ التنفيذ؛ لا توجد مهام Windows مجدولة أو سياسة إعادة اتصال.", ModuleImplementationStatus.Planned)
             ]),
         new("phone-link", 14, "الاتصال والتشخيص", "استوديو الهاتف", "Phone Link Studio",
@@ -194,21 +194,21 @@ public static class SoftBoxModuleCatalog
             [
                 new("repair-guides", "البحث عن أدلة إصلاح خارجية", "External repair guide search", "يفتح مصادر iFixit الأصلية؛ هذه ليست ميزة ذكاء اصطناعي.", ModuleImplementationStatus.Implemented, "RepairGuides"),
                 new("evidence-reasoning", "تحليل قراءات البطارية والتخزين ونتائج الاختبارات", "Evidence-based repair reasoning", "يرتب توصيات غير مدمرة ويربط كل توصية بدليل ودرجة ثقة وحدود واضحة؛ لا يستنتج أعطالًا من بيانات مفقودة.", ModuleImplementationStatus.Implemented, "OpenRepairAdvisor"),
-                new("offline-knowledge", "قاعدة معرفة محلية قابلة للبحث", "Searchable offline repair knowledge", "مقالات الإصلاح العامة متاحة في Help Center؛ قاعدة تشخيص تفصيلية موسعة للأعطال والموديلات ما زالت قيد التطوير.", ModuleImplementationStatus.InDevelopment, "OpenHelpCenter")
+                new("offline-knowledge", "قاعدة معرفة محلية قابلة للبحث", "Searchable offline repair knowledge", "مقالات الإصلاح العامة متاحة في Help Center؛ قاعدة تشخيص تفصيلية موسعة للأعطال والموديلات ما زالت قيد التطوير.", ModuleImplementationStatus.InDevelopment)
             ]),
         new("one-click-diagnostic", 18, "الذكاء والمعرفة", "الفحص الشامل بزر واحد", "One-Click Diagnostic",
             "يجمع قراءات ADB غير المدمرة في جلسة واحدة ويصدر تقريرًا مفصلًا مع نتائج جزئية وحدود واضحة.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("device-inspect", "قراءة بيانات الجهاز وتحديث تقرير المكونات", "Device inspection", "قراءات ADB المتاحة دون تغيير إعدادات الهاتف؛ الفحص العام موجود في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented, "InspectDevice"),
+                new("device-inspect", "قراءة بيانات الجهاز وتحديث تقرير المكونات", "Device inspection", "قراءات ADB المتاحة دون تغيير إعدادات الهاتف؛ الفحص العام موجود في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("automated-suite", "سلسلة قراءات ADB للخصائص والبطارية والتخزين ووقت التشغيل والتطبيقات", "Read-only diagnostic orchestration", "ينفذ خمسة أوامر قراءة محددة على الجهاز المختار، يدعم الإلغاء ويحفظ تقرير JSON؛ لا يشغل اختبارات العتاد أو العمليات الحساسة تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenOneClickDiagnostic")
             ]),
         new("safe-recovery", 19, "Firmware والاستعادة", "الاستعادة الآمنة", "Safe Recovery",
             "فحص مسبق محافظ داخل Firmware Center يعيد التحقق من الملف ويقارن الشركة والموديل المقروءين، ويعرض شروط المصدر والتوافق وAnti-Rollback والنسخة الاحتياطية. لا توجد عملية Flash.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("firmware-precheck", "فحص أولي لبنية ملف Firmware وبصمته", "Firmware pre-inspection", "الفحص المحلي وSHA-256 متاحان في Firmware Center، ولا يثبتان توقيع الناشر أو التوافق.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
-                new("recovery-gate", "بوابة فحص الشركة والموديل والتصريح وسلامة الملف والمخاطر", "Conservative recovery preflight", "يعيد حساب SHA-256 قبل التقييم، ويطلب Snapshot مطابقًا للجهاز المصرح به، ويعرض Passed/Failed/Unknown/Blocked مع الأدلة. CanProceed يبقى false لأن سلسلة ثقة الناشر والتوافق وAnti-Rollback وإثبات النسخة غير متاحة.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
+                new("firmware-precheck", "فحص أولي لبنية ملف Firmware وبصمته", "Firmware pre-inspection", "الفحص المحلي وSHA-256 متاحان في Firmware Center، ولا يثبتان توقيع الناشر أو التوافق.", ModuleImplementationStatus.Implemented),
+                new("recovery-gate", "بوابة فحص الشركة والموديل والتصريح وسلامة الملف والمخاطر", "Conservative recovery preflight", "يعيد حساب SHA-256 قبل التقييم، ويطلب Snapshot مطابقًا للجهاز المصرح به، ويعرض Passed/Failed/Unknown/Blocked مع الأدلة. CanProceed يبقى false لأن سلسلة ثقة الناشر والتوافق وAnti-Rollback وإثبات النسخة غير متاحة.", ModuleImplementationStatus.Implemented),
                 new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported)
             ]),
         new("workflow-automation", 20, "الأتمتة والإنتاجية", "أتمتة سير العمل", "Workflow Automation",
@@ -216,14 +216,14 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("workflow-builder", "إنشاء وحفظ قوالب Workflow بصيغة JSON", "Workflow builder and JSON templates", "محرر خطوات من قائمة سماح، مع حفظ وتحميل ملفات JSON محلية والتحقق من المخطط قبل القبول.", ModuleImplementationStatus.Implemented, "OpenAndroidWorkflow"),
-                new("workflow-runner", "تشغيل متتابع مع تقدم وإلغاء وتقرير لكل خطوة", "Sequential workflow runner", "ينفذ خطوات القراءة فقط على الجهاز المحدد، ويتوقف عند الفشل أو الإلغاء ويسجل ناتج كل خطوة؛ لا ينفذ أوامر Shell حرة.", ModuleImplementationStatus.Implemented, "OpenAndroidWorkflow")
+                new("workflow-runner", "تشغيل متتابع مع تقدم وإلغاء وتقرير لكل خطوة", "Sequential workflow runner", "ينفذ خطوات القراءة فقط على الجهاز المحدد، ويتوقف عند الفشل أو الإلغاء ويسجل ناتج كل خطوة؛ لا ينفذ أوامر Shell حرة.", ModuleImplementationStatus.Implemented)
             ]),
         new("batch-operations", 21, "الأتمتة والإنتاجية", "العمليات الجماعية", "Batch Operations",
             "تنفيذ أوامر Android غير المدمرة على أجهزة ADB المصرح بها بالتوازي المحدود وعزل نتيجة كل جهاز.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("batch-selection", "اختيار مجموعة أجهزة مصرح بها", "Authorized multi-device selection", "يتيح اختيار عدة أجهزة من قائمة الاكتشاف الفعلية ويربط كل نتيجة بالمعرف المحدد.", ModuleImplementationStatus.Implemented, "OpenAndroidBatchTools"),
-                new("batch-runner", "تنفيذ متوازٍ محدود لأوامر قراءة فقط", "Bounded read-only batch runner", "ينفذ أوامر الكتالوج الآمنة بحد أقصى 3 أجهزة متزامنة مع إلغاء مشترك ونتيجة مستقلة لكل جهاز.", ModuleImplementationStatus.Implemented, "OpenAndroidBatchTools")
+                new("batch-runner", "تنفيذ متوازٍ محدود لأوامر قراءة فقط", "Bounded read-only batch runner", "ينفذ أوامر الكتالوج الآمنة بحد أقصى 3 أجهزة متزامنة مع إلغاء مشترك ونتيجة مستقلة لكل جهاز.", ModuleImplementationStatus.Implemented)
             ]),
         new("repair-history", 22, "إدارة مركز الصيانة", "سجل الصيانة", "Repair History",
             "سجل محلي مستمر لأحداث اتصال الجهاز وفحوص النظام ومزامنة Agent وتصدير التقارير، بالإضافة إلى سجل أوامر المركز.",
@@ -245,12 +245,12 @@ public static class SoftBoxModuleCatalog
             "إضافة الأصناف وتعديلها وحركات الصرف والإضافة والتنبيه بانخفاض المخزون متاحة.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("stock-items", "إدارة الأصناف والكميات وحد إعادة الطلب", "Inventory items", "يحفظ SKU والكمية والتكلفة والموقع محليًا؛ يفتح تبويب المخزون داخل مركز الصيانة.", ModuleImplementationStatus.Implemented, "OpenWorkshopInventory"),
+                new("stock-items", "إدارة الأصناف والكميات وحد إعادة الطلب", "Inventory items", "يحفظ SKU والكمية والتكلفة والموقع محليًا؛ يفتح تبويب المخزون داخل مركز الصيانة.", ModuleImplementationStatus.Implemented, "OpenPartsInventory"),
                 new("stock-movements", "حركات المخزون وسجلها", "Stock movements", "يمنع الرصيد السالب ويسجل سبب الحركة.", ModuleImplementationStatus.Implemented),
-                new("supplier-purchasing", "الموردون واستلام المشتريات وفواتير الموردين", "Supplier receipts and purchase invoices", "استلام كمية لصنف موجود مع المورد ورقم الفاتورة وتكلفة الشراء، وتحديث متوسط التكلفة المرجح وتسجيل إيصال الشراء وحركة المخزون في حفظ ذري واحد؛ يدعم تصدير سجل المشتريات CSV. أوامر الشراء متعددة الأصناف واعتماد الفواتير والمدفوعات غير منفذة.", ModuleImplementationStatus.Implemented, "OpenPartsInventory"),
-                new("inventory-catalogue", "إدارة الموردين والتصنيفات والتكلفة وسجل الحركات", "Supplier and stock movement catalogue", "نافذة موسعة لإدارة SKU والتصنيف والمورد وتكلفة الشراء وسعر البيع وحد إعادة الطلب، مع حركات مخزون قابلة للمراجعة وتصدير CSV.", ModuleImplementationStatus.Implemented, "OpenPartsInventory"),
-                new("repair-order-part-usage", "صرف قطع الغيار وربط تكلفتها بأمر الصيانة", "Repair order parts consumption", "يخصم الكمية من المخزون ويربط القطعة والكمية وتكلفة الوحدة والفني بأمر الإصلاح، ويسجل حركة المخزون ضمن عملية حفظ واحدة.", ModuleImplementationStatus.Implemented, "OpenGlobalWorkshopHistory"),
-                new("inventory-movement-history", "سجل حركات الإضافة والصرف والتعديل", "Inventory movement ledger", "يسجل فرق الكمية والرصيد بعد الحركة والسبب والفني وأمر الصيانة المرتبط، ويظهر في شاشة المخزون والتقارير.", ModuleImplementationStatus.Implemented, "OpenPartsInventory")
+                new("supplier-purchasing", "الموردون واستلام المشتريات وفواتير الموردين", "Supplier receipts and purchase invoices", "استلام كمية لصنف موجود مع المورد ورقم الفاتورة وتكلفة الشراء، وتحديث متوسط التكلفة المرجح وتسجيل إيصال الشراء وحركة المخزون في حفظ ذري واحد؛ يدعم تصدير سجل المشتريات CSV. أوامر الشراء متعددة الأصناف واعتماد الفواتير والمدفوعات غير منفذة.", ModuleImplementationStatus.Implemented),
+                new("inventory-catalogue", "إدارة الموردين والتصنيفات والتكلفة وسجل الحركات", "Supplier and stock movement catalogue", "نافذة موسعة لإدارة SKU والتصنيف والمورد وتكلفة الشراء وسعر البيع وحد إعادة الطلب، مع حركات مخزون قابلة للمراجعة وتصدير CSV.", ModuleImplementationStatus.Implemented),
+                new("repair-order-part-usage", "صرف قطع الغيار وربط تكلفتها بأمر الصيانة", "Repair order parts consumption", "يخصم الكمية من المخزون ويربط القطعة والكمية وتكلفة الوحدة والفني بأمر الإصلاح، ويسجل حركة المخزون ضمن عملية حفظ واحدة.", ModuleImplementationStatus.Implemented),
+                new("inventory-movement-history", "سجل حركات الإضافة والصرف والتعديل", "Inventory movement ledger", "يسجل فرق الكمية والرصيد بعد الحركة والسبب والفني وأمر الصيانة المرتبط، ويظهر في شاشة المخزون والتقارير.", ModuleImplementationStatus.Implemented)
             ]),
         new("service-reports", 25, "إدارة مركز الصيانة", "تقارير الخدمة والإحصائيات", "Service Reports",
             "تقارير تشخيص JSON وتقارير ورشة HTML/TXT وتصدير CSV موجودة؛ لوحة التحليلات المالية غير مكتملة.",
@@ -308,7 +308,7 @@ public static class SoftBoxModuleCatalog
                 new("catalog-update", "تحديث كتالوج الموديلات", "Device catalog refresh", "يحدّث بيانات الموديلات ويخزن نسخة محلية؛ مدخل التحديث في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("release-check", "فحص إصدارات SoftBox الرسمية Stable/Beta", "Official release channel check", "يقرأ metadata من GitHub API، يقارن SemVer، ويقبل صفحة الإصدار وروابط الأصول من مستودع SoftBox الرسمي فقط؛ لا ينزّل أو ينفذ ملفات.", ModuleImplementationStatus.Implemented, "OpenUpdateCenter"),
                 new("application-updater", "تنزيل وتحقق توقيع وتثبيت تحديث SoftBox", "Signed application updater", "لم يتم تنفيذ الثقة بجذر توقيع أو تحديث ذاتي؛ يلزم توقيع ملفات الإصدار قبل تفعيل التثبيت.", ModuleImplementationStatus.Planned),
-                new("release-channels", "قنوات Stable/Beta وسياسة الرجوع الآمن", "Release channels and rollback", "اختيار قناة الفحص Stable/Beta متاح؛ تثبيت إصدار سابق أو rollback لم يبدأ.", ModuleImplementationStatus.InDevelopment, "OpenUpdateCenter")
+                new("release-channels", "قنوات Stable/Beta وسياسة الرجوع الآمن", "Release channels and rollback", "اختيار قناة الفحص Stable/Beta متاح؛ تثبيت إصدار سابق أو rollback لم يبدأ.", ModuleImplementationStatus.InDevelopment)
             ]),
         new("notification-center", 32, "النظام والحماية", "مركز الإشعارات", "Notification Center",
             "صندوق إشعارات محلي محفوظ لأحداث اتصال الأجهزة ونتائج الفحص وتصدير التقارير، مع تعليم الإشعار كمقروء.",
@@ -345,7 +345,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("version-info", "عرض الإصدار وبيئة التشغيل", "Version and runtime information", "يقرأ إصدار Assembly و.NET وWindows ومعمارية التطبيق مباشرة من النظام.", ModuleImplementationStatus.Implemented, "OpenAbout"),
-                new("third-party-notices", "عرض إشعارات ومراجع مكونات الطرف الثالث", "Third-party notices", "يعرض ملف THIRD-PARTY-NOTICES المحلي عند تضمينه مع الحزمة، أو يوضح أنه غير موجود في التثبيت الحالي.", ModuleImplementationStatus.Implemented, "OpenAbout")
+                new("third-party-notices", "عرض إشعارات ومراجع مكونات الطرف الثالث", "Third-party notices", "يعرض ملف THIRD-PARTY-NOTICES المحلي عند تضمينه مع الحزمة، أو يوضح أنه غير موجود في التثبيت الحالي.", ModuleImplementationStatus.Implemented)
             ])
     ];
 
@@ -354,9 +354,9 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenUpdateCenter", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
-        "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
+        "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
     };
 
