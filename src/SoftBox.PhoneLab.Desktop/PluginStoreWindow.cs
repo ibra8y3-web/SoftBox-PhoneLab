@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Plugins;
 using System.IO;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
@@ -18,8 +19,16 @@ public sealed class PluginStoreWindow : Window
     private readonly TextBox _path = new();
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
+    private readonly TextBlock _libraryLocation = new();
+    private readonly ListBox _libraryList = new();
+    private readonly ObservableCollection<PackageLibraryItem> _libraryItems = [];
+    private readonly string _libraryDirectory = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "SoftBox", "PhoneLab", "PluginPackages");
     private readonly Button _inspectButton;
     private readonly Button _saveButton;
+    private readonly Button _copyToLibraryButton;
+    private readonly Button _refreshLibraryButton;
     private PluginPackageInspection? _inspection;
 
     public PluginStoreWindow()
@@ -36,8 +45,13 @@ public sealed class PluginStoreWindow : Window
 
         _inspectButton = ButtonControl("فحص حزمة Plugin", "#14517A", Inspect_Click);
         _saveButton = ButtonControl("حفظ تقرير الفحص JSON", "#176044", Save_Click);
+        _copyToLibraryButton = ButtonControl("حفظ في المكتبة المحلية", "#243B56", CopyToLibrary_Click);
+        _refreshLibraryButton = ButtonControl("تحديث المكتبة", "#243B56", RefreshLibrary_Click);
         _saveButton.IsEnabled = false;
+        _copyToLibraryButton.IsEnabled = false;
         Content = BuildContent();
+        _libraryList.SelectionChanged += (_, _) => SelectLibraryItem();
+        Loaded += async (_, _) => await RefreshLibraryAsync();
     }
 
     private UIElement BuildContent()
@@ -87,6 +101,28 @@ public sealed class PluginStoreWindow : Window
         };
         DockPanel.SetDock(warning, Dock.Top);
         root.Children.Add(warning);
+
+        var library = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        _libraryLocation.Text = "المكتبة المحلية: " + _libraryDirectory;
+        _libraryLocation.Foreground = Brush("#9FC7E8");
+        _libraryLocation.TextWrapping = TextWrapping.Wrap;
+        _libraryLocation.FontSize = 10;
+        _libraryLocation.Margin = new Thickness(0, 0, 0, 5);
+        library.Children.Add(_libraryLocation);
+        _libraryList.ItemsSource = _libraryItems;
+        _libraryList.DisplayMemberPath = nameof(PackageLibraryItem.DisplayName);
+        _libraryList.Height = 95;
+        _libraryList.Background = Brush("#071625");
+        _libraryList.Foreground = Brush("#DCEBFA");
+        _libraryList.BorderBrush = Brush("#263D58");
+        _libraryList.Padding = new Thickness(6);
+        library.Children.Add(_libraryList);
+        var libraryActions = new WrapPanel { Margin = new Thickness(0, 5, 0, 0) };
+        libraryActions.Children.Add(_refreshLibraryButton);
+        libraryActions.Children.Add(_copyToLibraryButton);
+        library.Children.Add(libraryActions);
+        DockPanel.SetDock(library, Dock.Top);
+        root.Children.Add(library);
 
         var form = new Grid { Margin = new Thickness(0, 0, 0, 10) };
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -147,6 +183,7 @@ public sealed class PluginStoreWindow : Window
             _path.Text = dialog.FileName;
             _inspection = null;
             _saveButton.IsEnabled = false;
+            _copyToLibraryButton.IsEnabled = false;
             _report.Text = "اضغط فحص حزمة Plugin لقراءة Manifest والصلاحيات.";
         }
     }
@@ -167,9 +204,13 @@ public sealed class PluginStoreWindow : Window
             _inspection = await _inspector.InspectAsync(_path.Text);
             _report.Text = FormatReport(_inspection);
             _saveButton.IsEnabled = true;
-            _status.Text = _inspection.PackageErrors.Count == 0 && _inspection.ManifestValidation.IsValid
-                ? "انتهى الفحص البنيوي. الحزمة لم تُوقّع أو تُحمّل أو تُشغّل."
-                : "فشل الفحص البنيوي أو تحقق Manifest؛ راجع الأخطاء قبل أي استخدام.";
+            _copyToLibraryButton.IsEnabled =
+                _inspection.PackageErrors.Count == 0 &&
+                _inspection.ManifestValidation.IsValid &&
+                _inspection.Manifest is not null;
+            _status.Text = _copyToLibraryButton.IsEnabled
+                ? "اجتازت الحزمة الفحص البنيوي. يمكنك حفظ نسخة خاملة في المكتبة المحلية؛ لن يتم تثبيتها أو تشغيلها."
+                : "فشل الفحص البنيوي أو تحقق Manifest؛ لا يمكن حفظ الحزمة في المكتبة.";
         }
         catch (Exception ex)
         {
@@ -180,6 +221,87 @@ public sealed class PluginStoreWindow : Window
         finally
         {
             _inspectButton.IsEnabled = true;
+        }
+    }
+
+    private void SelectLibraryItem()
+    {
+        if (_libraryList.SelectedItem is not PackageLibraryItem item)
+            return;
+        _path.Text = item.FullPath;
+        _inspection = null;
+        _saveButton.IsEnabled = false;
+        _copyToLibraryButton.IsEnabled = false;
+        _report.Text = "اختر فحص حزمة Plugin لقراءة Manifest والصلاحيات والبصمة.";
+    }
+
+    private async void RefreshLibrary_Click(object sender, RoutedEventArgs e)
+        => await RefreshLibraryAsync();
+
+    private Task RefreshLibraryAsync()
+    {
+        _libraryItems.Clear();
+        try
+        {
+            Directory.CreateDirectory(_libraryDirectory);
+            var files = Directory.EnumerateFiles(_libraryDirectory, "*", SearchOption.TopDirectoryOnly)
+                .Where(file =>
+                    Path.GetExtension(file).Equals(".sbxplugin", StringComparison.OrdinalIgnoreCase) ||
+                    Path.GetExtension(file).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .Take(500);
+            foreach (var file in files)
+                _libraryItems.Add(new PackageLibraryItem(file, Path.GetFileName(file)));
+            _libraryLocation.Text = $"المكتبة المحلية: {_libraryDirectory} | الحزم: {_libraryItems.Count:N0}";
+            _status.Text = "تم تحديث فهرس المكتبة المحلية. الحزم المخزنة لا يتم تشغيلها.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر قراءة المكتبة المحلية: " + ex.Message;
+        }
+        return Task.CompletedTask;
+    }
+
+    private async void CopyToLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_inspection is null ||
+            _inspection.PackageErrors.Count != 0 ||
+            !_inspection.ManifestValidation.IsValid ||
+            _inspection.Manifest is null)
+        {
+            _status.Text = "افحص حزمة صالحة بنيويًا أولًا.";
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(_libraryDirectory);
+            var sourceName = Path.GetFileNameWithoutExtension(_inspection.PackagePath);
+            var safeName = new string(sourceName
+                .Where(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_')
+                .Take(64).ToArray());
+            if (string.IsNullOrWhiteSpace(safeName))
+                safeName = "plugin";
+            var destination = Path.Combine(
+                _libraryDirectory,
+                _inspection.PackageSha256[..16] + "-" + safeName + ".sbxplugin");
+
+            if (!File.Exists(destination))
+                File.Copy(_inspection.PackagePath, destination, overwrite: false);
+
+            await RefreshLibraryAsync();
+            _libraryList.SelectedItem = _libraryItems.FirstOrDefault(item =>
+                item.FullPath.Equals(destination, StringComparison.OrdinalIgnoreCase));
+
+            _status.Text = File.Exists(destination)
+                ? "تم حفظ الحزمة كملف خامل في المكتبة المحلية. لم يتم تثبيتها أو منحها صلاحيات أو تشغيل DLL."
+                : "لم يتم العثور على ملف الحزمة في المكتبة بعد النسخ.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر حفظ الحزمة في المكتبة: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "Plugin Store",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -261,6 +383,8 @@ public sealed class PluginStoreWindow : Window
         button.Click += handler;
         return button;
     }
+
+    private sealed record PackageLibraryItem(string FullPath, string DisplayName);
 
     private static SolidColorBrush Brush(string color)
         => new((Color)ColorConverter.ConvertFromString(color));
