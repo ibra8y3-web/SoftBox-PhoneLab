@@ -686,6 +686,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenAbout":
                 new AboutWindow { Owner = this }.Show();
                 break;
+            case "OpenPartsInventory":
+                new PartsInventoryWindow() { Owner = this }.Show();
+                break;
             case "OpenRepairAdvisor":
                 if (_snapshot is null)
                 {
