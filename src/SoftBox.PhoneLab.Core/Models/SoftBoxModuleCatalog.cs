@@ -65,7 +65,7 @@ public static class SoftBoxModuleCatalog
                 new("compatibility", "مصفوفة القدرات والتوافق لكل موديل", "Per-model capability matrix", "لم تُبنَ بعد قاعدة موثقة تربط كل عملية بموديل وإصدار وبروتوكول.", ModuleImplementationStatus.Planned)
             ]),
         new("android-service", 4, "أدوات Android", "مركز صيانة Android", "Android Service Center",
-            "مركز موحد لأدوات ADB وAgent وإدارة ملفات التخزين المشترك وقراءة التطبيقات والأوامر الآمنة.",
+            "مركز موحد لأدوات ADB وFastboot وAgent وإدارة ملفات التخزين المشترك وقراءة التطبيقات والأوامر الآمنة.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("adb-core", "اكتشاف أجهزة ADB وقراءة معلوماتها", "ADB discovery and inspection", "مدمج في محرك الاكتشاف والفحص الحالي؛ تشغيل الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
