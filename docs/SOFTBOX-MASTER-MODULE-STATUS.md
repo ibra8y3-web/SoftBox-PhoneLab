@@ -131,9 +131,9 @@ The same implementation is shared and linked from related module pages; it must 
 
 ## Current navigation ownership after cleanup
 
-The latest catalog is audited at 52 unique executable actions. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Duplicate launch aliases have been removed only from non-canonical feature rows; implementations, services, legacy views and data stores remain.
+The latest catalog is audited at **53 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
 
-Latest CI for the implementation branch: run #257 — 150 passed, 0 failed, 0 skipped; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
+Latest CI for the combined implementation branch: run #273 — **166 passed, 0 failed, 0 skipped**; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
 
 No physical handset, USB chipset, EDL/BROM protocol, firmware flash or board-level test is claimed. Do not change any feature to Verified without recorded target-environment evidence.
 

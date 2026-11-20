@@ -228,7 +228,8 @@ The current catalog statuses are implementation classifications, not a completio
 - The previously Planned section 30 now contains real local account bootstrap/authentication, three fixed roles, PBKDF2 password verifiers, lockout, account administration, session re-authentication and a local audit trail.
 - Authorization is fail-closed for all 53 catalog action IDs. Module launch is recorded against the authenticated user. Read-only roles cannot invoke interactive screen control or device-write/workshop/admin actions.
 - Account data is stored within the current Windows user's LocalAppData profile. This is not domain identity, Windows Hello, dedicated ACL/DPAPI enforcement, or a central multi-workstation identity platform.
-- PR #2 CI run #264 passed 165 tests, Restore, Windows x64 publish, Android Agent build and offline bundle packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44784653573
-- Windows x64 artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44784653573/artifacts/14653526981
-- Follow-up hardening (per-invocation audit, read-only workflow/batch permissions and blocking automatic interactive mirroring) is part of the current PR head and must pass its next CI run before merge.
+- PR #2 CI run #273 passed **166 tests** (0 failures, 0 skipped), Restore, Windows x64 publish, Android Agent build and offline bundle packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393
+- Windows x64 artifact (227,451,055 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
+- The final PR #2 head records each permitted module-action invocation against the authenticated user and denies launching an action if its audit entry cannot be written. The ReadOnly role can run allow-listed read-only command/workflow/batch inspections but not interactive screen control; auto mirror and Agent installation are disabled for read-only sessions.
+- PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged. The PR remains a separate reviewable addition until merged.
 - PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged.

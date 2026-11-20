@@ -126,4 +126,19 @@ This CI run includes the catalog/reorganization/build report updates. The tested
 
 The added account tests cover first-admin bootstrap, PBKDF2 verifier storage (not the password), login, admin/technician/read-only account creation, non-admin denial, repeated-failure lockout, last-admin protection, password reset/change, disabled-account rejection, local audit redaction and corrupted-store fail-closed behavior. Authorization tests validate all 53 catalog ActionIds and role restrictions.
 
-This run is hosted Windows CI with temporary account-store fixtures. It does not validate Windows ACL/DPAPI deployment policy, domain accounts, multi-workstation synchronization or physical Android hardware. The subsequent permission hardening and invocation-audit extension are tracked in the newer PR head and require the next CI run before merge.
+This run is hosted Windows CI with temporary account-store fixtures. It does not validate Windows ACL/DPAPI deployment policy, domain accounts, multi-workstation synchronization or physical Android hardware.
+
+## Final follow-up verification — read-only permission hardening and per-tool audit (CI run #273)
+
+- Workflow: PhoneLab CI, run #273; result: **Success** on the latest PR #2 source head `4cb3578711e45d87e525a86162b99100c7f93644`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393
+- Restore: passed.
+- Unit tests: **166 passed, 0 failed, 0 skipped**.
+- Windows self-contained x64 publish: passed.
+- Android Agent build/upload: passed.
+- Offline USB, scrcpy and TRACE Boardviewer bundling: passed.
+- Windows artifact: **227,451,055 bytes**, artifact ID `14653329474`.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
+- No CS* compiler or xUnit analyzer warnings were present in the build log.
+
+The final follow-up adds user-attributed module-action invocation to the bounded audit log and blocks tool launch if that audit write fails. Read-only roles can run allow-listed read-only command/workflow/batch inspection but cannot invoke interactive screen control; automatic screen mirroring and Agent installation are suppressed for read-only sessions. Tests cover these role boundaries. This is still a local application role system, not Windows account isolation, ACL/DPAPI enforcement or domain identity.
