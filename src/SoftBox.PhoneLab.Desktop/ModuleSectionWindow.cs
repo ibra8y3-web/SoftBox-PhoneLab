@@ -13,11 +13,13 @@ public sealed class ModuleSectionWindow : Window
 {
     private readonly SoftBoxModule _module;
     private readonly Action<string> _openAction;
+    private readonly Func<string, bool> _canExecute;
 
-    public ModuleSectionWindow(SoftBoxModule module, Action<string> openAction)
+    public ModuleSectionWindow(SoftBoxModule module, Action<string> openAction, Func<string, bool>? canExecute = null)
     {
         _module = module ?? throw new ArgumentNullException(nameof(module));
         _openAction = openAction ?? throw new ArgumentNullException(nameof(openAction));
+        _canExecute = canExecute ?? (_ => true);
         Title = $"SoftBox | {_module.NameAr} — {_module.NameEn}";
         Width = 980;
         Height = 760;
@@ -172,19 +174,22 @@ public sealed class ModuleSectionWindow : Window
 
             if (!string.IsNullOrWhiteSpace(feature.ActionId))
             {
+                var actionId = feature.ActionId;
+                var allowed = _canExecute(actionId);
                 var open = new Button
                 {
-                    Content = "فتح الأداة الموجودة",
+                    Content = allowed ? "فتح الأداة الموجودة" : "الصلاحية غير متاحة",
                     Padding = new Thickness(12, 6, 12, 6),
                     Margin = new Thickness(4, 0, 4, 0),
                     MinWidth = 120,
-                    Background = Brush("#14517A"),
+                    Background = Brush(allowed ? "#14517A" : "#273449"),
                     Foreground = Brushes.White,
                     BorderBrush = Brush("#2F83B5"),
                     FontWeight = FontWeights.SemiBold,
-                    VerticalAlignment = VerticalAlignment.Center
+                    VerticalAlignment = VerticalAlignment.Center,
+                    IsEnabled = allowed,
+                    ToolTip = allowed ? null : "هذا الحساب لا يملك صلاحية تشغيل هذه الأداة."
                 };
-                var actionId = feature.ActionId;
                 open.Click += (_, _) => _openAction(actionId);
                 Grid.SetColumn(open, 2);
                 Grid.SetRowSpan(open, 3);

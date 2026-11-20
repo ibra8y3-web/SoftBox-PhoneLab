@@ -1,0 +1,56 @@
+using SoftBox.PhoneLab.Core.Models;
+using SoftBox.PhoneLab.Core.Security;
+using Xunit;
+
+namespace SoftBox.PhoneLab.Tests;
+
+public sealed class SoftBoxAuthorizationPolicyTests
+{
+    [Fact]
+    public void EveryCatalogActionHasAnExplicitFailClosedPermission()
+    {
+        var actions = SoftBoxModuleCatalog.All.SelectMany(x => x.Features)
+            .Where(x => x.ActionId is not null).Select(x => x.ActionId!).ToArray();
+
+        Assert.Equal(actions.Length, actions.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(SoftBoxAuthorizationPolicy.SupportedActionIds.OrderBy(x => x, StringComparer.Ordinal),
+            actions.OrderBy(x => x, StringComparer.Ordinal));
+        Assert.All(actions, action =>
+        {
+            Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission(action, out var permission));
+            Assert.NotEqual(SoftBoxAccountPermission.None, permission);
+        });
+    }
+
+    [Fact]
+    public void ReadOnlyAccountCannotPerformDeviceWritesOrWorkshopChanges()
+    {
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "InspectDevice"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenHelpCenter"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidFileManager"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "MirrorScreen"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidCommandCenter"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidWorkflow"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidBatchTools"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenWorkshop"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenUserManagement"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenPluginStore"));
+    }
+
+    [Fact]
+    public void TechnicianCanRepairButCannotManageAccountsOrApplicationSecurity()
+    {
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenAndroidAppManager"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenPartsInventory"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenUserManagement"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenApplicationSettings"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenUpdateCenter"));
+    }
+
+    [Fact]
+    public void UnknownActionIdsAreDeniedForEveryRole()
+    {
+        foreach (var role in Enum.GetValues<SoftBoxUserRole>())
+            Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(role, "ExecuteArbitraryCommand"));
+    }
+}

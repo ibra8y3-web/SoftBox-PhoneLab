@@ -294,12 +294,12 @@ public static class SoftBoxModuleCatalog
                 new("encrypted-data", "تشفير قاعدة البيانات والنسخ وإدارة مفاتيح", "At-rest encryption and key management", "نسخ الورشة غير مشفرة حتى الآن.", ModuleImplementationStatus.Planned)
             ]),
         new("user-technician-management", 30, "النظام والحماية", "المستخدمون والفنيون والصلاحيات", "User & Technician Management",
-            "اسم الفني حقل في أوامر الصيانة فقط؛ لا توجد حسابات أو تسجيل دخول أو أدوار وصلاحيات.",
-            ModuleImplementationStatus.Planned,
+            "حسابات محلية حقيقية بأدوار مدير وفني وقراءة فقط، ومصادقة PBKDF2، وقفل مؤقت بعد محاولات فاشلة، وسجل تدقيق حسب المستخدم.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("technician-field", "تسجيل اسم الفني على أمر الصيانة", "Technician attribution field", "حقل اسم فني وليس حساب مستخدم موثق؛ يظهر مع أوامر الصيانة في إدارة مركز الصيانة.", ModuleImplementationStatus.Implemented),
-                new("accounts", "حسابات ومصادقة وأدوار وصلاحيات", "Accounts and roles", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned),
-                new("audit-user", "قفل الجلسة وسجل عمليات حسب هوية المستخدم", "Session locking and per-user audit", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
+                new("accounts", "حسابات ومصادقة وأدوار وصلاحيات", "Accounts and roles", "إعداد أول مدير، وتسجيل دخول محلي، وإدارة حسابات مدير وفني وقراءة فقط، وتجزئة كلمات المرور باستخدام PBKDF2-HMAC-SHA256.", ModuleImplementationStatus.Tested, "OpenUserManagement"),
+                new("audit-user", "قفل الجلسة وسجل عمليات حسب هوية المستخدم", "Session locking and per-user audit", "قفل الجلسة يتطلب إعادة المصادقة، ويُسجل الدخول والفشل وتغيير كلمة المرور ومنع الصلاحيات وبدء تشغيل الأدوات حسب هوية المستخدم في سجل محلي محدود الحجم.", ModuleImplementationStatus.Tested)
             ]),
         new("update-center", 31, "النظام والحماية", "مركز التحديثات", "Update Center",
             "يفحص إصدارات Stable/Beta من GitHub Releases ويعرض رقم الإصدار والملاحظات والملفات المنشورة دون تنزيل أو تثبيت تلقائي.",
@@ -357,7 +357,7 @@ public static class SoftBoxModuleCatalog
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
-        "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
+        "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement"
     };
 
     public static SoftBoxModule? Find(string id)

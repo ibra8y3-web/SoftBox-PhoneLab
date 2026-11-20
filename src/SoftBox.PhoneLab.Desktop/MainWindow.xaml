@@ -29,6 +29,13 @@
      </Border>
     </StackPanel>
 nel>
+    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+     <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+      <TextBlock Text="المستخدم الحالي" FontSize="9" Foreground="#8199B5" HorizontalAlignment="Right"/>
+      <TextBlock Text="{Binding CurrentUserDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#C7E7FF" HorizontalAlignment="Right"/>
+     </StackPanel>
+     <Button Content="قفل الجلسة" Click="LockSession_Click" MinWidth="105" Padding="12,8" Background="#6B3D22"/>
+    </StackPanel>
    </Grid>
   </Border>
 

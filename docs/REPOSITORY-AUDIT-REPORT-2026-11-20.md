@@ -219,3 +219,17 @@ The current catalog statuses are implementation classifications, not a completio
 - CI run #258 completed successfully: 150 passed, 0 failed, 0 skipped; Restore, Windows x64 self-contained publish, Android Agent build/upload, offline tool packaging and artifact upload passed.
 - Artifact (227,398,186 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
 - The feature branch remained in its pull request for integration into `main` after this successful check; no hardware verification is implied.
+
+
+## Follow-up PR #2 — User & Technician Management
+
+- Pull request: https://github.com/ibra8y3-web/SoftBox-PhoneLab/pull/2
+- Branch: `feature/user-technician-management`.
+- The previously Planned section 30 now contains real local account bootstrap/authentication, three fixed roles, PBKDF2 password verifiers, lockout, account administration, session re-authentication and a local audit trail.
+- Authorization is fail-closed for all 53 catalog action IDs. Module launch is recorded against the authenticated user. Read-only roles cannot invoke interactive screen control or device-write/workshop/admin actions.
+- Account data is stored within the current Windows user's LocalAppData profile. This is not domain identity, Windows Hello, dedicated ACL/DPAPI enforcement, or a central multi-workstation identity platform.
+- PR #2 CI run #273 passed **166 tests** (0 failures, 0 skipped), Restore, Windows x64 publish, Android Agent build and offline bundle packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393
+- Windows x64 artifact (227,451,055 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
+- The final PR #2 head records each permitted module-action invocation against the authenticated user and denies launching an action if its audit entry cannot be written. The ReadOnly role can run allow-listed read-only command/workflow/batch inspections but not interactive screen control; auto mirror and Agent installation are disabled for read-only sessions.
+- PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged. The PR remains a separate reviewable addition until merged.
+- PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged.

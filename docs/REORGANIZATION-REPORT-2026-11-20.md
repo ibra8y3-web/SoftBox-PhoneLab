@@ -77,7 +77,7 @@ Future moves should occur only when a specific existing tool has a proven owners
 - The three Android Service Center entries now have distinct actions: `OpenAndroidFileManager` selects the file tab, `OpenAndroidAppManager` selects the application tab and `OpenAndroidCommandCenter` selects the allow-listed read-only command tab. `OpenAndroidBatchTools` selects the batch tab. They still share one serial-authorized Android service/window, not separate duplicated ADB engines.
 - Qualcomm and MediaTek now have section-specific entrypoints into the shared USB Doctor. The selected filter is applied to enumerated Windows PnP devices; unknown/missing IDs remain unknown rather than inferred.
 - Parts Inventory now has one canonical launch action to the dedicated Parts Inventory workspace. The older Workshop inventory view and its legacy code path remain in place; no inventory records or WorkshopStore data were removed.
-- The catalog contains 52 unique executable ActionIds. All 52 have explicit MainWindow handlers; no repeated ActionId remains in the feature rows.
+- The catalog contains 53 unique executable ActionIds. All 53 have explicit MainWindow handlers and exactly one fail-closed role-permission entry; no repeated ActionId remains in the feature rows.
 - A total of 84 pull-request files were reviewed; none had status `removed`. This is a navigation correction, not a deletion of old tool implementations.
 - Latest CI run #257 passed 150/150 unit tests, Windows x64 self-contained publishing, Android Agent build/upload and offline tool bundling: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644
 
@@ -85,3 +85,14 @@ Future moves should occur only when a specific existing tool has a proven owners
 ## Documentation revision — CI run #258
 
 The inventory, navigation ownership and build report were synchronized to the final 165-entry catalog and 52 unique executable routes. Documentation-updated branch CI #258 succeeded with 150 tests, Windows x64 publish, Android Agent build and offline packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
+
+
+## Follow-up — User & Technician Management and account authorization (PR #2)
+
+- Added first-run local administrator bootstrap and mandatory sign-in before the WPF workspace opens.
+- Added fixed Administrator, Technician and ReadOnly roles, administrator account controls, PBKDF2-HMAC-SHA256 password verifiers (600,000 iterations by default), temporary lockout, self-service password change, modal session re-authentication and a bounded audit log.
+- The central action router and module buttons both enforce a role permission map for all 53 catalog actions.
+- Every allowed module action is recorded against the authenticated user before it executes. If the audit write fails, the action is not launched. Denied actions are also recorded.
+- ReadOnly users can run allow-listed read-only command/workflow/batch inspections; interactive mirror/control, automatic Agent installation and device writes are denied.
+- This does not yet provide Windows domain/Hello identity, DPAPI/ACL enforcement, custom per-user permission editing, idle-time locking, central multi-workstation accounts, or attribution of every internal workshop data mutation.
+- Latest validation: CI #273 — 166/166 tests passed; Windows x64 publish, Android Agent build and offline package validation passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474

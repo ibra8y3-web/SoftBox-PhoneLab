@@ -10,13 +10,13 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 - Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 5 Tested, 63 Planned, 23 In Development and 2 Unsupported.
 - No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
 
-### Current additive branch snapshot — 20 November 2026
+### Current additive branch snapshot — User & Technician Management follow-up
 
-- Top-level sections: **36 retained** — 35 In Development and 1 Planned.
+- Top-level sections: **36 retained** — all 36 In Development.
 - Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): 24 Planned, 38 In Development, 95 Implemented, 6 Tested, 0 Verified and 2 Unsupported.
-- Executable navigation: **52 unique ActionIds**, all routed, with no duplicate executable action IDs.
-- The one top-level Planned section is User & Technician Management. The catalog does not mark any section Verified; CI does not constitute physical-device verification.
+- Entry statuses (section rows plus child features): **21 Planned, 39 In Development, 95 Implemented, 8 Tested, 0 Verified and 2 Unsupported**.
+- Executable navigation: **53 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
 ## Status definitions
 
@@ -62,8 +62,8 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 27 | Plugin SDK | In Development | Version-1 manifest contract, semantic version validation, known permission identifiers, fail-closed unknown permissions, sample manifest and developer quickstart | Public SDK assembly/contracts, actual host API, runtime IPC, sample executable plugin and compatibility test host |
 | 28 | Offline Center | In Development | Local ADB, APK analysis, USB inventory, firmware library, workshop/activity data, settings and offline Help Center; support bundle stays local | Unified online/offline state, local component inventory and offline policy controls |
 | 29 | Security & Privacy | In Development | ADB argument-list invocation and serial validation; allow-listed read-only shell presets; Agent consent; safe public-storage paths; secret-redacted local support ZIP; masked device history identifiers | Encrypted local workshop/history storage, managed keys, signed updater/plugin trust roots and formal threat model |
-| 30 | User & Technician Management | Planned | Technician attribution fields on repair orders and stock movements; no authenticated account identity is asserted | Local accounts, PBKDF2/password policy, role/permission enforcement, session lock and user-attributed audit |
-| 31 | Update Center | Planned | Device catalog refresh only; no self-updater | Signed application update manifest, trust-root verification, staged install, rollback and release-channel management |
+| 30 | User & Technician Management | In Development | First-run administrator bootstrap; mandatory local sign-in; administrator/technician/read-only roles; PBKDF2-HMAC-SHA256 password verifiers; password lockout; account administration; self-service password change; manual session lock/re-authentication; bounded audit for sign-in, account, session, denied-action and module-action events | Windows OS account binding and dedicated ACL/DPAPI protection; unattended idle timeout; custom per-user permission editor; password recovery policy; full attribution of every internal WorkshopStore mutation and all nested device-operation outcomes; central multi-workstation identity |
+| 31 | Update Center | In Development | Official GitHub Stable/Beta release metadata inspection and local device-catalog refresh | Signed application update manifest, trusted publisher roots, secure staged download/install, rollback and release-channel enforcement |
 | 32 | Notification Center | In Development | Persistent local inbox for device connect/disconnect/ADB authorization, Agent diagnostics and report export; unread/read and mark-all-read | Additional operation-completion sources, filtering and direct deep links for every module event |
 | 33 | Help Center | In Development | Searchable local Arabic help articles with English titles/keywords for ADB, USB, APK, backup, firmware, network, workflow, support and privacy limitations | Expanded illustrated guides, full glossary and manufacturer/model-specific troubleshooting articles |
 | 34 | Support & Logs | In Development | Bounded Android evidence collection, firmware inspection reports, local support ZIP with system/runtime metadata and user-selected TXT/LOG/JSON files plus password/token/authorization/device-ID redaction | Structured application log pipeline, crash capture and stronger review of non-standard secret formats |
@@ -131,9 +131,9 @@ The same implementation is shared and linked from related module pages; it must 
 
 ## Current navigation ownership after cleanup
 
-The latest catalog is audited at 52 unique executable actions. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Duplicate launch aliases have been removed only from non-canonical feature rows; implementations, services, legacy views and data stores remain.
+The latest catalog is audited at **53 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
 
-Latest CI for the implementation branch: run #257 — 150 passed, 0 failed, 0 skipped; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
+Latest CI for the combined implementation branch: run #273 — **166 passed, 0 failed, 0 skipped**; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
 
 No physical handset, USB chipset, EDL/BROM protocol, firmware flash or board-level test is claimed. Do not change any feature to Verified without recorded target-environment evidence.
 
@@ -146,3 +146,27 @@ No physical handset, USB chipset, EDL/BROM protocol, firmware flash or board-lev
 - CI run #258 on the documentation-updated branch passed all 150 unit tests, Restore, Windows x64 publish, Android Agent build/upload, offline dependency bundling and artifact upload.
 - Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
 - No physical-device verification is claimed.
+
+
+## Follow-up implementation — local user and technician security (PR #2)
+
+Section 30 is now In Development rather than Planned. The current implementation has:
+
+- First-run creation of one administrator chosen by the operator; no shared/default password.
+- Mandatory authentication before the WPF main window opens.
+- Administrator, Technician and ReadOnly roles with a fail-closed map for every one of the 53 catalog ActionIds.
+- PBKDF2-HMAC-SHA256 verifiers with random per-account salt; 600,000 iterations by default; no plaintext password storage.
+- Minimum 12-character passwords, constant-time verifier comparison and five-failure / 15-minute temporary lockout.
+- Administrator creation, role/state changes, password reset for another user, and self-service password change.
+- Session lock with re-authentication; if re-authentication is cancelled or fails, the application exits.
+- Local bounded audit for sign-in success/failure, account changes, password events, session locks, denied actions and canonical module-action invocation.
+- Permission checks in both the module-window buttons and the central action dispatcher. Read-only roles do not receive device-write, workshop-change, account-management, settings, plugin or updater privileges. Interactive screen mirror and automatic Agent installation are blocked for read-only roles; allow-listed read-only command/workflow/batch operations remain available.
+- The user-account file lives under the current Windows user's LocalAppData folder. This is application-level authorization and does not replace Windows OS account isolation or a dedicated filesystem ACL/DPAPI policy.
+
+### Explicit remaining gaps
+
+- No custom permission editor; three fixed role templates are used.
+- No idle-time lock timer, password recovery workflow or Windows identity/Hello integration.
+- Audit events cover authentication, accounts, session events, denied actions and module launch; not every internal WorkshopStore write or the final result of every nested device command.
+- Account/audit storage is local to one Windows profile; no central identity or multi-workstation account synchronization.
+- No permanent account delete action; accounts are disabled to preserve attribution and history.
