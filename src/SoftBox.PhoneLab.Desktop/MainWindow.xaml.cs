@@ -783,6 +783,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenFastbootManager":
                 new FastbootManagerWindow { Owner = this }.Show();
                 break;
+            case "OpenAndroidLogAnalyzer":
+                if (SelectedDevice is { IsAuthorized: true } logAnalyzerDevice)
+                {
+                    new AndroidLogAnalyzerWindow(_adb, logAnalyzerDevice.Serial) { Owner = this }.Show();
+                }
+                else
+                {
+                    MessageBox.Show(this, "اختر هاتف Android مصرحًا به عبر ADB أولًا.",
+                        "محلل سجلات Android", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                break;
             case "OpenDeviceCapabilityCenter":
             {
                 var capabilitySelectedDevice = SelectedDevice;
