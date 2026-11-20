@@ -19,6 +19,7 @@ public sealed class AndroidBackupWindow : Window
     private readonly string _serial;
     private readonly TextBox _remotePath = new();
     private readonly TextBox _archivePath = new();
+    private readonly TextBox _restoreRoot = new();
     private readonly TextBox _output = new();
     private readonly CheckBox _encryptBackup = new();
     private readonly PasswordBox _password = new();
@@ -27,6 +28,7 @@ public sealed class AndroidBackupWindow : Window
     private readonly ProgressBar _progress = new();
     private readonly Button _backupButton;
     private readonly Button _verifyButton;
+    private readonly Button _restoreButton;
     private readonly Button _cancelButton;
     private CancellationTokenSource? _operation;
 
@@ -49,6 +51,7 @@ public sealed class AndroidBackupWindow : Window
 
         _backupButton = ButtonControl("إنشاء نسخة احتياطية", "#14517A", Backup_Click);
         _verifyButton = ButtonControl("التحقق من نسخة موجودة", "#176044", Verify_Click);
+        _restoreButton = ButtonControl("استعادة الملفات إلى الهاتف", "#6B4C21", Restore_Click);
         _cancelButton = ButtonControl("إلغاء", "#51333A", Cancel_Click);
         _cancelButton.IsEnabled = false;
         _encryptBackup.Content = "تشفير النسخة بكلمة مرور قوية داخل ملف SBX";
@@ -101,7 +104,7 @@ public sealed class AndroidBackupWindow : Window
             Margin = new Thickness(0, 0, 0, 14),
             Child = new TextBlock
             {
-                Text = "تقتصر النسخة على التخزين المشترك الذي يسمح به Android. يمكنك إنشاء ZIP عادي أو ملف SBX مشفر بكلمة مرور؛ لا توجد استعادة تلقائية إلى الهاتف، ولا يتم نسخ بيانات التطبيقات الخاصة.",
+                Text = "تقتصر النسخة على التخزين المشترك الذي يسمح به Android. يمكنك إنشاء ZIP عادي أو ملف SBX مشفر بكلمة مرور؛ تتيح الاستعادة نسخ الملفات التي تحقق منها SoftBox إلى مجلد جديد على الهاتف دون حذف أو استبدال ملفات قديمة؛ لا يتم نسخ بيانات التطبيقات الخاصة.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -113,6 +116,8 @@ public sealed class AndroidBackupWindow : Window
         var form = new Grid { Margin = new Thickness(0, 0, 0, 10) };
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -167,12 +172,20 @@ public sealed class AndroidBackupWindow : Window
         Grid.SetColumnSpan(_password, 2);
         form.Children.Add(_password);
 
+        AddLabel(form, "المجلد الأب لاستعادة الملفات (سينشأ مجلد جديد بداخله)", 7);
+        _restoreRoot.Text = "/sdcard/SoftBox-Restores";
+        ConfigureInput(_restoreRoot);
+        Grid.SetRow(_restoreRoot, 8);
+        Grid.SetColumnSpan(_restoreRoot, 2);
+        form.Children.Add(_restoreRoot);
+
         DockPanel.SetDock(form, Dock.Top);
         root.Children.Add(form);
 
         var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         actions.Children.Add(_backupButton);
         actions.Children.Add(_verifyButton);
+        actions.Children.Add(_restoreButton);
         actions.Children.Add(_cancelButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -307,6 +320,75 @@ public sealed class AndroidBackupWindow : Window
         });
     }
 
+    private async void Restore_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار نسخة SoftBox لاستعادة الملفات إلى الهاتف",
+            Filter = "SoftBox Backup (*.zip;*.sbx)|*.zip;*.sbx|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        var encrypted = Path.GetExtension(dialog.FileName).Equals(".sbx", StringComparison.OrdinalIgnoreCase);
+        if (encrypted && _encryptBackup.IsChecked != true)
+            _encryptBackup.IsChecked = true;
+        if (encrypted)
+        {
+            try { EncryptedBackupService.ValidatePassword(_password.Password); }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "أدخل كلمة مرور SBX في الحقل المخصص أولًا. " + ex.Message,
+                    "استعادة النسخة المشفرة", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+        }
+
+        var parent = _restoreRoot.Text.Trim();
+        try { _ = AndroidDeviceToolsService.ValidatePublicStoragePath(parent); }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "مسار الاستعادة غير صالح",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirm = MessageBox.Show(this,
+            $"سيتم أولًا التحقق من سلامة النسخة{(encrypted ? " ومصادقة SBX بكلمة المرور" : "")}، ثم نسخ الملفات إلى مجلد جديد وفريد داخل:\n{parent}\n\nلن يحذف SoftBox أي ملف موجود ولن يكتب فوق مجلد المصدر. قد تترك عملية انقطاع الاتصال بعض الملفات في مجلد الاستعادة الجديد. هل تتابع؟",
+            "تأكيد استعادة الملفات", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        await RunOperationAsync("جارٍ التحقق من النسخة ثم استعادة الملفات إلى مجلد جديد على الهاتف...", async token =>
+        {
+            var progress = new Progress<string>(message => _status.Text = message);
+            var result = await _service.RestoreToNewAndroidDirectoryAsync(
+                _serial,
+                dialog.FileName,
+                parent,
+                encrypted ? _password.Password : null,
+                progress,
+                token);
+
+            var summary = new StringBuilder();
+            summary.AppendLine("BACKUP RESTORE: " + (result.Errors.Count == 0 ? "SUCCESS" : "PARTIAL"));
+            summary.AppendLine("DEVICE: " + (_serial.Length > 4 ? "••••" + _serial[^4..] : "••••"));
+            summary.AppendLine("CONTAINER: " + (result.WasEncrypted ? "Authenticated SBX" : "ZIP with SHA-256 manifest"));
+            summary.AppendLine("REMOTE DIRECTORY: " + result.RemoteRestoreDirectory);
+            summary.AppendLine("RESTORED FILES: " + result.RestoredFiles + " / " + result.TotalFiles);
+            summary.AppendLine("RESTORED BYTES: " + result.RestoredBytes);
+            summary.AppendLine("EXISTING FILES: NOT OVERWRITTEN");
+            foreach (var error in result.Errors)
+                summary.AppendLine("ERROR: " + error);
+            _output.Text = summary.ToString();
+
+            return result.Errors.Count == 0
+                ? $"اكتملت الاستعادة داخل {result.RemoteRestoreDirectory}."
+                : $"اكتملت الاستعادة جزئيًا: {result.RestoredFiles}/{result.TotalFiles}. راجع الأخطاء؛ لم تُحذف الملفات.";
+        });
+    }
+
     private void BrowseArchive_Click(object sender, RoutedEventArgs e)
     {
         var encrypted = _encryptBackup.IsChecked == true;
@@ -358,8 +440,10 @@ public sealed class AndroidBackupWindow : Window
         _progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         _backupButton.IsEnabled = !busy;
         _verifyButton.IsEnabled = !busy;
+        _restoreButton.IsEnabled = !busy;
         _encryptBackup.IsEnabled = !busy;
         _password.IsEnabled = !busy;
+        _restoreRoot.IsEnabled = !busy;
         _cancelButton.IsEnabled = busy;
     }
 
