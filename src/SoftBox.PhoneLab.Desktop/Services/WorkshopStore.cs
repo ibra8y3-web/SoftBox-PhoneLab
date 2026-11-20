@@ -107,6 +107,8 @@ public sealed class WorkshopStore
             order.Status = "تم الاستلام";
             if (order.WarrantyMonths is < 0 or > 120) order.WarrantyMonths = _cache.Settings.DefaultWarrantyMonths;
             order.Timeline ??= [];
+            order.PartsUsed ??= [];
+            order.PartsCostEgp = order.PartsUsed.Sum(part => part.TotalCostEgp);
             order.Timeline.Add(new RepairOrderNote { TechnicianName = order.TechnicianName, Note = "Device checked in." });
             order.ReceivedAtUtc = DateTimeOffset.UtcNow;
             order.UpdatedAtUtc = order.ReceivedAtUtc;
@@ -159,7 +161,7 @@ public sealed class WorkshopStore
         ArgumentNullException.ThrowIfNull(item);
         if (string.IsNullOrWhiteSpace(item.Sku) || string.IsNullOrWhiteSpace(item.Name))
             throw new ArgumentException("كود الصنف واسمه مطلوبان.");
-        if (item.Quantity < 0 || item.MinimumQuantity < 0 || item.UnitCostEgp < 0)
+        if (item.Quantity < 0 || item.MinimumQuantity < 0 || item.UnitCostEgp < 0 || item.SalePriceEgp < 0)
             throw new ArgumentOutOfRangeException(nameof(item), "قيم المخزون والتكلفة يجب ألا تكون سالبة.");
         await _gate.WaitAsync(cancellationToken);
         try
@@ -174,6 +176,7 @@ public sealed class WorkshopStore
                 item.UpdatedAtUtc = DateTimeOffset.UtcNow;
                 _cache.Inventory.Add(item);
                 current = item;
+                _cache.InventoryMovements.Add(new InventoryMovement { Sku = item.Sku, ItemName = item.Name, Delta = item.Quantity, BalanceAfter = item.Quantity, UnitCostEgp = item.UnitCostEgp, Reason = "رصيد افتتاحي / إنشاء صنف" });
                 AddEvent("مخزون", item.Sku, $"إضافة صنف للمخزون: {item.Name}.");
             }
             else
@@ -182,6 +185,9 @@ public sealed class WorkshopStore
                 current.Quantity = item.Quantity;
                 current.MinimumQuantity = item.MinimumQuantity;
                 current.UnitCostEgp = item.UnitCostEgp;
+                current.SalePriceEgp = item.SalePriceEgp;
+                current.Category = item.Category.Trim();
+                current.Supplier = item.Supplier.Trim();
                 current.Location = item.Location.Trim();
                 current.UpdatedAtUtc = DateTimeOffset.UtcNow;
                 AddEvent("مخزون", current.Sku, $"تحديث بيانات الصنف: {current.Name}.");
@@ -204,8 +210,101 @@ public sealed class WorkshopStore
             if (item.Quantity + delta < 0) throw new InvalidOperationException("الكمية المطلوبة أكبر من الرصيد المتاح.");
             item.Quantity += delta;
             item.UpdatedAtUtc = DateTimeOffset.UtcNow;
+            _cache.InventoryMovements.Add(new InventoryMovement { Sku = item.Sku, ItemName = item.Name, Delta = delta, BalanceAfter = item.Quantity, UnitCostEgp = item.UnitCostEgp, Reason = reason.Trim() });
             AddEvent("حركة مخزون", item.Sku, $"{(delta > 0 ? "إضافة" : "صرف")} {Math.Abs(delta)} — {reason.Trim()}.");
             await SaveLockedAsync(cancellationToken);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<RepairOrderPartUsage> ConsumeInventoryPartForOrderAsync(
+        Guid orderId,
+        string sku,
+        int quantity,
+        string technicianName,
+        string reason = "استخدام قطعة في أمر الصيانة",
+        CancellationToken cancellationToken = default)
+    {
+        if (orderId == Guid.Empty) throw new ArgumentException("أمر الصيانة مطلوب.", nameof(orderId));
+        if (string.IsNullOrWhiteSpace(sku)) throw new ArgumentException("كود الصنف مطلوب.", nameof(sku));
+        if (quantity <= 0 || quantity > 10000) throw new ArgumentOutOfRangeException(nameof(quantity), "الكمية يجب أن تكون بين 1 و10000.");
+        reason = (reason ?? "").Trim();
+        if (reason.Length > 300 || reason.Any(char.IsControl)) throw new ArgumentException("سبب الصرف غير صالح.", nameof(reason));
+        technicianName = (technicianName ?? "").Trim();
+        if (technicianName.Length > 120 || technicianName.Any(char.IsControl)) throw new ArgumentException("اسم الفني غير صالح.", nameof(technicianName));
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureLoadedLockedAsync(cancellationToken);
+            var order = _cache!.RepairOrders.FirstOrDefault(item => item.Id == orderId)
+                ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
+            var stock = _cache.Inventory.FirstOrDefault(item => item.Sku.Equals(sku.Trim(), StringComparison.OrdinalIgnoreCase))
+                ?? throw new KeyNotFoundException("قطعة الغيار غير موجودة في المخزون.");
+            if (stock.Quantity < quantity)
+                throw new InvalidOperationException($"الرصيد غير كافٍ. المتاح: {stock.Quantity}، المطلوب: {quantity}.");
+
+            var usedAt = DateTimeOffset.UtcNow;
+            var usage = new RepairOrderPartUsage
+            {
+                Sku = stock.Sku,
+                PartName = stock.Name,
+                Quantity = quantity,
+                UnitCostEgp = stock.UnitCostEgp,
+                UsedAtUtc = usedAt,
+                TechnicianName = technicianName
+            };
+
+            // All changes are held under the same lock and committed through one atomic JSON replacement.
+            stock.Quantity -= quantity;
+            stock.UpdatedAtUtc = usedAt;
+            order.PartsUsed ??= [];
+            order.PartsUsed.Add(usage);
+            order.PartsCostEgp = order.PartsUsed.Sum(part => part.TotalCostEgp);
+            order.UpdatedAtUtc = usedAt;
+            order.Timeline ??= [];
+            order.Timeline.Add(new RepairOrderNote
+            {
+                AtUtc = usedAt,
+                TechnicianName = technicianName,
+                Note = $"صرف {quantity} × {stock.Name} ({stock.Sku}) — {reason}."
+            });
+            _cache.InventoryMovements.Add(new InventoryMovement
+            {
+                AtUtc = usedAt,
+                Sku = stock.Sku,
+                ItemName = stock.Name,
+                Delta = -quantity,
+                BalanceAfter = stock.Quantity,
+                UnitCostEgp = stock.UnitCostEgp,
+                Reason = reason,
+                RepairOrderId = order.Id,
+                RepairTicketNumber = order.TicketNumber,
+                TechnicianName = technicianName
+            });
+            AddEvent("صرف قطعة لأمر صيانة", order.TicketNumber,
+                $"صرف {quantity} × {stock.Name} ({stock.Sku}). الرصيد المتبقي: {stock.Quantity}.");
+            await SaveLockedAsync(cancellationToken);
+            return usage;
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async Task<IReadOnlyList<InventoryMovement>> GetInventoryMovementsAsync(
+        string? sku = null,
+        Guid? repairOrderId = null,
+        CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureLoadedLockedAsync(cancellationToken);
+            IEnumerable<InventoryMovement> movements = _cache!.InventoryMovements;
+            if (!string.IsNullOrWhiteSpace(sku))
+                movements = movements.Where(item => item.Sku.Equals(sku.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (repairOrderId.HasValue)
+                movements = movements.Where(item => item.RepairOrderId == repairOrderId);
+            return movements.OrderByDescending(item => item.AtUtc).ToArray();
         }
         finally { _gate.Release(); }
     }
@@ -313,7 +412,7 @@ public sealed class WorkshopStore
         await using var stream = File.OpenRead(DatabasePath);
         _cache = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
             ?? new WorkshopData();
-        var schemaNeedsUpgrade = _cache.SchemaVersion != 2;
+        var schemaNeedsUpgrade = _cache.SchemaVersion != 3;
         MigrateAndValidate(_cache);
         if (schemaNeedsUpgrade) await SaveLockedAsync(cancellationToken);
     }
@@ -341,11 +440,11 @@ public sealed class WorkshopStore
 
     private static void MigrateAndValidate(WorkshopData data)
     {
-        if (data.SchemaVersion is < 1 or > 2) throw new InvalidDataException($"Unsupported workshop database schema: {data.SchemaVersion}.");
+        if (data.SchemaVersion is < 1 or > 3) throw new InvalidDataException($"Unsupported workshop database schema: {data.SchemaVersion}.");
         data.Settings ??= new WorkshopSettings();
         data.Settings.CurrencyCode = WorkshopInternationalRules.NormalizeCurrencyCode(data.Settings.CurrencyCode);
         data.Settings.CultureName = WorkshopInternationalRules.NormalizeCultureName(data.Settings.CultureName);
-        data.Customers ??= []; data.RepairOrders ??= []; data.Inventory ??= []; data.Events ??= [];
+        data.Customers ??= []; data.RepairOrders ??= []; data.Inventory ??= []; data.Events ??= []; data.InventoryMovements ??= [];
         foreach (var order in data.RepairOrders)
         {
             order.Timeline ??= [];
@@ -353,8 +452,8 @@ public sealed class WorkshopStore
             if (order.DeliveredAtUtc is not null && order.WarrantyEndsAtUtc is null)
                 order.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(order.DeliveredAtUtc, order.WarrantyMonths);
         }
-        if (data.SchemaVersion == 1) data.SchemaVersion = 2;
-        if (data.Customers.Count > 100000 || data.RepairOrders.Count > 100000 || data.Inventory.Count > 100000)
+        if (data.SchemaVersion < 3) data.SchemaVersion = 3;
+        if (data.Customers.Count > 100000 || data.RepairOrders.Count > 100000 || data.Inventory.Count > 100000 || data.InventoryMovements.Count > 500000)
             throw new InvalidDataException("Workshop database exceeds safe size limits.");
     }
 }
