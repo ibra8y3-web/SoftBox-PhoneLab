@@ -45,3 +45,8 @@ Future moves should occur only when a specific existing tool has a proven owners
 - The existing Parts Inventory owner remains section 24. The advanced catalog editor adds supplier/category/pricing fields and exposes the existing stock ledger without creating a second inventory database.
 - Repair-order part consumption is launched from the selected repair order, uses the same WorkshopStore instance, and records both a usage snapshot on the order and a stock movement.
 - The same inventory service is used for manual adjustments and repair-order consumption; no duplicated part-balance engine was introduced.
+## Manufacturer sections
+
+- Samsung Tools and Xiaomi Tools open a read-only vendor diagnostics window only when the selected authorized device's detected manufacturer matches the requested vendor. Redmi and POCO are mapped to the Xiaomi property profile.
+- Android Brands uses the same fixed-key read-only property collector for other manufacturers, avoiding duplicated ADB engines.
+- Qualcomm and MediaTek sections link only to the common USB PnP mode-hint inspector; they do not claim an EDL/BROM protocol implementation.
