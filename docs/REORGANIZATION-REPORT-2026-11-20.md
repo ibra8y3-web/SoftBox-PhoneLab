@@ -2,7 +2,7 @@
 
 ## Result
 
-No pre-existing tool was moved in this pass. The repository already had a 36-section sidebar/catalog and a canonical `ActionId` mapping for existing tools. The shared `ModuleSectionWindow` displays an executable button only for a feature with a wired action. Moving tools without a demonstrated ownership conflict would risk duplicate entries, broken shortcuts or duplicated implementations.
+No tool implementation or service class was physically relocated in this pass: the audit found that the existing 36-section catalog already had the correct owners for most tools. Instead, the navigation ownership was normalized so shared windows have one canonical launch action, while distinct capabilities inside a shared workspace open their own tab. This avoids both repeated buttons and duplicate service implementations. The shared `ModuleSectionWindow` continues to show an executable action only when a feature is wired to a real command.
 
 ## Existing canonical ownership retained
 
@@ -26,9 +26,12 @@ No pre-existing tool was moved in this pass. The repository already had a 36-sec
 
 ## Files changed for navigation and ownership
 
-- `src/SoftBox.PhoneLab.Core/Models/SoftBoxModuleCatalog.cs`: added the two feature inventories and their real action IDs; existing action IDs and section IDs were retained.
-- `src/SoftBox.PhoneLab.Desktop/MainWindow.xaml.cs`: routed the two new action IDs to their dedicated WPF windows.
-- No old action ID was removed and no old tool implementation was relocated or duplicated.
+- `src/SoftBox.PhoneLab.Core/Models/SoftBoxModuleCatalog.cs`: retained all 36 section IDs and all feature records, normalized duplicated launch aliases, registered 52 unique executable action IDs and added Qualcomm/MediaTek filtered USB entrypoints.
+- `src/SoftBox.PhoneLab.Desktop/MainWindow.xaml.cs`: routed Android capabilities to their specific shared-workspace tabs and added Qualcomm/MediaTek routes.
+- `src/SoftBox.PhoneLab.Desktop/AndroidDeviceToolsWindow.cs`: added an explicit initial-tab argument and persisted the selection as window state.
+- `src/SoftBox.PhoneLab.Desktop/UsbDoctorWindow.cs`: added actual Windows PnP filtering for Qualcomm and MediaTek VID/PID identity categories.
+- `tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs`: strengthened the canonical-action test to reject duplicate action IDs.
+- Duplicate navigation aliases were removed from non-canonical feature rows and the old generic Android launch alias was replaced by three purpose-specific IDs. **No tool implementation, service, data store, section, or source file was deleted.**
 
 ## Preservation checks
 
@@ -49,7 +52,7 @@ Future moves should occur only when a specific existing tool has a proven owners
 
 - Samsung Tools and Xiaomi Tools open a read-only vendor diagnostics window only when the selected authorized device's detected manufacturer matches the requested vendor. Redmi and POCO are mapped to the Xiaomi property profile.
 - Android Brands uses the same fixed-key read-only property collector for other manufacturers, avoiding duplicated ADB engines.
-- Qualcomm and MediaTek sections link only to the common USB PnP mode-hint inspector; they do not claim an EDL/BROM protocol implementation.
+- Qualcomm and MediaTek sections open the shared USB Doctor with their own filter selected. The view enumerates actual Windows PnP devices and filters the registered Qualcomm 05C6:9008 or MediaTek 0E8D:0003 identity hints; it does not open an EDL/BROM channel, load a programmer/DA or claim firmware support.
 ## Smart Backup
 
 - The existing `BackupArchiveService` remains the owner of ZIP Manifest and per-file SHA-256 generation/verification.
@@ -67,3 +70,13 @@ Future moves should occur only when a specific existing tool has a proven owners
 
 - Screen mirror and screen recording use the same ScreenMirrorService and the currently selected ADB-authorized device; there is one active scrcpy session in this implementation.
 - The recording UI is a separate action under Phone Link Studio. It does not create a second ADB engine, does not record the Windows desktop and documents that stopping a recording also closes the active mirror session.
+
+## Canonical navigation and section-specific workspaces — final pass
+
+- The 36 existing sections and their display order are unchanged. No extra empty top-level sections were created because the supplied 36-section specification was already represented by the catalog.
+- The three Android Service Center entries now have distinct actions: `OpenAndroidFileManager` selects the file tab, `OpenAndroidAppManager` selects the application tab and `OpenAndroidCommandCenter` selects the allow-listed read-only command tab. `OpenAndroidBatchTools` selects the batch tab. They still share one serial-authorized Android service/window, not separate duplicated ADB engines.
+- Qualcomm and MediaTek now have section-specific entrypoints into the shared USB Doctor. The selected filter is applied to enumerated Windows PnP devices; unknown/missing IDs remain unknown rather than inferred.
+- Parts Inventory now has one canonical launch action to the dedicated Parts Inventory workspace. The older Workshop inventory view and its legacy code path remain in place; no inventory records or WorkshopStore data were removed.
+- The catalog contains 52 unique executable ActionIds. All 52 have explicit MainWindow handlers; no repeated ActionId remains in the feature rows.
+- A total of 84 pull-request files were reviewed; none had status `removed`. This is a navigation correction, not a deletion of old tool implementations.
+- Latest CI run #257 passed 150/150 unit tests, Windows x64 self-contained publishing, Android Agent build/upload and offline tool bundling: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644

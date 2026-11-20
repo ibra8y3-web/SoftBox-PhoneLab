@@ -4,11 +4,19 @@ Audit baseline: pre-implementation `main` snapshot, commit `12650bed442498f77464
 
 This document maps the supplied **SoftBox – Universal Smart Device Service & Repair Platform** specification to the code that already exists. It is an implementation inventory, not a claim that every module is complete.
 
-### Audited catalog snapshot
+### Pre-implementation main snapshot
 
 - Top-level sections: 36 total — 22 In Development and 14 Planned.
 - Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 5 Tested, 63 Planned, 23 In Development and 2 Unsupported.
 - No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
+
+### Current additive branch snapshot — 20 November 2026
+
+- Top-level sections: **36 retained** — 35 In Development and 1 Planned.
+- Child features: **129**; catalog entries including section rows: **165**.
+- Entry statuses (section rows plus child features): 24 Planned, 38 In Development, 95 Implemented, 6 Tested, 0 Verified and 2 Unsupported.
+- Executable navigation: **52 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- The one top-level Planned section is User & Technician Management. The catalog does not mark any section Verified; CI does not constitute physical-device verification.
 
 ## Status definitions
 
@@ -33,8 +41,8 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 06 | Samsung Tools | In Development | Official Samsung USB driver entry under USB Doctor; fixed-key getprop collection for One UI, CSC, PDA, bootloader and Verified Boot with JSON report | Download Mode service protocol, model-specific recovery and officially verified firmware workflow |
 | 07 | Xiaomi Tools | In Development | Xiaomi/Redmi/POCO fixed-key getprop collection for model/build/MIUI-HyperOS/region/Verified Boot with JSON report | Model/region compatibility database and official model-specific Fastboot/recovery workflows |
 | 08 | Android Brands | In Development | Generic read-only Android manufacturer/brand/model/build and Verified Boot property collection | Dedicated, evidenced service protocols for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
-| 09 | Qualcomm Tools | In Development | SoC identification hints plus Windows PnP VID/PID hint for common 05C6:9008 EDL mode | EDL protocol, programmer verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
-| 10 | MediaTek Tools | In Development | SoC hints plus Windows PnP VID/PID hint for common 0E8D:0003 Preloader/BROM family | BROM protocol, Download Agent verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
+| 09 | Qualcomm Tools | In Development | SoC identification hints plus an automatically opened Windows PnP view filtered to the common 05C6:9008 EDL USB identity hint | EDL protocol, programmer verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
+| 10 | MediaTek Tools | In Development | SoC hints plus an automatically opened Windows PnP view filtered to the common 0E8D:0003 Preloader/BROM USB identity hint | BROM protocol, Download Agent verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
 | 11 | Firmware Center | In Development | Local firmware import/catalogue by vendor/model/region/version, file SHA-256, ZIP/OTA archive inspection and post-import integrity revalidation | Trusted source catalog, signed publisher verification, download manager and device/model/region/rollback compatibility gate |
 | 12 | USB Doctor | In Development | ADB/Fastboot transport inspection; Windows SetupAPI PnP inventory with VID/PID, friendly name, service and problem code; conservative Samsung/Google/Qualcomm/MediaTek mode hints; official Samsung driver entry | Driver package signature verification, controlled install/remove/rollback and OEM driver catalogue; no driver mutation in the current PnP inspector |
 | 13 | Smart Backup | In Development | ADB shared-storage backup into ZIP with per-file SHA-256; optional `.sbx` AES-256-CBC + HMAC-SHA256 using PBKDF2-HMAC-SHA256 (600,000 iterations); authenticated verification; verified ZIP/SBX restore to a unique new shared-storage directory without overwrite/delete | Scheduled backups, key recovery policy, automatic reconnect jobs and app-private/system data backup (unsupported by design) |
@@ -48,7 +56,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 21 | Batch Operations | In Development | Multi-device selection and bounded concurrent read-only ADB preset execution with per-device results and configured concurrency limit | Additional allowed batch actions, independent per-device cancellation and durable batch job queue |
 | 22 | Repair History | In Development | Persistent local per-device connection/authorization/inspection/Agent/report history using SHA-256 device fingerprint and masked serial; existing workshop event/timeline history retained | Broader linkage of every service action and diagnostic result, searchable retention/cleanup and encrypted local store |
 | 23 | Workshop Manager | In Development | Customers, repair orders, status tracking, QR ticket, estimates/final cost, workshop settings and reports | Intake accessory checklist, customer approval flow, photos with consent, receipts, quotes, invoices and multi-user workflow |
-| 24 | Parts Inventory | In Development | SKU catalogue with category/supplier/cost/sale/reorder fields; supplier stock receipts record supplier and invoice, quantity and purchase unit cost, update weighted-average cost, and atomically add a purchase receipt plus stock movement; order-linked consumption deducts stock and records parts cost; inventory/movement/purchase CSV exports | Multi-line purchase orders, invoice approval/payment tracking, barcode scanning and multi-branch synchronization |
+| 24 | Parts Inventory | In Development | SKU catalogue with category/supplier/cost/sale/reorder fields in the dedicated Parts Inventory window; supplier stock receipts record supplier and invoice, quantity and purchase unit cost, update weighted-average cost, and atomically add a purchase receipt plus stock movement; order-linked consumption deducts stock and records parts cost; inventory/movement/purchase CSV exports | Multi-line purchase orders, invoice approval/payment tracking, barcode scanning and multi-branch synchronization |
 | 25 | Service Reports | In Development | Device JSON diagnostics; repair-order HTML/text/UTF-8 CSV includes parts and parts cost; inventory and movement CSV exports | Native PDF/Excel, signed report provenance and aggregated analytics dashboards |
 | 26 | Plugin Store | In Development | Local ZIP/Manifest inspection, permission allow-list validation, Zip Slip/symlink/duplicate-path/size/ratio checks and package SHA-256; install and code execution remain disabled | Publisher signature/trusted-root verification, permission grant UI, dependency manager, install/update/uninstall lifecycle and sandboxed runtime |
 | 27 | Plugin SDK | In Development | Version-1 manifest contract, semantic version validation, known permission identifiers, fail-closed unknown permissions, sample manifest and developer quickstart | Public SDK assembly/contracts, actual host API, runtime IPC, sample executable plugin and compatibility test host |
@@ -119,3 +127,12 @@ The same implementation is shared and linked from related module pages; it must 
 6. Set a feature to Tested only when an automated test actually covers it. Set it to Verified only after the target environment/device test is recorded.
 7. Keep customer data local by default; request consent for exports and remote services.
 8. Build and test after each stage; do not start the next dependent stage with a broken main branch.
+
+
+## Current navigation ownership after cleanup
+
+The latest catalog is audited at 52 unique executable actions. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Duplicate launch aliases have been removed only from non-canonical feature rows; implementations, services, legacy views and data stores remain.
+
+Latest CI for the implementation branch: run #257 — 150 passed, 0 failed, 0 skipped; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
+
+No physical handset, USB chipset, EDL/BROM protocol, firmware flash or board-level test is claimed. Do not change any feature to Verified without recorded target-environment evidence.

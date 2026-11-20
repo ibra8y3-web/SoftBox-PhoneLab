@@ -170,3 +170,42 @@ This is CI verification using generated local test fixtures and a Windows runner
 - The manager reads `fastboot getvar all` for the selected serial and provides a user-confirmed `fastboot reboot` to Android.
 - The service intentionally exposes no arbitrary command execution, flash, unlock, erase, format or boot operations.
 - Added unit tests for Fastboot device parsing, deduplication and rejection of unsafe/non-Fastboot entries.
+
+## Current additive development branch — catalog after navigation cleanup
+
+This is the current pull-request branch snapshot, not the pre-implementation `main` baseline counts shown earlier in this report.
+
+| Inventory | Count |
+|---|---:|
+| Existing top-level sections retained | 36 |
+| Sections In Development | 35 |
+| Sections Planned | 1 |
+| Child feature entries | 129 |
+| Catalog entries including sections and child features | 165 |
+| Planned entries (including section rows) | 24 |
+| In Development entries (including section rows) | 38 |
+| Implemented entries | 95 |
+| Tested entries | 6 |
+| Verified entries | 0 |
+| Unsupported entries | 2 |
+| Unique executable ActionIds | 52 |
+| Duplicate executable ActionIds | 0 |
+| Executable ActionIds with no MainWindow route | 0 |
+
+The current catalog statuses are implementation classifications, not a completion percentage. All top-level sections remain In Development except User & Technician Management, which remains Planned. The zero Verified count is intentional: the current hosted CI does not prove physical-device or vendor-protocol compatibility.
+
+## Navigation and dedicated tool entrypoints
+
+- Android file manager, app manager, read-only command center and batch operations each enter the appropriate tab within one shared ADB-authorized Android workspace.
+- Qualcomm and MediaTek open the common USB Doctor with actual Windows PnP filters for the common 05C6:9008 and 0E8D:0003 USB identity hints. This does not claim EDL/BROM protocol communication, programmer/DA compatibility or flashing.
+- Parts Inventory feature records now point to one canonical Parts Inventory window. Workshop Manager's legacy inventory entry/view and the shared WorkshopStore remain intact.
+- Duplicate feature-row launch aliases were removed only where they opened the exact same shared window. No feature implementation, source file, section, data store or user data was deleted.
+- The pull request contains no files with Git status `removed`.
+
+## Latest verification — CI run #257
+
+- Commit: `55ae843048a988b5883af0cb8953a4eab741f322`.
+- Result: Success — Restore passed; **150 tests passed, 0 failed, 0 skipped**; Windows self-contained x64 publish passed; Android Agent Gradle build/upload passed; offline tool bundling passed; Windows artifact uploaded.
+- Windows artifact (227,398,184 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
+- No CS* compiler or xUnit analyzer warnings appeared in the latest run logs.
+- No physical Android handset, Qualcomm/MediaTek USB interface, firmware flash or board-level fixture was tested by this CI run.
