@@ -111,7 +111,13 @@ public sealed class PluginPackageInspectorTests
         var path = Path.Combine(root, "missing-entry.zip");
         try
         {
-            await CreatePackageAsync(path, ValidManifest() with { EntryAssembly = "DoesNotExist.dll" });
+            using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
+            {
+                var manifest = archive.CreateEntry(PluginPackageInspector.ManifestEntryName);
+                await using var stream = manifest.Open();
+                await JsonSerializer.SerializeAsync(stream, ValidManifest() with { EntryAssembly = "DoesNotExist.dll" });
+            }
+
             var result = await _inspector.InspectAsync(path);
             Assert.Contains(result.PackageErrors, error => error.Contains("Entry assembly does not exist", StringComparison.Ordinal));
         }
