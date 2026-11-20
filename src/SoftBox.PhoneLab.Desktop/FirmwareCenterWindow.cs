@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Compatibility;
 using System.IO;
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Firmware;
@@ -19,6 +20,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class FirmwareCenterWindow : Window
 {
     private readonly FirmwareLibraryService _library = new();
+    private readonly DeviceProfileCatalog _deviceProfiles = new();
     private readonly FirmwareDownloadService _downloadService;
     private readonly ObservableCollection<FirmwareLibraryItem> _items = [];
     private readonly ListBox _list = new();
@@ -436,11 +438,13 @@ public sealed class FirmwareCenterWindow : Window
         {
             // Re-hash the file immediately before evaluating the preflight report.
             var integrity = await _library.VerifyAsync(item.Id, token);
+            var profileCatalog = await _deviceProfiles.LoadAsync();
             var report = SafeRecoveryPreflightService.Evaluate(
                 _deviceSnapshot,
                 _adbAuthorized && _deviceSnapshot is not null,
                 item,
-                integrity);
+                integrity,
+                profileCatalog.Profiles);
 
             var lines = new List<string>
             {

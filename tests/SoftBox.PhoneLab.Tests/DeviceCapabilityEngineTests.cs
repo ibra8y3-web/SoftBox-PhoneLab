@@ -60,7 +60,21 @@ public sealed class DeviceCapabilityEngineTests
     [Fact]
     public void MissingOrUnverifiedIdentitySourceCannotProduceAnExactMatch()
     {
-        var profile = Profile() with { IdentityVerified = false };
+        var source = Profile();
+        var profile = new DeviceProfile
+        {
+            Id = source.Id,
+            Manufacturer = source.Manufacturer,
+            MarketingName = source.MarketingName,
+            ModelNumbers = source.ModelNumbers,
+            DeviceCodes = source.DeviceCodes,
+            ProductNames = source.ProductNames,
+            ModelAliases = source.ModelAliases,
+            SocAliases = source.SocAliases,
+            IdentitySource = source.IdentitySource,
+            IdentitySourceUrl = source.IdentitySourceUrl,
+            IdentityVerified = false
+        };
         var result = DeviceCapabilityEngine.ResolveIdentity(Device(), [profile]);
 
         Assert.Equal(DeviceIdentityState.Probable, result.State);

@@ -783,6 +783,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenFastbootManager":
                 new FastbootManagerWindow { Owner = this }.Show();
                 break;
+            case "OpenDeviceCapabilityCenter":
+            {
+                var selected = SelectedDevice;
+                if (selected is null || _snapshot is null ||
+                    !_snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal))
+                {
+                    MessageBox.Show(this,
+                        "اختر جهازًا، ثم نفّذ قراءة خصائصه أولًا لفتح محرك القدرات والتوافق.",
+                        "محرك قدرات الجهاز", MessageBoxButton.OK, MessageBoxImage.Information);
+                    break;
+                }
+
+                new DeviceCapabilityCenterWindow(
+                    _adb,
+                    _snapshot,
+                    selected.IsAuthorized,
+                    _agentSnapshot is not null)
+                {
+                    Owner = this
+                }.Show();
+                break;
+            }
             case "OpenUsbDoctor":
                 new UsbDoctorWindow { Owner = this }.Show();
                 break;

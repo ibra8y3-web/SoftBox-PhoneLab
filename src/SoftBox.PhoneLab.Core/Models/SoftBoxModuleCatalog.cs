@@ -62,7 +62,7 @@ public static class SoftBoxModuleCatalog
                 new("profiles", "مطابقة الموديل وقاعدة ملفات التعريف", "Model profile matching", "كتالوج محلي من SoftBox مع مصدر مجتمعي؛ المطابقة المجتمعية احتمالية وليست إثباتًا للوحة.", ModuleImplementationStatus.Implemented, "UpdateDeviceCatalog"),
                 new("board-map", "استيراد خريطة PCB موثقة للموديل", "Verified PCB map import", "يتطلب ملف خريطة موثقًا ومتطابقًا مع الموديل ومصدره؛ الخريطة العامة ليست تخطيطًا دقيقًا.", ModuleImplementationStatus.Implemented, "ImportBoardMap"),
                 new("board-view", "فتح ملف BoardView في برنامج خارجي مستقل", "Native BoardView viewer", "يفتح الصيغ المدعومة في TRACE Boardviewer المنفصل؛ لا يحول كل الصيغ إلى المجسم ثلاثي الأبعاد.", ModuleImplementationStatus.Implemented, "OpenBoardView"),
-                new("compatibility", "مصفوفة القدرات والتوافق لكل موديل", "Per-model capability matrix", "لم تُبنَ بعد قاعدة موثقة تربط كل عملية بموديل وإصدار وبروتوكول.", ModuleImplementationStatus.Planned)
+                new("compatibility", "محرك قدرات وتوافق الجهاز والعمليات", "Device capability and compatibility engine", "محرك مركزي يحسم هوية الجهاز بالأدلة ويميز بين دعم ADB وAgent وFastboot وخريطة PCB وملف Firmware؛ يتعامل مع التعارضات والمطابقات الملتبسة كحالات غير مؤكدة، ويمنع التفليش وفتح Bootloader والمسح وعمليات EDL/BROM وعمليات OEM غير الموثقة. مرتبط بمطابقة Device Profile وفحص الاستعادة الآمنة.", ModuleImplementationStatus.InDevelopment, "OpenDeviceCapabilityCenter")
             ]),
         new("android-service", 4, "أدوات Android", "مركز صيانة Android", "Android Service Center",
             "مركز موحد لأدوات ADB وFastboot وAgent وإدارة ملفات التخزين المشترك وقراءة التطبيقات والأوامر الآمنة.",

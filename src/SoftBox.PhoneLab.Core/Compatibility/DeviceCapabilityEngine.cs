@@ -159,7 +159,7 @@ public static class DeviceCapabilityEngine
                 best.Conflicts);
         }
 
-        var verifiedSource = IsVerifiedIdentitySource(best.Profile);
+        var verifiedSource = best.Profile.IdentityVerified && IsVerifiedIdentitySource(best.Profile);
         var exact = best.ExactModelNumberMatched &&
                     best.ManufacturerMatched &&
                     best.Profile.IdentityVerified &&
