@@ -203,14 +203,11 @@ public sealed class AndroidBackupService(AdbClient adb)
                 var item = manifest.Files[index];
                 try
                 {
-                    ValidateRestoreRelativePath(item.Path);
+                    BackupRestorePathPolicy.ValidateRelativePath(item.Path);
                     if (!dataEntries.TryGetValue(item.Path, out var entry))
                         throw new InvalidDataException("الملف غير موجود داخل الأرشيف بعد التحقق.");
 
-                    var localPath = Path.GetFullPath(Path.Combine(
-                        extractionRoot,
-                        item.Path.Replace('/', Path.DirectorySeparatorChar)));
-                    EnsureInsideDirectory(extractionRoot, localPath);
+                    var localPath = BackupRestorePathPolicy.ResolveInsideDirectory(extractionRoot, item.Path);
                     Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
 
                     await using (var source = entry.Open())
@@ -260,34 +257,6 @@ public sealed class AndroidBackupService(AdbClient adb)
         }
     }
 
-    private static void ValidateRestoreRelativePath(string path)
-    {
-        if (string.IsNullOrWhiteSpace(path) || path.StartsWith("/", StringComparison.Ordinal) ||
-            path.Contains('\\') || path.Contains(':') || path.Any(char.IsControl) ||
-            path.Split('/').Any(segment => segment is "" or "." or ".."))
-            throw new InvalidDataException("مسار داخل النسخة غير صالح للاستعادة.");
-
-        foreach (var segment in path.Split('/'))
-        {
-            if (segment.EndsWith(' ') || segment.EndsWith('.') ||
-                segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
-                segment.Length > 180 ||
-                segment.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
-                System.Text.RegularExpressions.Regex.IsMatch(
-                    segment, @"^(COM|LPT)[1-9]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-                throw new InvalidDataException("اسم ملف غير مدعوم على Windows: " + segment);
-        }
-    }
-
-    private static void EnsureInsideDirectory(string root, string path)
-    {
-        var prefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (!Path.GetFullPath(path).StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("مسار الاستخراج يخرج عن مجلد العمل المؤقت.");
-    }
 
     public Task<BackupVerificationResult> VerifyEncryptedBackupAsync(
         string encryptedPath,
