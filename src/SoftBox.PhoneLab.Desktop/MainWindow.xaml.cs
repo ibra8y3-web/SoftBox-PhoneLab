@@ -670,10 +670,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             case "OpenFirmwareCenter":
             {
-                var selected = SelectedDevice;
-                var hasMatchingAuthorizedSnapshot = selected is { IsAuthorized: true } &&
+                var preflightDevice = SelectedDevice;
+                var hasMatchingAuthorizedSnapshot = preflightDevice is { IsAuthorized: true } &&
                     _snapshot is not null &&
-                    _snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal);
+                    _snapshot.Serial.Equals(preflightDevice.Serial, StringComparison.Ordinal);
                 new FirmwareCenterWindow(
                     hasMatchingAuthorizedSnapshot ? _snapshot : null,
                     hasMatchingAuthorizedSnapshot)
