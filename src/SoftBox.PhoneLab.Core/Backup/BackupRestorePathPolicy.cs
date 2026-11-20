@@ -21,15 +21,16 @@ public static class BackupRestorePathPolicy
 
         foreach (var segment in path.Split('/'))
         {
+            var deviceName = segment.Split('.')[0];
             if (segment.EndsWith(' ') ||
                 segment.EndsWith('.') ||
                 segment.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
                 segment.Length > 180 ||
-                segment.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
-                segment.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
-                Regex.IsMatch(segment, @"^(COM|LPT)[1-9]$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                deviceName.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
+                deviceName.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
+                deviceName.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
+                deviceName.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
+                Regex.IsMatch(deviceName, @"^(COM|LPT)[1-9]$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                 throw new InvalidDataException("اسم ملف غير مدعوم على Windows: " + segment);
         }
     }
