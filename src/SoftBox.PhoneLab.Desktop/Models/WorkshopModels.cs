@@ -2,12 +2,14 @@ namespace SoftBox.PhoneLab.Desktop.Models;
 
 public sealed class WorkshopData
 {
-    public int SchemaVersion { get; set; } = 2;
+    public int SchemaVersion { get; set; } = 4;
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public WorkshopSettings Settings { get; set; } = new();
     public List<CustomerRecord> Customers { get; set; } = [];
     public List<RepairOrder> RepairOrders { get; set; } = [];
     public List<InventoryItem> Inventory { get; set; } = [];
+    public List<InventoryMovement> InventoryMovements { get; set; } = [];
+    public List<InventoryPurchaseReceipt> InventoryPurchaseReceipts { get; set; } = [];
     public List<WorkshopEvent> Events { get; set; } = [];
 }
 
@@ -52,6 +54,8 @@ public sealed class RepairOrder
     public string TechnicianName { get; set; } = "";
     public decimal EstimatedCostEgp { get; set; }
     public decimal FinalCostEgp { get; set; }
+    public decimal PartsCostEgp { get; set; }
+    public List<RepairOrderPartUsage> PartsUsed { get; set; } = [];
     public int WarrantyMonths { get; set; }
     public DateTimeOffset? WarrantyEndsAtUtc { get; set; }
     public DateTimeOffset ReceivedAtUtc { get; set; } = DateTimeOffset.UtcNow;
@@ -75,10 +79,59 @@ public sealed class InventoryItem
     public string Name { get; set; } = "";
     public int Quantity { get; set; }
     public int MinimumQuantity { get; set; }
+    public string Category { get; set; } = "";
+    public string Supplier { get; set; } = "";
     public decimal UnitCostEgp { get; set; }
+    public decimal SalePriceEgp { get; set; }
     public string Location { get; set; } = "";
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public bool NeedsRestock => Quantity <= MinimumQuantity;
+}
+
+
+public sealed class RepairOrderPartUsage
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Sku { get; set; } = "";
+    public string PartName { get; set; } = "";
+    public int Quantity { get; set; }
+    public decimal UnitCostEgp { get; set; }
+    public decimal TotalCostEgp => UnitCostEgp * Quantity;
+    public DateTimeOffset UsedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public string TechnicianName { get; set; } = "";
+}
+
+
+public sealed class InventoryPurchaseReceipt
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public DateTimeOffset ReceivedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public string Sku { get; set; } = "";
+    public string ItemName { get; set; } = "";
+    public string Supplier { get; set; } = "";
+    public string InvoiceReference { get; set; } = "";
+    public int Quantity { get; set; }
+    public decimal PurchaseUnitCostEgp { get; set; }
+    public decimal TotalCostEgp => Quantity * PurchaseUnitCostEgp;
+    public decimal WeightedAverageUnitCostAfterEgp { get; set; }
+    public int BalanceAfter { get; set; }
+    public string TechnicianName { get; set; } = "";
+    public Guid InventoryMovementId { get; set; }
+}
+
+public sealed class InventoryMovement
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public DateTimeOffset AtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public string Sku { get; set; } = "";
+    public string ItemName { get; set; } = "";
+    public int Delta { get; set; }
+    public int BalanceAfter { get; set; }
+    public decimal UnitCostEgp { get; set; }
+    public string Reason { get; set; } = "";
+    public Guid? RepairOrderId { get; set; }
+    public string RepairTicketNumber { get; set; } = "";
+    public string TechnicianName { get; set; } = "";
 }
 
 public sealed class WorkshopEvent

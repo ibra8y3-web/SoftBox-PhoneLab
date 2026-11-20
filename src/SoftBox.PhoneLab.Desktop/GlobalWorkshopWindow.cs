@@ -21,6 +21,8 @@ public sealed class GlobalWorkshopWindow : Window
     private readonly TextBlock _dashboard = new() { Margin = new Thickness(6), FontSize = 13, FontWeight = FontWeights.SemiBold, Foreground = Brush("#7DD3FC") };
     private readonly DataGrid _orders = GridView();
     private readonly DataGrid _timeline = GridView();
+    private readonly DataGrid _partsUsed = GridView();
+    private readonly TextBlock _partsCost = new() { Foreground = Brush("#9FC7E8"), Margin = new Thickness(6, 4, 6, 4) };
     private readonly TextBox _search = Box(250);
     private readonly ComboBox _statusFilter = new() { Width = 170, Margin = new Thickness(5), ItemsSource = StatusesWithAll(), SelectedIndex = 0 };
     private readonly ComboBox _status = new() { Width = 175, Margin = new Thickness(5), ItemsSource = Statuses(), SelectedIndex = 1 };
@@ -118,6 +120,7 @@ public sealed class GlobalWorkshopWindow : Window
         editor.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(.8, GridUnitType.Star) });
         editor.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         editor.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        editor.RowDefinitions.Add(new RowDefinition { Height = new GridLength(115) });
         editor.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         AddEditorField(editor, "نتائج الفحص قبل الإصلاح", _before, 0);
         AddEditorField(editor, "الأعمال المنفذة", _work, 1);
@@ -137,11 +140,24 @@ public sealed class GlobalWorkshopWindow : Window
         Grid.SetColumnSpan(_timeline, 3);
         Grid.SetRow(_timeline, 1);
         editor.Children.Add(_timeline);
+
+        _partsUsed.Columns.Add(Column("كود الصنف", nameof(RepairOrderPartUsage.Sku), 1));
+        _partsUsed.Columns.Add(Column("القطعة", nameof(RepairOrderPartUsage.PartName), 1.7));
+        _partsUsed.Columns.Add(Column("الكمية", nameof(RepairOrderPartUsage.Quantity), .6));
+        _partsUsed.Columns.Add(Column("تكلفة الوحدة", nameof(RepairOrderPartUsage.UnitCostEgp), .8));
+        _partsUsed.Columns.Add(Column("الإجمالي", nameof(RepairOrderPartUsage.TotalCostEgp), .8));
+        Grid.SetRow(_partsUsed, 2);
+        Grid.SetColumnSpan(_partsUsed, 4);
+        editor.Children.Add(_partsUsed);
+
         var actions = new WrapPanel();
         actions.Children.Add(Button("حفظ تغييرات العملية", async (_, _) => await SaveOrderAsync()));
         actions.Children.Add(Button("إضافة ملاحظة للسجل", async (_, _) => await AddNoteAsync()));
+        actions.Children.Add(Button("صرف قطعة من المخزون", async (_, _) => await OpenPartsUsageAsync()));
         actions.Children.Add(Button("تقرير للطباعة", async (_, _) => await ExportSelectedHtmlAsync()));
-        Grid.SetRow(actions, 2);
+        Grid.SetRow(_partsCost, 3);
+        actions.Children.Add(_partsCost);
+        Grid.SetRow(actions, 3);
         Grid.SetColumnSpan(actions, 4);
         editor.Children.Add(actions);
         Grid.SetRow(editor, 2);
@@ -246,6 +262,33 @@ public sealed class GlobalWorkshopWindow : Window
         _after.Text = _selectedOrder.ResultsAfterRepair;
         _finalCost.Text = _selectedOrder.FinalCostEgp.ToString("0.##", System.Globalization.CultureInfo.CurrentCulture);
         _timeline.ItemsSource = (_selectedOrder.Timeline ?? []).OrderByDescending(x => x.AtUtc).ToList();
+        _partsUsed.ItemsSource = (_selectedOrder.PartsUsed ?? []).OrderByDescending(x => x.UsedAtUtc).ToList();
+        _partsCost.Text = $"تكلفة قطع الغيار المسجلة: {_selectedOrder.PartsCostEgp:0.00} {WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings.CurrencyCode)}";
+    }
+
+    private async Task OpenPartsUsageAsync()
+    {
+        if (_selectedOrder is null)
+        {
+            SetResult("اختر أمر صيانة أولًا.");
+            return;
+        }
+        if (_selectedOrder.Status is "تم التسليم" or "ملغي")
+        {
+            SetResult("لا يمكن صرف قطع لأمر تم تسليمه أو إلغاؤه.");
+            return;
+        }
+
+        var orderId = _selectedOrder.Id;
+        var window = new PartsUsageWindow(_store, _selectedOrder, async () =>
+        {
+            await RefreshAsync();
+            _orders.SelectedItem = _data.RepairOrders.FirstOrDefault(order => order.Id == orderId);
+        })
+        {
+            Owner = this
+        };
+        window.ShowDialog();
     }
 
     private async Task SaveOrderAsync()

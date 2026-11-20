@@ -2,6 +2,8 @@ using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using SoftBox.PhoneLab.Core.Diagnostics;
+using SoftBox.PhoneLab.Core.Activity;
+using SoftBox.PhoneLab.Core.Settings;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
@@ -34,6 +36,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private ExternalMeasurementSample? _measurementSnapshot;
     private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
+    private readonly LocalActivityStore _activity = new();
+    private readonly PhoneLabSettingsService _settingsService = new();
+    private PhoneLabSettings _settings = new();
     private readonly DispatcherTimer _timer;
     private bool _busy;
     private bool _dragging;
@@ -103,12 +108,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
         Loaded += async (_, _) =>
         {
+            try
+            {
+                _settings = await _settingsService.LoadAsync();
+            }
+            catch (Exception ex)
+            {
+                _settings = new PhoneLabSettings();
+                StatusMessage = "تعذر قراءة إعدادات SoftBox؛ تم استخدام القيم الافتراضية لهذه الجلسة: " + ex.Message;
+                Notify(nameof(StatusMessage));
+            }
+
+            _timer.Interval = TimeSpan.FromSeconds(_settings.DiscoveryIntervalSeconds);
             await _deviceProfiles.LoadAsync();
             _boardMap = await _maps.LoadBestMapAsync(new DeviceSnapshot(), null);
             Notify(nameof(BoardMapNotice));
             BuildScene();
             await RefreshDevicesAsync();
-            _timer.Start();
+            if (_settings.AutoDiscoverDevices)
+                _timer.Start();
             _ = SyncDeviceCatalogQuietlyAsync();
         };
         Closed += (_, _) => { _timer.Stop(); _screenMirror.Dispose(); };
@@ -132,6 +150,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var signature = string.Join("|", list.Select(d => d.Serial + ":" + d.State));
             if (signature == _deviceSignature) return;
             _deviceSignature = signature;
+            var previousDevices = Devices.ToDictionary(device => device.Serial, StringComparer.Ordinal);
             var previous = SelectedDevice?.Serial;
             if (_screenMirror.ActiveSerial is string active && !list.Any(d => d.Serial == active && d.IsAuthorized))
             {
@@ -157,6 +176,55 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 Devices.Add(item);
             }
+
+            var currentSerials = new HashSet<string>(Devices.Select(device => device.Serial), StringComparer.Ordinal);
+            foreach (var current in Devices)
+            {
+                if (!previousDevices.TryGetValue(current.Serial, out var prior))
+                {
+                    if (current.IsAuthorized)
+                    {
+                        await RecordDeviceHistoryAsync(
+                            current.Serial, current.Manufacturer, current.Model,
+                            "DeviceConnected", "تم اكتشاف جهاز Android مصرح به عبر ADB.");
+                        await AddNotificationAsync(
+                            "device", "تم اكتشاف جهاز", $"تم اكتشاف {current.DisplayName} عبر ADB.",
+                            "device-center", current.Serial);
+                    }
+                }
+                else if (!prior.IsAuthorized && current.IsAuthorized)
+                {
+                    await RecordDeviceHistoryAsync(
+                        current.Serial, current.Manufacturer, current.Model,
+                        "AdbAuthorized", "أصبح الجهاز مصرحًا به عبر ADB.");
+                    await AddNotificationAsync(
+                        "device", "تمت الموافقة على ADB", $"الجهاز {current.DisplayName} أصبح جاهزًا للفحص.",
+                        "device-center", current.Serial);
+                }
+                else if (prior.IsAuthorized && !current.IsAuthorized)
+                {
+                    await RecordDeviceHistoryAsync(
+                        current.Serial, prior.Manufacturer, prior.Model,
+                        "AdbAuthorizationLost", "فقد الجهاز تصريح ADB أو تغيرت حالة الاتصال.");
+                    await AddNotificationAsync(
+                        "warning", "تغيرت حالة اتصال الجهاز", $"الجهاز {prior.DisplayName} لم يعد مصرحًا به عبر ADB.",
+                        "device-center", current.Serial);
+                }
+            }
+
+            foreach (var prior in previousDevices.Values.Where(device => !currentSerials.Contains(device.Serial)))
+            {
+                if (prior.IsAuthorized)
+                {
+                    await RecordDeviceHistoryAsync(
+                        prior.Serial, prior.Manufacturer, prior.Model,
+                        "DeviceDisconnected", "تم رصد فصل الجهاز عن قناة ADB.");
+                    await AddNotificationAsync(
+                        "device", "تم فصل جهاز", $"تم فصل {prior.DisplayName} عن ADB.",
+                        "device-center", prior.Serial);
+                }
+            }
+
             _suppressDeviceSelection = true;
             DevicesList.SelectedItem = Devices.FirstOrDefault(d => d.Serial == previous)
                 ?? Devices.FirstOrDefault(d => d.IsAuthorized) ?? Devices.FirstOrDefault();
@@ -189,40 +257,56 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task EnsureSelectedDeviceReadyAsync(DeviceListItem selected)
     {
         if (!selected.IsAuthorized) return;
-        if (_preparedSerials.Add(selected.Serial) || _screenMirror.ActiveSerial != selected.Serial)
+        if (_preparedSerials.Add(selected.Serial) || (_settings.AutoOpenScreenMirror && _screenMirror.ActiveSerial != selected.Serial))
         {
             _preparedSerials.Add(selected.Serial);
             await PrepareConnectedDeviceAsync(selected);
         }
-        if (SelectedDevice?.Serial == selected.Serial) await InspectSelectedAsync();
+        if (_settings.AutoInspectOnConnect && SelectedDevice?.Serial == selected.Serial)
+            await InspectSelectedAsync();
     }
 
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
-        try
+        if (_settings.AutoOpenScreenMirror)
         {
-            WorkspaceTabs.SelectedIndex = 1;
-            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
-            var deadline = DateTime.UtcNow.AddSeconds(6);
-            while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
-                await Task.Delay(100);
-            if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero) throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف.");
-            await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
-            MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
+            try
+            {
+                WorkspaceTabs.SelectedIndex = 1;
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+                var deadline = DateTime.UtcNow.AddSeconds(6);
+                while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
+                    await Task.Delay(100);
+                if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero) throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف.");
+                await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
+                MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
+            }
+            catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
         }
-        catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
+        else
+        {
+            MirrorStatus = "فتح شاشة الهاتف تلقائيًا معطّل من الإعدادات. يمكنك تشغيله يدويًا من Phone Link Studio.";
+        }
         Notify(nameof(MirrorStatus));
-        try
+
+        if (_settings.AutoInstallAgent)
         {
-            await _agentInstaller.InstallAndRequestConsentAsync(selected.Serial);
-            AgentStatus = "تم تثبيت Agent وإرسال طلب الموافقة. وافق على شاشة الهاتف لتفعيل الاختبارات.";
-            _ = WatchForAgentConsentAsync(selected.Serial);
+            try
+            {
+                await _agentInstaller.InstallAndRequestConsentAsync(selected.Serial);
+                AgentStatus = "تم تثبيت Agent وإرسال طلب الموافقة. وافق على شاشة الهاتف لتفعيل الاختبارات.";
+                _ = WatchForAgentConsentAsync(selected.Serial);
+            }
+            catch (Exception ex)
+            {
+                AgentStatus = "تعذر تجهيز Agent تلقائيًا: " + ex.Message + " قد تحتاج إلى السماح بالتثبيت عبر USB في إعدادات الشركة المصنّعة.";
+            }
         }
-        catch (Exception ex)
+        else
         {
-            AgentStatus = "تعذر تجهيز Agent تلقائيًا: " + ex.Message + " قد تحتاج إلى السماح بالتثبيت عبر USB في إعدادات الشركة المصنّعة.";
+            AgentStatus = "تثبيت Agent التلقائي معطّل من الإعدادات. يمكنك تهيئته يدويًا من زر تحديث Agent.";
         }
-        StatusMessage = "الاتصال الأساسي جاهز. وافق على طلب PhoneLab الظاهر على الهاتف لتفعيل الاختبارات.";
+        StatusMessage = "الاتصال الأساسي جاهز. راجع حالة تصريح ADB وموافقة Agent.";
         Notify(nameof(AgentStatus)); Notify(nameof(StatusMessage));
     }
 
@@ -285,6 +369,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             _snapshot = await _inspection.InspectAsync(selected.Serial);
+            await RecordDeviceHistoryAsync(
+                selected.Serial,
+                _snapshot.Manufacturer,
+                _snapshot.Model,
+                "SystemInspection",
+                "تمت قراءة خصائص Android المتاحة عبر ADB بوضع القراءة فقط.",
+                $"Android {_snapshot.AndroidVersion}; API {_snapshot.ApiLevel}; SoC {_snapshot.Soc}; Build {_snapshot.BuildId}");
             _agentSnapshot = null;
             _measurementSnapshot = null;
             _profileMatch = await _deviceProfiles.MatchAsync(_snapshot);
@@ -322,6 +413,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(AgentStatus)); return;
             }
             _agentSnapshot = agent;
+            await RecordDeviceHistoryAsync(
+                selected.Serial,
+                _snapshot.Manufacturer,
+                _snapshot.Model,
+                "HardwareDiagnostics",
+                $"تم استلام {agent.Tests.Count} نتيجة اختبار من Agent بإذن المستخدم.",
+                string.Join("; ", agent.Tests.Take(20).Select(test => $"{test.Key}: {test.Value.Status}")));
+            await AddNotificationAsync(
+                "diagnostic", "اكتملت مزامنة الاختبارات", $"استلم SoftBox نتائج {agent.Tests.Count} اختبار من الهاتف.",
+                "hardware-diagnostics", selected.Serial);
             ApplyDeviceFacts();
             ApplyAgentFacts(agent);
             RebuildDiagnostics();
@@ -539,6 +640,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "MirrorScreen":
                 MirrorScreen_Click(this, new RoutedEventArgs());
                 break;
+            case "OpenScreenRecording":
+                OpenScreenRecordingWindow();
+                break;
             case "AnalyzeScreen":
                 AnalyzeScreen_Click(this, new RoutedEventArgs());
                 break;
@@ -547,6 +651,123 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             case "RepairGuides":
                 RepairGuides_Click(this, new RoutedEventArgs());
+                break;
+            case "OpenApkLab":
+                new ApkLabWindow { Owner = this }.Show();
+                break;
+            case "OpenNetworkDiagnostics":
+                new NetworkDiagnosticsWindow { Owner = this }.Show();
+                break;
+            case "OpenAndroidFileManager":
+                OpenAndroidToolsWindow(0);
+                break;
+            case "OpenAndroidAppManager":
+                OpenAndroidToolsWindow(1);
+                break;
+            case "OpenAndroidCommandCenter":
+                OpenAndroidToolsWindow(2);
+                break;
+            case "OpenAndroidBatchTools":
+                OpenAndroidToolsWindow(3);
+                break;
+            case "OpenAndroidWorkflow":
+                OpenAndroidWorkflowWindow();
+                break;
+            case "OpenFastbootManager":
+                new FastbootManagerWindow { Owner = this }.Show();
+                break;
+            case "OpenUsbDoctor":
+                new UsbDoctorWindow { Owner = this }.Show();
+                break;
+            case "OpenQualcommUsbDiagnostics":
+                new UsbDoctorWindow("qualcomm") { Owner = this }.Show();
+                break;
+            case "OpenMediaTekUsbDiagnostics":
+                new UsbDoctorWindow("mediatek") { Owner = this }.Show();
+                break;
+            case "OpenFirmwareCenter":
+            {
+                var preflightDevice = SelectedDevice;
+                var hasMatchingAuthorizedSnapshot = preflightDevice is { IsAuthorized: true } &&
+                    _snapshot is not null &&
+                    _snapshot.Serial.Equals(preflightDevice.Serial, StringComparison.Ordinal);
+                new FirmwareCenterWindow(
+                    hasMatchingAuthorizedSnapshot ? _snapshot : null,
+                    hasMatchingAuthorizedSnapshot)
+                {
+                    Owner = this
+                }.Show();
+                break;
+            }
+            case "OpenDeviceHistory":
+                OpenActivityCenter(0, true);
+                break;
+            case "OpenNotificationCenter":
+                OpenActivityCenter(1, false);
+                break;
+            case "OpenSupportBundle":
+                new SupportBundleWindow { Owner = this }.Show();
+                break;
+            case "OpenUpdateCenter":
+                new UpdateCenterWindow { Owner = this }.Show();
+                break;
+            case "OpenHelpCenter":
+                new HelpCenterWindow { Owner = this }.Show();
+                break;
+            case "OpenApplicationSettings":
+                new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.Show();
+                break;
+            case "OpenAbout":
+                new AboutWindow { Owner = this }.Show();
+                break;
+            case "OpenPartsInventory":
+                new PartsInventoryWindow() { Owner = this }.Show();
+                break;
+            case "OpenSamsungDiagnostics":
+                OpenVendorDiagnostics(AndroidVendorKind.Samsung, "Samsung Tools");
+                break;
+            case "OpenXiaomiDiagnostics":
+                OpenVendorDiagnostics(AndroidVendorKind.Xiaomi, "Xiaomi Tools");
+                break;
+            case "OpenBrandDiagnostics":
+                OpenVendorDiagnostics(AndroidVendorKind.Generic, "Android Brands");
+                break;
+            case "OpenPluginStore":
+                new PluginStoreWindow { Owner = this }.Show();
+                break;
+            case "OpenRepairAdvisor":
+                if (_snapshot is null)
+                {
+                    MessageBox.Show(this, "افحص جهازًا مصرحًا به أولًا حتى تتوفر أدلة فعلية للتحليل.",
+                        "مساعد الإصلاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    new RepairAdvisorWindow(
+                        _snapshot,
+                        _agentSnapshot,
+                        Components.Select(component => component.Diagnostic).ToArray(),
+                        SelectedDevice?.IsAuthorized == true) { Owner = this }.Show();
+                }
+                break;
+            case "OpenOneClickDiagnostic":
+                if (SelectedDevice is not { IsAuthorized: true } selected)
+                {
+                    MessageBox.Show(this, "اختر هاتف Android مصرحًا به عبر ADB أولًا.",
+                        "الفحص الشامل", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    new OneClickDiagnosticWindow(
+                        _adb,
+                        selected.Serial,
+                        _snapshot,
+                        _agentSnapshot,
+                        Components.Select(component => component.Diagnostic).ToArray()) { Owner = this }.Show();
+                }
+                break;
+            case "OpenPhoneBackup":
+                OpenAndroidBackupWindow();
                 break;
             case "OpenWorkshopBackup":
                 OpenWorkshopAtTab(4);
@@ -592,6 +813,133 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
+
+    private void OpenAndroidToolsWindow(int selectedTabIndex = 0)
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "أدوات Android",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var authorized = Devices.Where(device => device.IsAuthorized)
+            .Select(device => device.Serial).ToArray();
+        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex) { Owner = this }.Show();
+    }
+
+    private void OpenVendorDiagnostics(AndroidVendorKind expectedVendor, string sectionName)
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتفًا حاصلًا على تصريح ADB أولًا.", sectionName,
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var detectedVendor = AndroidDeviceToolsService.NormalizeVendor(selected.Manufacturer);
+        if (expectedVendor != AndroidVendorKind.Generic && detectedVendor != expectedVendor)
+        {
+            MessageBox.Show(this,
+                $"القسم المحدد هو {sectionName}، لكن الشركة التي قرأها SoftBox للجهاز الحالي هي: {selected.Manufacturer}. اختر جهاز الشركة المطلوبة أولًا.",
+                sectionName, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        new VendorDiagnosticsWindow(_adb, selected.Serial, selected.Manufacturer, selected.Model ?? selected.DisplayName)
+        {
+            Owner = this
+        }.Show();
+    }
+
+    private void OpenAndroidWorkflowWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "Workflow Automation",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new AndroidWorkflowWindow(_adb, selected.Serial) { Owner = this }.Show();
+    }
+
+    private void OpenAndroidBackupWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "Smart Backup",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new AndroidBackupWindow(_adb, selected.Serial) { Owner = this }.Show();
+    }
+
+    private async Task RecordDeviceHistoryAsync(
+        string serial,
+        string manufacturer,
+        string model,
+        string eventType,
+        string summary,
+        string evidence = "")
+    {
+        try
+        {
+            await _activity.AddDeviceHistoryAsync(serial, manufacturer, model, eventType, summary, evidence);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning("SoftBox device history was not persisted: {0}", ex.Message);
+        }
+    }
+
+    private async Task AddNotificationAsync(
+        string category,
+        string title,
+        string message,
+        string moduleId,
+        string? serial = null)
+    {
+        try
+        {
+            await _activity.AddNotificationAsync(category, title, message, moduleId, serial);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning("SoftBox notification was not persisted: {0}", ex.Message);
+        }
+    }
+
+    private void ApplyApplicationSettings(PhoneLabSettings settings)
+    {
+        _settings = PhoneLabSettingsService.Validate(settings);
+        _timer.Interval = TimeSpan.FromSeconds(_settings.DiscoveryIntervalSeconds);
+        if (_settings.AutoDiscoverDevices)
+        {
+            if (!_timer.IsEnabled)
+                _timer.Start();
+        }
+        else
+        {
+            _timer.Stop();
+        }
+        StatusMessage = "تم تطبيق إعدادات اكتشاف الأجهزة وعمليات الاتصال. التغييرات محفوظة للمرة القادمة.";
+        Notify(nameof(StatusMessage));
+    }
+
+    private void OpenActivityCenter(int initialTab, bool filterToSelectedDevice)
+    {
+        var selected = SelectedDevice;
+        var serial = filterToSelectedDevice && selected is { IsAuthorized: true }
+            ? selected.Serial
+            : null;
+        new ActivityCenterWindow(_activity, serial, initialTab) { Owner = this }.Show();
+    }
 
     private void GlobalWorkshop_Click(object sender, RoutedEventArgs e)
     {
@@ -691,6 +1039,49 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void Inspect_Click(object sender, RoutedEventArgs e) => await InspectSelectedAsync();
     private async void Agent_Click(object sender, RoutedEventArgs e) => await RefreshAgentAsync();
+
+    private void OpenScreenRecordingWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.",
+                "تسجيل شاشة الهاتف", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new ScreenRecordingWindow(
+            _screenMirror,
+            selected.Serial,
+            selected.Model ?? selected.DisplayName)
+        {
+            Owner = this
+        }.Show();
+    }
+
+    private void OpenScreenRecording()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتفًا مصرحًا به عبر ADB قبل تسجيل الشاشة.",
+                "تسجيل الشاشة", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_screenMirror.IsRecording)
+        {
+            MessageBox.Show(this, "يوجد تسجيل نشط بالفعل. أوقف التسجيل الحالي واحفظه أولًا.",
+                "تسجيل الشاشة", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var window = new ScreenRecordingWindow(_screenMirror, selected.Serial, selected.Model ?? selected.DisplayName)
+        {
+            Owner = this
+        };
+        window.Show();
+    }
 
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
     {
@@ -925,6 +1316,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (dialog.ShowDialog(this) != true) return;
         await _reports.ExportAsync(dialog.FileName, _snapshot, _agentSnapshot, Components.Select(x => x.Diagnostic).ToList(), _measurementSnapshot);
+        if (SelectedDevice is { IsAuthorized: true } selected)
+        {
+            await RecordDeviceHistoryAsync(
+                selected.Serial, _snapshot.Manufacturer, _snapshot.Model,
+                "ReportExported", "تم تصدير تقرير تشخيص محلي بموافقة المستخدم.",
+                Path.GetFileName(dialog.FileName));
+            await AddNotificationAsync(
+                "report", "تم تصدير تقرير", $"تم حفظ تقرير الجهاز {selected.DisplayName}.",
+                "service-reports", selected.Serial);
+        }
         StatusMessage = "تم حفظ التقرير: " + dialog.FileName;
         Notify(nameof(StatusMessage));
     }

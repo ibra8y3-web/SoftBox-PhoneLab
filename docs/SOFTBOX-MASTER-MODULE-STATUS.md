@@ -1,8 +1,22 @@
 # SoftBox Master Module Audit and Development Roadmap
 
-Audit baseline: repository \`main\`, commit \`97bce485d71c309bf517790b8d6faa46bbd0a70b\`, 20 November 2026.
+Audit baseline: pre-implementation `main` snapshot, commit `12650bed442498f7746432de42bea95b1a622381`, 20 November 2026. APK Lab changes are recorded on `feature/apk-lab-real-apk-inspector` until CI review is complete.
 
 This document maps the supplied **SoftBox – Universal Smart Device Service & Repair Platform** specification to the code that already exists. It is an implementation inventory, not a claim that every module is complete.
+
+### Pre-implementation main snapshot
+
+- Top-level sections: 36 total — 22 In Development and 14 Planned.
+- Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 5 Tested, 63 Planned, 23 In Development and 2 Unsupported.
+- No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
+
+### Current additive branch snapshot — 20 November 2026
+
+- Top-level sections: **36 retained** — 35 In Development and 1 Planned.
+- Child features: **129**; catalog entries including section rows: **165**.
+- Entry statuses (section rows plus child features): 24 Planned, 38 In Development, 95 Implemented, 6 Tested, 0 Verified and 2 Unsupported.
+- Executable navigation: **52 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- The one top-level Planned section is User & Technician Management. The catalog does not mark any section Verified; CI does not constitute physical-device verification.
 
 ## Status definitions
 
@@ -13,48 +27,48 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 - **Verified**: verified in the intended real environment with recorded evidence.
 - **Unsupported**: intentionally not provided in the current product scope.
 
-A green build does not make a hardware feature Verified. Unit tests do not substitute for tests on a real handset, USB chipset, driver, fixture or firmware package. Navigation pages read their state from \`SoftBoxModuleCatalog\`; an unfinished feature never receives an action button.
+A green build does not make a hardware feature Verified. Unit tests do not substitute for tests on a real handset, USB chipset, driver, fixture or firmware package. Navigation pages read their state from `SoftBoxModuleCatalog`; an unfinished feature never receives an action button.
 
 ## The 36 product sections
 
 | # | Section | Current status | Already present | Important missing work |
 |---:|---|---|---|---|
-| 01 | Dashboard | In Development | Live ADB availability, connected-device list and immediate status text | Central activity counters, job queue, history, persistent notifications, storage and update health |
-| 02 | Device Center | In Development | ADB auto-discovery every 3 seconds, multiple-device listing and selection | Wireless pairing UI, sessions, group targeting, per-device job isolation and batch controls |
+| 01 | Dashboard | In Development | Live ADB availability, connected-device selection, persisted device-connect/disconnect and inspection notifications, current status | Job counters/queue, historical metrics, storage health and update health aggregation |
+| 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history | Wireless pairing UI, persistent sessions, group targeting and independent background job queue |
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
-| 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, Android evidence capture | ADB GUI manager, app/package manager, Android file manager and safe command catalog |
-| 05 | APK Lab | Planned | No APK inspection workbench | Manifest, package/version, signing-certificate, hash, archive-integrity and version-diff analysis |
-| 06 | Samsung Tools | In Development | Samsung device identification through the shared device engine; official Samsung USB driver is surfaced under USB Doctor | Samsung Download Mode visibility, model-specific service functions and official compatible recovery workflows |
-| 07 | Xiaomi Tools | Planned | Generic Android/ADB path only | Xiaomi/Redmi/POCO identity, region compatibility and supported model-specific workflows |
-| 08 | Android Brands | In Development | Generic manufacturer/model identification and community identity profiles | Dedicated, evidenced modules for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
-| 09 | Qualcomm Tools | Planned | SoC identification hints may be read from Android | Qualcomm USB/EDL detection, signed compatible recovery sources and a verified model support matrix |
-| 10 | MediaTek Tools | Planned | SoC identification hints may be read from Android | Preloader/BROM discovery, driver diagnostics and verified model-specific official recovery |
-| 11 | Firmware Center | In Development | Local archive inspection, SHA-256 and common Android OTA metadata/payload detection | Trusted source catalog, download manager, signature verification, region/model compatibility and firmware library |
-| 12 | USB Doctor | In Development | ADB/Fastboot inventory, transport explanations and optional official Samsung driver | Windows Device Manager inventory, VID/PID, driver health/conflict/signature diagnosis and broader OEM driver catalog |
-| 13 | Smart Backup | Planned | Workshop JSON database backup/restore only; its shortcut opens the existing workshop backup tab | Phone-file backup, integrity manifests, encryption/key management, scheduling and restore verification |
-| 14 | Phone Link Studio | In Development | Authorized Android screen mirror/control using scrcpy | Integrated recording, multiple independent sessions, clipboard/audio controls and quality profiles |
+| 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, public shared-storage browser/transfers, installed third-party package inspection, APK install after manifest inspection and confirmation, allow-listed read-only commands; Fastboot Manager discovers fastboot devices, reads getvar all and supports confirmed reboot to Android | Full package uninstall/split APK workflows, free-form shell commands, private app-data operations and model-specific destructive Fastboot servicing remain unsupported |
+| 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution and DEX/resource analysis; no installation or device action |
+| 06 | Samsung Tools | In Development | Official Samsung USB driver entry under USB Doctor; fixed-key getprop collection for One UI, CSC, PDA, bootloader and Verified Boot with JSON report | Download Mode service protocol, model-specific recovery and officially verified firmware workflow |
+| 07 | Xiaomi Tools | In Development | Xiaomi/Redmi/POCO fixed-key getprop collection for model/build/MIUI-HyperOS/region/Verified Boot with JSON report | Model/region compatibility database and official model-specific Fastboot/recovery workflows |
+| 08 | Android Brands | In Development | Generic read-only Android manufacturer/brand/model/build and Verified Boot property collection | Dedicated, evidenced service protocols for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
+| 09 | Qualcomm Tools | In Development | SoC identification hints plus an automatically opened Windows PnP view filtered to the common 05C6:9008 EDL USB identity hint | EDL protocol, programmer verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
+| 10 | MediaTek Tools | In Development | SoC hints plus an automatically opened Windows PnP view filtered to the common 0E8D:0003 Preloader/BROM USB identity hint | BROM protocol, Download Agent verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
+| 11 | Firmware Center | In Development | Local firmware import/catalogue by vendor/model/region/version, file SHA-256, ZIP/OTA archive inspection and post-import integrity revalidation | Trusted source catalog, signed publisher verification, download manager and device/model/region/rollback compatibility gate |
+| 12 | USB Doctor | In Development | ADB/Fastboot transport inspection; Windows SetupAPI PnP inventory with VID/PID, friendly name, service and problem code; conservative Samsung/Google/Qualcomm/MediaTek mode hints; official Samsung driver entry | Driver package signature verification, controlled install/remove/rollback and OEM driver catalogue; no driver mutation in the current PnP inspector |
+| 13 | Smart Backup | In Development | ADB shared-storage backup into ZIP with per-file SHA-256; optional `.sbx` AES-256-CBC + HMAC-SHA256 using PBKDF2-HMAC-SHA256 (600,000 iterations); authenticated verification; verified ZIP/SBX restore to a unique new shared-storage directory without overwrite/delete | Scheduled backups, key recovery policy, automatic reconnect jobs and app-private/system data backup (unsupported by design) |
+| 14 | Phone Link Studio | In Development | Verified scrcpy screen mirroring/control; real MP4/MKV screen recording is wired to the selected authorized ADB device, requires user-chosen new output path and finalizes via WM_CLOSE before validating non-empty output file | Hardware recording validation across Android versions/codecs, multi-session concurrent display and app-side recording library management |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
-| 16 | Network Diagnostics | Planned | No dedicated network diagnostics workspace | Host DNS/latency/connectivity tests, permitted Android network observations and ADB Wireless diagnosis |
-| 17 | Smart Repair AI | Planned | External iFixit repair-guide search only (not AI) | Evidence-linked reasoning, confidence-ranked hypotheses and a locally searchable repair knowledge base |
-| 18 | One-Click Diagnostic | In Development | One action reads available system properties and rebuilds component evidence | A consent-aware orchestrator for supported non-destructive tests, cancellation and one combined report |
-| 19 | Safe Recovery | Planned | Read-only firmware pre-inspection exists in Firmware Center | A central compatibility/consent/backup gate and only officially supported recovery integrations; no flashing is currently implemented |
-| 20 | Workflow Automation | Planned | No workflow designer or runner | Saved workflows, conditional steps, cancellation, safe retry policy and detailed step history |
-| 21 | Batch Operations | Planned | Multiple devices can be discovered and displayed | Explicit target selection, concurrent limits, per-device isolation/results and independent cancellation |
-| 22 | Repair History | In Development | Workshop order records, timeline notes and capped local activity events | Unified per-device diagnostic/session history, searchable reports and controlled retention |
+| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe with bounded timeouts/cancellation | Permitted Android network observations, Wi-Fi details and ADB Wireless pairing; no phone-private network claim |
+| 17 | Smart Repair AI | In Development | Deterministic local evidence-linked advisor over battery/storage readings, Agent results and component diagnostics with severity, confidence, evidence and safe next steps; external repair guide search | LLM-backed online mode and expanded model-specific offline repair knowledge; current local advisor is rules-based, not an AI model |
+| 18 | One-Click Diagnostic | In Development | One action runs five read-only ADB presets (properties, battery, storage, uptime, third-party apps), supports cancellation and saves a device-masked JSON report | Coordinated opt-in hardware test suite and consolidated lab instrumentation/Agent evidence |
+| 19 | Safe Recovery | In Development | Conservative preflight is wired into Firmware Center; re-hashes selected file, compares exact manufacturer/model against the current authorized device snapshot, and reports Passed/Failed/Unknown/Blocked with evidence; automated tests enforce never-allow while publisher trust, signed compatibility rules, rollback and verified-backup proof are unavailable | Official publisher trust roots, signed model/region/board compatibility database, anti-rollback policy evidence and vendor-authorized recovery workflow; no flashing is enabled |
+| 20 | Workflow Automation | In Development | JSON workflow builder/save/load and sequential read-only ADB runner with allow-list validation, cancellation and step-level results | Conditions, triggers, safe retry policies and broader workflow actions beyond read-only presets |
+| 21 | Batch Operations | In Development | Multi-device selection and bounded concurrent read-only ADB preset execution with per-device results and configured concurrency limit | Additional allowed batch actions, independent per-device cancellation and durable batch job queue |
+| 22 | Repair History | In Development | Persistent local per-device connection/authorization/inspection/Agent/report history using SHA-256 device fingerprint and masked serial; existing workshop event/timeline history retained | Broader linkage of every service action and diagnostic result, searchable retention/cleanup and encrypted local store |
 | 23 | Workshop Manager | In Development | Customers, repair orders, status tracking, QR ticket, estimates/final cost, workshop settings and reports | Intake accessory checklist, customer approval flow, photos with consent, receipts, quotes, invoices and multi-user workflow |
-| 24 | Parts Inventory | In Development | SKU items, quantities, thresholds, stock adjustments and event history; its shortcut opens the existing inventory tab | Suppliers, purchase orders, part consumption on repair orders, cost/sale accounting and analytics |
-| 25 | Service Reports | In Development | Device JSON reports; workshop text/HTML and UTF-8 CSV exports | Native PDF/Excel outputs, unified analytics, invoice templates and signed report provenance |
-| 26 | Plugin Store | Planned | No plugin installation/catalog runtime | Trusted catalog, signature verification, dependencies, permissions, updates and uninstall lifecycle |
-| 27 | Plugin SDK | Planned | No public contracts or SDK package | Versioned API, manifest, examples, templates, permission declarations and developer documentation |
-| 28 | Offline Center | In Development | Local ADB, inspection, workshop records and offline bundled utilities | Central online/offline status, local package management and offline knowledge/update policy |
-| 29 | Security & Privacy | In Development | ADB argument-list invocation, serial validation, bounded timeouts, Agent consent and read-only forensic flows | Encrypted local data, backup key management, centralized audit, privacy controls and reviewed threat model |
-| 30 | User & Technician Management | Planned | Technician name can be written on a repair order; this is not user authentication | User accounts, secure password handling, roles, section/action permissions, session lock and per-user audit |
-| 31 | Update Center | Planned | Device model catalog refresh only | Signed application updates, release channels, integrity checks, rollback policy and update history |
-| 32 | Notification Center | Planned | Current-operation status text only | Persistent notifications, unread state, filtering and navigation to related modules |
-| 33 | Help Center | In Development | USB/ADB and Agent instructions plus repository documentation | Searchable in-app help, glossary, FAQs and bundled offline knowledge |
-| 34 | Support & Logs | In Development | Bounded Android log/evidence export and firmware inspection messages | Structured SoftBox logs, crash reports, secret redaction and an explicit-consent support bundle |
-| 35 | Settings | In Development | Global Workshop locale, currency, time-zone, business profile and warranty settings | App-wide language/theme/shortcuts, device preferences, privacy and storage settings |
-| 36 | About | Planned | Version, project and third-party notice information exists in source/docs | Dedicated About page with current version, licenses, runtime/tools and links |
+| 24 | Parts Inventory | In Development | SKU catalogue with category/supplier/cost/sale/reorder fields in the dedicated Parts Inventory window; supplier stock receipts record supplier and invoice, quantity and purchase unit cost, update weighted-average cost, and atomically add a purchase receipt plus stock movement; order-linked consumption deducts stock and records parts cost; inventory/movement/purchase CSV exports | Multi-line purchase orders, invoice approval/payment tracking, barcode scanning and multi-branch synchronization |
+| 25 | Service Reports | In Development | Device JSON diagnostics; repair-order HTML/text/UTF-8 CSV includes parts and parts cost; inventory and movement CSV exports | Native PDF/Excel, signed report provenance and aggregated analytics dashboards |
+| 26 | Plugin Store | In Development | Local ZIP/Manifest inspection, permission allow-list validation, Zip Slip/symlink/duplicate-path/size/ratio checks and package SHA-256; install and code execution remain disabled | Publisher signature/trusted-root verification, permission grant UI, dependency manager, install/update/uninstall lifecycle and sandboxed runtime |
+| 27 | Plugin SDK | In Development | Version-1 manifest contract, semantic version validation, known permission identifiers, fail-closed unknown permissions, sample manifest and developer quickstart | Public SDK assembly/contracts, actual host API, runtime IPC, sample executable plugin and compatibility test host |
+| 28 | Offline Center | In Development | Local ADB, APK analysis, USB inventory, firmware library, workshop/activity data, settings and offline Help Center; support bundle stays local | Unified online/offline state, local component inventory and offline policy controls |
+| 29 | Security & Privacy | In Development | ADB argument-list invocation and serial validation; allow-listed read-only shell presets; Agent consent; safe public-storage paths; secret-redacted local support ZIP; masked device history identifiers | Encrypted local workshop/history storage, managed keys, signed updater/plugin trust roots and formal threat model |
+| 30 | User & Technician Management | Planned | Technician attribution fields on repair orders and stock movements; no authenticated account identity is asserted | Local accounts, PBKDF2/password policy, role/permission enforcement, session lock and user-attributed audit |
+| 31 | Update Center | Planned | Device catalog refresh only; no self-updater | Signed application update manifest, trust-root verification, staged install, rollback and release-channel management |
+| 32 | Notification Center | In Development | Persistent local inbox for device connect/disconnect/ADB authorization, Agent diagnostics and report export; unread/read and mark-all-read | Additional operation-completion sources, filtering and direct deep links for every module event |
+| 33 | Help Center | In Development | Searchable local Arabic help articles with English titles/keywords for ADB, USB, APK, backup, firmware, network, workflow, support and privacy limitations | Expanded illustrated guides, full glossary and manufacturer/model-specific troubleshooting articles |
+| 34 | Support & Logs | In Development | Bounded Android evidence collection, firmware inspection reports, local support ZIP with system/runtime metadata and user-selected TXT/LOG/JSON files plus password/token/authorization/device-ID redaction | Structured application log pipeline, crash capture and stronger review of non-standard secret formats |
+| 35 | Settings | In Development | Persisted local preferences for ADB discovery interval, screen auto-open, Agent auto-setup, auto-inspection and batch concurrency; workshop currency/locale/time-zone settings remain | App-wide theme, language, keyboard shortcuts, privacy/data retention and storage settings |
+| 36 | About | In Development | Application/Assembly version, runtime, OS/architecture and bundled THIRD-PARTY-NOTICES display | Build provenance, complete dependency/license inventory and official support links |
 
 ## Existing tools and their canonical sections
 
@@ -70,6 +84,8 @@ The same implementation is shared and linked from related module pages; it must 
 | External serial meter dashboard | Hardware Diagnostics | Read-only JSON-Lines protocol; fixture safety/calibration is external |
 | ADB/Fastboot transport inspector and Samsung driver installer | USB Doctor | Generic discovery cannot promise visibility of every vendor-specific mode |
 | Local firmware archive inspection | Firmware Center | Hash/archive structure is not publisher-signature or compatibility verification |
+| Local APK archive and Manifest inspection | APK Lab | SHA-256, ZIP entry readability, text/AXML metadata and signature-structure discovery; does not validate publisher trust |
+| Windows host network interface and DNS/ICMP probe | Network Diagnostics | Reads local interface properties; probes only one explicitly selected host and does not inspect Android-private Wi-Fi data |
 | TRACE Boardviewer launcher and verified JSON board-map importer | Device Intelligence | Boardviewer is a separate third-party app; native formats are not decoded into PhoneLab 3D |
 | Customer/order/inventory local store | Workshop Manager / Parts Inventory | One Windows workstation, JSON storage, no multi-branch synchronization |
 | Workshop international settings, warranty and printable reports | Workshop Manager / Service Reports | Currency code formats labels; there is no FX conversion or automatic tax calculation |
@@ -80,6 +96,8 @@ The same implementation is shared and linked from related module pages; it must 
 - Windows UI: WPF on .NET 10; Android companion: Kotlin/Android Agent.
 - Current solution has three .NET projects: Core, Desktop and Tests, plus the separate Android Gradle project.
 - ADB process invocation uses argument-list APIs, validates serial values and has a bounded command timeout.
+- APK Lab uses a dependency-free .NET Core inspection service for local ZIP entry-read checks, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
+- Network Diagnostics reads local Windows interface configuration and performs one user-selected DNS/ICMP probe with bounded timeouts; Android-private network observations are still unimplemented.
 - The workshop database is local JSON under the current Windows user's LocalAppData. It has a schema migration path for its v1/v2 workshop schema.
 - SQLite and Entity Framework Core are **not** currently used.
 - The current desktop UI has meaningful code-behind and services, but it is **not yet a complete MVVM/Clean Architecture implementation**.
@@ -109,3 +127,22 @@ The same implementation is shared and linked from related module pages; it must 
 6. Set a feature to Tested only when an automated test actually covers it. Set it to Verified only after the target environment/device test is recorded.
 7. Keep customer data local by default; request consent for exports and remote services.
 8. Build and test after each stage; do not start the next dependent stage with a broken main branch.
+
+
+## Current navigation ownership after cleanup
+
+The latest catalog is audited at 52 unique executable actions. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Duplicate launch aliases have been removed only from non-canonical feature rows; implementations, services, legacy views and data stores remain.
+
+Latest CI for the implementation branch: run #257 — 150 passed, 0 failed, 0 skipped; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44779995644/artifacts/14652201449
+
+No physical handset, USB chipset, EDL/BROM protocol, firmware flash or board-level test is claimed. Do not change any feature to Verified without recorded target-environment evidence.
+
+
+## Final catalog/documentation checkpoint — CI #258
+
+- Catalog: 36 sections, 129 child features, 165 entries; 35 sections In Development, 1 Planned.
+- Entry statuses: 24 Planned, 38 In Development, 95 Implemented, 6 Tested, 0 Verified and 2 Unsupported.
+- 52 unique executable actions; all have main-window routes.
+- CI run #258 on the documentation-updated branch passed all 150 unit tests, Restore, Windows x64 publish, Android Agent build/upload, offline dependency bundling and artifact upload.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44780672062/artifacts/14652362018
+- No physical-device verification is claimed.

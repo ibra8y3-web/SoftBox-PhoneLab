@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using SoftBox.PhoneLab.Desktop.Interop;
 
@@ -18,7 +19,10 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         "SoftBox", "PhoneLab", "tools", $"scrcpy-{Version}");
     private Process? _process;
     private ScrcpyWindowHost? _host;
+    private IntPtr _windowHandle;
     public string? ActiveSerial { get; private set; }
+    public string? ActiveRecordingPath { get; private set; }
+    public bool IsRecording => ActiveRecordingPath is not null;
 
     public async Task<string> EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {
@@ -50,12 +54,50 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         finally { try { File.Delete(zip); } catch { } }
     }
 
-    public async Task StartEmbeddedAsync(string serial, string model, ScrcpyWindowHost host, CancellationToken cancellationToken = default)
+    public Task StartEmbeddedAsync(
+        string serial,
+        string model,
+        ScrcpyWindowHost host,
+        CancellationToken cancellationToken = default)
+        => StartEmbeddedCoreAsync(serial, model, host, recordingPath: null, cancellationToken: cancellationToken);
+
+    public Task StartEmbeddedRecordingAsync(
+        string serial,
+        string model,
+        ScrcpyWindowHost host,
+        string recordingPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (!AdbClient.IsSafeSerial(serial))
+            throw new ArgumentException("Invalid ADB serial.", nameof(serial));
+        if (string.IsNullOrWhiteSpace(recordingPath))
+            throw new ArgumentException("حدد مسار حفظ التسجيل.", nameof(recordingPath));
+
+        var fullPath = Path.GetFullPath(recordingPath);
+        var extension = Path.GetExtension(fullPath);
+        if (!extension.Equals(".mp4", StringComparison.OrdinalIgnoreCase) &&
+            !extension.Equals(".mkv", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("صيغة التسجيل المدعومة هي MP4 أو MKV.", nameof(recordingPath));
+        if (File.Exists(fullPath) || Directory.Exists(fullPath))
+            throw new IOException("ملف التسجيل موجود بالفعل؛ اختر اسمًا آخر حتى لا يتم استبدال تسجيل قديم.");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        return StartEmbeddedCoreAsync(serial, model, host, fullPath, cancellationToken);
+    }
+
+    private async Task StartEmbeddedCoreAsync(
+        string serial,
+        string model,
+        ScrcpyWindowHost host,
+        string? recordingPath,
+        CancellationToken cancellationToken)
     {
         if (!AdbClient.IsSafeSerial(serial)) throw new ArgumentException("Invalid ADB serial.", nameof(serial));
         if (!host.IsLoaded || host.NativeHostHandle == IntPtr.Zero) throw new InvalidOperationException("Phone screen host is not ready.");
-        if (ActiveSerial == serial && _process is { HasExited: false } && host.HasEmbeddedWindow) return;
+        if (recordingPath is null && ActiveRecordingPath is null &&
+            ActiveSerial == serial && _process is { HasExited: false } && host.HasEmbeddedWindow) return;
         Stop();
+
         var exe = await EnsureInstalledAsync(cancellationToken);
         var exeDir = Path.GetDirectoryName(exe)!;
         var adbDir = Path.GetDirectoryName(adb.Executable) ?? "";
@@ -67,8 +109,16 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         start.ArgumentList.Add("--window-title"); start.ArgumentList.Add("SoftBox PhoneLab - " + model);
         start.ArgumentList.Add("--window-borderless");
         start.ArgumentList.Add("--stay-awake");
+        if (recordingPath is not null)
+        {
+            start.ArgumentList.Add("--record");
+            start.ArgumentList.Add(recordingPath);
+        }
+
         _process = Process.Start(start) ?? throw new InvalidOperationException("Could not launch scrcpy.");
-        _host = host; ActiveSerial = serial;
+        _host = host;
+        ActiveSerial = serial;
+        ActiveRecordingPath = recordingPath;
         var process = _process;
         var end = DateTime.UtcNow.AddSeconds(18);
         try
@@ -76,11 +126,14 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
             while (DateTime.UtcNow < end)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (process.HasExited) throw new InvalidOperationException("scrcpy exited with code " + process.ExitCode + ". Check ADB authorization and driver.");
+                if (process.HasExited)
+                    throw new InvalidOperationException("scrcpy exited with code " + process.ExitCode + ". Check ADB authorization and driver.");
                 var hwnd = ScrcpyWindowHost.FindTopLevelWindow(process.Id);
                 if (hwnd != IntPtr.Zero)
                 {
-                    if (!host.AttachWindow(hwnd)) throw new InvalidOperationException("Could not embed scrcpy in PhoneLab.");
+                    if (!host.AttachWindow(hwnd))
+                        throw new InvalidOperationException("Could not embed scrcpy in PhoneLab.");
+                    _windowHandle = hwnd;
                     return;
                 }
                 await Task.Delay(120, cancellationToken);
@@ -90,13 +143,91 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         catch { Stop(); throw; }
     }
 
+    public async Task<FileInfo> StopRecordingAsync(CancellationToken cancellationToken = default)
+    {
+        var recordingPath = ActiveRecordingPath
+            ?? throw new InvalidOperationException("لا يوجد تسجيل شاشة نشط لإيقافه.");
+        var process = _process;
+        if (process is null)
+            throw new InvalidOperationException("عملية scrcpy المسؤولة عن التسجيل غير متاحة.");
+
+        try
+        {
+            if (!process.HasExited && _windowHandle != IntPtr.Zero)
+                _ = PostMessage(_windowHandle, WmClose, IntPtr.Zero, IntPtr.Zero);
+
+            if (!process.HasExited)
+            {
+                var exited = await Task.Run(() => process.WaitForExit(12_000), cancellationToken);
+                if (!exited)
+                {
+                    process.Kill(entireProcessTree: true);
+                    await process.WaitForExitAsync(cancellationToken);
+                    throw new TimeoutException("لم يغلق scrcpy ملف التسجيل في الوقت المحدد؛ تم إنهاء العملية، وقد يكون الملف غير مكتمل.");
+                }
+            }
+
+            var host = _host;
+            try { host?.DetachWindow(); } catch { }
+            _host = null;
+            _windowHandle = IntPtr.Zero;
+            _process = null;
+            ActiveSerial = null;
+            ActiveRecordingPath = null;
+
+            process.Dispose();
+            if (!File.Exists(recordingPath))
+                throw new IOException("انتهى scrcpy لكن ملف التسجيل لم يتم إنشاؤه.");
+            var info = new FileInfo(recordingPath);
+            if (info.Length <= 0)
+                throw new InvalidDataException("ملف التسجيل الناتج فارغ.");
+            return info;
+        }
+        catch
+        {
+            if (process.HasExited)
+            {
+                try { _host?.DetachWindow(); } catch { }
+                _host = null;
+                _windowHandle = IntPtr.Zero;
+                _process = null;
+                ActiveSerial = null;
+                ActiveRecordingPath = null;
+                process.Dispose();
+            }
+            throw;
+        }
+    }
+
     public void Stop()
     {
+        var process = _process;
+        try
+        {
+            if (ActiveRecordingPath is not null && process is { HasExited: false } && _windowHandle != IntPtr.Zero)
+            {
+                _ = PostMessage(_windowHandle, WmClose, IntPtr.Zero, IntPtr.Zero);
+                if (!process.WaitForExit(8_000))
+                    process.Kill(entireProcessTree: true);
+            }
+            else if (process is { HasExited: false })
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch { }
+        try { process?.Dispose(); } catch { }
         try { _host?.DetachWindow(); } catch { }
         _host = null;
-        var process = _process; _process = null; ActiveSerial = null;
-        if (process is null) return;
-        try { if (!process.HasExited) process.Kill(true); process.Dispose(); } catch { }
+        _windowHandle = IntPtr.Zero;
+        _process = null;
+        ActiveSerial = null;
+        ActiveRecordingPath = null;
     }
+
+    private const uint WmClose = 0x0010;
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostMessage(IntPtr window, uint message, IntPtr wParam, IntPtr lParam);
+
     public void Dispose() => Stop();
 }
