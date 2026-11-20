@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Compatibility;
 using SoftBox.PhoneLab.Core.Firmware;
 using SoftBox.PhoneLab.Core.Models;
 
@@ -39,7 +40,8 @@ public static class SafeRecoveryPreflightService
         DeviceSnapshot? device,
         bool adbAuthorized,
         FirmwareLibraryItem? firmware,
-        FirmwareIntegrityResult? integrity)
+        FirmwareIntegrityResult? integrity,
+        IEnumerable<DeviceProfile>? profiles = null)
     {
         var checks = new List<RecoveryPreflightCheck>();
         var limitations = new List<string>
@@ -112,6 +114,30 @@ public static class SafeRecoveryPreflightService
                 ? "لم تتم إعادة قراءة الملف وحساب بصمته."
                 : $"{integrity.Message} SHA-256 match={integrity.Sha256Matches}; size match={integrity.SizeMatches}; exists={integrity.FileExists}.",
             hashVerified ? "هذه النتيجة لا تثبت هوية الناشر؛ استمر في مراجعة المصدر والتوافق." : "أعد استيراد الملف أو تحقق من فقده أو تغيّره."));
+
+        var capabilityReport = DeviceCapabilityEngine.Evaluate(
+            new DeviceCapabilityContext(
+                device,
+                adbAuthorized,
+                AgentConnected: false,
+                FastbootDetected: false,
+                VerifiedBoardMapAvailable: false,
+                firmware,
+                integrity),
+            profiles);
+        var firmwareDecision = capabilityReport.Decisions.Single(
+            item => item.Operation == DeviceCapabilityOperation.ReviewFirmwareCandidate);
+        checks.Add(new RecoveryPreflightCheck(
+            "capability-engine-firmware",
+            "محرك قدرات وتوافق الجهاز — مراجعة ملف Firmware",
+            firmwareDecision.State switch
+            {
+                CapabilityDecisionState.Supported => RecoveryCheckState.Passed,
+                CapabilityDecisionState.Unknown or CapabilityDecisionState.NeedsSetup => RecoveryCheckState.Unknown,
+                _ => RecoveryCheckState.Blocked
+            },
+            firmwareDecision.Evidence,
+            firmwareDecision.RequiredAction));
 
         checks.Add(new RecoveryPreflightCheck(
             "publisher-authenticity",

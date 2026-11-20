@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Compatibility;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
@@ -149,56 +150,9 @@ public sealed class DeviceProfileCatalog
 
     public async Task<DeviceProfileMatch> MatchAsync(DeviceSnapshot device)
     {
+        ArgumentNullException.ThrowIfNull(device);
         var catalog = await LoadAsync();
-        var best = DeviceProfileMatch.Unknown;
-        foreach (var profile in catalog.Profiles)
-        {
-            var score = 0;
-            var reasons = new List<string>();
-            if (profile.ModelNumbers.Contains(device.ModelNumber, StringComparer.OrdinalIgnoreCase) &&
-                device.ModelNumber != "غير متاح")
-            {
-                score += 120;
-                reasons.Add("مطابقة رقم الموديل");
-            }
-            if (profile.DeviceCodes.Contains(device.DeviceCode, StringComparer.OrdinalIgnoreCase) &&
-                device.DeviceCode != "غير متاح")
-            {
-                score += 110;
-                reasons.Add("مطابقة Device Codename");
-            }
-            if (profile.ProductNames.Contains(device.Product, StringComparer.OrdinalIgnoreCase) &&
-                device.Product != "غير متاح")
-            {
-                score += 70;
-                reasons.Add("مطابقة Product ID");
-            }
-            if (profile.Manufacturer.Equals(device.Manufacturer, StringComparison.OrdinalIgnoreCase) &&
-                device.Manufacturer != "غير متاح")
-            {
-                score += 10;
-                reasons.Add("مطابقة الشركة");
-            }
-            if (profile.ModelAliases.Any(alias => ContainsNormalized(device.Model, alias)))
-            {
-                score += 35;
-                reasons.Add("مطابقة اسم تجاري");
-            }
-            if (profile.BoardIds.Contains(device.Board, StringComparer.OrdinalIgnoreCase) &&
-                device.Board != "غير متاح")
-            {
-                score += 20;
-                reasons.Add("مطابقة Board ID");
-            }
-
-            if (score > best.Score)
-            {
-                var confidence = score >= 110 && profile.IdentityVerified ? "مطابقة دقيقة" :
-                    score >= 70 ? "مرجح" : "ضعيف";
-                best = new DeviceProfileMatch(profile, score, confidence, reasons);
-            }
-        }
-        return best;
+        return DeviceCapabilityEngine.ResolveIdentity(device, catalog.Profiles).ToLegacyMatch();
     }
 
     private static string NormalizeCode(string value)
