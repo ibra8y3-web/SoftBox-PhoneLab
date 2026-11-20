@@ -181,6 +181,7 @@ public sealed class WorkshopStore
             }
             else
             {
+                var quantityDelta = item.Quantity - current.Quantity;
                 current.Name = item.Name.Trim();
                 current.Quantity = item.Quantity;
                 current.MinimumQuantity = item.MinimumQuantity;
@@ -190,6 +191,16 @@ public sealed class WorkshopStore
                 current.Supplier = item.Supplier.Trim();
                 current.Location = item.Location.Trim();
                 current.UpdatedAtUtc = DateTimeOffset.UtcNow;
+                if (quantityDelta != 0)
+                    _cache.InventoryMovements.Add(new InventoryMovement
+                    {
+                        Sku = current.Sku,
+                        ItemName = current.Name,
+                        Delta = quantityDelta,
+                        BalanceAfter = current.Quantity,
+                        UnitCostEgp = current.UnitCostEgp,
+                        Reason = "تعديل الرصيد من نموذج المخزون"
+                    });
                 AddEvent("مخزون", current.Sku, $"تحديث بيانات الصنف: {current.Name}.");
             }
             await SaveLockedAsync(cancellationToken);
