@@ -69,14 +69,14 @@ public sealed class NetworkDiagnosticsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "WINDOWS HOST NETWORK • LOCAL INTERFACES • DNS • ICMP",
+            Text = "WINDOWS HOST + ANDROID ADB • INTERFACES • IP ROUTES • DNS • ICMP",
             FontSize = 10,
             Foreground = Brush("#8199B5"),
             Margin = new Thickness(0, 4, 0, 0)
         });
         header.Children.Add(new TextBlock
         {
-            Text = "يعرض واجهات الشبكة وعناوين IP والبوابات وخوادم DNS التي يتيحها Windows، ثم يختبر اسم نطاق أو IP تختاره أنت. لا يجري مسح منافذ أو يجمع بيانات خاصة من الهاتف.",
+            Text = "يعرض واجهات Windows المحلية واختبارات DNS/ICMP لهدف تختاره، ويمكنه قراءة عناوين ومسارات IP التي يتيحها Android عبر ADB للهاتف المحدد. لا يجري مسح منافذ ولا يقرأ كلمات مرور Wi-Fi أو بيانات التطبيقات.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 9, 0, 0),
@@ -95,7 +95,7 @@ public sealed class NetworkDiagnosticsWindow : Window
             Margin = new Thickness(0, 12, 0, 0),
             Child = new TextBlock
             {
-                Text = "حدود الفحص: هذه بيانات الكمبيوتر المحلي. لا تمثل معلومات Wi-Fi الخاصة بالهاتف ولا تثبت اتصال ADB اللاسلكي. قد تمنع الجدران النارية أو إعدادات الشبكة رد Ping حتى عند نجاح DNS.",
+                Text = "حدود الفحص: معلومات Windows تخص الكمبيوتر المحلي. قراءة Android تقتصر على مخرجات واجهات IP ومساراتها التي يتيحها النظام عبر ADB، ولا تكشف كلمات مرور Wi-Fi أو بيانات خاصة ولا تثبت الوصول إلى الإنترنت. قد تمنع الجدران النارية رد Ping حتى عند نجاح DNS.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
