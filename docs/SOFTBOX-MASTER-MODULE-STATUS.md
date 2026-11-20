@@ -13,7 +13,7 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 ### Current additive branch snapshot — Offline Readiness Center follow-up
 
 - Top-level sections: **36 retained** — all 36 In Development.
-- Child features: **130**; catalog entries including section rows: **166**.
+- Child features: **129**; catalog entries including section rows: **165**.
 - Entry statuses (section rows plus child features): **19 Planned, 39 In Development, 96 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
 - Executable navigation: **55 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
@@ -188,7 +188,7 @@ Section 30 is now In Development rather than Planned. The current implementation
 ## Follow-up — Wireless ADB Pairing
 
 - Section 02 was completed additively; the existing `WirelessAdbPairingService` was reused rather than creating a second ADB engine.
-- Added a dedicated WPF window with separate IP, pairing-port, six-digit temporary code and Wireless-debugging connection-port inputs.
+- Added a dedicated WPF window with separate pairing IP/port and connection IP/port inputs plus a six-digit temporary code.
 - The window calls the existing Android Platform-Tools binary with the authenticated `adb pair` and `adb connect` sequence, bounded timeouts and cancellation.
 - The code field is cleared before execution; SoftBox does not persist the code in settings, reports or logs.
 - Added `OpenWirelessAdbPairing` as the 55th canonical action and assigned it to DeviceOperations, so Administrator and Technician can use it while ReadOnly cannot.
