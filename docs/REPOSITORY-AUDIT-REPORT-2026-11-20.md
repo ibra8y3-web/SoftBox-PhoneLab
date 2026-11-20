@@ -257,7 +257,7 @@ No hardware compatibility is claimed. No package is downloaded or installed by t
 
 - The audit found an existing WirelessAdbPairingService implementing adb pair and adb connect, but no user-facing route or entry in the canonical Device Center catalog. The missing item was integration and workflow completion, not a missing second pairing engine.
 - Added IAdbCommandRunner as a narrow test seam; the production AdbClient implements it and still uses argument-list process invocation rather than shell string interpolation.
-- Added WirelessAdbPairingWindow, linked from Device Center through OpenWirelessAdbPairing, with IP address, distinct pairing and connection ports, a hidden one-time pairing-code field, cancellation, actual ADB outputs and error states.
+- Added WirelessAdbPairingWindow, linked from Device Center through OpenWirelessAdbPairing, with separate pairing/connection IP addresses and ports, a hidden one-time pairing-code field, cancellation, actual ADB outputs and error states.
 - Added the action to the central authorization policy as DeviceOperations; ReadOnly users are denied. The canonical catalog action count is now 55.
 - Added automated tests for endpoint and input validation, successful pair/connect command sequencing, pair failure, connect failure and cancellation. No hardware is simulated in the production app.
 - No existing section, service, data store or user setting was deleted. No new third-party package or external binary was needed; the workflow reuses bundled Android Platform-Tools.
