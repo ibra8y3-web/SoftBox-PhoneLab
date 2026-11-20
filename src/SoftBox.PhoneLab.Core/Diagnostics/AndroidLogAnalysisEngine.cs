@@ -205,11 +205,15 @@ public static class AndroidLogAnalysisEngine
         string summary,
         string timestamp)
     {
+        public AndroidLogEventCategory Category { get; } = category;
+        public string Severity { get; } = severity;
+        public string Tag { get; } = tag;
+        public string Summary { get; } = summary;
         public int Occurrences { get; set; }
         public string LastSeenTimestamp { get; set; } = timestamp;
 
         public AndroidLogEvent ToRecord()
-            => new(category, severity, tag, summary, LastSeenTimestamp, Occurrences);
+            => new(Category, Severity, Tag, Summary, LastSeenTimestamp, Occurrences);
     }
 
     private sealed record ParsedLogLine(string Timestamp, string Priority, string Tag);
