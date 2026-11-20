@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Network;
+using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows;
@@ -13,17 +14,25 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class NetworkDiagnosticsWindow : Window
 {
     private readonly NetworkDiagnosticsService _service = new();
+    private readonly AndroidNetworkDiagnosticsService? _androidService;
+    private readonly string? _androidSerial;
     private readonly ObservableCollection<string> _interfaces = [];
     private readonly TextBox _host = new();
     private readonly TextBox _results = new();
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
     private readonly Button _probeButton;
+    private readonly Button _androidInspectButton;
     private readonly Button _cancelButton;
     private CancellationTokenSource? _operation;
 
-    public NetworkDiagnosticsWindow()
+    public NetworkDiagnosticsWindow(IAdbCommandRunner? adb = null, string? selectedAndroidSerial = null)
     {
+        if (adb is not null && !string.IsNullOrWhiteSpace(selectedAndroidSerial) && AdbClient.IsSafeSerial(selectedAndroidSerial))
+        {
+            _androidService = new AndroidNetworkDiagnosticsService(adb);
+            _androidSerial = selectedAndroidSerial;
+        }
         Title = "SoftBox | تشخيص الشبكات — Network Diagnostics";
         Width = 980;
         Height = 740;
@@ -35,6 +44,11 @@ public sealed class NetworkDiagnosticsWindow : Window
         Foreground = Brush("#EAF3FF");
 
         _probeButton = ButtonControl("اختبار DNS وPing", "#14517A", Probe_Click);
+        _androidInspectButton = ButtonControl("قراءة شبكة Android", "#0F6251", InspectAndroid_Click);
+        _androidInspectButton.IsEnabled = _androidService is not null;
+        _androidInspectButton.ToolTip = _androidService is null
+            ? "اختر هاتف Android مصرحًا به عبر ADB من مركز الأجهزة أولًا."
+            : "قراءة عناوين واجهات ومسارات الشبكة التي يعرضها Android عبر ADB.";
         _cancelButton = ButtonControl("إلغاء", "#51333A", Cancel_Click);
         _cancelButton.IsEnabled = false;
         Content = BuildContent();
@@ -55,14 +69,14 @@ public sealed class NetworkDiagnosticsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "WINDOWS HOST NETWORK • LOCAL INTERFACES • DNS • ICMP",
+            Text = "WINDOWS HOST + ANDROID ADB • INTERFACES • IP ROUTES • DNS • ICMP",
             FontSize = 10,
             Foreground = Brush("#8199B5"),
             Margin = new Thickness(0, 4, 0, 0)
         });
         header.Children.Add(new TextBlock
         {
-            Text = "يعرض واجهات الشبكة وعناوين IP والبوابات وخوادم DNS التي يتيحها Windows، ثم يختبر اسم نطاق أو IP تختاره أنت. لا يجري مسح منافذ أو يجمع بيانات خاصة من الهاتف.",
+            Text = "يعرض واجهات Windows المحلية واختبارات DNS/ICMP لهدف تختاره، ويمكنه قراءة عناوين ومسارات IP التي يتيحها Android عبر ADB للهاتف المحدد. لا يجري مسح منافذ ولا يقرأ كلمات مرور Wi-Fi أو بيانات التطبيقات.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 9, 0, 0),
@@ -81,7 +95,7 @@ public sealed class NetworkDiagnosticsWindow : Window
             Margin = new Thickness(0, 12, 0, 0),
             Child = new TextBlock
             {
-                Text = "حدود الفحص: هذه بيانات الكمبيوتر المحلي. لا تمثل معلومات Wi-Fi الخاصة بالهاتف ولا تثبت اتصال ADB اللاسلكي. قد تمنع الجدران النارية أو إعدادات الشبكة رد Ping حتى عند نجاح DNS.",
+                Text = "حدود الفحص: معلومات Windows تخص الكمبيوتر المحلي. قراءة Android تقتصر على مخرجات واجهات IP ومساراتها التي يتيحها النظام عبر ADB، ولا تكشف كلمات مرور Wi-Fi أو بيانات خاصة ولا تثبت الوصول إلى الإنترنت. قد تمنع الجدران النارية رد Ping حتى عند نجاح DNS.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -103,6 +117,7 @@ public sealed class NetworkDiagnosticsWindow : Window
         _host.ToolTip = "اسم نطاق مثل example.com أو عنوان IP";
         actions.Children.Add(_host);
         actions.Children.Add(_probeButton);
+        actions.Children.Add(_androidInspectButton);
         actions.Children.Add(_cancelButton);
         top.Children.Add(actions);
 
@@ -218,6 +233,7 @@ public sealed class NetworkDiagnosticsWindow : Window
 
         _operation = new CancellationTokenSource();
         _probeButton.IsEnabled = false;
+        _androidInspectButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ حل اسم النطاق عبر DNS ثم إرسال طلب ICMP واحد إلى أول عنوان مناسب...";
@@ -251,6 +267,62 @@ public sealed class NetworkDiagnosticsWindow : Window
             _operation.Dispose();
             _operation = null;
             _probeButton.IsEnabled = true;
+            _androidInspectButton.IsEnabled = _androidService is not null;
+            _cancelButton.IsEnabled = false;
+            _progress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async void InspectAndroid_Click(object sender, RoutedEventArgs e)
+    {
+        if (_operation is not null)
+            return;
+        if (_androidService is null || string.IsNullOrWhiteSpace(_androidSerial))
+        {
+            _status.Text = "اختر هاتف Android مصرحًا به عبر ADB أولًا ثم افتح تشخيص الشبكات.";
+            return;
+        }
+
+        _operation = new CancellationTokenSource();
+        _probeButton.IsEnabled = false;
+        _androidInspectButton.IsEnabled = false;
+        _cancelButton.IsEnabled = true;
+        _progress.Visibility = Visibility.Visible;
+        _status.Text = "جارٍ قراءة عناوين واجهات ومسارات الشبكة من هاتف Android المحدد عبر ADB...";
+        try
+        {
+            var snapshot = await _androidService.InspectAsync(_androidSerial, _operation.Token);
+            var output = new StringBuilder();
+            output.AppendLine("ANDROID DEVICE: " + snapshot.DeviceSerial);
+            output.AppendLine("CAPTURED UTC: " + snapshot.CapturedAtUtc.ToString("O"));
+            output.AppendLine();
+            output.AppendLine("INTERFACE ADDRESSES:");
+            output.AppendLine(string.IsNullOrWhiteSpace(snapshot.InterfaceAddressOutput)
+                ? "غير متاح من Android."
+                : snapshot.InterfaceAddressOutput);
+            output.AppendLine();
+            output.AppendLine("NETWORK ROUTES:");
+            output.AppendLine(string.IsNullOrWhiteSpace(snapshot.RouteOutput)
+                ? "غير متاح من Android."
+                : snapshot.RouteOutput);
+            _results.Text = output.ToString();
+            _status.Text = "اكتملت قراءة معلومات الشبكة التي أتاحها Android عبر ADB. هذه قراءة إعدادات شبكة وليست اختبارًا لسرعة الإنترنت أو فحصًا أمنيًا.";
+        }
+        catch (OperationCanceledException)
+        {
+            _status.Text = "تم إلغاء قراءة شبكة Android.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر قراءة شبكة Android: " + ex.Message;
+            _results.Text = ex.ToString();
+        }
+        finally
+        {
+            _operation.Dispose();
+            _operation = null;
+            _probeButton.IsEnabled = true;
+            _androidInspectButton.IsEnabled = _androidService is not null;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }

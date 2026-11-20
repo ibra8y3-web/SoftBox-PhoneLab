@@ -251,3 +251,14 @@ The current catalog statuses are implementation classifications, not a completio
 The Offline Readiness feature has been added to the existing section 28 and classified Tested after CI #279. The overall section remains In Development because the larger Offline Center scope (Internet reachability, trusted source hashes/signatures, package repair/install and full local dependency inventory) is not implemented.
 
 No hardware compatibility is claimed. No package is downloaded or installed by the Offline Center. The local SHA-256 shown is computed from the current file bytes only.
+
+
+## Additive follow-up — real Android Wireless ADB pairing workflow
+
+- The audit found an existing WirelessAdbPairingService implementing adb pair and adb connect, but no user-facing route or entry in the canonical Device Center catalog. The missing item was integration and workflow completion, not a missing second pairing engine.
+- Added IAdbCommandRunner as a narrow test seam; the production AdbClient implements it and still uses argument-list process invocation rather than shell string interpolation.
+- Added WirelessAdbPairingWindow, linked from Device Center through OpenWirelessAdbPairing, with separate pairing/connection IP addresses and ports, a hidden one-time pairing-code field, cancellation, actual ADB outputs and error states.
+- Added the action to the central authorization policy as DeviceOperations; ReadOnly users are denied. The canonical catalog action count is now 55.
+- Added automated tests for endpoint and input validation, successful pair/connect command sequencing, pair failure, connect failure and cancellation. No hardware is simulated in the production app.
+- No existing section, service, data store or user setting was deleted. No new third-party package or external binary was needed; the workflow reuses bundled Android Platform-Tools.
+- Automated test status is recorded as **Tested**, not **Verified**. A physical Android 11+ handset on the same Wi-Fi as the Windows PC is still required to prove end-to-end device pairing. Android's official workflow uses separately displayed pairing and connection endpoints. The same ADB tool can now read public Android interface addresses and IP routes over an already-authorized device connection.
