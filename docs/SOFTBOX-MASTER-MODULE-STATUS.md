@@ -14,7 +14,7 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 
 - Top-level sections: **36 retained** — all 36 In Development.
 - Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): **19 Planned, 39 In Development, 95 Implemented, 10 Tested, 0 Verified and 2 Unsupported**.
+- Entry statuses (section rows plus child features): **18 Planned, 39 In Development, 96 Implemented, 10 Tested, 0 Verified and 2 Unsupported**.
 - Executable navigation: **55 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
@@ -48,7 +48,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 13 | Smart Backup | In Development | ADB shared-storage backup into ZIP with per-file SHA-256; optional `.sbx` AES-256-CBC + HMAC-SHA256 using PBKDF2-HMAC-SHA256 (600,000 iterations); authenticated verification; verified ZIP/SBX restore to a unique new shared-storage directory without overwrite/delete | Scheduled backups, key recovery policy, automatic reconnect jobs and app-private/system data backup (unsupported by design) |
 | 14 | Phone Link Studio | In Development | Verified scrcpy screen mirroring/control; real MP4/MKV screen recording is wired to the selected authorized ADB device, requires user-chosen new output path and finalizes via WM_CLOSE before validating non-empty output file | Hardware recording validation across Android versions/codecs, multi-session concurrent display and app-side recording library management |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
-| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe with bounded timeouts/cancellation | Permitted Android network observations and Wi-Fi details; ADB Wireless pairing is implemented canonically in Device Center; no phone-private network claim |
+| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe; authorized Android interface-address and IP-route observations through ADB with bounded timeouts/cancellation | Wi-Fi radio/security metadata, internet reachability from the phone and model-specific connectivity diagnostics remain unimplemented; no phone-private or unavailable data claim |
 | 17 | Smart Repair AI | In Development | Deterministic local evidence-linked advisor over battery/storage readings, Agent results and component diagnostics with severity, confidence, evidence and safe next steps; external repair guide search | LLM-backed online mode and expanded model-specific offline repair knowledge; current local advisor is rules-based, not an AI model |
 | 18 | One-Click Diagnostic | In Development | One action runs five read-only ADB presets (properties, battery, storage, uptime, third-party apps), supports cancellation and saves a device-masked JSON report | Coordinated opt-in hardware test suite and consolidated lab instrumentation/Agent evidence |
 | 19 | Safe Recovery | In Development | Conservative preflight is wired into Firmware Center; re-hashes selected file, compares exact manufacturer/model against the current authorized device snapshot, and reports Passed/Failed/Unknown/Blocked with evidence; automated tests enforce never-allow while publisher trust, signed compatibility rules, rollback and verified-backup proof are unavailable | Official publisher trust roots, signed model/region/board compatibility database, anti-rollback policy evidence and vendor-authorized recovery workflow; no flashing is enabled |
@@ -195,3 +195,10 @@ Section 30 is now In Development rather than Planned. The current implementation
 - Automated tests cover IPv4/IPv6 endpoint formatting, port validation, code validation, separate pair/connect ports, pair failure, connect failure and cancellation. These tests use an in-memory command runner only in the isolated test project; no simulated device or success result is exposed in the production UI.
 - Status: **Tested** for protocol orchestration by automated tests; **not Verified** on a physical handset. Android 11+ and a shared Wi-Fi network are required for the pairing-code workflow.
 - No new NuGet package, driver, firmware payload or external executable was added. The feature reuses ADB already bundled by the existing Windows packaging workflow.
+
+## Follow-up — Android Network Diagnostics
+
+- Section 16 now includes the actual Android network interface and route reader in the existing Network Diagnostics workspace.
+- The selected authorized ADB serial is passed from Device Center; the service reads `ip address show` and `ip route show` from that exact device, bounds output, supports cancellation and rejects invalid device identifiers before running ADB.
+- The Windows host interface/DNS/ICMP tools remain unchanged. The new Android action reports only data returned by Android and does not claim Wi-Fi password access, Internet reachability, signal quality or private network details.
+- Unit tests cover selected-device targeting, interface/route output handling, invalid serial rejection, ADB unavailability, empty output and cancellation. No physical phone was connected in CI; the feature is Implemented, not hardware Verified.
