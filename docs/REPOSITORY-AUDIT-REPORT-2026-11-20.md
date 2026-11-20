@@ -105,3 +105,13 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Global workshop repair-order editor exposes a parts-consumption dialog; the advanced Parts Inventory window manages category, supplier, cost price, sale price, reorder threshold, manual adjustments and CSV export.
 - Repair-order text, HTML and CSV reports now include used parts and parts cost.
 - Added tests for successful consumption, insufficient stock protection and schema-v2 migration.
+## Workshop Parts Inventory and repair-order integration
+
+- Upgraded the local workshop JSON schema from version 2 to version 3, preserving existing customers, repair orders and inventory entries.
+- Added category, supplier and sale-price metadata to inventory items.
+- Added an inventory movement ledger with signed quantity delta, resulting balance, unit cost, reason, technician and optional repair-order/ticket linkage.
+- Added a repair-order parts usage snapshot and calculated parts-cost total.
+- Added a single locked store operation to consume a part against an order; insufficient stock, delivered orders and cancelled orders are rejected before the write.
+- Added an order-linked parts usage dialog, advanced parts catalog editor, low-stock summary and CSV exports for inventory and movements.
+- Repair-order text/HTML/CSV reports include parts usage and parts cost.
+- Added integration tests for stock deduction and order linkage, insufficient stock protection and schema-v2 migration.
