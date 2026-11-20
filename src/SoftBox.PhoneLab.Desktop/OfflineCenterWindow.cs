@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Offline;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
