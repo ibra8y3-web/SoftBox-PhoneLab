@@ -45,6 +45,24 @@ public sealed record ApkInspectionResult(
 }
 
 /// <summary>
+/// A local comparison of two inspected APK files. Archive entry comparison is by path only,
+/// not by decompressed file content; signer authenticity is not established.
+/// </summary>
+public sealed record ApkComparisonResult(
+    string FirstFileName,
+    string SecondFileName,
+    bool? SamePackage,
+    bool? VersionNameChanged,
+    bool? VersionCodeChanged,
+    bool Sha256Matches,
+    bool EntryListsComplete,
+    IReadOnlyList<string> AddedPermissions,
+    IReadOnlyList<string> RemovedPermissions,
+    IReadOnlyList<string> AddedArchiveEntries,
+    IReadOnlyList<string> RemovedArchiveEntries,
+    IReadOnlyList<string> Warnings);
+
+/// <summary>
 /// Inspects APK files without installing them or communicating with a connected device.
 /// It validates ZIP entry readability, computes SHA-256 and reads text or Android binary XML manifests.
 /// </summary>
@@ -202,6 +220,58 @@ public sealed class ApkInspectionService
             signingBlockDetected,
             ArchiveEntriesReadable: true,
             manifestFormat,
+            warnings);
+    }
+
+    public async Task<ApkComparisonResult> CompareAsync(
+        string firstFilePath,
+        string secondFilePath,
+        CancellationToken cancellationToken = default)
+    {
+        var first = await InspectAsync(firstFilePath, cancellationToken);
+        var second = await InspectAsync(secondFilePath, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        bool? samePackage = first.PackageName is not null && second.PackageName is not null
+            ? string.Equals(first.PackageName, second.PackageName, StringComparison.Ordinal)
+            : null;
+        bool? versionNameChanged = first.VersionName is not null && second.VersionName is not null
+            ? !string.Equals(first.VersionName, second.VersionName, StringComparison.Ordinal)
+            : null;
+        bool? versionCodeChanged = first.VersionCode.HasValue && second.VersionCode.HasValue
+            ? first.VersionCode.Value != second.VersionCode.Value
+            : null;
+
+        var firstPermissions = first.Permissions.ToHashSet(StringComparer.Ordinal);
+        var secondPermissions = second.Permissions.ToHashSet(StringComparer.Ordinal);
+        var firstEntries = first.Entries.ToHashSet(StringComparer.Ordinal);
+        var secondEntries = second.Entries.ToHashSet(StringComparer.Ordinal);
+        var entryListsComplete = first.EntryCount == first.Entries.Count &&
+                                 second.EntryCount == second.Entries.Count;
+
+        var warnings = new List<string>();
+        if (samePackage == false)
+            warnings.Add("اسما الحزمة مختلفان؛ لا تعتبر الملفين إصدارين من التطبيق نفسه.");
+        if (samePackage is null)
+            warnings.Add("تعذر تأكيد تطابق اسم الحزمة لأن Manifest مفقود أو غير قابل للتحليل في أحد الملفين.");
+        if (versionNameChanged is null || versionCodeChanged is null)
+            warnings.Add("بيانات إصدار ناقصة في أحد الملفين؛ لم يتم تخمين القيمة المفقودة.");
+        if (!entryListsComplete)
+            warnings.Add($"مقارنة أسماء الملفات جزئية لأن العرض محدود بأول {MaximumDisplayedEntries} مدخلًا لكل APK.");
+        warnings.Add("مقارنة الملفات هنا حسب المسار والبيانات الوصفية فقط؛ لم تتم مقارنة محتوى كل ملف داخل الأرشيف أو التوقيع التشفيري.");
+
+        return new ApkComparisonResult(
+            first.FileName,
+            second.FileName,
+            samePackage,
+            versionNameChanged,
+            versionCodeChanged,
+            string.Equals(first.Sha256, second.Sha256, StringComparison.Ordinal),
+            entryListsComplete,
+            secondPermissions.Except(firstPermissions, StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray(),
+            firstPermissions.Except(secondPermissions, StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray(),
+            secondEntries.Except(firstEntries, StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray(),
+            firstEntries.Except(secondEntries, StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray(),
             warnings);
     }
 
