@@ -116,7 +116,9 @@
       </Border>
      </Grid>
     </Border>
-    <Border Grid.Row="1" Background="#091321" BorderBrush="#203751" BorderThickness="1" CornerRadius="14" ClipToBounds="True">
+    <TabControl x:Name="WorkspaceTabs" Grid.Row="1" Background="#091321" BorderBrush="#203751" BorderThickness="1">
+     <TabItem Header="المجسم ثلاثي الأبعاد">
+<Border Grid.Row="1" Background="#091321" BorderBrush="#203751" BorderThickness="1" CornerRadius="14" ClipToBounds="True">
      <Grid>
       <Viewport3D x:Name="PhoneViewport" ClipToBounds="True"
        MouseDown="Viewport_MouseDown" MouseMove="Viewport_MouseMove" MouseUp="Viewport_MouseUp" MouseWheel="Viewport_MouseWheel"/>
@@ -132,7 +134,19 @@
       </Border>
      </Grid>
     </Border>
-    <Border Grid.Row="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="11" Margin="0,11,0,0">
+         </TabItem>
+     <TabItem Header="شاشة الهاتف الحقيقية">
+      <Border Background="#050B13" ClipToBounds="True">
+       <Grid>
+        <interop:ScrcpyWindowHost x:Name="PhoneScreenHost"/>
+        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Background="#14263A" BorderBrush="#31516C" BorderThickness="1" CornerRadius="8" Padding="12,7" Margin="8" IsHitTestVisible="False">
+         <TextBlock Text="{Binding MirrorStatus}" Foreground="#D4E8FA" FontSize="10" TextWrapping="Wrap" MaxWidth="500" TextAlignment="Center"/>
+        </Border>
+       </Grid>
+      </Border>
+     </TabItem>
+    </TabControl>
+<Border Grid.Row="2" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="12" Padding="11" Margin="0,11,0,0">
      <StackPanel>
       <TextBlock Text="دليل الألوان" FontSize="9" Foreground="#839AB5" FontWeight="Bold" Margin="0,0,0,8"/>
       <UniformGrid Columns="5">
