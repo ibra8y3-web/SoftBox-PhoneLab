@@ -173,11 +173,12 @@ public static class SoftBoxModuleCatalog
                 new("board-level", "قياسات اللوحة والمكونات الكهربائية", "Board-level electrical tests", "تتطلب Fixture ومخططات ومجسات آمنة مناسبة للموديل.", ModuleImplementationStatus.Unsupported)
             ]),
         new("network-diagnostics", 16, "الاتصال والتشخيص", "تشخيص الشبكات", "Network Diagnostics",
-            "لم يتم بناء قسم مستقل لاختبار Wi-Fi وDNS وLatency وشبكة ADB اللاسلكية.",
-            ModuleImplementationStatus.Planned,
+            "تشخيص حقيقي لشبكة Windows المحلية وحل DNS وPing لهدف يحدده المستخدم؛ رصد شبكة الهاتف ما زال غير منفذ.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("host-network", "اختبارات اتصال الكمبيوتر وDNS وزمن الاستجابة", "Host connectivity tests", "لم يتم تنفيذها داخل SoftBox بعد.", ModuleImplementationStatus.Planned),
-                new("phone-network", "قراءة معلومات الشبكة المسموح بها من الهاتف", "Android network observations", "لا توجد واجهة تشخيص شبكات مستقلة بعد.", ModuleImplementationStatus.Planned)
+                new("host-network-interfaces", "قراءة واجهات Windows وعناوين IP والبوابات وDNS", "Windows network interfaces", "يقرأ بيانات واجهات الشبكة المحلية المتاحة من النظام دون إرسال طلبات خارجية.", ModuleImplementationStatus.Implemented),
+                new("host-network-probe", "حل DNS واختبار ICMP لهدف يختاره المستخدم", "User-selected DNS and ICMP probe", "يجري حل DNS ثم طلب Ping واحدًا لعنوان واحد؛ قد يحجب الجدار الناري ICMP ولا يعني فشل DNS.", ModuleImplementationStatus.Implemented, "OpenNetworkDiagnostics"),
+                new("phone-network", "قراءة معلومات الشبكة المسموح بها من الهاتف وتشخيص ADB اللاسلكي", "Android network observations and ADB Wireless", "لم يُنفذ هذا المسار؛ لا تُعرض بيانات هاتف خاصة أو نتائج غير متاحة.", ModuleImplementationStatus.Planned)
             ]),
         new("smart-repair-ai", 17, "الذكاء والمعرفة", "مساعد الإصلاح الذكي", "Smart Repair AI",
             "لا يوجد مساعد AI حاليًا؛ المتاح فتح أدلة إصلاح أصلية من iFixit دون نسخ محتواها.",
@@ -339,7 +340,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
