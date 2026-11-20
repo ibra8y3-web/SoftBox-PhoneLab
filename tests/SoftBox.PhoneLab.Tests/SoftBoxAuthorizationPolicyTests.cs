@@ -49,6 +49,14 @@ public sealed class SoftBoxAuthorizationPolicyTests
     }
 
     [Fact]
+    public void WirelessAdbPairingRequiresDeviceOperationPermission()
+    {
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Administrator, "OpenWirelessAdbPairing"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenWirelessAdbPairing"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenWirelessAdbPairing"));
+    }
+
+    [Fact]
     public void UnknownActionIdsAreDeniedForEveryRole()
     {
         foreach (var role in Enum.GetValues<SoftBoxUserRole>())
