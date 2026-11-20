@@ -96,3 +96,15 @@ The inventory, navigation ownership and build report were synchronized to the fi
 - ReadOnly users can run allow-listed read-only command/workflow/batch inspections; interactive mirror/control, automatic Agent installation and device writes are denied.
 - This does not yet provide Windows domain/Hello identity, DPAPI/ACL enforcement, custom per-user permission editing, idle-time locking, central multi-workstation accounts, or attribution of every internal workshop data mutation.
 - Latest validation: CI #273 — 166/166 tests passed; Windows x64 publish, Android Agent build and offline package validation passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
+
+
+## Follow-up — Offline Readiness Center (PR #3)
+
+- Added a separate read-only Offline Center window inside existing section 28. It is not another copy of the Device Center or USB Doctor.
+- The Core inventory service resolves all package paths beneath the current installation root and rejects reparse points. If it cannot establish link status, it fails closed.
+- Inventories seven known packaged components and the actual local Data/device-profiles and Data/boardmaps directories.
+- It displays actual SHA-256, sizes, versions where available, file counts, operating system/runtime, storage and active interface state. It makes no Internet-connectivity claim.
+- JSON report export is user initiated and local. The feature does not download, execute, install, update or repair components.
+- The catalog now has 54 unique ActionIds, each with one authorization mapping; OpenOfflineCenter is read-only and allowed for ReadOnly users.
+- CI #279 passed 171/171 unit tests, Windows x64 publish, Android Agent, offline bundling and package upload: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44788760474
+- Windows artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44788760474/artifacts/14654323613

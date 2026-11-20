@@ -142,3 +142,19 @@ This run is hosted Windows CI with temporary account-store fixtures. It does not
 - No CS* compiler or xUnit analyzer warnings were present in the build log.
 
 The final follow-up adds user-attributed module-action invocation to the bounded audit log and blocks tool launch if that audit write fails. Read-only roles can run allow-listed read-only command/workflow/batch inspection but cannot invoke interactive screen control; automatic screen mirroring and Agent installation are suppressed for read-only sessions. Tests cover these role boundaries. This is still a local application role system, not Windows account isolation, ACL/DPAPI enforcement or domain identity.
+
+
+## Follow-up verification — Offline Readiness Center (CI run #279)
+
+- Workflow: PhoneLab CI, run #279; result: **Success** on source commit `dd8b725a97b3a2f5da439391aea4cc34d7c12abc`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44788760474
+- Restore: passed.
+- Unit tests: **171 passed, 0 failed, 0 skipped**.
+- Windows self-contained x64 publish: passed.
+- Android Agent Gradle build/upload: passed.
+- Offline USB, scrcpy and TRACE Boardviewer bundling: passed.
+- Windows x64 artifact: **227,459,925 bytes**, artifact ID `14654323613`.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44788760474/artifacts/14654323613
+- No CS* compiler or xUnit analyzer warnings were present in the build log.
+
+The five Offline Readiness tests use isolated local fixture files. They validate actual filesystem inventory and hashing; they do not test Internet reachability, install tools, validate a publisher's signature or prove that a device driver works on physical hardware.
