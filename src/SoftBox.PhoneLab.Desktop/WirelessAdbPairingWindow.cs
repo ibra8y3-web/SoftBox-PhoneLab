@@ -2,21 +2,23 @@ using System.Globalization;
 using System.Net;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;\nusing SoftBox.PhoneLab.Desktop.Services;
+using System.Windows.Media;
+using SoftBox.PhoneLab.Desktop.Services;
 
 namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
 /// Pair an Android device through Android's official Wireless debugging pairing-code flow.
-/// Pairing credentials stay in memory for the single ADB invocation and are never saved.
+/// The pairing code is held only for the operation and is not saved by SoftBox.
 /// </summary>
 public sealed class WirelessAdbPairingWindow : Window
 {
     private readonly WirelessAdbPairingService _service;
-    private readonly TextBox _host = new();
+    private readonly TextBox _pairingHost = new();
     private readonly TextBox _pairingPort = new();
-    private readonly PasswordBox _pairingCode = new();
+    private readonly TextBox _connectionHost = new();
     private readonly TextBox _connectionPort = new();
+    private readonly PasswordBox _pairingCode = new();
     private readonly TextBox _output = new();
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
@@ -76,7 +78,7 @@ public sealed class WirelessAdbPairingWindow : Window
             Margin = new Thickness(0, 0, 0, 12),
             Child = new TextBlock
             {
-                Text = "على الهاتف: فعّل خيارات المطوّر ثم Wireless debugging، واختر Pair device with pairing code. يجب أن يكون الهاتف والكمبيوتر على شبكة Wi-Fi نفسها. أدخل عنوان IP نفسه، ومنفذ الاقتران والرمز من نافذة Pair device، ثم أدخل منفذ الاتصال من شاشة Wireless debugging الرئيسية. هذه الطريقة مدعومة على هواتف Android 11 فأحدث.",
+                Text = "على الهاتف: فعّل خيارات المطوّر ثم Wireless debugging. اختر Pair device with pairing code وأدخل IP ومنفذ الاقتران من نافذة الاقتران. بعد نجاحه، أدخل IP ومنفذ الاتصال من شاشة Wireless debugging الرئيسية؛ قد يختلف العنوان أو المنفذ بين الشاشتين. يجب أن يكون الهاتف والكمبيوتر على شبكة Wi-Fi نفسها. مدعوم على هواتف Android 11 فأحدث.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#C7D9EA"),
                 FontSize = 12
@@ -87,16 +89,29 @@ public sealed class WirelessAdbPairingWindow : Window
 
         var fields = new Grid { Margin = new Thickness(0, 0, 0, 12) };
         fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, Star) });
-        fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        AddField(fields, "عنوان IP للهاتف", _host, 0, 0, "مثال: 192.168.1.25");
-        AddField(fields, "منفذ الاقتران (Pair device)", _pairingPort, 0, 1, "المنفذ الظاهر بجوار رمز الاقتران");
-        AddField(fields, "رمز الاقتران المؤقت", _pairingCode, 1, 0);
-        AddField(fields, "منفذ الاتصال (Wireless debugging)", _connectionPort, 1, 1, "منفذ الشاشة الرئيسية وليس منفذ الاقتران");
+        fields.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        for (var index = 0; index < 3; index++)
+            fields.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        AddField(fields, "IP من نافذة Pair device", _pairingHost, 0, 0, "عنوان IP الظاهر بجوار رمز الاقتران");
+        AddField(fields, "منفذ الاقتران", _pairingPort, 0, 1, "المنفذ الظاهر في نافذة Pair device");
+        AddField(fields, "IP من شاشة Wireless debugging", _connectionHost, 1, 0, "قد يكون مختلفًا عن عنوان الاقتران");
+        AddField(fields, "منفذ الاتصال", _connectionPort, 1, 1, "المنفذ الظاهر في شاشة Wireless debugging الرئيسية");
+        AddField(fields, "رمز الاقتران المؤقت", _pairingCode, 2, 0, "ستة أرقام من نافذة Pair device");
         _pairingCode.MaxLength = 6;
         _pairingCode.PasswordChar = '●';
+
+        var note = new TextBlock
+        {
+            Text = "لا تغلق نافذة رمز الاقتران في الهاتف قبل نجاح ADB pair. لا يتم حفظ الرمز في SoftBox.",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = Brush("#9CB3CC"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(6, 10, 10, 0)
+        };
+        Grid.SetRow(note, 2);
+        Grid.SetColumn(note, 1);
+        fields.Children.Add(note);
         DockPanel.SetDock(fields, Dock.Top);
         root.Children.Add(fields);
 
@@ -170,19 +185,22 @@ public sealed class WirelessAdbPairingWindow : Window
         if (_operation is not null)
             return;
 
-        if (!IPAddress.TryParse(_host.Text.Trim(), out _))
+        if (!IPAddress.TryParse(_pairingHost.Text.Trim(), out _))
         {
-            SetStatus("أدخل عنوان IP صحيحًا كما يظهر على الهاتف.");
+            SetStatus("أدخل IP صحيحًا من نافذة Pair device.");
             return;
         }
-
+        if (!IPAddress.TryParse(_connectionHost.Text.Trim(), out _))
+        {
+            SetStatus("أدخل IP صحيحًا من شاشة Wireless debugging الرئيسية.");
+            return;
+        }
         if (!int.TryParse(_pairingPort.Text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var pairPort) ||
             pairPort is < 1 or > 65535)
         {
             SetStatus("منفذ الاقتران يجب أن يكون رقمًا بين 1 و65535.");
             return;
         }
-
         if (!int.TryParse(_connectionPort.Text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var connectPort) ||
             connectPort is < 1 or > 65535)
         {
@@ -204,11 +222,13 @@ public sealed class WirelessAdbPairingWindow : Window
         try
         {
             var result = await _service.PairAndConnectAsync(
-                _host.Text.Trim(), pairPort, code, connectPort, _operation.Token);
+                _pairingHost.Text.Trim(), pairPort, code,
+                _connectionHost.Text.Trim(), connectPort, _operation.Token);
             _output.Text =
                 "ADB PAIR\n" + result.PairOutput +
                 "\n\nADB CONNECT\n" + result.ConnectOutput +
-                "\n\nTARGET\n" + result.ConnectEndpoint;
+                "\n\nPAIRING TARGET\n" + result.PairingEndpoint +
+                "\nCONNECT TARGET\n" + result.ConnectEndpoint;
             _status.Text = "أكد ADB نجاح الاقتران والاتصال. ارجع إلى قائمة الأجهزة وحدّث الاكتشاف للتحقق من ظهور الجهاز.";
         }
         catch (OperationCanceledException)
@@ -218,7 +238,7 @@ public sealed class WirelessAdbPairingWindow : Window
         catch (Exception ex)
         {
             _output.Text = ex.Message;
-            _status.Text = "لم يكتمل الاتصال. راجع IP والمنفذين والرمز والشبكة ومخرجات ADB.";
+            _status.Text = "لم يكتمل الاتصال. راجع عنواني IP والمنفذين والرمز والشبكة ومخرجات ADB.";
         }
         finally
         {
@@ -236,10 +256,11 @@ public sealed class WirelessAdbPairingWindow : Window
         _progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         _pairButton.IsEnabled = !busy;
         _cancelButton.IsEnabled = busy;
-        _host.IsEnabled = !busy;
+        _pairingHost.IsEnabled = !busy;
         _pairingPort.IsEnabled = !busy;
-        _pairingCode.IsEnabled = !busy;
+        _connectionHost.IsEnabled = !busy;
         _connectionPort.IsEnabled = !busy;
+        _pairingCode.IsEnabled = !busy;
     }
 
     private void SetStatus(string message)
