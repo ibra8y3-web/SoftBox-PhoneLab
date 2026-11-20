@@ -18,7 +18,7 @@ public sealed class PartsInventoryWindow : Window
 {
     private readonly WorkshopStore _store;
     private readonly ObservableCollection<InventoryItem> _items = [];
-    private readonly ObservableCollection<InventoryMovement> _movements = [];
+    private readonly ObservableCollection<MovementDisplay> _movements = [];
     private readonly ListBox _list = new();
     private readonly ListBox _movementList = new();
     private readonly TextBox _sku = new();
@@ -166,7 +166,7 @@ public sealed class PartsInventoryWindow : Window
                 _items.Add(item);
             _movements.Clear();
             foreach (var movement in snapshot.InventoryMovements.OrderByDescending(item => item.AtUtc).Take(500))
-                _movements.Add(new MovementDisplay(movement).ToMovementDisplay());
+                _movements.Add(new MovementDisplay(movement));
             _list.SelectedItem = _items.FirstOrDefault(item => item.Sku.Equals(selectedSku, StringComparison.OrdinalIgnoreCase));
             _status.Text = $"المخزون: {_items.Count:N0} صنف | الحركات المعروضة: {_movements.Count:N0}.";
             if (_list.SelectedItem is null && _items.Count > 0)
@@ -335,7 +335,6 @@ public sealed class PartsInventoryWindow : Window
     private sealed record MovementDisplay(InventoryMovement Movement)
     {
         public string DisplayText => $"{Movement.AtUtc.LocalDateTime:yyyy-MM-dd HH:mm} | {Movement.Sku} | {Movement.ItemName} | {Movement.Delta:+#;-#;0} | رصيد: {Movement.BalanceAfter} | {Movement.Reason}";
-        public MovementDisplay ToMovementDisplay() => this;
     }
 
     private sealed class StockMovementPromptWindow : Window
@@ -353,7 +352,7 @@ public sealed class PartsInventoryWindow : Window
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
             FlowDirection = FlowDirection.RightToLeft;
             Background = Brush("#081321");
-            Foreground = Brush("#EAF3FF);
+            Foreground = Brush("#EAF3FF");
 
             var panel = new StackPanel { Margin = new Thickness(18) };
             panel.Children.Add(new TextBlock { Text = $"{item.Name} ({item.Sku}) — الرصيد الحالي: {item.Quantity}", Foreground = Brush("#B7C9DE"), TextWrapping = TextWrapping.Wrap });
