@@ -130,7 +130,7 @@ public sealed class MultiScreenSessionsWindow : Window
         return root;
     }
 
-    private async Task RefreshDevicesAsync()
+    private async Task RefreshDevicesAsync(bool preserveStatus = false)
     {
         if (!_adb.IsAvailable)
         {
@@ -180,7 +180,8 @@ public sealed class MultiScreenSessionsWindow : Window
                 });
             }
 
-            UpdateSessionStatus();
+            if (!preserveStatus)
+                UpdateSessionStatus();
         }
         catch (Exception ex)
         {
@@ -266,7 +267,7 @@ public sealed class MultiScreenSessionsWindow : Window
             {
                 _refreshButton.IsEnabled = true;
                 _startButton.IsEnabled = true;
-                await RefreshDevicesAsync();
+                await RefreshDevicesAsync(preserveStatus: true);
             }
             UpdateSessionStatus();
         }
@@ -379,6 +380,8 @@ public sealed class MultiScreenSessionsWindow : Window
     private void UpdateSessionStatus()
     {
         _stopAllButton.IsEnabled = _sessions.Count > 0;
+        _startButton.IsEnabled = _sessions.Count < MultiScreenSessionsPolicy.MaximumConcurrentSessions &&
+                                  _operation is null && !_closing;
         if (_status is not null && !_closing)
             _status.Text = $"الجلسات النشطة: {_sessions.Count}/{MultiScreenSessionsPolicy.MaximumConcurrentSessions}. كل جلسة تملك عملية scrcpy ومساحة عرض مستقلة.";
     }

@@ -737,6 +737,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "MirrorScreen":
                 MirrorScreen_Click(this, new RoutedEventArgs());
                 break;
+            case "OpenMultiScreenSessions":
+                new MultiScreenSessionsWindow(_adb) { Owner = this }.Show();
+                break;
             case "OpenScreenRecording":
                 OpenScreenRecordingWindow();
                 break;

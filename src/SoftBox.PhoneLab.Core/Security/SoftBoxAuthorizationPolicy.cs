@@ -19,6 +19,7 @@ public static class SoftBoxAuthorizationPolicy
             ["UsbTransport"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenWorkshop"] = SoftBoxAccountPermission.WorkshopOperations,
             ["MirrorScreen"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenMultiScreenSessions"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenScreenRecording"] = SoftBoxAccountPermission.DeviceOperations,
             ["AnalyzeScreen"] = SoftBoxAccountPermission.DeviceRead,
             ["MeasurementRig"] = SoftBoxAccountPermission.DeviceRead,

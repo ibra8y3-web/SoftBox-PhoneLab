@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Security;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
 using Xunit;
