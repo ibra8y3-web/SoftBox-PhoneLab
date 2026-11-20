@@ -50,7 +50,8 @@ public sealed class AndroidDeviceToolsWindow : Window
         AdbClient adb,
         string serial,
         IReadOnlyList<string> authorizedSerials,
-        int maximumBatchConcurrency = 3)
+        int maximumBatchConcurrency = 3,
+        int selectedTabIndex = 0)
     {
         if (!AdbClient.IsSafeSerial(serial))
             throw new ArgumentException("معرف ADB غير صالح.", nameof(serial));
@@ -147,6 +148,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         tabs.Items.Add(BuildPackageTab());
         tabs.Items.Add(BuildCommandTab());
         tabs.Items.Add(BuildBatchTab());
+        tabs.SelectedIndex = Math.Clamp(selectedTabIndex, 0, tabs.Items.Count - 1);
         root.Children.Add(tabs);
         return root;
     }
