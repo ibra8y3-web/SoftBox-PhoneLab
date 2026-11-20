@@ -26,7 +26,7 @@ public sealed class SupportBundleService
     private const int MaximumSelectedFiles = 20;
     private const long MaximumInputFileBytes = 10 * 1024 * 1024;
     private const long MaximumTotalRedactedBytes = 50 * 1024 * 1024;
-    private const long MaximumNotesCharacters = 4_000;
+    private const int MaximumNotesCharacters = 4_000;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private static readonly Regex SecretAssignment = new(
         @"(?im)\b(password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization)\b(\s*[:=]\s*)([^\s,;]+)",
