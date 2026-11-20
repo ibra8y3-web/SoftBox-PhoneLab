@@ -50,3 +50,8 @@ Future moves should occur only when a specific existing tool has a proven owners
 - Samsung Tools and Xiaomi Tools open a read-only vendor diagnostics window only when the selected authorized device's detected manufacturer matches the requested vendor. Redmi and POCO are mapped to the Xiaomi property profile.
 - Android Brands uses the same fixed-key read-only property collector for other manufacturers, avoiding duplicated ADB engines.
 - Qualcomm and MediaTek sections link only to the common USB PnP mode-hint inspector; they do not claim an EDL/BROM protocol implementation.
+## Smart Backup
+
+- The existing `BackupArchiveService` remains the owner of ZIP Manifest and per-file SHA-256 generation/verification.
+- New `EncryptedBackupService` wraps the existing ZIP archive in an authenticated `.sbx` container without replacing or changing the ZIP format.
+- Android Backup UI exposes an explicit encryption checkbox; normal ZIP output remains supported and clearly labeled unencrypted.
