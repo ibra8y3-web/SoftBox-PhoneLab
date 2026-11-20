@@ -11,7 +11,7 @@ namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
 /// Android file browsing, installed-package inspection and safe ADB command presets.
-/// Device writes are limited to pushing a chosen file and creating a chosen shared-storage directory.
+/// Device writes are limited to shared-storage transfers/directories, confirmed APK installs and confirmed third-party app removal.
 /// </summary>
 public sealed class AndroidDeviceToolsWindow : Window
 {
@@ -43,6 +43,7 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly Button _packageRefreshButton;
     private readonly Button _packageDetailsButton;
     private readonly Button _installApkButton;
+    private readonly Button _uninstallAppButton;
     private readonly Button _commandButton;
     private readonly Button _batchButton;
     private readonly Button _cancelButton;
@@ -84,6 +85,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _packageRefreshButton = ButtonControl("قراءة التطبيقات", "#14517A", LoadPackages_Click);
         _packageDetailsButton = ButtonControl("تفاصيل الحزمة", "#243B56", PackageDetails_Click);
         _installApkButton = ButtonControl("تثبيت / تحديث APK", "#176044", InstallApk_Click);
+        _uninstallAppButton = ButtonControl("إزالة التطبيق المحدد", "#7A3434", UninstallPackage_Click);
         _commandButton = ButtonControl("تنفيذ الأمر الآمن", "#14517A", RunCommand_Click);
         _batchButton = ButtonControl("تنفيذ على الأجهزة المحددة", "#14517A", RunBatch_Click);
         _cancelButton = ButtonControl("إلغاء العملية", "#51333A", Cancel_Click);
@@ -118,7 +120,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "الجهاز المستهدف: " + _serial + " — العمليات مقيدة بهذا المعرف. لا توجد أوامر Shell حرة أو إزالة تطبيقات أو وصول إلى بيانات التطبيقات الخاصة.",
+            Text = "الجهاز المستهدف: " + _serial + " — العمليات مقيدة بهذا المعرف. لا توجد أوامر Shell حرة أو وصول إلى بيانات التطبيقات الخاصة؛ إزالة التطبيق تقتصر على حزم الطرف الثالث وبموافقة صريحة.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -241,6 +243,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         packageActions.Children.Add(_packageRefreshButton);
         packageActions.Children.Add(_packageDetailsButton);
         packageActions.Children.Add(_installApkButton);
+        packageActions.Children.Add(_uninstallAppButton);
         Grid.SetColumnSpan(packageActions, 2);
         grid.Children.Add(packageActions);
 
@@ -476,6 +479,39 @@ public sealed class AndroidDeviceToolsWindow : Window
         });
     }
 
+    private async void UninstallPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_packages.SelectedItem is not string packageName)
+        {
+            MessageBox.Show(this, "اختر تطبيقًا من قائمة تطبيقات الطرف الثالث أولًا.",
+                "مدير التطبيقات", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this,
+            $"هل تريد إزالة التطبيق التالي من الجهاز المحدد؟\n\n{packageName}\n\n" +
+            "سيتم حذف التطبيق وبياناته المحلية من هذا الجهاز. لا يمكن التراجع عن العملية من SoftBox. " +
+            "لن تتم محاولة إزالة تطبيقات النظام أو الحزم غير الموجودة في قائمة Android للتطبيقات الخارجية.\n\nهل تؤكد الإزالة؟",
+            "تأكيد إزالة تطبيق طرف ثالث", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            _status.Text = "ألغى المستخدم إزالة التطبيق؛ لم يتم إرسال أمر إلى ADB.";
+            return;
+        }
+
+        await RunOperationAsync("جارٍ التحقق من أن الحزمة تطبيق طرف ثالث ثم تنفيذ الإزالة...", async token =>
+        {
+            var output = await _service.UninstallThirdPartyPackageAsync(_serial, packageName, token);
+            _packageNames.Remove(packageName);
+            _packageDetails.Text =
+                "PACKAGE: " + packageName + Environment.NewLine +
+                "ADB UNINSTALL RESULT:" + Environment.NewLine + output + Environment.NewLine +
+                "تم تأكيد نتيجة ADB. أُزيل التطبيق من قائمة العرض الحالية.";
+            return "أكد ADB إزالة تطبيق الطرف الثالث: " + packageName;
+        });
+    }
+
     private async void InstallApk_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
@@ -590,6 +626,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _packageRefreshButton.IsEnabled = !busy;
         _packageDetailsButton.IsEnabled = !busy;
         _installApkButton.IsEnabled = !busy;
+        _uninstallAppButton.IsEnabled = !busy;
         _commandButton.IsEnabled = !busy;
         _batchButton.IsEnabled = !busy;
     }
