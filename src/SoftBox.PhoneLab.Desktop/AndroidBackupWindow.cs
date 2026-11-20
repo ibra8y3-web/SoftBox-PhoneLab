@@ -123,7 +123,7 @@ public sealed class AndroidBackupWindow : Window
         _archivePath.Background = Brush("#0A1B2D");
         _archivePath.Foreground = Brush("#EAF3FF");
         _archivePath.BorderBrush = Brush("#35516F");
-        Grid.SetRow(_archivePath, 2);
+        Grid.SetRow(_archivePath, 3);
         Grid.SetColumn(_archivePath, 0);
         form.Children.Add(_archivePath);
 
