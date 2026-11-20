@@ -63,3 +63,7 @@ Future moves should occur only when a specific existing tool has a proven owners
 
 - Restore is an additive operation on the existing AndroidBackupService and AndroidDeviceToolsService. It reuses the central ADB client, the existing archive verifier and SBX authentication service.
 - Restore always generates a separate destination folder and pushes only verified files; it does not call delete, overwrite, format or private-app-data APIs.
+## Phone Link Studio ownership
+
+- Screen mirror and screen recording use the same ScreenMirrorService and the currently selected ADB-authorized device; there is one active scrcpy session in this implementation.
+- The recording UI is a separate action under Phone Link Studio. It does not create a second ADB engine, does not record the Windows desktop and documents that stopping a recording also closes the active mirror session.
