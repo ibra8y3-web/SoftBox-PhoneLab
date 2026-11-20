@@ -171,6 +171,26 @@ public sealed class SoftBoxAccountServiceTests
     }
 
     [Fact]
+    public async Task ToolInvocationIsRecordedAgainstTheAuthenticatedUser()
+    {
+        var directory = CreateTempDirectory();
+        try
+        {
+            var service = CreateService(directory);
+            var admin = await service.CreateInitialAdministratorAsync("admin", "المدير", "Administrator Password 12!");
+            var tech = await service.CreateUserAsync(admin.Id, "tech01", "فني", SoftBoxUserRole.Technician, "Technician Password 12!");
+            await service.RecordActionInvokedAsync(tech.Id, "OpenAndroidFileManager");
+
+            var audit = await service.GetAuditAsync(admin.Id);
+            var action = Assert.Single(audit, x => x.EventType == "ModuleActionInvoked");
+            Assert.Equal(tech.Id, action.ActorUserId);
+            Assert.Equal(tech.Id, action.SubjectUserId);
+            Assert.Equal("OpenAndroidFileManager", action.Reference);
+        }
+        finally { DeleteTempDirectory(directory); }
+    }
+
+    [Fact]
     public async Task AuditCapturesUserActionsButNeverPasswords()
     {
         var directory = CreateTempDirectory();
