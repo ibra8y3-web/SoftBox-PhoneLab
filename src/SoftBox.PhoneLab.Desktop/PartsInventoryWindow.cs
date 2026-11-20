@@ -43,7 +43,7 @@ public sealed class PartsInventoryWindow : Window
         MinHeight = 620;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         FlowDirection = FlowDirection.RightToLeft;
-        Background = Brush("#081321");
+        Background = PartsInventoryWindow.Brush("#081321");
         Foreground = Brush("#EAF3FF");
         Content = BuildContent();
 
