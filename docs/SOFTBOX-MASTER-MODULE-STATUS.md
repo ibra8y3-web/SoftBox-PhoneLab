@@ -13,9 +13,9 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 ### Current additive branch snapshot — Offline Readiness Center follow-up
 
 - Top-level sections: **36 retained** — all 36 In Development.
-- Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): **20 Planned, 39 In Development, 95 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
-- Executable navigation: **54 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- Child features: **130**; catalog entries including section rows: **166**.
+- Entry statuses (section rows plus child features): **19 Planned, 39 In Development, 96 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
+- Executable navigation: **55 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
 ## Status definitions
@@ -34,7 +34,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | # | Section | Current status | Already present | Important missing work |
 |---:|---|---|---|---|
 | 01 | Dashboard | In Development | Live ADB availability, connected-device selection, persisted device-connect/disconnect and inspection notifications, current status | Job counters/queue, historical metrics, storage health and update health aggregation |
-| 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history | Wireless pairing UI, persistent sessions, group targeting and independent background job queue |
+| 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history; Wi-Fi pairing through the existing ADB binary | Persistent session inventory, group targeting and independent background job queue |
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
 | 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, public shared-storage browser/transfers, installed third-party package inspection, APK install after manifest inspection and confirmation, allow-listed read-only commands; Fastboot Manager discovers fastboot devices, reads getvar all and supports confirmed reboot to Android | Full package uninstall/split APK workflows, free-form shell commands, private app-data operations and model-specific destructive Fastboot servicing remain unsupported |
 | 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution and DEX/resource analysis; no installation or device action |
@@ -131,7 +131,7 @@ The same implementation is shared and linked from related module pages; it must 
 
 ## Current navigation ownership after cleanup
 
-The latest catalog is audited at **53 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
+The latest catalog is audited at **55 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
 
 Latest CI for the combined implementation branch: run #273 — **166 passed, 0 failed, 0 skipped**; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
 
@@ -181,5 +181,17 @@ Section 30 is now In Development rather than Planned. The current implementation
 - OS/runtime, storage free space and operational network interfaces are displayed. The view does not claim that an active interface proves Internet connectivity.
 - The user can export a local JSON report. The view does not download, install, launch or mutate any inspected component.
 - SHA-256 is an integrity fingerprint of the current bytes only; it is not a publisher signature, trusted expected hash or safety certification.
-- All **54** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
+- All **55** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
 - Tests validate missing files, exact byte count and SHA-256 for present files, actual data-directory inventory, root-relative paths and real host metadata without Internet claims.
+
+
+## Follow-up — Wireless ADB Pairing
+
+- Section 02 was completed additively; the existing `WirelessAdbPairingService` was reused rather than creating a second ADB engine.
+- Added a dedicated WPF window with separate IP, pairing-port, six-digit temporary code and Wireless-debugging connection-port inputs.
+- The window calls the existing Android Platform-Tools binary with the authenticated `adb pair` and `adb connect` sequence, bounded timeouts and cancellation.
+- The code field is cleared before execution; SoftBox does not persist the code in settings, reports or logs.
+- Added `OpenWirelessAdbPairing` as the 55th canonical action and assigned it to DeviceOperations, so Administrator and Technician can use it while ReadOnly cannot.
+- Added unit tests for IPv4/IPv6 endpoint formatting, invalid hosts and ports, six ASCII-digit pairing-code validation, and role permissions.
+- No new NuGet package or external runtime executable was added.
+- No physical handset was connected during this change. The feature is **Implemented**, not Verified; consult [WIRELESS-ADB.md](WIRELESS-ADB.md) for the required Android settings and limitations.
