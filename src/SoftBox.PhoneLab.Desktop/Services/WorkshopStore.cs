@@ -655,7 +655,8 @@ public sealed class WorkshopStore
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await EnsureLoadedLockedAsync(cancellationToken);
+            // Restore must be able to replace a corrupt or unreadable current database.
+            // Validate the backup first; never require the existing database to load.
             var storedBytes = await File.ReadAllBytesAsync(sourcePath, cancellationToken);
             if (storedBytes.Length is <= 0 or > 256 * 1024 * 1024)
                 throw new InvalidDataException("ملف النسخة الاحتياطية فارغ أو أكبر من الحد الآمن.");
@@ -786,12 +787,23 @@ public sealed class WorkshopStore
         MigrateAndValidate(restored);
         _cache = restored;
         if (schemaNeedsUpgrade)
-            await SaveLockedAsync(cancellationToken);
+        {
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                _cache = null;
+                throw;
+            }
+        }
     }
 
     private async Task SaveLockedAsync(CancellationToken cancellationToken)
     {
-        _cache!.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        var previousUpdatedAtUtc = _cache!.UpdatedAtUtc;
+        _cache.UpdatedAtUtc = DateTimeOffset.UtcNow;
         var temp = DatabasePath + ".tmp";
         byte[]? jsonBytes = null;
         byte[]? protectedBytes = null;
@@ -804,6 +816,7 @@ public sealed class WorkshopStore
         }
         catch
         {
+            _cache.UpdatedAtUtc = previousUpdatedAtUtc;
             try { File.Delete(temp); } catch { }
             throw;
         }

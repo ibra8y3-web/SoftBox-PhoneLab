@@ -252,7 +252,17 @@ public sealed class LocalActivityStore
 
         _data = restored;
         if (!wasProtected)
-            await SaveLockedAsync(cancellationToken);
+        {
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                _data = null;
+                throw;
+            }
+        }
     }
 
     private async Task SaveLockedAsync(CancellationToken cancellationToken)

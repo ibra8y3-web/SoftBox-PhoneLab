@@ -261,6 +261,41 @@ public sealed class WorkshopInventoryIntegrationTests
         }
     }
 
+
+    [Fact]
+    public async Task RestoreCanRecoverOverAnUnreadableCurrentWorkshopDatabase()
+    {
+        var sourceRoot = CreateTempDirectory();
+        var targetRoot = CreateTempDirectory();
+        try
+        {
+            var source = new WorkshopStore(sourceRoot);
+            await source.CreateRepairOrderAsync(new RepairOrder
+            {
+                CustomerName = "Recoverable Customer",
+                DeviceModel = "Pixel 8",
+                IntakeSymptoms = "Recovery test"
+            });
+            var backupPath = Path.Combine(sourceRoot, "valid.sbxbackup");
+            await source.CreateBackupAsync(backupPath);
+
+            var targetDatabase = Path.Combine(targetRoot, "workshop.json");
+            await File.WriteAllTextAsync(targetDatabase, "{ corrupt legacy data");
+
+            var target = new WorkshopStore(targetRoot);
+            await target.RestoreBackupAsync(backupPath);
+
+            var snapshot = await target.GetSnapshotAsync();
+            Assert.Equal("Recoverable Customer", Assert.Single(snapshot.RepairOrders).CustomerName);
+            Assert.True(WindowsUserDataProtection.IsProtected(await File.ReadAllBytesAsync(targetDatabase)));
+        }
+        finally
+        {
+            if (Directory.Exists(sourceRoot)) Directory.Delete(sourceRoot, recursive: true);
+            if (Directory.Exists(targetRoot)) Directory.Delete(targetRoot, recursive: true);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "softbox-workshop-integration-" + Guid.NewGuid().ToString("N"));
