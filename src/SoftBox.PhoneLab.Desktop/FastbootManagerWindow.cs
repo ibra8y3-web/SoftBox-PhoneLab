@@ -1,3 +1,5 @@
+using SoftBox.PhoneLab.Core.Fastboot;
+using System.Text;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -165,12 +167,8 @@ public sealed class FastbootManagerWindow : Window
         await RunOperationAsync("جارٍ قراءة متغيرات Bootloader من الجهاز المحدد...", async token =>
         {
             var output = await _fastboot.ReadAllVariablesAsync(selected.Serial, token);
-            _details.Text =
-                $"FASTBOOT DEVICE: {selected.Serial}\n" +
-                $"DETAILS: {selected.Details}\n" +
-                "COMMAND: fastboot -s <selected-serial> getvar all\n" +
-                "MODE: READ ONLY\n\n" + output +
-                "\n\nهذه القيم قرأها Fastboot من الجهاز. لا تعني وحدها إثبات توافق Firmware أو إمكانية فتح Bootloader.";
+            var parsed = FastbootVariableParser.Parse(output);
+            _details.Text = FormatStateReport(selected, parsed, output);
             return "اكتملت قراءة متغيرات Fastboot. لم يتم تغيير أي قسم أو إعداد في الجهاز.";
         });
     }
@@ -200,6 +198,80 @@ public sealed class FastbootManagerWindow : Window
             return "أُرسل أمر إعادة التشغيل إلى Android. أعد اكتشاف الجهاز بعد اكتمال إقلاعه.";
         });
     }
+
+
+    private static string FormatStateReport(
+        FastbootDevice device,
+        FastbootStateReport report,
+        string rawOutput)
+    {
+        var text = new StringBuilder();
+        text.AppendLine("FASTBOOT DEVICE: " + device.Serial);
+        text.AppendLine("DETAILS: " + device.Details);
+        text.AppendLine("COMMAND: fastboot -s <selected-serial> getvar all");
+        text.AppendLine("MODE: READ ONLY");
+        text.AppendLine();
+
+        text.AppendLine("BOOTLOADER STATE SUMMARY");
+        text.AppendLine("PRODUCT: " + (report.Product ?? "غير متاح"));
+        text.AppendLine("VARIANT: " + (report.Variant ?? "غير متاح"));
+        text.AppendLine("HARDWARE REVISION: " + (report.HardwareRevision ?? "غير متاح"));
+        text.AppendLine("BOOTLOADER VERSION: " + (report.BootloaderVersion ?? "غير متاح"));
+        text.AppendLine("BASEBAND VERSION: " + (report.BasebandVersion ?? "غير متاح"));
+        text.AppendLine("BOOTLOADER LOCK: " + LockStateLabel(report.LockState));
+        text.AppendLine("SECURE / VERIFIED BOOT: " + SecureStateLabel(report.SecureBootState));
+        text.AppendLine("CURRENT SLOT: " + (report.CurrentSlot ?? "غير متاح"));
+        text.AppendLine("SLOT COUNT: " + (report.SlotCount?.ToString() ?? "غير متاح"));
+
+        text.AppendLine();
+        text.AppendLine("ANTI-ROLLBACK RAW VARIABLES");
+        if (report.RollbackVariables.Count == 0)
+            text.AppendLine("لم يتم إرجاع متغيرات Anti-Rollback معروفة.");
+        else
+            foreach (var pair in report.RollbackVariables)
+                text.AppendLine(pair.Key + ": " + pair.Value);
+
+        text.AppendLine();
+        text.AppendLine("CONFLICTING VARIABLES");
+        if (report.ConflictingVariables.Count == 0)
+            text.AppendLine("لا توجد أسماء متغيرات بقيم متعارضة.");
+        else
+            foreach (var key in report.ConflictingVariables)
+                text.AppendLine(key + ": CONFLICT — تم إخفاء القيمة المحسومة.");
+
+        text.AppendLine();
+        text.AppendLine("PARSED VARIABLES");
+        foreach (var pair in report.Variables.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+            text.AppendLine(pair.Key + ": " + pair.Value);
+
+        text.AppendLine();
+        text.AppendLine("WARNINGS");
+        foreach (var warning in report.Warnings)
+            text.AppendLine("- " + warning);
+
+        text.AppendLine();
+        text.AppendLine("RAW FASTBOOT OUTPUT");
+        text.AppendLine(rawOutput);
+        text.AppendLine();
+        text.AppendLine("البيانات أعلاه قراءات نصية من Fastboot فقط؛ لا تثبت أهلية فتح Bootloader أو صحة Firmware أو سياسة Anti-Rollback.");
+        return text.ToString();
+    }
+
+    private static string LockStateLabel(BootloaderLockState value) => value switch
+    {
+        BootloaderLockState.Locked => "مقفل وفق المتغير المقروء",
+        BootloaderLockState.Unlocked => "مفتوح وفق المتغير المقروء",
+        BootloaderLockState.Conflicting => "متعارض — غير محسوم",
+        _ => "غير معروف"
+    };
+
+    private static string SecureStateLabel(VerifiedBootState value) => value switch
+    {
+        VerifiedBootState.Enabled => "مفعّل وفق المتغير المقروء",
+        VerifiedBootState.Disabled => "معطّل وفق المتغير المقروء",
+        VerifiedBootState.Conflicting => "متعارض — غير محسوم",
+        _ => "غير معروف"
+    };
 
     private async Task RunOperationAsync(string message, Func<CancellationToken, Task<string>> operation)
     {
