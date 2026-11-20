@@ -1,3 +1,4 @@
+using System.IO;
 using System.Text.RegularExpressions;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -32,7 +33,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
     {
         ValidateAuthorizedSerial(serial);
         ValidatePublicStoragePath(remotePath);
-        return await adb.RunForDeviceAsync(serial,
+        return await RunDeviceAsync(serial,
             ["shell", "ls", "-la", "--", QuoteForRemoteShell(remotePath)],
             cancellationToken);
     }
@@ -50,7 +51,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
 
         var localPath = Path.GetFullPath(localFilePath);
         Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
-        await adb.RunForDeviceAsync(serial,
+        await RunDeviceAsync(serial,
             ["pull", remoteFilePath, localPath],
             cancellationToken, TransferTimeout);
 
@@ -69,7 +70,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
         if (!File.Exists(localFilePath))
             throw new FileNotFoundException("الملف المحلي المحدد غير موجود.", localFilePath);
 
-        await adb.RunForDeviceAsync(serial,
+        await RunDeviceAsync(serial,
             ["push", Path.GetFullPath(localFilePath), remoteDirectory],
             cancellationToken, TransferTimeout);
     }
@@ -81,7 +82,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
     {
         ValidateAuthorizedSerial(serial);
         ValidatePublicStoragePath(remotePath);
-        await adb.RunForDeviceAsync(serial,
+        await RunDeviceAsync(serial,
             ["shell", "mkdir", "-p", "--", QuoteForRemoteShell(remotePath)],
             cancellationToken);
     }
@@ -91,7 +92,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
         CancellationToken cancellationToken = default)
     {
         ValidateAuthorizedSerial(serial);
-        var output = await adb.RunForDeviceAsync(serial, ["shell", "pm", "list", "packages", "-3"], cancellationToken);
+        var output = await RunDeviceAsync(serial, ["shell", "pm", "list", "packages", "-3"], cancellationToken);
         return ParsePackageList(output);
     }
 
@@ -104,7 +105,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
         if (!IsSafePackageName(packageName))
             throw new ArgumentException("اسم حزمة Android غير صالح.", nameof(packageName));
 
-        return await adb.RunForDeviceAsync(serial,
+        return await RunDeviceAsync(serial,
             ["shell", "dumpsys", "package", packageName],
             cancellationToken);
     }
@@ -136,7 +137,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
         if (!ReadOnlyPresets.TryGetValue(presetId, out var args))
             throw new ArgumentException("الأمر غير موجود في قائمة الأوامر المسموح بها.", nameof(presetId));
 
-        return await adb.RunForDeviceAsync(serial, args, cancellationToken);
+        return await RunDeviceAsync(serial, args, cancellationToken);
     }
 
     public async Task<IReadOnlyList<AndroidBatchResult>> RunBatchReadOnlyPresetAsync(
@@ -219,6 +220,19 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
             throw new ArgumentException("المسار لا يسمح بمقاطع التنقل إلى مجلد أب.", nameof(remotePath));
 
         return value;
+    }
+
+
+    private Task<string> RunDeviceAsync(
+        string serial,
+        IReadOnlyList<string> args,
+        CancellationToken cancellationToken,
+        TimeSpan? commandTimeout = null)
+    {
+        ValidateAuthorizedSerial(serial);
+        var arguments = new List<string> { "-s", serial };
+        arguments.AddRange(args);
+        return adb.RunAsync(arguments, cancellationToken, commandTimeout);
     }
 
     private static void ValidateAuthorizedSerial(string serial)
