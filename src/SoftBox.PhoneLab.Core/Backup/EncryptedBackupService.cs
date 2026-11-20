@@ -280,25 +280,36 @@ public sealed class EncryptedBackupService
         }
     }
 
-    private sealed class BoundedReadStream(Stream inner, long length) : Stream
+    private sealed class BoundedReadStream : Stream
     {
-        private long _remaining = length;
-        public override bool CanRead => inner.CanRead;
+        private readonly Stream _inner;
+        private readonly long _length;
+        private long _remaining;
+
+        public BoundedReadStream(Stream inner, long length)
+        {
+            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            if (length < 0) throw new ArgumentOutOfRangeException(nameof(length));
+            _length = length;
+            _remaining = length;
+        }
+
+        public override bool CanRead => _inner.CanRead;
         public override bool CanSeek => false;
         public override bool CanWrite => false;
-        public override long Length => length;
-        public override long Position { get => length - _remaining; set => throw new NotSupportedException(); }
+        public override long Length => _length;
+        public override long Position { get => _length - _remaining; set => throw new NotSupportedException(); }
         public override int Read(byte[] buffer, int offset, int count)
         {
             if (_remaining <= 0) return 0;
-            var read = inner.Read(buffer, offset, (int)Math.Min(count, _remaining));
+            var read = _inner.Read(buffer, offset, (int)Math.Min(count, _remaining));
             _remaining -= read;
             return read;
         }
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             if (_remaining <= 0) return 0;
-            var read = await inner.ReadAsync(buffer[..(int)Math.Min(buffer.Length, _remaining)], cancellationToken);
+            var read = await _inner.ReadAsync(buffer[..(int)Math.Min(buffer.Length, _remaining)], cancellationToken);
             _remaining -= read;
             return read;
         }
