@@ -24,3 +24,11 @@
 `NetworkDiagnosticsServiceTests` covers accepted DNS/IP input and rejection of URL/path/malformed host values without depending on external DNS or internet availability.
 
 Successful compilation and execution in CI do not replace live network testing in each Windows/network environment.
+
+## CI evidence — 20 November 2026
+
+PhoneLab CI run #57 completed successfully: restore passed; 51 tests passed, 0 failed and 0 skipped; Windows x64 self-contained publish succeeded; Android Agent and offline tool bundling succeeded.
+
+Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114
+
+The tests validate input handling only and do not perform external DNS or ICMP calls. CI success does not replace testing on each Windows network environment or with a real Android handset.
