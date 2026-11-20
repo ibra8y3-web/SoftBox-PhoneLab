@@ -229,7 +229,7 @@ public sealed class PluginStoreWindow : Window
             text.AppendLine("ENTRY ASSEMBLY: " + manifest.EntryAssembly);
             text.AppendLine("DESCRIPTION: " + manifest.Description);
             text.AppendLine("REQUESTED PERMISSIONS:");
-            foreach (var permission in manifest.RequestedPermissions)
+            foreach (var permission in manifest.RequestedPermissions ?? Array.Empty<string>())
                 text.AppendLine("- " + permission);
         }
         text.AppendLine();
