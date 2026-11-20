@@ -64,6 +64,7 @@ public sealed class BackupArchiveService
 
         var records = new List<BackupFileEntry>(files.Count);
         long totalBytes = 0;
+        BackupArchiveManifest? completedManifest = null;
 
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -103,7 +104,7 @@ public sealed class BackupArchiveService
                         Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant()));
                 }
 
-                var manifest = new BackupArchiveManifest(
+                completedManifest = new BackupArchiveManifest(
                     "SoftBox",
                     1,
                     DateTimeOffset.UtcNow,
@@ -116,14 +117,11 @@ public sealed class BackupArchiveService
 
                 var manifestEntry = archive.CreateEntry(ManifestEntryName, CompressionLevel.Optimal);
                 await using var manifestStream = manifestEntry.Open();
-                await JsonSerializer.SerializeAsync(manifestStream, manifest, JsonOptions, cancellationToken);
+                await JsonSerializer.SerializeAsync(manifestStream, completedManifest, JsonOptions, cancellationToken);
             }
 
             File.Move(temporary, target, overwrite: true);
-            return new BackupArchiveManifest(
-                "SoftBox", 1, DateTimeOffset.UtcNow, sourceDevice, sourcePath,
-                records.Count, totalBytes, records,
-                "This archive is not encrypted. It contains only files accessible through the selected source path; Android-private app/system data is not included.");
+            return completedManifest ?? throw new InvalidOperationException("Backup manifest was not created.");
         }
         catch
         {
