@@ -55,3 +55,7 @@ Future moves should occur only when a specific existing tool has a proven owners
 - The existing `BackupArchiveService` remains the owner of ZIP Manifest and per-file SHA-256 generation/verification.
 - New `EncryptedBackupService` wraps the existing ZIP archive in an authenticated `.sbx` container without replacing or changing the ZIP format.
 - Android Backup UI exposes an explicit encryption checkbox; normal ZIP output remains supported and clearly labeled unencrypted.
+## Plugin inspection ownership
+
+- Plugin Manifest validation and ZIP package safety checks are implemented in the shared Core layer; the Plugin Store UI calls the same inspector.
+- No plugin DLL is loaded by the inspector. Signature trust, install, update, uninstall and runtime execution remain separate planned capabilities.
