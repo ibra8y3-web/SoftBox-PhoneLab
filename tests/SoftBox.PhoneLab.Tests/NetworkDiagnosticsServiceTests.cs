@@ -8,6 +8,7 @@ public sealed class NetworkDiagnosticsServiceTests
     [Theory]
     [InlineData("example.com")]
     [InlineData("one.two.example")]
+    [InlineData("printer")]
     [InlineData("192.0.2.1")]
     [InlineData("2001:db8::1")]
     public void IsValidHostAcceptsDnsNamesAndIpAddresses(string host)
@@ -21,7 +22,6 @@ public sealed class NetworkDiagnosticsServiceTests
     [InlineData("https://example.com")]
     [InlineData("example.com/path")]
     [InlineData("example.com?query=1")]
-    [InlineData("example")]
     [InlineData("host with spaces.example")]
     public void IsValidHostRejectsUrlsPathsAndMalformedValues(string host)
     {
