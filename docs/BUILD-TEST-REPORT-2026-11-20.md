@@ -176,3 +176,21 @@ The five Offline Readiness tests use isolated local fixture files. They validate
 - No C# compiler (CS*) or xUnit analyzer warnings were observed in the Windows job log. GitHub Actions did emit a Node.js 20 deprecation notice for its hosted actions; this is an Actions-runtime notice, not an application compiler/test warning.
 
 The added tests cover ADB endpoint formatting and validation, pairing-code validation, real command ordering through the production command-runner interface, pair/connect error handling, cancellation, role restrictions and Android interface/route reads. The fake command runner exists only inside the test project. No physical Android handset was connected; wireless pairing and Android network reads remain unverified on real hardware.
+
+
+## Follow-up verification — Confirmed third-party Android app removal (CI run #300)
+
+- Workflow: PhoneLab CI, run #300; result: **Success** on source commit `0338c2562796f7fc7f5a1c9b9cbf7f750f4b4191`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44799798040
+- Restore: passed.
+- Unit tests: **205 passed, 0 failed, 0 skipped**.
+- Windows self-contained x64 publish: passed.
+- Android Agent Gradle build/upload: passed.
+- Offline Android Platform-Tools, scrcpy and TRACE Boardviewer bundling: passed.
+- Windows x64 package: **227,455,566 bytes**, artifact ID `14661101336`.
+- Windows package artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44799798040/artifacts/14661101336
+- Android Agent APK: **2,343,509 bytes**, artifact ID `14660926631`.
+- Android Agent artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44799798040/artifacts/14660926631
+- No C# compiler (CS*) or xUnit analyzer warnings were observed in the Windows job log. GitHub Actions emitted its Node.js 20 deprecation notice for hosted Actions; this is separate from application build/test output.
+
+The new app-removal tests validate package-list re-checking, exact serial targeting, refusal of a package not listed as third-party, invalid package/serial rejection and strict ADB success-output handling. Tests use a fake command runner only inside the isolated test project. No physical handset was attached, so real-device removal behavior is not hardware Verified.
