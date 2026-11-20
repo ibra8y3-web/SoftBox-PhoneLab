@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 /// <summary>Executes a fixed ADB executable with argument-list APIs; no shell interpolation is used.</summary>
-public sealed class AdbClient
+public sealed class AdbClient : IAdbCommandRunner
 {
     private readonly string? _executable;
 
