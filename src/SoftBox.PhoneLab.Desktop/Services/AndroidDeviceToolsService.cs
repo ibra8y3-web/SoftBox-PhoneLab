@@ -279,7 +279,7 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             arguments,
             cancellationToken,
             TimeSpan.FromMinutes(15));
-        var confirmed = output.Split(['\\r', '\\n'], StringSplitOptions.RemoveEmptyEntries)
+        var confirmed = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
             .Any(line => line.Trim().Equals("Success", StringComparison.OrdinalIgnoreCase));
         if (!confirmed)
             throw new InvalidOperationException(
