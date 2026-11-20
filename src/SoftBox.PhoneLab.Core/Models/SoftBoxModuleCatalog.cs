@@ -203,11 +203,11 @@ public static class SoftBoxModuleCatalog
                 new("automated-suite", "سلسلة قراءات ADB للخصائص والبطارية والتخزين ووقت التشغيل والتطبيقات", "Read-only diagnostic orchestration", "ينفذ خمسة أوامر قراءة محددة على الجهاز المختار، يدعم الإلغاء ويحفظ تقرير JSON؛ لا يشغل اختبارات العتاد أو العمليات الحساسة تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenOneClickDiagnostic")
             ]),
         new("safe-recovery", 19, "Firmware والاستعادة", "الاستعادة الآمنة", "Safe Recovery",
-            "يوجد فحص أرشيف فقط؛ لا توجد عمليات تفليش أو استعادة رسمية مفعلة في هذا الإصدار.",
-            ModuleImplementationStatus.Planned,
+            "فحص مسبق محافظ داخل Firmware Center يعيد التحقق من الملف ويقارن الشركة والموديل المقروءين، ويعرض شروط المصدر والتوافق وAnti-Rollback والنسخة الاحتياطية. لا توجد عملية Flash.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("firmware-precheck", "فحص أولي لبنية ملف Firmware وبصمته", "Firmware pre-inspection", "الفحص المحلي متاح في قسم Firmware Center فقط، ولا يثبت التوقيع أو التوافق.", ModuleImplementationStatus.Implemented),
-                new("recovery-gate", "بوابة تحقق للتوافق والموافقة والنسخ الاحتياطي", "Recovery safety gate", "لم يتم تنفيذ بوابة مركزية تمنع جميع الوحدات من تنفيذ عملية حساسة.", ModuleImplementationStatus.Planned),
+                new("firmware-precheck", "فحص أولي لبنية ملف Firmware وبصمته", "Firmware pre-inspection", "الفحص المحلي وSHA-256 متاحان في Firmware Center، ولا يثبتان توقيع الناشر أو التوافق.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
+                new("recovery-gate", "بوابة فحص الشركة والموديل والتصريح وسلامة الملف والمخاطر", "Conservative recovery preflight", "يعيد حساب SHA-256 قبل التقييم، ويطلب Snapshot مطابقًا للجهاز المصرح به، ويعرض Passed/Failed/Unknown/Blocked مع الأدلة. CanProceed يبقى false لأن سلسلة ثقة الناشر والتوافق وAnti-Rollback وإثبات النسخة غير متاحة.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
                 new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported)
             ]),
         new("workflow-automation", 20, "الأتمتة والإنتاجية", "أتمتة سير العمل", "Workflow Automation",
