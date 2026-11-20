@@ -209,8 +209,6 @@ public sealed class WorkshopStore
         finally { _gate.Release(); }
     }
 
-    public async Task AdjustStockAsync(string sku, int delta, string reason, CancellationToken cancellationToken = default)
-    {
     public async Task<InventoryPurchaseReceipt> ReceiveSupplierStockAsync(
         string sku,
         int quantity,
@@ -284,7 +282,7 @@ public sealed class WorkshopStore
                 InventoryMovementId = movement.Id
             };
 
-            var previousEventCount = _cache.Events.Count;
+            var previousEvents = _cache.Events.ToArray();
             stock.Quantity = nextQuantity;
             stock.UnitCostEgp = weightedCost;
             stock.Supplier = supplier;
@@ -306,8 +304,8 @@ public sealed class WorkshopStore
                 stock.UpdatedAtUtc = previousUpdatedAt;
                 _cache.InventoryMovements.Remove(movement);
                 _cache.InventoryPurchaseReceipts.Remove(receipt);
-                if (_cache.Events.Count > previousEventCount)
-                    _cache.Events.RemoveRange(previousEventCount, _cache.Events.Count - previousEventCount);
+                _cache.Events.Clear();
+                _cache.Events.AddRange(previousEvents);
                 throw;
             }
 
@@ -316,6 +314,12 @@ public sealed class WorkshopStore
         finally { _gate.Release(); }
     }
 
+    public async Task AdjustStockAsync(
+        string sku,
+        int delta,
+        string reason,
+        CancellationToken cancellationToken = default)
+    {
         if (string.IsNullOrWhiteSpace(sku) || delta == 0) throw new ArgumentException("حدد كود الصنف وكمية تغيير غير صفرية.");
         reason = (reason ?? "").Trim();
         if (reason.Length is < 2 or > 300 || reason.Any(char.IsControl))
