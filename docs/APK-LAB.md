@@ -7,7 +7,7 @@ APK Lab is a read-only desktop tool for inspecting a user-selected .apk file. It
 ## Implemented behavior
 
 - Calculates the SHA-256 digest of the complete APK file.
-- Opens the package as a ZIP archive and reads every non-directory entry to detect unreadable or truncated content.
+- Opens the package as a ZIP archive and reads every non-directory entry to detect decompression/read errors and truncated content. This is not a ZIP CRC, publisher-signature, or provenance verification.
 - Applies a 2 GiB maximum expanded-archive limit and an 8 MiB Android manifest limit.
 - Lists up to 500 archive entry names and reports the total entry count.
 - Parses AndroidManifest.xml when it is text XML or Android Binary XML (AXML).
@@ -20,7 +20,7 @@ APK Lab is a read-only desktop tool for inspecting a user-selected .apk file. It
 - An application label stored as a resource reference is shown as a resource identifier; the Android resource table is not decoded.
 - Permissions are declarations from the manifest, not proof that an application actually uses a permission or that the package is malicious.
 - SHA-256 identifies the inspected bytes. It does not establish provenance or compare the package to a trusted publisher hash.
-- ZIP readability and manifest parsing are not malware analysis or a complete security review.
+- ZIP entry readability and manifest parsing are not CRC verification, malware analysis, or a complete security review.
 - The tool does not decompile DEX, decode arbitrary resources, compare two APK versions, install APKs, or perform device-side package operations.
 - No phone, USB transport, ADB authorization, or external service is needed for this local inspection.
 
