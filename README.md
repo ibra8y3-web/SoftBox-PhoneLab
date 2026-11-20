@@ -18,8 +18,10 @@ The curated catalog is a starter set. The additional community model-code databa
 ### Android App Manager
 - Reads installed third-party packages and package details from the selected authorized phone.
 - Installs or updates a selected local APK only after Manifest inspection and explicit confirmation.
+- Installs a selected Base APK plus its split files through `adb install-multiple -r` after inspecting every Manifest and ZIP archive. SoftBox requires one Base, unique Split names, matching package names and Version Code, and re-checks each SHA-256 before sending the files.
+- Android's package installer remains responsible for signer compatibility; SoftBox reports signature metadata but does not independently verify publisher certificates. Android rejects incompatible signer sets.
 - Removes only a selected package that SoftBox re-confirms in Android's `pm list packages -3` output, after showing the package name and an explicit warning that local app data will be deleted.
-- SoftBox reports uninstall success only when ADB returns `Success`; system packages and arbitrary package names are rejected. Split APK workflows and private app-data management remain unsupported.
+- SoftBox reports install/removal success only when ADB returns `Success`; system packages and arbitrary package names are rejected. Private app-data management remains unsupported.
 - See [Android App Manager safeguards](docs/ANDROID-APP-MANAGER.md).
 
 
