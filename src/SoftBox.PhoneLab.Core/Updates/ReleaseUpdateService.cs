@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 
 namespace SoftBox.PhoneLab.Core.Updates;
@@ -39,6 +41,9 @@ public sealed class ReleaseUpdateService
     public const string RepositoryName = "SoftBox-PhoneLab";
     public const string ReleasesApiUrl = "https://api.github.com/repos/ibra8y3-web/SoftBox-PhoneLab/releases?per_page=30";
     private const int MaximumResponseBytes = 2 * 1024 * 1024;
+    private static readonly Regex SemanticVersionPattern = new(
+        @"^[vV]?(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly HttpClient _http;
 
     public ReleaseUpdateService(HttpClient? httpClient = null)
@@ -193,27 +198,21 @@ public sealed class ReleaseUpdateService
     private static bool TryParseVersion(string value, out SemVersion parsed)
     {
         parsed = default;
-        var text = value.Trim();
-        if (text.StartsWith('v') || text.StartsWith('V'))
-            text = text[1..];
-        if (text.Length is < 5 or > 100)
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 100)
             return false;
 
-        var metadataSplit = text.Split('+', 2);
-        var withoutMetadata = metadataSplit[0];
-        var prereleaseSplit = withoutMetadata.Split('-', 2);
-        var core = prereleaseSplit[0].Split('.');
-        if (core.Length != 3 ||
-            !int.TryParse(core[0], out var major) ||
-            !int.TryParse(core[1], out var minor) ||
-            !int.TryParse(core[2], out var patch) ||
-            major < 0 || minor < 0 || patch < 0)
+        var match = SemanticVersionPattern.Match(value.Trim());
+        if (!match.Success ||
+            !int.TryParse(match.Groups[1].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var major) ||
+            !int.TryParse(match.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var minor) ||
+            !int.TryParse(match.Groups[3].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var patch))
             return false;
 
-        var prerelease = prereleaseSplit.Length == 2 ? prereleaseSplit[1] : "";
-        if (prerelease.Length > 60 ||
-            prerelease.Any(character => !(char.IsAsciiLetterOrDigit(character) || character is '.' or '-')) ||
-            prerelease.Split('.').Any(part => part.Length == 0))
+        var prerelease = match.Groups[4].Success ? match.Groups[4].Value : "";
+        if (prerelease.Split('.').Any(part =>
+                part.Length > 1 &&
+                part.All(char.IsAsciiDigit) &&
+                part.StartsWith('0')))
             return false;
 
         parsed = new SemVersion(major, minor, patch, prerelease);
