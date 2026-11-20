@@ -269,7 +269,7 @@ public sealed class LocalActivityStore
     private static string Normalize(string? value, int maximum)
     {
         var result = (value ?? "").Trim();
-        if (result.Length > maximum || result.Any(char.IsControl) && result.Contains('\0'))
+        if (result.Length > maximum || result.Any(char.IsControl))
             throw new ArgumentException("إحدى قيم السجل طويلة جدًا أو غير صالحة.");
         return result;
     }
@@ -281,7 +281,7 @@ public sealed class LocalActivityStore
 
     private sealed class ActivityData
     {
-        public int SchemaVersion { get; set; } = SchemaVersion;
+        public int SchemaVersion { get; set; } = LocalActivityStore.SchemaVersion;
         public List<DeviceHistoryEntry> DeviceHistory { get; set; } = [];
         public List<SoftBoxNotification> Notifications { get; set; } = [];
     }
