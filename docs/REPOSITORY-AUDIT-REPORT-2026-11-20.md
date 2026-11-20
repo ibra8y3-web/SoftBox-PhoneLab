@@ -87,3 +87,12 @@ These are catalog status counts, not a percentage of product completion. `Verifi
 - Changes are on the feature branch and submitted as Pull Request #1.
 - Main was not modified directly and the pull request remains open for review.
 - No release or permanent GitHub Release was created. The Windows ZIP linked above is a temporary Actions artifact.
+## Final verification after APK comparison — CI run #65
+
+- Result: Success on the pull-request source/catalog containing the two-file APK comparison.
+- Unit tests: 53 passed, 0 failed, 0 skipped.
+- Windows x64 self-contained publish, Android Agent build, offline tool bundling and artifact upload: passed.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968
+- Windows artifact (227,167,411 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968/artifacts/14636852748
+
+This is CI verification using generated local test fixtures and a Windows runner. It is not a physical-handset compatibility claim.
