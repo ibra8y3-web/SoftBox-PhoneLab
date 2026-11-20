@@ -18,8 +18,10 @@ The curated catalog is a starter set. The additional community model-code databa
 ### Android App Manager
 - Reads installed third-party packages and package details from the selected authorized phone.
 - Installs or updates a selected local APK only after Manifest inspection and explicit confirmation.
+- Installs a selected Base APK plus its split files through `adb install-multiple -r` after inspecting every Manifest and ZIP archive. SoftBox requires one Base, unique Split names, matching package names and Version Code, and re-checks each SHA-256 before sending the files.
+- Android's package installer remains responsible for signer compatibility; SoftBox reports signature metadata but does not independently verify publisher certificates. Android rejects incompatible signer sets.
 - Removes only a selected package that SoftBox re-confirms in Android's `pm list packages -3` output, after showing the package name and an explicit warning that local app data will be deleted.
-- SoftBox reports uninstall success only when ADB returns `Success`; system packages and arbitrary package names are rejected. Split APK workflows and private app-data management remain unsupported.
+- SoftBox reports install/removal success only when ADB returns `Success`; system packages and arbitrary package names are rejected. Private app-data management remains unsupported.
 - See [Android App Manager safeguards](docs/ANDROID-APP-MANAGER.md).
 
 
@@ -53,11 +55,18 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Customer directory, parts inventory, low-stock threshold flag, stock in/out movements and a capped activity history.
 - JSON-backed local database stored under the current Windows user's LocalAppData. Manual backup and restore are built in; no customer records are uploaded to a cloud service.
 - Exports a technician-entered text report for each repair order.
+- Creates printable Arabic/English intake receipts, preliminary estimates and service invoices from saved work-order data. These documents do not record customer approval or payment, calculate taxes or claim certified e-invoice compliance.
+- Service analytics calculate delivered-order revenue, open estimates, reported symptom text frequency, device-model frequency, technician activity, delivery duration and inventory values from saved local records; analytics export is available as CSV.
 
 ### USB transport, Android evidence and firmware inspection
 - Read-only ADB/Fastboot transport inspection. The report explains the difference between MTP, authorized ADB, Fastboot and vendor-specific Download/EDL/Preloader modes.
 - Captures a bounded Android evidence bundle: recent logcat, system properties, battery and thermal service state, and boot uptime. A heuristic can flag log patterns worth reviewing for reboot/boot-loop investigation.
 - Inspects a selected firmware archive locally, computes SHA-256 and looks for common Android OTA metadata/payload entries. It does not flash, unlock, wipe, execute package scripts or assert that a package is authentic or compatible.
+
+### Workshop documents and service analytics
+- From a selected repair order, create a printable intake receipt, preliminary estimate or service invoice using saved repair-order values.
+- The estimate remains unapproved until a separate customer-approval workflow is added. The invoice does not record payment, calculate tax or claim e-invoice certification.
+- The reports tab calculates operating metrics from saved repair orders and inventory and exports the analytics to UTF-8 CSV. Delivered-order revenue is not a profit or cash-collection figure.
 
 ### Global workshop operations
 - A dedicated Global Workshop workspace adds cross-field search and status filtering for repair orders, live operational counts, active-warranty tracking and technician timeline notes.
