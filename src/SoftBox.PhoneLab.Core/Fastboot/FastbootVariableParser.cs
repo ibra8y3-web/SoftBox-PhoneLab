@@ -167,7 +167,9 @@ public static class FastbootVariableParser
 
         var rawKey = text[..separator].Trim();
         var rawValue = text[(separator + 1)..].Trim();
-        if (rawKey.Length is 0 or > 160 || rawValue.Length is 0 or > 4096)
+        if (rawKey.Length is 0 or > 160 ||
+            rawKey.Any(char.IsWhiteSpace) ||
+            rawValue.Length is 0 or > 4096)
             return false;
 
         var normalizedKey = NormalizeKey(rawKey);
@@ -246,7 +248,7 @@ public static class FastbootVariableParser
         var normalized = NormalizeValue(value);
         if (normalized is "yes" or "true" or "1" or "unlocked" or "orange")
             return BootloaderLockState.Unlocked;
-        if (normalized is "no" or "false" or "0" or "locked" or "green")
+        if (normalized is "no" or "false" or "0" or "locked")
             return BootloaderLockState.Locked;
         return null;
     }
