@@ -1,8 +1,14 @@
 # SoftBox Master Module Audit and Development Roadmap
 
-Audit baseline: pre-implementation \`main\` snapshot, commit \`12650bed442498f7746432de42bea95b1a622381\`, 20 November 2026. APK Lab changes are recorded on \`feature/apk-lab-real-apk-inspector\` until CI review is complete.
+Audit baseline: pre-implementation `main` snapshot, commit `12650bed442498f7746432de42bea95b1a622381`, 20 November 2026. APK Lab changes are recorded on `feature/apk-lab-real-apk-inspector` until CI review is complete.
 
 This document maps the supplied **SoftBox – Universal Smart Device Service & Repair Platform** specification to the code that already exists. It is an implementation inventory, not a claim that every module is complete.
+
+### Audited catalog snapshot
+
+- Top-level sections: 36 total — 22 In Development and 14 Planned.
+- Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 4 Tested, 64 Planned, 23 In Development and 2 Unsupported.
+- No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
 
 ## Status definitions
 
@@ -13,7 +19,7 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 - **Verified**: verified in the intended real environment with recorded evidence.
 - **Unsupported**: intentionally not provided in the current product scope.
 
-A green build does not make a hardware feature Verified. Unit tests do not substitute for tests on a real handset, USB chipset, driver, fixture or firmware package. Navigation pages read their state from \`SoftBoxModuleCatalog\`; an unfinished feature never receives an action button.
+A green build does not make a hardware feature Verified. Unit tests do not substitute for tests on a real handset, USB chipset, driver, fixture or firmware package. Navigation pages read their state from `SoftBoxModuleCatalog`; an unfinished feature never receives an action button.
 
 ## The 36 product sections
 
@@ -82,7 +88,7 @@ The same implementation is shared and linked from related module pages; it must 
 - Windows UI: WPF on .NET 10; Android companion: Kotlin/Android Agent.
 - Current solution has three .NET projects: Core, Desktop and Tests, plus the separate Android Gradle project.
 - ADB process invocation uses argument-list APIs, validates serial values and has a bounded command timeout.
-- APK Lab uses a dependency-free .NET Core inspection service for local ZIP validation, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
+- APK Lab uses a dependency-free .NET Core inspection service for local ZIP entry-read checks, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
 - Network Diagnostics reads local Windows interface configuration and performs one user-selected DNS/ICMP probe with bounded timeouts; Android-private network observations are still unimplemented.
 - The workshop database is local JSON under the current Windows user's LocalAppData. It has a schema migration path for its v1/v2 workshop schema.
 - SQLite and Entity Framework Core are **not** currently used.
