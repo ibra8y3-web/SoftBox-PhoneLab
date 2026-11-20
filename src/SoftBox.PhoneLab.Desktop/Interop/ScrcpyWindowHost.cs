@@ -11,7 +11,7 @@ public sealed class ScrcpyWindowHost : HwndHost
     public bool HasEmbeddedWindow => _child != IntPtr.Zero && IsWindow(_child);
     protected override HandleRef BuildWindowCore(HandleRef hwndParent)
     {
-        _parent = CreateWindowEx(0,"STATIC","",WsChild|WsVisible|WsClipChildren|WsClipSiblings,0,0,1,1,hwndParent.Handle,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero);
+        _parent = CreateWindowEx(0,"STATIC","",(int)(WsChild|WsVisible|WsClipChildren|WsClipSiblings),0,0,1,1,hwndParent.Handle,IntPtr.Zero,IntPtr.Zero,IntPtr.Zero);
         if (_parent==IntPtr.Zero) throw new InvalidOperationException("Unable to create PhoneLab screen host.");
         return new HandleRef(this,_parent);
     }
