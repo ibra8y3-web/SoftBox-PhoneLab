@@ -1,6 +1,8 @@
 using System.IO;
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Firmware;
+using SoftBox.PhoneLab.Core.Models;
+using SoftBox.PhoneLab.Core.Recovery;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Text;
@@ -31,10 +33,15 @@ public sealed class FirmwareCenterWindow : Window
     private readonly Button _importButton;
     private readonly Button _verifyButton;
     private readonly Button _inspectButton;
+    private readonly Button _preflightButton;
+    private readonly DeviceSnapshot? _deviceSnapshot;
+    private readonly bool _adbAuthorized;
     private CancellationTokenSource? _operation;
 
-    public FirmwareCenterWindow()
+    public FirmwareCenterWindow(DeviceSnapshot? deviceSnapshot = null, bool adbAuthorized = false)
     {
+        _deviceSnapshot = deviceSnapshot;
+        _adbAuthorized = adbAuthorized && deviceSnapshot is not null;
         Title = "SoftBox | مركز Firmware";
         Width = 1120;
         Height = 820;
@@ -48,6 +55,7 @@ public sealed class FirmwareCenterWindow : Window
         _importButton = ButtonControl("استيراد ملف Firmware محلي", "#14517A", Import_Click);
         _verifyButton = ButtonControl("إعادة التحقق من SHA-256", "#176044", Verify_Click);
         _inspectButton = ButtonControl("فحص الأرشيف", "#243B56", Inspect_Click);
+        _preflightButton = ButtonControl("فحص الاستعادة الآمنة", "#704B20", Preflight_Click);
 
         Content = BuildContent();
         _list.SelectionChanged += (_, _) => ShowSelected();
@@ -193,6 +201,7 @@ public sealed class FirmwareCenterWindow : Window
         buttons.Children.Add(_importButton);
         buttons.Children.Add(_verifyButton);
         buttons.Children.Add(_inspectButton);
+        buttons.Children.Add(_preflightButton);
         DockPanel.SetDock(buttons, Dock.Top);
         right.Children.Add(buttons);
 
@@ -321,6 +330,65 @@ public sealed class FirmwareCenterWindow : Window
             text.AppendLine("This is local archive inspection only. No publisher trust or device compatibility is inferred.");
             _details.Text = text.ToString();
             return "اكتمل فحص البنية المحلية. راجع حدود الفحص قبل استخدام الملف.";
+        });
+    }
+
+    private async void Preflight_Click(object sender, RoutedEventArgs e)
+    {
+        if (_list.SelectedItem is not FirmwareLibraryItem item)
+        {
+            _status.Text = "اختر ملف Firmware من المكتبة أولًا.";
+            return;
+        }
+
+        await RunOperationAsync("جارٍ إعادة التحقق من الملف وفحص شروط الاستعادة الآمنة...", async token =>
+        {
+            // Re-hash the file immediately before evaluating the preflight report.
+            var integrity = await _library.VerifyAsync(item.Id, token);
+            var report = SafeRecoveryPreflightService.Evaluate(
+                _deviceSnapshot,
+                _adbAuthorized && _deviceSnapshot is not null,
+                item,
+                integrity);
+
+            var lines = new List<string>
+            {
+                "SOFTBOX SAFE RECOVERY — PREFLIGHT ONLY",
+                "DEVICE: " + report.DeviceLabel,
+                "FIRMWARE: " + report.FirmwareLabel,
+                "EVALUATED UTC: " + report.EvaluatedAtUtc.ToString("O"),
+                "CAN PROCEED: " + report.CanProceed,
+                "",
+                "CHECKS:"
+            };
+
+            foreach (var check in report.Checks)
+            {
+                var state = check.State switch
+                {
+                    RecoveryCheckState.Passed => "PASS",
+                    RecoveryCheckState.Failed => "FAIL",
+                    RecoveryCheckState.Unknown => "UNKNOWN",
+                    RecoveryCheckState.Blocked => "BLOCKED",
+                    _ => "UNKNOWN"
+                };
+                lines.Add($"[{state}] {check.Title}");
+                lines.Add("Evidence: " + check.Evidence);
+                lines.Add("Required action: " + check.RequiredAction);
+                lines.Add("");
+            }
+
+            lines.Add("LIMITATIONS:");
+            lines.AddRange(report.Limitations.Select(limit => "- " + limit));
+            lines.Add("");
+            lines.Add("No firmware was flashed, no bootloader state was changed and no device data was modified.");
+            _details.Text = string.Join(Environment.NewLine, lines);
+
+            var blocked = report.Checks.Count(check =>
+                check.State is RecoveryCheckState.Blocked or RecoveryCheckState.Failed or RecoveryCheckState.Unknown);
+            return report.CanProceed
+                ? "انتهى الفحص المسبق؛ لا توجد عملية Flash متاحة من هذه الشاشة."
+                : $"الاستعادة ممنوعة حاليًا. توجد {blocked} شروط فاشلة أو غير معروفة أو محجوبة. لم يتم تنفيذ أي تغيير على الهاتف.";
         });
     }
 
