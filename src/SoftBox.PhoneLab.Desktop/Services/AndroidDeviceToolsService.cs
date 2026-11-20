@@ -13,10 +13,10 @@ public sealed record AndroidVendorDiagnostics(
     IReadOnlyList<string> UnavailableProperties);
 
 /// <summary>
-/// ADB operations restricted to authorized devices, public shared storage and read-only command presets.
-/// It intentionally has no arbitrary shell-command or package-removal method.
+/// Authorized ADB operations for public shared storage, package inspection and allow-listed commands.
+/// Third-party package removal is limited to packages revalidated through pm list packages -3.
 /// </summary>
-public sealed class AndroidDeviceToolsService(AdbClient adb)
+public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
 {
     private static readonly TimeSpan TransferTimeout = TimeSpan.FromHours(2);
     private static readonly IReadOnlyDictionary<string, string[]> ReadOnlyPresets =
@@ -132,6 +132,38 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
             ["install", "-r", Path.GetFullPath(apkFilePath)],
             cancellationToken,
             TimeSpan.FromMinutes(10));
+    }
+
+    public async Task<string> UninstallThirdPartyPackageAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAuthorizedSerial(serial);
+        if (!IsSafePackageName(packageName))
+            throw new ArgumentException("اسم حزمة Android غير صالح.", nameof(packageName));
+
+        var thirdPartyPackages = await ListThirdPartyPackagesAsync(serial, cancellationToken);
+        if (!thirdPartyPackages.Any(package =>
+                package.PackageName.Equals(packageName, StringComparison.Ordinal)))
+        {
+            throw new UnauthorizedAccessException(
+                "رُفضت الإزالة: الحزمة ليست ضمن قائمة تطبيقات الطرف الثالث التي يعرضها Android لهذا الجهاز.");
+        }
+
+        var output = await RunDeviceAsync(
+            serial,
+            ["uninstall", packageName],
+            cancellationToken,
+            TimeSpan.FromMinutes(5));
+
+        var confirmed = output.Split(['\\r', '\\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(line => line.Trim().Equals("Success", StringComparison.OrdinalIgnoreCase));
+        if (!confirmed)
+            throw new InvalidOperationException(
+                "لم يؤكد ADB نجاح إزالة التطبيق. لم يتم عرض العملية على أنها ناجحة. مخرجات ADB: " + output);
+
+        return output.Trim();
     }
 
     public async Task<AndroidVendorDiagnostics> ReadVendorDiagnosticsAsync(
