@@ -203,7 +203,6 @@ public sealed class AndroidBackupService(AdbClient adb)
                 var item = manifest.Files[index];
                 try
                 {
-                    BackupRestorePathPolicy.ValidateRelativePath(item.Path);
                     if (!dataEntries.TryGetValue(item.Path, out var entry))
                         throw new InvalidDataException("الملف غير موجود داخل الأرشيف بعد التحقق.");
 
