@@ -558,6 +558,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenAndroidBatchTools":
                 OpenAndroidToolsWindow();
                 break;
+            case "OpenAndroidWorkflow":
+                OpenAndroidWorkflowWindow();
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
@@ -619,6 +622,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var authorized = Devices.Where(device => device.IsAuthorized)
             .Select(device => device.Serial).ToArray();
         new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized) { Owner = this }.Show();
+    }
+
+    private void OpenAndroidWorkflowWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "Workflow Automation",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new AndroidWorkflowWindow(_adb, selected.Serial) { Owner = this }.Show();
     }
 
     private void OpenAndroidBackupWindow()
