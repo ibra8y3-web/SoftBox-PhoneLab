@@ -1,3 +1,4 @@
+using Xunit;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
 
