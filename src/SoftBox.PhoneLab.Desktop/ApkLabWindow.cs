@@ -216,7 +216,7 @@ public sealed class ApkLabWindow : Window
         {
             var result = await _inspector.InspectAsync(_path.Text.Trim(), _operation.Token);
             DisplayResult(result);
-            _status.Text = "اكتمل فحص الأرشيف المحلي. راجع التحذيرات وحدود التحليل قبل اتخاذ أي قرار.";
+            _status.Text = "اكتمل قراءة الأرشيف المحلي. راجع التحذيرات وحدود التحليل قبل اتخاذ أي قرار.";
         }
         catch (OperationCanceledException)
         {
@@ -246,7 +246,7 @@ public sealed class ApkLabWindow : Window
         text.AppendLine("FILE: " + result.FileName);
         text.AppendLine("SIZE: " + FormatBytes(result.FileSizeBytes));
         text.AppendLine("SHA-256: " + result.Sha256);
-        text.AppendLine("ZIP: " + (result.ArchiveIntegrityChecked
+        text.AppendLine("ZIP: " + (result.ArchiveEntriesReadable
             ? $"تمت قراءة {result.EntryCount} مدخلًا دون خطأ"
             : "لم يكتمل فحص الأرشيف"));
         text.AppendLine("MANIFEST: " + result.ManifestFormat);
