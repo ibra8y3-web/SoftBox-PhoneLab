@@ -1,6 +1,7 @@
 using System.IO;
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Backup;
+using System.IO;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Text;
 using System.Windows;
@@ -11,7 +12,7 @@ namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
 /// Creates and verifies backups of user-accessible Android shared-storage directories.
-/// App-private data and password encryption are explicitly out of scope in this version.
+/// App-private data and restore-to-phone remain out of scope. SBX encryption is optional.
 /// </summary>
 public sealed class AndroidBackupWindow : Window
 {
@@ -20,6 +21,9 @@ public sealed class AndroidBackupWindow : Window
     private readonly TextBox _remotePath = new();
     private readonly TextBox _archivePath = new();
     private readonly TextBox _output = new();
+    private readonly CheckBox _encryptBackup = new();
+    private readonly PasswordBox _password = new();
+    private readonly TextBlock _passwordLabel = new();
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
     private readonly Button _backupButton;
@@ -48,7 +52,13 @@ public sealed class AndroidBackupWindow : Window
         _verifyButton = ButtonControl("التحقق من نسخة موجودة", "#176044", Verify_Click);
         _cancelButton = ButtonControl("إلغاء", "#51333A", Cancel_Click);
         _cancelButton.IsEnabled = false;
+        _encryptBackup.Content = "تشفير النسخة بكلمة مرور قوية داخل ملف SBX";
+        _encryptBackup.Foreground = Brush("#DCEBFA");
+        _encryptBackup.Margin = new Thickness(0, 4, 0, 8);
+        _encryptBackup.Checked += (_, _) => UpdateEncryptionVisibility();
+        _encryptBackup.Unchecked += (_, _) => UpdateEncryptionVisibility();
         Content = BuildContent();
+        UpdateEncryptionVisibility();
         Closed += (_, _) => _operation?.Cancel();
     }
 
@@ -92,7 +102,7 @@ public sealed class AndroidBackupWindow : Window
             Margin = new Thickness(0, 0, 0, 14),
             Child = new TextBlock
             {
-                Text = "حدود النسخة الحالية: لا تنسخ بيانات التطبيقات الخاصة أو ملفات النظام المحمية. ملف ZIP غير مشفر بكلمة مرور؛ خزّنه في مكان آمن. لا توجد استعادة تلقائية إلى الهاتف في هذه النسخة.",
+                Text = "تقتصر النسخة على التخزين المشترك الذي يسمح به Android. يمكنك إنشاء ZIP عادي أو ملف SBX مشفر بكلمة مرور؛ لا توجد استعادة تلقائية إلى الهاتف، ولا يتم نسخ بيانات التطبيقات الخاصة.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -104,6 +114,9 @@ public sealed class AndroidBackupWindow : Window
         var form = new Grid { Margin = new Thickness(0, 0, 0, 10) };
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         form.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -132,6 +145,28 @@ public sealed class AndroidBackupWindow : Window
         Grid.SetRow(browse, 3);
         Grid.SetColumn(browse, 1);
         form.Children.Add(browse);
+
+        Grid.SetRow(_encryptBackup, 4);
+        Grid.SetColumnSpan(_encryptBackup, 2);
+        form.Children.Add(_encryptBackup);
+
+        _passwordLabel.Text = "كلمة مرور التشفير (12 حرفًا على الأقل)";
+        _passwordLabel.Foreground = Brush("#9FC7E8");
+        _passwordLabel.Margin = new Thickness(0, 0, 0, 5);
+        Grid.SetRow(_passwordLabel, 5);
+        Grid.SetColumnSpan(_passwordLabel, 2);
+        form.Children.Add(_passwordLabel);
+
+        _password.Height = 36;
+        _password.Margin = new Thickness(0, 0, 0, 8);
+        _password.Padding = new Thickness(9, 6, 9, 6);
+        _password.Background = Brush("#0A1B2D");
+        _password.Foreground = Brush("#EAF3FF");
+        _password.BorderBrush = Brush("#35516F");
+        _password.ToolTip = "لا يتم حفظ كلمة المرور في ملف الإعدادات أو سجل SoftBox.";
+        Grid.SetRow(_password, 6);
+        Grid.SetColumnSpan(_password, 2);
+        form.Children.Add(_password);
 
         DockPanel.SetDock(form, Dock.Top);
         root.Children.Add(form);
