@@ -185,12 +185,12 @@ public static class SoftBoxModuleCatalog
                 new("phone-network", "قراءة معلومات الشبكة المسموح بها من الهاتف وتشخيص ADB اللاسلكي", "Android network observations and ADB Wireless", "لم يُنفذ هذا المسار؛ لا تُعرض بيانات هاتف خاصة أو نتائج غير متاحة.", ModuleImplementationStatus.Planned)
             ]),
         new("smart-repair-ai", 17, "الذكاء والمعرفة", "مساعد الإصلاح الذكي", "Smart Repair AI",
-            "لا يوجد مساعد AI حاليًا؛ المتاح فتح أدلة إصلاح أصلية من iFixit دون نسخ محتواها.",
-            ModuleImplementationStatus.Planned,
+            "يتضمن الآن محرك استدلال محليًا قائمًا على قواعد وأدلة فعلية؛ لا يدّعي أنه نموذج AI أو تشخيص مادي نهائي.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("repair-guides", "البحث عن أدلة إصلاح خارجية", "External repair guide search", "يفتح مصادر iFixit الأصلية؛ هذه ليست ميزة ذكاء اصطناعي.", ModuleImplementationStatus.Implemented, "RepairGuides"),
-                new("evidence-reasoning", "تحليل الأدلة وترتيب احتمالات العطل", "Evidence-based repair reasoning", "لم يتم بناء محرك استدلال أو مساعد AI بعد.", ModuleImplementationStatus.Planned),
-                new("offline-knowledge", "قاعدة معرفة محلية تعمل دون إنترنت", "Offline repair knowledge", "لم يتم إنشاء قاعدة معرفة محلية قابلة للبحث بعد.", ModuleImplementationStatus.Planned)
+                new("evidence-reasoning", "تحليل قراءات البطارية والتخزين ونتائج الاختبارات", "Evidence-based repair reasoning", "يرتب توصيات غير مدمرة ويربط كل توصية بدليل ودرجة ثقة وحدود واضحة؛ لا يستنتج أعطالًا من بيانات مفقودة.", ModuleImplementationStatus.Implemented, "OpenRepairAdvisor"),
+                new("offline-knowledge", "قاعدة معرفة محلية قابلة للبحث", "Searchable offline repair knowledge", "مقالات الإصلاح العامة متاحة في Help Center؛ قاعدة تشخيص تفصيلية موسعة للأعطال والموديلات ما زالت قيد التطوير.", ModuleImplementationStatus.InDevelopment, "OpenHelpCenter")
             ]),
         new("one-click-diagnostic", 18, "الذكاء والمعرفة", "الفحص الشامل بزر واحد", "One-Click Diagnostic",
             "زر الفحص الحالي يقرأ بيانات النظام ويحدّث حالة المكونات؛ لا ينفذ كل اختبارات العتاد تلقائيًا.",
@@ -345,7 +345,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenApplicationSettings", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenApplicationSettings", "OpenRepairAdvisor", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
