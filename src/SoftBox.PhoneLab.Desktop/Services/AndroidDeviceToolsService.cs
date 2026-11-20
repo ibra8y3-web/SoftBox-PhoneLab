@@ -5,6 +5,12 @@ namespace SoftBox.PhoneLab.Desktop.Services;
 
 public sealed record AndroidPackageInfo(string PackageName);
 public sealed record AndroidBatchResult(string DeviceSerial, bool Success, string Output, string? Error);
+public enum AndroidVendorKind { Generic, Samsung, Xiaomi }
+public sealed record AndroidVendorDiagnostics(
+    AndroidVendorKind Vendor,
+    DateTimeOffset CollectedAtUtc,
+    IReadOnlyDictionary<string, string> AvailableProperties,
+    IReadOnlyList<string> UnavailableProperties);
 
 /// <summary>
 /// ADB operations restricted to authorized devices, public shared storage and read-only command presets.
@@ -126,6 +132,68 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
             ["install", "-r", Path.GetFullPath(apkFilePath)],
             cancellationToken,
             TimeSpan.FromMinutes(10));
+    }
+
+    public async Task<AndroidVendorDiagnostics> ReadVendorDiagnosticsAsync(
+        string serial,
+        string manufacturer,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAuthorizedSerial(serial);
+        var vendor = NormalizeVendor(manufacturer);
+        var properties = vendor switch
+        {
+            AndroidVendorKind.Samsung => new[]
+            {
+                "ro.product.model", "ro.product.device", "ro.product.name",
+                "ro.build.version.release", "ro.build.version.sdk",
+                "ro.build.version.oneui", "ro.csc.sales_code", "ro.boot.sales_code",
+                "ril.sales_code", "ro.bootloader", "ro.build.PDA",
+                "ro.build.fingerprint", "ro.boot.verifiedbootstate"
+            },
+            AndroidVendorKind.Xiaomi => new[]
+            {
+                "ro.product.model", "ro.product.device", "ro.product.name",
+                "ro.product.marketname", "ro.product.mod_device",
+                "ro.build.version.release", "ro.build.version.sdk",
+                "ro.build.version.incremental", "ro.build.version.miui",
+                "ro.miui.ui.version.name", "ro.miui.region",
+                "ro.boot.hwc", "ro.boot.hwcountry", "ro.boot.verifiedbootstate"
+            },
+            _ => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model",
+                "ro.product.device", "ro.product.name", "ro.build.version.release",
+                "ro.build.version.sdk", "ro.build.fingerprint", "ro.boot.verifiedbootstate"
+            }
+        };
+
+        var results = await Task.WhenAll(properties.Select(async key =>
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var value = await RunDeviceAsync(serial, ["shell", "getprop", key], cancellationToken);
+            return new KeyValuePair<string, string>(key, value.Trim());
+        }));
+
+        return new AndroidVendorDiagnostics(
+            vendor,
+            DateTimeOffset.UtcNow,
+            results.Where(pair => !string.IsNullOrWhiteSpace(pair.Value))
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal),
+            results.Where(pair => string.IsNullOrWhiteSpace(pair.Value))
+                .Select(pair => pair.Key).ToArray());
+    }
+
+    public static AndroidVendorKind NormalizeVendor(string? manufacturer)
+    {
+        var value = (manufacturer ?? "").Trim().ToLowerInvariant();
+        if (value.Contains("samsung", StringComparison.Ordinal))
+            return AndroidVendorKind.Samsung;
+        if (value.Contains("xiaomi", StringComparison.Ordinal) ||
+            value.Equals("redmi", StringComparison.Ordinal) ||
+            value.Equals("poco", StringComparison.Ordinal))
+            return AndroidVendorKind.Xiaomi;
+        return AndroidVendorKind.Generic;
     }
 
     public async Task<string> RunReadOnlyPresetAsync(
