@@ -140,7 +140,13 @@ public sealed class WorkshopStore
             current.WarrantyMonths = order.WarrantyMonths;
             current.UpdatedAtUtc = DateTimeOffset.UtcNow;
             if (current.Status == "تم التسليم" && current.DeliveredAtUtc is null) current.DeliveredAtUtc = DateTimeOffset.UtcNow;
-            if (current.Status == "تم التسليم") current.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(current.DeliveredAtUtc, current.WarrantyMonths);
+            if (current.Status == "تم التسليم")
+                current.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(current.DeliveredAtUtc, current.WarrantyMonths);
+            else
+            {
+                current.DeliveredAtUtc = null;
+                current.WarrantyEndsAtUtc = null;
+            }
             AddEvent("أمر صيانة", current.TicketNumber,
                 previousStatus == current.Status ? "تحديث تفاصيل ونتيجة الإصلاح." : $"تغيير الحالة من «{previousStatus}» إلى «{current.Status}».");
             await SaveLockedAsync(cancellationToken);

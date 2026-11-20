@@ -66,6 +66,13 @@ public static class WorkshopReportExporter
     }
 
     private static string CsvRow(params string?[] values) => string.Join(",", values.Select(Csv));
-    private static string Csv(string? value) => "\"" + (value ?? "").Replace("\"", "\"\"").Replace("\r", " ").Replace("\n", " ") + "\"";
+    private static string Csv(string? value)
+    {
+        value ??= "";
+        // Prevent spreadsheet formula execution from user-entered names, notes and identifiers.
+        if (value.Length > 0 && (value[0] == '=' || value[0] == '+' || value[0] == '-' || value[0] == '@' || value[0] == '\\t' || value[0] == '\\r'))
+            value = "'" + value;
+        return "\"" + value.Replace("\"", "\"\"").Replace("\\r", " ").Replace("\\n", " ") + "\"";
+    }
     private static string E(string? value) => WebUtility.HtmlEncode(value ?? "");
 }

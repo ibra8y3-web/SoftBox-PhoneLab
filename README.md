@@ -57,6 +57,12 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Generates print-friendly Arabic or English HTML reports that can be printed or saved as PDF through the browser. Exports repair orders and inventory as UTF-8 CSV for spreadsheet and ERP import.
 - Workshop database schema v1 is upgraded to v2 on load without discarding customer, order, inventory or event records. The currency code labels values; no exchange-rate conversion or tax calculation is performed.
 
+## Modular navigation
+
+- A persistent right-side menu groups tools by workflow; each major capability opens its own dedicated workspace.
+- New modules follow the convention in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
+- International workshop administration adds per-business locale/currency settings, warranty tracking, technician notes, printable HTML and UTF-8 CSV exports.
+
 ## Repository modules
 
 | Module | Purpose |

@@ -489,6 +489,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         window.Show();
     }
 
+    private void GlobalWorkshop_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new GlobalWorkshopWindow { Owner = this };
+        window.Show();
+    }
+
     private async void UsbTransport_Click(object sender, RoutedEventArgs e)
     {
         try
