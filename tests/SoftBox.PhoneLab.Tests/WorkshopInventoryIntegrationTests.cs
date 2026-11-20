@@ -12,7 +12,7 @@ public sealed class WorkshopInventoryIntegrationTests
         var root = CreateTempDirectory();
         try
         {
-            var store = new WorkshopStore(root);
+            var store = new WorkshopStore(Path.Combine(root, "workshop.json"));
             var order = await store.CreateRepairOrderAsync(new RepairOrder
             {
                 CustomerName = "Workshop Customer",
@@ -62,7 +62,7 @@ public sealed class WorkshopInventoryIntegrationTests
         var root = CreateTempDirectory();
         try
         {
-            var store = new WorkshopStore(root);
+            var store = new WorkshopStore(Path.Combine(root, "workshop.json"));
             var order = await store.CreateRepairOrderAsync(new RepairOrder
             {
                 CustomerName = "Workshop Customer",
@@ -117,7 +117,7 @@ public sealed class WorkshopInventoryIntegrationTests
                 }
                 """);
 
-            var store = new WorkshopStore(root);
+            var store = new WorkshopStore(Path.Combine(root, "workshop.json"));
             var snapshot = await store.GetSnapshotAsync();
 
             Assert.Equal(1, snapshot.RepairOrders.Count);
@@ -128,7 +128,7 @@ public sealed class WorkshopInventoryIntegrationTests
             Assert.NotNull(snapshot.InventoryMovements);
             Assert.Equal(3, snapshot.SchemaVersion);
 
-            var reloaded = await new WorkshopStore(root).GetSnapshotAsync();
+            var reloaded = await new WorkshopStore(path).GetSnapshotAsync();
             Assert.Equal(3, reloaded.SchemaVersion);
             Assert.Equal("Old part", Assert.Single(reloaded.Inventory).Name);
             Assert.Single(reloaded.RepairOrders);
