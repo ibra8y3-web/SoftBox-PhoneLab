@@ -82,6 +82,18 @@ public sealed class FastbootService
         return ["-s", serial, "reboot", "recovery"];
     }
 
+    public Task<string> RebootFastbootdAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        var arguments = BuildRebootFastbootdArguments(serial);
+        return ExecuteAsync(arguments, cancellationToken, TimeSpan.FromSeconds(20));
+    }
+
+    public static IReadOnlyList<string> BuildRebootFastbootdArguments(string serial)
+    {
+        ValidateSerial(serial);
+        return ["-s", serial, "reboot", "fastboot"];
+    }
+
     public static IReadOnlyList<FastbootDevice> ParseDevices(string output)
     {
         var devices = new List<FastbootDevice>();
