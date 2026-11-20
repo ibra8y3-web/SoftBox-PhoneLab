@@ -15,15 +15,18 @@ public sealed class ApkLabWindow : Window
 {
     private readonly ApkInspectionService _inspector = new();
     private readonly TextBox _path = new();
+    private readonly TextBox _comparisonPath = new();
     private readonly TextBox _summary = new();
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
     private readonly Button _inspectButton;
+    private readonly Button _compareButton;
     private readonly Button _cancelButton;
     private readonly ObservableCollection<string> _permissions = [];
     private readonly ObservableCollection<string> _entries = [];
     private readonly ObservableCollection<string> _signatureFiles = [];
     private readonly ObservableCollection<string> _warnings = [];
+    private readonly ObservableCollection<string> _comparisonResults = [];
     private CancellationTokenSource? _operation;
 
     public ApkLabWindow()
@@ -39,6 +42,7 @@ public sealed class ApkLabWindow : Window
         Foreground = Brush("#EAF3FF");
 
         _inspectButton = CreateButton("تحليل ملف APK", "#14517A", Inspect_Click);
+        _compareButton = CreateButton("مقارنة الإصدارين", "#176044", Compare_Click);
         _cancelButton = CreateButton("إلغاء", "#51333A", Cancel_Click);
         _cancelButton.IsEnabled = false;
 
@@ -127,6 +131,34 @@ public sealed class ApkLabWindow : Window
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
+        var comparisonToolbar = new Grid { Margin = new Thickness(0, 0, 0, 12) };
+        comparisonToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        comparisonToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        comparisonToolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+        _comparisonPath.Height = 36;
+        _comparisonPath.Margin = new Thickness(0, 0, 8, 0);
+        _comparisonPath.Padding = new Thickness(10, 6, 10, 6);
+        _comparisonPath.Background = Brush("#0D1C2E");
+        _comparisonPath.Foreground = Brush("#EAF3FF");
+        _comparisonPath.BorderBrush = Brush("#35516F");
+        _comparisonPath.VerticalContentAlignment = VerticalAlignment.Center;
+        _comparisonPath.ToolTip = "اختر ملف APK الثاني للمقارنة مع الملف الأول";
+        Grid.SetColumn(_comparisonPath, 0);
+        comparisonToolbar.Children.Add(_comparisonPath);
+
+        var browseComparison = CreateButton("اختيار APK الثاني", "#243B56", BrowseComparison_Click);
+        browseComparison.Margin = new Thickness(0, 0, 8, 0);
+        Grid.SetColumn(browseComparison, 1);
+        comparisonToolbar.Children.Add(browseComparison);
+
+        _compareButton.Margin = new Thickness(0, 0, 8, 0);
+        Grid.SetColumn(_compareButton, 2);
+        comparisonToolbar.Children.Add(_compareButton);
+
+        DockPanel.SetDock(comparisonToolbar, Dock.Top);
+        root.Children.Add(comparisonToolbar);
+
         var statePanel = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
         _status.Text = "اختر ملف APK لبدء الفحص المحلي.";
         _status.Foreground = Brush("#9FC7E8");
@@ -170,6 +202,7 @@ public sealed class ApkLabWindow : Window
         tabs.Items.Add(CreateTab("الصلاحيات", _permissions));
         tabs.Items.Add(CreateTab("ملفات الأرشيف", _entries));
         tabs.Items.Add(CreateTab("بيانات التوقيع", _signatureFiles));
+        tabs.Items.Add(CreateTab("مقارنة إصدارين", _comparisonResults));
         tabs.Items.Add(CreateTab("التحذيرات والحدود", _warnings));
         Grid.SetRow(tabs, 1);
         body.Children.Add(tabs);
@@ -195,6 +228,23 @@ public sealed class ApkLabWindow : Window
         }
     }
 
+    private void BrowseComparison_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار ملف APK الثاني للمقارنة",
+            Filter = "Android Package (*.apk)|*.apk|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            _comparisonPath.Text = dialog.FileName;
+            _status.Text = "تم اختيار الملف الثاني. اختر الملف الأول ثم ابدأ مقارنة الإصدارين.";
+        }
+    }
+
     private async void Inspect_Click(object sender, RoutedEventArgs e)
     {
         if (_operation is not null)
@@ -209,6 +259,7 @@ public sealed class ApkLabWindow : Window
 
         _operation = new CancellationTokenSource();
         _inspectButton.IsEnabled = false;
+        _compareButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ حساب SHA-256 وقراءة جميع مدخلات الأرشيف وتحليل Manifest...";
@@ -233,12 +284,109 @@ public sealed class ApkLabWindow : Window
             _operation.Dispose();
             _operation = null;
             _inspectButton.IsEnabled = true;
+            _compareButton.IsEnabled = true;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => _operation?.Cancel();
+
+    private async void Compare_Click(object sender, RoutedEventArgs e)
+    {
+        if (_operation is not null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_path.Text) || string.IsNullOrWhiteSpace(_comparisonPath.Text))
+        {
+            MessageBox.Show(this, "اختر ملف APK الأول وملف APK الثاني قبل المقارنة.",
+                "APK Lab", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        _operation = new CancellationTokenSource();
+        _inspectButton.IsEnabled = false;
+        _compareButton.IsEnabled = false;
+        _cancelButton.IsEnabled = true;
+        _progress.Visibility = Visibility.Visible;
+        _status.Text = "جارٍ تحليل الملفين محليًا ومقارنة بيانات Manifest والصلاحيات وأسماء الملفات...";
+        try
+        {
+            var result = await _inspector.CompareAsync(
+                _path.Text.Trim(),
+                _comparisonPath.Text.Trim(),
+                _operation.Token);
+            DisplayComparison(result);
+            _status.Text = result.SamePackage == false
+                ? "اكتملت المقارنة، لكن اسمي الحزمة مختلفان؛ لا تعتبر الملفين إصدارين للتطبيق نفسه."
+                : "اكتملت مقارنة الملفين محليًا. راجع التحذيرات وحدود المقارنة.";
+        }
+        catch (OperationCanceledException)
+        {
+            _status.Text = "تم إلغاء مقارنة APK.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "فشلت مقارنة ملفي APK.";
+            MessageBox.Show(this, ex.Message, "تعذر مقارنة APK",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _operation.Dispose();
+            _operation = null;
+            _inspectButton.IsEnabled = true;
+            _compareButton.IsEnabled = true;
+            _cancelButton.IsEnabled = false;
+            _progress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void DisplayComparison(ApkComparisonResult result)
+    {
+        var text = new StringBuilder();
+        text.AppendLine("FIRST APK: " + result.FirstFileName);
+        text.AppendLine("SECOND APK: " + result.SecondFileName);
+        text.AppendLine("SAME PACKAGE: " + FormatTriState(result.SamePackage));
+        text.AppendLine("VERSION NAME CHANGED: " + FormatTriState(result.VersionNameChanged));
+        text.AppendLine("VERSION CODE CHANGED: " + FormatTriState(result.VersionCodeChanged));
+        text.AppendLine("SHA-256 IDENTICAL: " + (result.Sha256Matches ? "YES" : "NO"));
+        text.AppendLine("ENTRY LISTS COMPLETE: " + (result.EntryListsComplete ? "YES" : "NO"));
+        text.AppendLine("ADDED PERMISSIONS: " + result.AddedPermissions.Count);
+        text.AppendLine("REMOVED PERMISSIONS: " + result.RemovedPermissions.Count);
+        text.AppendLine("ADDED ENTRY NAMES: " + result.AddedArchiveEntries.Count);
+        text.AppendLine("REMOVED ENTRY NAMES: " + result.RemovedArchiveEntries.Count);
+        text.AppendLine("CONTENT-BY-CONTENT HASH COMPARISON: NOT PERFORMED");
+        text.AppendLine("SIGNATURE VERIFICATION: NOT PERFORMED");
+        _summary.Text = text.ToString();
+
+        ReplaceItems(_permissions,
+            result.AddedPermissions.Select(item => "+ " + item)
+                .Concat(result.RemovedPermissions.Select(item => "- " + item)));
+        ReplaceItems(_entries,
+            result.AddedArchiveEntries.Select(item => "+ " + item)
+                .Concat(result.RemovedArchiveEntries.Select(item => "- " + item)));
+        ReplaceItems(_signatureFiles, []);
+        ReplaceItems(_comparisonResults,
+            new[]
+            {
+                "FIRST: " + result.FirstFileName,
+                "SECOND: " + result.SecondFileName,
+                "SAME PACKAGE: " + FormatTriState(result.SamePackage),
+                "VERSION NAME CHANGED: " + FormatTriState(result.VersionNameChanged),
+                "VERSION CODE CHANGED: " + FormatTriState(result.VersionCodeChanged),
+                "SHA-256 IDENTICAL: " + (result.Sha256Matches ? "YES" : "NO"),
+                "ENTRY LISTS COMPLETE: " + (result.EntryListsComplete ? "YES" : "NO")
+            }
+            .Concat(result.AddedPermissions.Select(item => "ADDED PERMISSION: " + item))
+            .Concat(result.RemovedPermissions.Select(item => "REMOVED PERMISSION: " + item))
+            .Concat(result.AddedArchiveEntries.Select(item => "ADDED ENTRY NAME: " + item))
+            .Concat(result.RemovedArchiveEntries.Select(item => "REMOVED ENTRY NAME: " + item)));
+        ReplaceItems(_warnings, result.Warnings);
+    }
+
+    private static string FormatTriState(bool? value)
+        => value.HasValue ? (value.Value ? "YES" : "NO") : "UNKNOWN";
 
     private void DisplayResult(ApkInspectionResult result)
     {
