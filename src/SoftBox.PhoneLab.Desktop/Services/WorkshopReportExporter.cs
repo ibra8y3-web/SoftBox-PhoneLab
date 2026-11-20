@@ -70,9 +70,9 @@ public static class WorkshopReportExporter
     {
         value ??= "";
         // Prevent spreadsheet formula execution from user-entered names, notes and identifiers.
-        if (value.Length > 0 && (value[0] == '=' || value[0] == '+' || value[0] == '-' || value[0] == '@' || value[0] == '\\t' || value[0] == '\\r'))
+        if (value.Length > 0 && (value[0] == '=' || value[0] == '+' || value[0] == '-' || value[0] == '@' || value[0] == (char)9 || value[0] == (char)13))
             value = "'" + value;
-        return "\"" + value.Replace("\"", "\"\"").Replace("\\r", " ").Replace("\\n", " ") + "\"";
+        return "\"" + value.Replace("\"", "\"\"").Replace("\r", " ").Replace("\n", " ") + "\"";
     }
     private static string E(string? value) => WebUtility.HtmlEncode(value ?? "");
 }
