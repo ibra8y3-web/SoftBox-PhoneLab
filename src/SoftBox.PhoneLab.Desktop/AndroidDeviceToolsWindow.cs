@@ -45,6 +45,13 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly Button _installApkButton;
     private readonly Button _installSplitApksButton;
     private readonly Button _uninstallAppButton;
+    private readonly Button _permissionsButton;
+    private readonly Button _launchAppButton;
+    private readonly Button _forceStopAppButton;
+    private readonly Button _clearAppDataButton;
+    private readonly Button _rebootSystemButton;
+    private readonly Button _rebootRecoveryButton;
+    private readonly Button _rebootBootloaderButton;
     private readonly Button _commandButton;
     private readonly Button _batchButton;
     private readonly Button _cancelButton;
@@ -88,6 +95,13 @@ public sealed class AndroidDeviceToolsWindow : Window
         _installApkButton = ButtonControl("تثبيت / تحديث APK", "#176044", InstallApk_Click);
         _installSplitApksButton = ButtonControl("تثبيت Split APK", "#145F85", InstallSplitApks_Click);
         _uninstallAppButton = ButtonControl("إزالة التطبيق المحدد", "#7A3434", UninstallPackage_Click);
+        _permissionsButton = ButtonControl("إدارة الصلاحيات", "#14517A", Permissions_Click);
+        _launchAppButton = ButtonControl("تشغيل التطبيق", "#176044", LaunchPackage_Click);
+        _forceStopAppButton = ButtonControl("إيقاف التطبيق إجباريًا", "#704B20", ForceStopPackage_Click);
+        _clearAppDataButton = ButtonControl("مسح بيانات التطبيق", "#7A3434", ClearPackageData_Click);
+        _rebootSystemButton = ButtonControl("إعادة تشغيل Android", "#14517A", (_, _) => RebootDevice_Click(AndroidRebootTarget.System));
+        _rebootRecoveryButton = ButtonControl("الدخول إلى Recovery", "#704B20", (_, _) => RebootDevice_Click(AndroidRebootTarget.Recovery));
+        _rebootBootloaderButton = ButtonControl("الدخول إلى Bootloader", "#704B20", (_, _) => RebootDevice_Click(AndroidRebootTarget.Bootloader));
         _commandButton = ButtonControl("تنفيذ الأمر الآمن", "#14517A", RunCommand_Click);
         _batchButton = ButtonControl("تنفيذ على الأجهزة المحددة", "#14517A", RunBatch_Click);
         _cancelButton = ButtonControl("إلغاء العملية", "#51333A", Cancel_Click);
@@ -115,14 +129,14 @@ public sealed class AndroidDeviceToolsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "AUTHORIZED ADB • FILE MANAGER • APP INSPECTOR • READ-ONLY COMMANDS • BATCH",
+            Text = "AUTHORIZED ADB • REAL APP MANAGEMENT • PERMISSION CONTROL • DEVICE SERVICE ACTIONS • FILE TRANSFER",
             FontSize = 10,
             Foreground = Brush("#8199B5"),
             Margin = new Thickness(0, 4, 0, 0)
         });
         header.Children.Add(new TextBlock
         {
-            Text = "الجهاز المستهدف: " + _serial + " — العمليات مقيدة بهذا المعرف. لا توجد أوامر Shell حرة أو وصول إلى بيانات التطبيقات الخاصة؛ إزالة التطبيق تقتصر على حزم الطرف الثالث وبموافقة صريحة.",
+            Text = "الجهاز المستهدف: " + _serial + " — الأدوات تنفذ عمليات ADB فعلية على هذا الهاتف فقط. تشمل تثبيت وإزالة تطبيقات الطرف الثالث، تشغيلها وإيقافها ومسح بياناتها، تغيير صلاحيات Runtime التي طلبها التطبيق، وإعادة التشغيل إلى System أو Recovery أو Bootloader. كل عملية تغيير تعرض تأكيدًا منفصلًا وتتحقق من النتيجة؛ لا يوجد Shell حر أو تعامل مع تطبيقات النظام.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -154,6 +168,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         tabs.Items.Add(BuildPackageTab());
         tabs.Items.Add(BuildCommandTab());
         tabs.Items.Add(BuildBatchTab());
+        tabs.Items.Add(BuildDeviceOperationsTab());
         tabs.SelectedIndex = Math.Clamp(_selectedTabIndex, 0, tabs.Items.Count - 1);
         root.Children.Add(tabs);
         return root;
@@ -247,6 +262,10 @@ public sealed class AndroidDeviceToolsWindow : Window
         packageActions.Children.Add(_installApkButton);
         packageActions.Children.Add(_installSplitApksButton);
         packageActions.Children.Add(_uninstallAppButton);
+        packageActions.Children.Add(_permissionsButton);
+        packageActions.Children.Add(_launchAppButton);
+        packageActions.Children.Add(_forceStopAppButton);
+        packageActions.Children.Add(_clearAppDataButton);
         Grid.SetColumnSpan(packageActions, 2);
         grid.Children.Add(packageActions);
 
@@ -453,6 +472,56 @@ public sealed class AndroidDeviceToolsWindow : Window
         });
     }
 
+
+    private TabItem BuildDeviceOperationsTab()
+    {
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(TextBlock(
+            "عمليات خدمة فعلية على الهاتف المحدد. كل زر يرسل أمر ADB موجّهًا إلى Serial هذا الجهاز فقط، ويتحقق أولًا من أن ADB يعرض الحالة device. إعادة التشغيل إلى Recovery أو Bootloader لا تنفذ مسحًا أو Unlock أو Flash.",
+            12, "#B7C9DE"));
+
+        var system = new Border
+        {
+            Background = Brush("#0D1C2E"),
+            BorderBrush = Brush("#263D58"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14),
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        var systemPanel = new StackPanel();
+        systemPanel.Children.Add(TextBlock("إعادة التشغيل وأوضاع الخدمة", 16, "#7DD3FC"));
+        systemPanel.Children.Add(TextBlock(
+            "System: يعيد تشغيل Android. Recovery: ينقل الهاتف إلى بيئة الاستعادة المثبتة من الشركة. Bootloader: ينقل الهاتف إلى وضع Bootloader/Fastboot. قد يختلف توفر الأوضاع حسب الشركة والموديل.",
+            11, "#B7C9DE"));
+        var rebootButtons = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
+        rebootButtons.Children.Add(_rebootSystemButton);
+        rebootButtons.Children.Add(_rebootRecoveryButton);
+        rebootButtons.Children.Add(_rebootBootloaderButton);
+        systemPanel.Children.Add(rebootButtons);
+        system.Child = systemPanel;
+        panel.Children.Add(system);
+
+        var app = new Border
+        {
+            Background = Brush("#0D1C2E"),
+            BorderBrush = Brush("#263D58"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14),
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        var appPanel = new StackPanel();
+        appPanel.Children.Add(TextBlock("إدارة التطبيقات المحددة", 16, "#7DD3FC"));
+        appPanel.Children.Add(TextBlock(
+            "لتشغيل تطبيق أو إيقافه أو مسح بياناته، افتح تبويب «مدير التطبيقات» واختر حزمة من القائمة. مسح البيانات يحذف تسجيلات الدخول والإعدادات والملفات الخاصة بالتطبيق نهائيًا؛ لا تنفذه إلا بعد موافقة المستخدم ووجود نسخة احتياطية عند الحاجة.",
+            11, "#B7C9DE"));
+        app.Child = appPanel;
+        panel.Children.Add(app);
+
+        return new TabItem { Header = "عمليات خدمة الهاتف", Content = panel };
+    }
+
     private async void LoadPackages_Click(object sender, RoutedEventArgs e)
     {
         await RunOperationAsync("جارٍ قراءة أسماء التطبيقات الخارجية...", async token =>
@@ -479,6 +548,141 @@ public sealed class AndroidDeviceToolsWindow : Window
         {
             _packageDetails.Text = await _service.GetPackageDetailsAsync(_serial, packageName, token);
             return "تم جلب معلومات الحزمة دون تعديلها.";
+        });
+    }
+
+
+    private async void Permissions_Click(object sender, RoutedEventArgs e)
+    {
+        if (_packages.SelectedItem is not string packageName)
+        {
+            MessageBox.Show(this, "اختر تطبيق طرف ثالث أولًا.", "مدير الصلاحيات",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var window = new AndroidRuntimePermissionsWindow(_service, _serial, packageName) { Owner = this };
+        window.ShowDialog();
+        await LoadPackagesRefreshDetailsAsync(packageName);
+    }
+
+    private async Task LoadPackagesRefreshDetailsAsync(string packageName)
+    {
+        await RunOperationAsync("جارٍ تحديث قائمة التطبيقات بعد إدارة الصلاحيات...", async token =>
+        {
+            var packages = await _service.ListThirdPartyPackagesAsync(_serial, token);
+            _packageNames.Clear();
+            foreach (var package in packages)
+                _packageNames.Add(package.PackageName);
+            if (_packageNames.Contains(packageName))
+            {
+                _packages.SelectedItem = packageName;
+                _packageDetails.Text = await _service.GetPackageDetailsAsync(_serial, packageName, token);
+            }
+            return "تم تحديث بيانات التطبيق من الهاتف.";
+        });
+    }
+
+    private async void LaunchPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_packages.SelectedItem is not string packageName)
+        {
+            MessageBox.Show(this, "اختر تطبيق طرف ثالث أولًا.", "مدير التطبيقات",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this,
+            $"سيتم تشغيل التطبيق على الهاتف المحدد:\n{packageName}\n\nمتابعة؟",
+            "تأكيد تشغيل التطبيق", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        await RunOperationAsync("جارٍ التحقق من الحزمة وتشغيلها على الهاتف...", async token =>
+        {
+            var result = await _service.LaunchThirdPartyPackageAsync(_serial, packageName, token);
+            _packageDetails.Text = "LAUNCH RESULT\n" + result;
+            return "تم تنفيذ طلب تشغيل التطبيق: " + packageName;
+        });
+    }
+
+    private async void ForceStopPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (_packages.SelectedItem is not string packageName)
+        {
+            MessageBox.Show(this, "اختر تطبيق طرف ثالث أولًا.", "مدير التطبيقات",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this,
+            $"سيتم فرض إيقاف التطبيق المحدد على الهاتف:\n{packageName}\n\nقد يفقد التطبيق عمليات الخلفية الحالية. هل تؤكد؟",
+            "تأكيد إيقاف التطبيق", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        await RunOperationAsync("جارٍ التحقق من الحزمة وإيقاف التطبيق...", async token =>
+        {
+            var result = await _service.ForceStopThirdPartyPackageAsync(_serial, packageName, token);
+            _packageDetails.Text = "FORCE STOP RESULT\n" + result;
+            return "تم إرسال أمر إيقاف التطبيق وأكده ADB: " + packageName;
+        });
+    }
+
+    private async void ClearPackageData_Click(object sender, RoutedEventArgs e)
+    {
+        if (_packages.SelectedItem is not string packageName)
+        {
+            MessageBox.Show(this, "اختر تطبيق طرف ثالث أولًا.", "مدير التطبيقات",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this,
+            $"تحذير: سيحذف Android جميع بيانات التطبيق المحلية والإعدادات وقواعد البيانات وملفات المستخدم الخاصة به:\n\n{packageName}\n\n" +
+            "سيظل التطبيق مثبتًا، لكن لا يمكن التراجع عن مسح بياناته من SoftBox. خذ نسخة احتياطية من بياناتك أولًا إن كانت مهمة.\n\nهل تؤكد مسح البيانات الآن؟",
+            "تأكيد مسح بيانات التطبيق", MessageBoxButton.YesNo, MessageBoxImage.Stop);
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        await RunOperationAsync("جارٍ التحقق من الحزمة ومسح بيانات التطبيق...", async token =>
+        {
+            var result = await _service.ClearThirdPartyPackageDataAsync(_serial, packageName, token);
+            _packageDetails.Text = "CLEAR APP DATA RESULT\n" + result;
+            return result;
+        });
+    }
+
+    private async void RebootDevice_Click(AndroidRebootTarget target)
+    {
+        var mode = target switch
+        {
+            AndroidRebootTarget.System => "إعادة تشغيل Android",
+            AndroidRebootTarget.Recovery => "الدخول إلى Recovery",
+            AndroidRebootTarget.Bootloader => "الدخول إلى Bootloader / Fastboot",
+            _ => "إعادة تشغيل الجهاز"
+        };
+        var details = target switch
+        {
+            AndroidRebootTarget.System => "سيعاد تشغيل الهاتف إلى Android.",
+            AndroidRebootTarget.Recovery => "سينتقل الهاتف إلى Recovery. هذا الأمر لا ينفذ Wipe أو Factory Reset.",
+            AndroidRebootTarget.Bootloader => "سينتقل الهاتف إلى Bootloader/Fastboot. هذا الأمر لا يفتح Bootloader ولا ينفذ Flash.",
+            _ => ""
+        };
+        var confirmation = MessageBox.Show(this,
+            $"الجهاز المستهدف: {_serial}\n\n{details}\n\nهل تؤكد التنفيذ؟",
+            "تأكيد " + mode, MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            _status.Text = "أُلغي طلب إعادة التشغيل؛ لم يتم إرسال أمر إلى الهاتف.";
+            return;
+        }
+
+        await RunOperationAsync("جارٍ التحقق من اتصال ADB ثم إعادة تشغيل الهاتف...", async token =>
+        {
+            var result = await _service.RebootDeviceAsync(_serial, target, token);
+            _commandOutput.Text = result;
+            return result;
         });
     }
 
@@ -673,6 +877,13 @@ public sealed class AndroidDeviceToolsWindow : Window
         _installApkButton.IsEnabled = !busy;
         _installSplitApksButton.IsEnabled = !busy;
         _uninstallAppButton.IsEnabled = !busy;
+        _permissionsButton.IsEnabled = !busy;
+        _launchAppButton.IsEnabled = !busy;
+        _forceStopAppButton.IsEnabled = !busy;
+        _clearAppDataButton.IsEnabled = !busy;
+        _rebootSystemButton.IsEnabled = !busy;
+        _rebootRecoveryButton.IsEnabled = !busy;
+        _rebootBootloaderButton.IsEnabled = !busy;
         _commandButton.IsEnabled = !busy;
         _batchButton.IsEnabled = !busy;
     }

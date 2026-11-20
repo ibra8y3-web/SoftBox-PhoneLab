@@ -777,6 +777,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenAndroidBatchTools":
                 OpenAndroidToolsWindow(3);
                 break;
+            case "OpenAndroidServiceOperations":
+                OpenAndroidToolsWindow(4);
+                break;
             case "OpenAndroidWorkflow":
                 OpenAndroidWorkflowWindow();
                 break;

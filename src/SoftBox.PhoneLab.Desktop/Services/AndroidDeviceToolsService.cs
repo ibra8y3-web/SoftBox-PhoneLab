@@ -2,10 +2,12 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using SoftBox.PhoneLab.Core.Apk;
+using SoftBox.PhoneLab.Core.Android;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 public sealed record AndroidPackageInfo(string PackageName);
+public enum AndroidRebootTarget { System, Recovery, Bootloader }
 public sealed record AndroidSplitApkFile(string FullPath, string FileName, string? SplitName, string Sha256);
 public sealed record AndroidSplitApkInstallPlan(
     string PackageName,
@@ -318,6 +320,168 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
                 "لم يؤكد ADB نجاح إزالة التطبيق. لم يتم عرض العملية على أنها ناجحة. مخرجات ADB: " + output);
 
         return output.Trim();
+    }
+
+
+    public async Task<IReadOnlyList<AndroidRuntimePermission>> GetThirdPartyRuntimePermissionsAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        var output = await GetPackageDetailsAsync(serial, packageName, cancellationToken);
+        return AndroidRuntimePermissionParser.Parse(output);
+    }
+
+    public async Task<string> SetThirdPartyRuntimePermissionAsync(
+        string serial,
+        string packageName,
+        string permissionName,
+        bool granted,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        if (!AndroidRuntimePermissionParser.IsSafePermissionName(permissionName))
+            throw new ArgumentException("اسم صلاحية Android غير صالح.", nameof(permissionName));
+
+        var currentOutput = await GetPackageDetailsAsync(serial, packageName, cancellationToken);
+        var permission = AndroidRuntimePermissionParser.Parse(currentOutput)
+            .SingleOrDefault(item => item.Name.Equals(permissionName, StringComparison.Ordinal));
+        if (permission is null)
+            throw new UnauthorizedAccessException(
+                "رُفض التغيير: الصلاحية غير موجودة ضمن صلاحيات Runtime التي طلبها التطبيق. لا يمكن منح صلاحية لم يطلبها التطبيق أو صلاحية تثبيت/نظام.");
+        if (permission.IsConflicting || !permission.IsGranted.HasValue)
+            throw new InvalidDataException("حالة الصلاحية متعارضة داخل مخرجات PackageManager؛ لم يتم إرسال أمر تغيير.");
+        if (permission.IsGranted.Value == granted)
+            return granted
+                ? "الصلاحية ممنوحة بالفعل؛ لم يتم إرسال أمر مكرر."
+                : "الصلاحية مرفوضة بالفعل؛ لم يتم إرسال أمر مكرر.";
+
+        var command = granted ? "grant" : "revoke";
+        await RunDeviceAsync(
+            serial,
+            ["shell", "pm", command, packageName, permissionName],
+            cancellationToken,
+            TimeSpan.FromSeconds(30));
+
+        // Verify the actual post-operation state instead of trusting the command exit code alone.
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        var verifiedOutput = await GetPackageDetailsAsync(serial, packageName, cancellationToken);
+        var verified = AndroidRuntimePermissionParser.Parse(verifiedOutput)
+            .SingleOrDefault(item => item.Name.Equals(permissionName, StringComparison.Ordinal));
+        if (verified is null || verified.IsConflicting || verified.IsGranted != granted)
+            throw new InvalidOperationException(
+                $"أُرسل أمر pm {command} لكن PackageManager لم يؤكد الحالة المطلوبة للصلاحية {permissionName}. راجع إصدار Android وسياسة التطبيق.");
+
+        return $"تم {(granted ? "منح" : "سحب")} الصلاحية وتحقق SoftBox من الحالة الجديدة: {permissionName} = {(granted ? "granted" : "denied")}.";
+    }
+
+    public async Task<string> LaunchThirdPartyPackageAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        var output = await RunDeviceAsync(
+            serial,
+            ["shell", "monkey", "-p", packageName, "-c", "android.intent.category.LAUNCHER", "1"],
+            cancellationToken,
+            TimeSpan.FromSeconds(45));
+
+        if (output.Contains("No activities found", StringComparison.OrdinalIgnoreCase) ||
+            output.Contains("monkey aborted", StringComparison.OrdinalIgnoreCase) ||
+            output.Contains("Error", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(
+                "لم يتمكن Android من تشغيل نشاط Launcher لهذا التطبيق. قد لا يحتوي التطبيق على واجهة تشغيل. مخرجات الهاتف: " + output);
+
+        return string.IsNullOrWhiteSpace(output)
+            ? $"تم إرسال طلب تشغيل تطبيق الطرف الثالث {packageName} عبر Android Activity Manager."
+            : output.Trim();
+    }
+
+    public async Task<string> ForceStopThirdPartyPackageAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        var output = await RunDeviceAsync(
+            serial,
+            ["shell", "am", "force-stop", packageName],
+            cancellationToken,
+            TimeSpan.FromSeconds(30));
+        return string.IsNullOrWhiteSpace(output)
+            ? $"قبل Android أمر إيقاف التطبيق إجباريًا: {packageName}."
+            : output.Trim();
+    }
+
+    public async Task<string> ClearThirdPartyPackageDataAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        var output = await RunDeviceAsync(
+            serial,
+            ["shell", "pm", "clear", packageName],
+            cancellationToken,
+            TimeSpan.FromMinutes(2));
+        var confirmed = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(line => line.Trim().Equals("Success", StringComparison.OrdinalIgnoreCase));
+        if (!confirmed)
+            throw new InvalidOperationException(
+                "لم يؤكد Android نجاح مسح بيانات التطبيق. لم يتم عرض العملية على أنها ناجحة. المخرجات: " + output);
+
+        await EnsureThirdPartyPackageAsync(serial, packageName, cancellationToken);
+        return $"أكد Android مسح بيانات التطبيق {packageName}. التطبيق ما زال مثبتًا، لكن بياناته وإعداداته المحلية أُزيلت.";
+    }
+
+    public async Task<string> RebootDeviceAsync(
+        string serial,
+        AndroidRebootTarget target,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAuthorizedSerial(serial);
+        var state = await adb.RunAsync(["-s", serial, "get-state"], cancellationToken, TimeSpan.FromSeconds(12));
+        if (!state.Trim().Equals("device", StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException(
+                "الجهاز المحدد ليس في حالة ADB device المصرح بها حاليًا؛ لم يتم إرسال أمر إعادة التشغيل.");
+
+        var arguments = target switch
+        {
+            AndroidRebootTarget.System => new[] { "reboot" },
+            AndroidRebootTarget.Recovery => new[] { "reboot", "recovery" },
+            AndroidRebootTarget.Bootloader => new[] { "reboot", "bootloader" },
+            _ => throw new ArgumentOutOfRangeException(nameof(target))
+        };
+        var output = await adb.RunAsync(
+            new[] { "-s", serial }.Concat(arguments).ToArray(),
+            cancellationToken,
+            TimeSpan.FromSeconds(25));
+
+        var mode = target switch
+        {
+            AndroidRebootTarget.System => "Android System",
+            AndroidRebootTarget.Recovery => "Recovery",
+            AndroidRebootTarget.Bootloader => "Bootloader / Fastboot",
+            _ => "Unknown"
+        };
+        return $"تم قبول أمر إعادة تشغيل الجهاز المحدد إلى {mode}. قد ينقطع ADB أثناء انتقال الهاتف إلى الوضع المطلوب. {output}".Trim();
+    }
+
+    private async Task EnsureThirdPartyPackageAsync(
+        string serial,
+        string packageName,
+        CancellationToken cancellationToken)
+    {
+        ValidateAuthorizedSerial(serial);
+        if (!IsSafePackageName(packageName))
+            throw new ArgumentException("اسم حزمة Android غير صالح.", nameof(packageName));
+
+        var packages = await ListThirdPartyPackagesAsync(serial, cancellationToken);
+        if (!packages.Any(item => item.PackageName.Equals(packageName, StringComparison.Ordinal)))
+            throw new UnauthorizedAccessException(
+                "رُفضت العملية: الحزمة ليست ضمن قائمة تطبيقات الطرف الثالث الحالية على الجهاز. لا يتم تنفيذ هذه الأوامر على تطبيقات النظام.");
     }
 
     public async Task<AndroidVendorDiagnostics> ReadVendorDiagnosticsAsync(
