@@ -698,6 +698,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenBrandDiagnostics":
                 OpenVendorDiagnostics(AndroidVendorKind.Generic, "Android Brands");
                 break;
+            case "OpenPluginStore":
+                new PluginStoreWindow { Owner = this }.Show();
+                break;
             case "OpenRepairAdvisor":
                 if (_snapshot is null)
                 {
