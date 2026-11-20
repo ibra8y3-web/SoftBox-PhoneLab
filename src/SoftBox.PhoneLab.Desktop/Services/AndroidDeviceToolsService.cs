@@ -121,7 +121,7 @@ public sealed class AndroidDeviceToolsService(AdbClient adb)
         if (!Path.GetExtension(apkFilePath).Equals(".apk", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("حدد ملف APK بامتداد صحيح.", nameof(apkFilePath));
 
-        return await adb.RunForDeviceAsync(
+        return await RunDeviceAsync(
             serial,
             ["install", "-r", Path.GetFullPath(apkFilePath)],
             cancellationToken,
