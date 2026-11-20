@@ -95,7 +95,7 @@ public sealed class WorkshopInventoryIntegrationTests
     }
 
     [Fact]
-    public async Task SchemaV2DatabaseMigratesToV4WithoutLosingExistingOrdersOrStock()
+    public async Task SchemaV2DatabaseMigratesToV5WithoutLosingExistingOrdersOrStock()
     {
         var root = CreateTempDirectory();
         try
@@ -128,10 +128,12 @@ public sealed class WorkshopInventoryIntegrationTests
             Assert.NotNull(snapshot.InventoryMovements);
             Assert.NotNull(snapshot.InventoryPurchaseReceipts);
             Assert.Empty(snapshot.InventoryPurchaseReceipts);
-            Assert.Equal(4, snapshot.SchemaVersion);
+            Assert.Empty(snapshot.RepairOrders[0].QuoteDecisionHistory);
+            Assert.Empty(snapshot.RepairOrders[0].Payments);
+            Assert.Equal(5, snapshot.SchemaVersion);
 
             var reloaded = await new WorkshopStore(root).GetSnapshotAsync();
-            Assert.Equal(4, reloaded.SchemaVersion);
+            Assert.Equal(5, reloaded.SchemaVersion);
             Assert.Equal("Old part", Assert.Single(reloaded.Inventory).Name);
             Assert.Single(reloaded.RepairOrders);
         }

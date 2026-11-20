@@ -27,6 +27,8 @@ public sealed record WorkshopAnalyticsSnapshot(
     decimal RecordedDeliveredRevenue,
     decimal EstimatedOpenWorkValue,
     decimal RecordedPartsCost,
+    decimal TotalRecordedPayments,
+    decimal ApprovedOutstandingBalance,
     double? AverageDeliveryHours,
     int LowStockItems,
     decimal InventoryValueAtCost,
@@ -54,6 +56,10 @@ public static class WorkshopAnalyticsService
         var revenue = delivered.Sum(order => NonNegative(order.FinalCostEgp));
         var estimatedOpen = open.Sum(order => NonNegative(order.EstimatedCostEgp));
         var partsCost = orders.Sum(order => NonNegative(order.PartsCostEgp));
+        var totalPayments = orders.Sum(order => NonNegative(order.TotalPaidEgp));
+        var approvedOutstanding = orders
+            .Where(order => order.HasCurrentQuoteApproval)
+            .Sum(order => NonNegative(order.OutstandingBalanceEgp));
 
         var durations = delivered
             .Where(order => order.DeliveredAtUtc.HasValue && order.DeliveredAtUtc.Value >= order.ReceivedAtUtc)
@@ -103,6 +109,8 @@ public static class WorkshopAnalyticsService
             revenue,
             estimatedOpen,
             partsCost,
+            totalPayments,
+            approvedOutstanding,
             durations.Length == 0 ? null : durations.Average(),
             inventory.Count(item => item.NeedsRestock),
             inventory.Sum(item => NonNegative(item.UnitCostEgp) * Math.Max(0, item.Quantity)),
@@ -133,6 +141,8 @@ public static class WorkshopAnalyticsService
             CsvRow("Summary", "Recorded delivered revenue", "", report.RecordedDeliveredRevenue, currency, ""),
             CsvRow("Summary", "Estimated open work value", "", report.EstimatedOpenWorkValue, currency, ""),
             CsvRow("Summary", "Recorded parts cost", "", report.RecordedPartsCost, currency, ""),
+            CsvRow("Summary", "Total manually recorded payments", "", report.TotalRecordedPayments, currency, ""),
+            CsvRow("Summary", "Outstanding approved quote balances", "", report.ApprovedOutstandingBalance, currency, ""),
             CsvRow("Summary", "Low-stock items", report.LowStockItems, "", currency, ""),
             CsvRow("Summary", "Inventory value at cost", "", report.InventoryValueAtCost, currency, ""),
             CsvRow("Summary", "Average delivery hours", "", "", "", report.AverageDeliveryHours?.ToString("0.##", CultureInfo.InvariantCulture) ?? ""),

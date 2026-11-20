@@ -55,7 +55,9 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Customer directory, parts inventory, low-stock threshold flag, stock in/out movements and a capped activity history.
 - JSON-backed local database stored under the current Windows user's LocalAppData. Manual backup and restore are built in; no customer records are uploaded to a cloud service.
 - Exports a technician-entered text report for each repair order.
-- Creates printable Arabic/English intake receipts, preliminary estimates and service invoices from saved work-order data. These documents do not record customer approval or payment, calculate taxes or claim certified e-invoice compliance.
+- Creates printable Arabic/English intake receipts, preliminary estimates and service invoices from saved work-order data. Customer quote approval/rejection is recorded with its history, quoted amount, contact method and technician; these are local manual records, not electronic signatures.
+- Records multiple partial/full payments against the currently approved quote, computes the remaining balance, prevents overpayment and prevents price edits/cancellation from invalidating existing money records. Each recorded payment has a printable receipt, but the application does not verify settlement with a bank or payment provider.
+- These documents and ledger do not calculate taxes, process/refund payments or claim certified e-invoice compliance.
 - Service analytics calculate delivered-order revenue, open estimates, reported symptom text frequency, device-model frequency, technician activity, delivery duration and inventory values from saved local records; analytics export is available as CSV.
 
 ### USB transport, Android evidence and firmware inspection
@@ -65,7 +67,7 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 
 ### Workshop documents and service analytics
 - From a selected repair order, create a printable intake receipt, preliminary estimate or service invoice using saved repair-order values.
-- The estimate remains unapproved until a separate customer-approval workflow is added. The invoice does not record payment, calculate tax or claim e-invoice certification.
+- The estimate can be marked approved or rejected by recording the contact method, timestamp, quoted amount, technician and notes. Payment entries require approval for the current quote and keep a running balance. Approval and payment entries are manual workshop records, not an electronic signature or external payment confirmation. The invoice shows the recorded balance and payment history; tax calculation, payment processing/refunds and certified e-invoicing remain unsupported.
 - The reports tab calculates operating metrics from saved repair orders and inventory and exports the analytics to UTF-8 CSV. Delivered-order revenue is not a profit or cash-collection figure.
 
 ### Global workshop operations

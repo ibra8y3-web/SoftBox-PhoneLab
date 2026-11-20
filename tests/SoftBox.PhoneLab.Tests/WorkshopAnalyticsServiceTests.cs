@@ -19,7 +19,9 @@ public sealed class WorkshopAnalyticsServiceTests
                     TicketNumber = "SB-1", Status = "تم التسليم", DeviceModel = "Pixel 8",
                     IntakeSymptoms = "Broken display", TechnicianName = "Mina",
                     ReceivedAtUtc = now.AddHours(-24), DeliveredAtUtc = now,
-                    FinalCostEgp = 200m, EstimatedCostEgp = 180m, PartsCostEgp = 50m
+                    FinalCostEgp = 200m, EstimatedCostEgp = 180m, PartsCostEgp = 50m,
+                    QuoteDecisionHistory = [new CustomerQuoteDecisionRecord { Decision = CustomerQuoteDecision.Approved, QuotedAmountEgp = 200m }],
+                    Payments = [new RepairPaymentRecord { AmountEgp = 50m, Method = "نقدًا" }]
                 },
                 new RepairOrder
                 {
@@ -37,7 +39,8 @@ public sealed class WorkshopAnalyticsServiceTests
                 {
                     TicketNumber = "SB-4", Status = "Delivered", DeviceModel = "Galaxy A54",
                     IntakeSymptoms = "Camera focus issue", TechnicianName = "Sara",
-                    FinalCostEgp = 300m, PartsCostEgp = 100m
+                    FinalCostEgp = 300m, PartsCostEgp = 100m,
+                    QuoteDecisionHistory = [new CustomerQuoteDecisionRecord { Decision = CustomerQuoteDecision.Approved, QuotedAmountEgp = 300m }]
                 }
             ],
             Inventory =
@@ -56,6 +59,8 @@ public sealed class WorkshopAnalyticsServiceTests
         Assert.Equal(500m, report.RecordedDeliveredRevenue);
         Assert.Equal(120m, report.EstimatedOpenWorkValue);
         Assert.Equal(150m, report.RecordedPartsCost);
+        Assert.Equal(50m, report.TotalRecordedPayments);
+        Assert.Equal(450m, report.ApprovedOutstandingBalance);
         Assert.Equal(24d, report.AverageDeliveryHours.GetValueOrDefault(), 0.001d);
         Assert.Equal(1, report.LowStockItems);
         Assert.Equal(130m, report.InventoryValueAtCost);
@@ -98,6 +103,8 @@ public sealed class WorkshopAnalyticsServiceTests
             var csv = await File.ReadAllTextAsync(path);
             Assert.Contains("\"EGP\"", csv);
             Assert.Contains("Recorded delivered revenue", csv);
+            Assert.Contains("Total manually recorded payments", csv);
+            Assert.Contains("Outstanding approved quote balances", csv);
             Assert.Contains("'=HYPERLINK", csv);
             Assert.Contains("'+Formula", csv);
         }

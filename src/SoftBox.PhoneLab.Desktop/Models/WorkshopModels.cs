@@ -1,8 +1,39 @@
+using System.Text.Json.Serialization;
+
 namespace SoftBox.PhoneLab.Desktop.Models;
+
+public enum CustomerQuoteDecision
+{
+    Approved,
+    Rejected
+}
+
+public sealed class CustomerQuoteDecisionRecord
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public CustomerQuoteDecision Decision { get; set; }
+    public decimal QuotedAmountEgp { get; set; }
+    public string ContactMethod { get; set; } = "";
+    public string Note { get; set; } = "";
+    public string RecordedBy { get; set; } = "";
+    public DateTimeOffset RecordedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
+public sealed class RepairPaymentRecord
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public decimal AmountEgp { get; set; }
+    public string Method { get; set; } = "";
+    public string Reference { get; set; } = "";
+    public string Note { get; set; } = "";
+    public string RecordedBy { get; set; } = "";
+    public DateTimeOffset ReceivedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public decimal BalanceAfterPaymentEgp { get; set; }
+}
 
 public sealed class WorkshopData
 {
-    public int SchemaVersion { get; set; } = 4;
+    public int SchemaVersion { get; set; } = 5;
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public WorkshopSettings Settings { get; set; } = new();
     public List<CustomerRecord> Customers { get; set; } = [];
@@ -62,6 +93,38 @@ public sealed class RepairOrder
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? DeliveredAtUtc { get; set; }
     public List<RepairOrderNote> Timeline { get; set; } = [];
+    public List<CustomerQuoteDecisionRecord> QuoteDecisionHistory { get; set; } = [];
+    public List<RepairPaymentRecord> Payments { get; set; } = [];
+
+    [JsonIgnore]
+    public CustomerQuoteDecisionRecord? LatestQuoteDecision
+        => (QuoteDecisionHistory ?? []).OrderByDescending(item => item.RecordedAtUtc).FirstOrDefault();
+
+    [JsonIgnore]
+    public decimal TotalPaidEgp => (Payments ?? []).Sum(payment => payment.AmountEgp);
+
+    [JsonIgnore]
+    public decimal CurrentQuoteAmountEgp => FinalCostEgp > 0 ? FinalCostEgp : EstimatedCostEgp;
+
+    [JsonIgnore]
+    public bool HasCurrentQuoteApproval
+        => LatestQuoteDecision is { Decision: CustomerQuoteDecision.Approved } decision &&
+           decision.QuotedAmountEgp == CurrentQuoteAmountEgp;
+
+    [JsonIgnore]
+    public decimal PaymentTargetEgp => HasCurrentQuoteApproval ? LatestQuoteDecision!.QuotedAmountEgp : 0m;
+
+    [JsonIgnore]
+    public decimal OutstandingBalanceEgp => Math.Max(0, PaymentTargetEgp - TotalPaidEgp);
+
+    [JsonIgnore]
+    public string PaymentStatus
+        => LatestQuoteDecision is null ? "بانتظار موافقة العميل"
+            : LatestQuoteDecision.Decision == CustomerQuoteDecision.Rejected ? "العرض مرفوض"
+            : !HasCurrentQuoteApproval ? "يتطلب اعتماد السعر المعدل"
+            : TotalPaidEgp <= 0 ? "غير مدفوع"
+            : OutstandingBalanceEgp > 0 ? "مدفوع جزئيًا"
+            : "مدفوع";
 }
 
 public sealed class RepairOrderNote

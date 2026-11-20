@@ -44,7 +44,7 @@ public sealed class WorkshopServiceDocumentExporterTests
             var html = await File.ReadAllTextAsync(path);
             Assert.Contains("عرض سعر صيانة مبدئي", html);
             Assert.Contains("950", html);
-            Assert.Contains("لم تسجل موافقة", html);
+            Assert.Contains("بانتظار موافقة العميل", html);
             Assert.Contains("غير معتمد", html);
         }
         finally { DeleteDirectory(root); }
@@ -58,7 +58,22 @@ public sealed class WorkshopServiceDocumentExporterTests
         {
             var order = CreateOrder();
             order.FinalCostEgp = 1250m;
+            order.EstimatedCostEgp = 1250m;
             order.PartsCostEgp = 350m;
+            order.QuoteDecisionHistory.Add(new CustomerQuoteDecisionRecord
+            {
+                Decision = CustomerQuoteDecision.Approved,
+                QuotedAmountEgp = 1250m,
+                ContactMethod = "حضور العميل",
+                RecordedBy = "Technician A"
+            });
+            order.Payments.Add(new RepairPaymentRecord
+            {
+                AmountEgp = 500m,
+                Method = "نقدًا",
+                RecordedBy = "Technician A",
+                BalanceAfterPaymentEgp = 750m
+            });
             order.PartsUsed.Add(new RepairOrderPartUsage
             {
                 Sku = "USB-C-01", PartName = "USB-C port", Quantity = 1, UnitCostEgp = 350m
@@ -73,8 +88,50 @@ public sealed class WorkshopServiceDocumentExporterTests
             Assert.Contains("USB-C-01", html);
             Assert.Contains("USB-C port", html);
             Assert.Contains("حالة السداد", html);
-            Assert.Contains("غير مسجل", html);
-            Assert.Contains("لا يحسب هذا المستند ضريبة", html);
+            Assert.Contains("مدفوع جزئيًا", html);
+            Assert.Contains("750", html);
+            Assert.Contains("لا تُحسب الضرائب", html);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+
+    [Fact]
+    public async Task ExportsManualPaymentReceiptAndEscapesCustomerAndPaymentText()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new WorkshopStore(root);
+            var order = await store.CreateRepairOrderAsync(new RepairOrder
+            {
+                CustomerName = "<script>alert(1)</script>",
+                CustomerPhone = "01000000000",
+                DeviceModel = "Android device",
+                IntakeSymptoms = "Charging issue",
+                EstimatedCostEgp = 600m
+            });
+            await store.RecordQuoteDecisionAsync(
+                order.Id, CustomerQuoteDecision.Approved, "مكالمة", "Technician A");
+            await store.RecordPaymentAsync(
+                order.Id, 200m, "نقدًا <img src=x>", "Technician A", "REF-01");
+
+            var snapshot = await store.GetSnapshotAsync();
+            var savedOrder = Assert.Single(snapshot.RepairOrders);
+            var payment = Assert.Single(savedOrder.Payments);
+            var path = Path.Combine(root, "payment.html");
+
+            await WorkshopServiceDocumentExporter.ExportPaymentReceiptAsync(
+                snapshot, savedOrder, payment, path);
+
+            var html = await File.ReadAllTextAsync(path);
+            Assert.Contains("إيصال تسجيل دفعة صيانة", html);
+            Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html);
+            Assert.Contains("&lt;img src=x&gt;", html);
+            Assert.DoesNotContain("<script>alert(1)</script>", html);
+            Assert.Contains("200", html);
+            Assert.Contains("لا يؤكد الإيصال وصول الأموال", html);
+            Assert.Contains("400", html);
         }
         finally { DeleteDirectory(root); }
     }
