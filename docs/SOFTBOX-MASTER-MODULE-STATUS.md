@@ -7,7 +7,7 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 ### Audited catalog snapshot
 
 - Top-level sections: 36 total — 22 In Development and 14 Planned.
-- Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 4 Tested, 64 Planned, 23 In Development and 2 Unsupported.
+- Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 5 Tested, 63 Planned, 23 In Development and 2 Unsupported.
 - No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
 
 ## Status definitions
@@ -29,7 +29,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 02 | Device Center | In Development | ADB auto-discovery every 3 seconds, multiple-device listing and selection | Wireless pairing UI, sessions, group targeting, per-device job isolation and batch controls |
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
 | 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, Android evidence capture | ADB GUI manager, app/package manager, Android file manager and safe command catalog |
-| 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution, two-version diff and DEX/resource analysis; no installation or device action |
+| 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution and DEX/resource analysis; no installation or device action |
 | 06 | Samsung Tools | In Development | Samsung device identification through the shared device engine; official Samsung USB driver is surfaced under USB Doctor | Samsung Download Mode visibility, model-specific service functions and official compatible recovery workflows |
 | 07 | Xiaomi Tools | Planned | Generic Android/ADB path only | Xiaomi/Redmi/POCO identity, region compatibility and supported model-specific workflows |
 | 08 | Android Brands | In Development | Generic manufacturer/model identification and community identity profiles | Dedicated, evidenced modules for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
