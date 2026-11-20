@@ -2,6 +2,7 @@ using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using SoftBox.PhoneLab.Core.Diagnostics;
+using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
@@ -34,6 +35,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private ExternalMeasurementSample? _measurementSnapshot;
     private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
+    private readonly LocalActivityStore _activity = new();
     private readonly DispatcherTimer _timer;
     private bool _busy;
     private bool _dragging;
@@ -132,6 +134,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var signature = string.Join("|", list.Select(d => d.Serial + ":" + d.State));
             if (signature == _deviceSignature) return;
             _deviceSignature = signature;
+            var previousDevices = Devices.ToDictionary(device => device.Serial, StringComparer.Ordinal);
             var previous = SelectedDevice?.Serial;
             if (_screenMirror.ActiveSerial is string active && !list.Any(d => d.Serial == active && d.IsAuthorized))
             {
@@ -157,6 +160,55 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 Devices.Add(item);
             }
+
+            var currentSerials = new HashSet<string>(Devices.Select(device => device.Serial), StringComparer.Ordinal);
+            foreach (var current in Devices)
+            {
+                if (!previousDevices.TryGetValue(current.Serial, out var prior))
+                {
+                    if (current.IsAuthorized)
+                    {
+                        await _activity.AddDeviceHistoryAsync(
+                            current.Serial, current.Manufacturer, current.Model,
+                            "DeviceConnected", "تم اكتشاف جهاز Android مصرح به عبر ADB.");
+                        await _activity.AddNotificationAsync(
+                            "device", "تم اكتشاف جهاز", $"تم اكتشاف {current.DisplayName} عبر ADB.",
+                            "device-center", current.Serial);
+                    }
+                }
+                else if (!prior.IsAuthorized && current.IsAuthorized)
+                {
+                    await _activity.AddDeviceHistoryAsync(
+                        current.Serial, current.Manufacturer, current.Model,
+                        "AdbAuthorized", "أصبح الجهاز مصرحًا به عبر ADB.");
+                    await _activity.AddNotificationAsync(
+                        "device", "تمت الموافقة على ADB", $"الجهاز {current.DisplayName} أصبح جاهزًا للفحص.",
+                        "device-center", current.Serial);
+                }
+                else if (prior.IsAuthorized && !current.IsAuthorized)
+                {
+                    await _activity.AddDeviceHistoryAsync(
+                        current.Serial, prior.Manufacturer, prior.Model,
+                        "AdbAuthorizationLost", "فقد الجهاز تصريح ADB أو تغيرت حالة الاتصال.");
+                    await _activity.AddNotificationAsync(
+                        "warning", "تغيرت حالة اتصال الجهاز", $"الجهاز {prior.DisplayName} لم يعد مصرحًا به عبر ADB.",
+                        "device-center", current.Serial);
+                }
+            }
+
+            foreach (var prior in previousDevices.Values.Where(device => !currentSerials.Contains(device.Serial)))
+            {
+                if (prior.IsAuthorized)
+                {
+                    await _activity.AddDeviceHistoryAsync(
+                        prior.Serial, prior.Manufacturer, prior.Model,
+                        "DeviceDisconnected", "تم رصد فصل الجهاز عن قناة ADB.");
+                    await _activity.AddNotificationAsync(
+                        "device", "تم فصل جهاز", $"تم فصل {prior.DisplayName} عن ADB.",
+                        "device-center", prior.Serial);
+                }
+            }
+
             _suppressDeviceSelection = true;
             DevicesList.SelectedItem = Devices.FirstOrDefault(d => d.Serial == previous)
                 ?? Devices.FirstOrDefault(d => d.IsAuthorized) ?? Devices.FirstOrDefault();
@@ -285,6 +337,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             _snapshot = await _inspection.InspectAsync(selected.Serial);
+            await _activity.AddDeviceHistoryAsync(
+                selected.Serial,
+                _snapshot.Manufacturer,
+                _snapshot.Model,
+                "SystemInspection",
+                "تمت قراءة خصائص Android المتاحة عبر ADB بوضع القراءة فقط.",
+                $"Android {_snapshot.AndroidVersion}; API {_snapshot.ApiLevel}; SoC {_snapshot.Soc}; Build {_snapshot.BuildId}");
             _agentSnapshot = null;
             _measurementSnapshot = null;
             _profileMatch = await _deviceProfiles.MatchAsync(_snapshot);
@@ -322,6 +381,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(AgentStatus)); return;
             }
             _agentSnapshot = agent;
+            await _activity.AddDeviceHistoryAsync(
+                selected.Serial,
+                _snapshot.Manufacturer,
+                _snapshot.Model,
+                "HardwareDiagnostics",
+                $"تم استلام {agent.Tests.Count} نتيجة اختبار من Agent بإذن المستخدم.",
+                string.Join("; ", agent.Tests.Take(20).Select(test => $"{test.Name}: {test.Status}")));
+            await _activity.AddNotificationAsync(
+                "diagnostic", "اكتملت مزامنة الاختبارات", $"استلم SoftBox نتائج {agent.Tests.Count} اختبار من الهاتف.",
+                "hardware-diagnostics", selected.Serial);
             ApplyDeviceFacts();
             ApplyAgentFacts(agent);
             RebuildDiagnostics();
@@ -988,6 +1057,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (dialog.ShowDialog(this) != true) return;
         await _reports.ExportAsync(dialog.FileName, _snapshot, _agentSnapshot, Components.Select(x => x.Diagnostic).ToList(), _measurementSnapshot);
+        if (SelectedDevice is { IsAuthorized: true } selected)
+        {
+            await _activity.AddDeviceHistoryAsync(
+                selected.Serial, _snapshot.Manufacturer, _snapshot.Model,
+                "ReportExported", "تم تصدير تقرير تشخيص محلي بموافقة المستخدم.",
+                Path.GetFileName(dialog.FileName));
+            await _activity.AddNotificationAsync(
+                "report", "تم تصدير تقرير", $"تم حفظ تقرير الجهاز {selected.DisplayName}.",
+                "service-reports", selected.Serial);
+        }
         StatusMessage = "تم حفظ التقرير: " + dialog.FileName;
         Notify(nameof(StatusMessage));
     }
