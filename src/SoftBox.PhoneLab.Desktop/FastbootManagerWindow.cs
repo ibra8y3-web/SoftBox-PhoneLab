@@ -22,6 +22,7 @@ public sealed class FastbootManagerWindow : Window
     private readonly Button _refreshButton;
     private readonly Button _inspectButton;
     private readonly Button _rebootButton;
+    private readonly Button _rebootRecoveryButton;
     private CancellationTokenSource? _operation;
 
     public FastbootManagerWindow()
@@ -39,13 +40,16 @@ public sealed class FastbootManagerWindow : Window
         _refreshButton = ButtonControl("اكتشاف أجهزة Fastboot", "#14517A", Refresh_Click);
         _inspectButton = ButtonControl("قراءة متغيرات الجهاز", "#176044", Inspect_Click);
         _rebootButton = ButtonControl("إعادة تشغيل Android", "#704B20", Reboot_Click);
+        _rebootRecoveryButton = ButtonControl("إعادة التشغيل إلى Recovery", "#7A3434", RebootRecovery_Click);
         _inspectButton.IsEnabled = false;
         _rebootButton.IsEnabled = false;
+        _rebootRecoveryButton.IsEnabled = false;
         Content = BuildContent();
         _deviceList.SelectionChanged += (_, _) =>
         {
             _inspectButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
             _rebootButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
+            _rebootRecoveryButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
         };
         Loaded += async (_, _) => await RefreshDevicesAsync();
         Closed += (_, _) => _operation?.Cancel();
@@ -65,14 +69,14 @@ public sealed class FastbootManagerWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "FASTBOOT DEVICE DISCOVERY • READ-ONLY BOOTLOADER INSPECTION",
+            Text = "FASTBOOT DEVICE DISCOVERY • BOOTLOADER INSPECTION • SAFE REBOOT",
             FontSize = 10,
             Foreground = Brush("#8199B5"),
             Margin = new Thickness(0, 4, 0, 0)
         });
         header.Children.Add(new TextBlock
         {
-            Text = "يتطلب fastboot.exe من Android SDK Platform-Tools. هذه الوحدة تكتشف الأجهزة وتقرأ getvar all فقط. لا توجد أوامر Flash أو Unlock أو Erase أو Format أو Boot. إعادة التشغيل إلى Android تتطلب تأكيدك.",
+            Text = "يتطلب fastboot.exe من Android SDK Platform-Tools. يقرأ معلومات Bootloader ويدعم إعادة التشغيل إلى Android أو Recovery بعد تأكيدك. لا توجد أوامر Flash أو Unlock أو Erase أو Format أو Boot.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#F0C9A5"),
             Background = Brush("#211D2A"),
@@ -87,6 +91,7 @@ public sealed class FastbootManagerWindow : Window
         actions.Children.Add(_refreshButton);
         actions.Children.Add(_inspectButton);
         actions.Children.Add(_rebootButton);
+        actions.Children.Add(_rebootRecoveryButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
 
@@ -199,6 +204,33 @@ public sealed class FastbootManagerWindow : Window
         });
     }
 
+    private async void RebootRecovery_Click(object sender, RoutedEventArgs e)
+    {
+        if (_deviceList.SelectedItem is not FastbootDevice selected)
+        {
+            _status.Text = "اختر جهاز Fastboot أولًا.";
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this,
+            $"إرسال أمر fastboot reboot recovery إلى الجهاز المحدد:\n{selected.Serial}\n\nسيطلب من Bootloader الانتقال إلى Recovery. هذا لا ينفذ مسحًا أو تفليشًا. قد لا تدعم بعض الأجهزة هذا الهدف. متابعة؟",
+            "تأكيد الدخول إلى Recovery", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        await RunOperationAsync("جارٍ إرسال أمر Fastboot للانتقال إلى Recovery...", async token =>
+        {
+            var output = await _fastboot.RebootRecoveryAsync(selected.Serial, token);
+            _devices.Remove(selected);
+            _inspectButton.IsEnabled = false;
+            _rebootButton.IsEnabled = false;
+            _rebootRecoveryButton.IsEnabled = false;
+            _details.Text = "تم إرسال أمر fastboot reboot recovery إلى الجهاز المحدد.\n" + output +
+                            "\nقد يختفي الجهاز من قائمة Fastboot أثناء انتقاله إلى Recovery.";
+            return "أُرسل طلب الانتقال إلى Recovery. أعد اكتشاف الجهاز بعد العودة إلى وضع مدعوم.";
+        });
+    }
+
 
     private static string FormatStateReport(
         FastbootDevice device,
@@ -308,6 +340,7 @@ public sealed class FastbootManagerWindow : Window
         _refreshButton.IsEnabled = !busy;
         _inspectButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
         _rebootButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
+        _rebootRecoveryButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
     }
 
     private static Button ButtonControl(string label, string background, RoutedEventHandler handler)
