@@ -130,3 +130,9 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Encrypted verification decrypts only to a temporary ZIP, re-runs the per-file SHA-256 Manifest checks, then removes the temporary plaintext archive.
 - Passwords are not stored in settings or operation logs. The legacy ordinary ZIP option remains available and is explicitly marked unencrypted.
 - Automated tests cover round-trip restore, plaintext absence in the encrypted bytes, wrong-password rejection, tamper rejection and password policy.
+## Plugin SDK and safe package inspection
+
+- Added versioned Plugin Manifest v1 contracts with semantic-version validation and a closed permission allow-list.
+- Added local ZIP package inspection with package SHA-256, path/duplicate/symlink checks, size and expansion limits, compression-ratio checks, manifest validation and entry-assembly existence checks.
+- Added a local Plugin Store inspection window and sample manifest/developer quickstart.
+- Plugin installation/execution remains disabled: no trusted publisher root/signature verifier, sandboxed runtime, IPC host or permission-grant/revocation lifecycle is implemented. Inspection always returns `PublisherSignatureVerified=false` and `CodeLoadedOrExecuted=false`.
