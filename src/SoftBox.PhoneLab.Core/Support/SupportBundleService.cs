@@ -38,7 +38,7 @@ public sealed class SupportBundleService
         @"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex DeviceSerial = new(
-        @"(?im)\b(serial|device[_-]?serial|adb[_-]?id|device[_-]?id)\b(\s*[:=]\s*)([A-Za-z0-9._:-]{5,128})",
+        @"(?im)\b(serial|device[_-]?serial|adb[_-]?serial|adb[_-]?id|device[_-]?id|android[_-]?id)\b(\s*[:=]\s*)([A-Za-z0-9._:-]{5,128})",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public async Task<SupportBundleResult> CreateAsync(
