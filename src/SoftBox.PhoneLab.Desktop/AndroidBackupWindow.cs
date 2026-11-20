@@ -106,6 +106,7 @@ public sealed class AndroidBackupWindow : Window
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
         AddLabel(form, "مجلد Android المطلوب نسخه", 0);
         _remotePath.Text = "/sdcard/DCIM";
