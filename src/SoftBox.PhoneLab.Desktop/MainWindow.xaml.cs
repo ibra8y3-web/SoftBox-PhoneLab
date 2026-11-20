@@ -548,6 +548,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "RepairGuides":
                 RepairGuides_Click(this, new RoutedEventArgs());
                 break;
+            case "OpenApkLab":
+                new ApkLabWindow { Owner = this }.Show();
+                break;
             case "OpenWorkshopBackup":
                 OpenWorkshopAtTab(4);
                 break;
