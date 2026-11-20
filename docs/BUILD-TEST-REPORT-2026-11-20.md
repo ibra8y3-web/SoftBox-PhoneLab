@@ -59,3 +59,17 @@ GitHub Actions artifacts are temporary workflow outputs; this is not a permanent
 The APK Lab code was already validated by run #48 (40 tests). Run #57 includes both APK Lab and Network Diagnostics code, including single-label local DNS host validation. Network Diagnostics tests validate input handling; they do not make an external DNS or live ICMP request in the test suite.
 
 No physical Android handset or USB device was attached during these CI runs.
+## Follow-up verification — APK version comparison (run #65)
+
+- Workflow: PhoneLab CI, run #65; result: Success.
+- Tested PR merge commit: run #65 completed against the updated pull-request source and catalog.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968
+- Restore: passed.
+- Unit tests: 53 passed, 0 failed, 0 skipped.
+- Windows self-contained x64 publish: passed.
+- Android Agent build and artifact upload: passed.
+- Offline USB/scrcpy/TRACE Boardviewer tool bundling: passed.
+- Windows x64 artifact: 227,167,411 bytes; artifact ID `14636852748`.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968/artifacts/14636852748
+
+The two added APK comparison tests cover version metadata, same/different package handling, permission changes, archive entry-name changes and the stated path-only comparison boundary. The code does not claim a per-entry content hash comparison or cryptographic signer verification.
