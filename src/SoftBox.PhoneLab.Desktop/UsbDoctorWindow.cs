@@ -21,12 +21,22 @@ public sealed class UsbDoctorWindow : Window
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
     private readonly ComboBox _filter = new();
+    private readonly string _initialFilter;
     private readonly Button _refreshButton;
     private CancellationTokenSource? _operation;
 
-    public UsbDoctorWindow()
+    public UsbDoctorWindow(string initialFilter = "all")
     {
-        Title = "SoftBox | طبيب USB — USB Doctor";
+        _initialFilter = initialFilter?.Trim().ToLowerInvariant() ?? "all";
+        if (_initialFilter is not ("all" or "known" or "problems" or "qualcomm" or "mediatek"))
+            throw new ArgumentException("مرشح USB غير معروف.", nameof(initialFilter));
+
+        Title = _initialFilter switch
+        {
+            "qualcomm" => "SoftBox | Qualcomm USB Diagnostics",
+            "mediatek" => "SoftBox | MediaTek USB Diagnostics",
+            _ => "SoftBox | طبيب USB — USB Doctor"
+        };
         Width = 1120;
         Height = 790;
         MinWidth = 850;
@@ -36,9 +46,17 @@ public sealed class UsbDoctorWindow : Window
         Background = Brush("#081321");
         Foreground = Brush("#EAF3FF");
 
-        _refreshButton = ButtonControl("فحص أجهزة USB المتصلة", "#14517A", Refresh_Click);
+        _refreshButton = ButtonControl(_initialFilter switch
+        {
+            "qualcomm" => "فحص أجهزة Qualcomm EDL",
+            "mediatek" => "فحص أجهزة MediaTek Preloader",
+            _ => "فحص أجهزة USB المتصلة"
+        }, "#14517A", Refresh_Click);
         Content = BuildContent();
+        _filter.SelectedValue = _initialFilter;
         _devices.SelectionChanged += (_, _) => ShowSelectedDevice();
+        if (_initialFilter is "qualcomm" or "mediatek")
+            Loaded += (_, _) => Refresh_Click(this, new RoutedEventArgs());
         Closed += (_, _) => _operation?.Cancel();
     }
 
@@ -49,7 +67,12 @@ public sealed class UsbDoctorWindow : Window
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         header.Children.Add(new TextBlock
         {
-            Text = "طبيب USB",
+            Text = _initialFilter switch
+            {
+                "qualcomm" => "تشخيص USB — Qualcomm EDL / 9008",
+                "mediatek" => "تشخيص USB — MediaTek Preloader / BROM",
+                _ => "طبيب USB"
+            },
             FontSize = 25,
             FontWeight = FontWeights.Bold,
             Foreground = Brush("#7DD3FC")
@@ -63,7 +86,12 @@ public sealed class UsbDoctorWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "يقرأ قائمة أجهزة USB الموجودة حاليًا في Windows ويعرض حالة PnP وVID/PID. معرفات Qualcomm وMediaTek وSamsung وGoogle الظاهرة مؤشرات معروفة فقط وليست إثباتًا لطراز الجهاز أو توافق التفليش.",
+            Text = _initialFilter switch
+            {
+                "qualcomm" => "يعرض أجهزة Windows PnP المطابقة لمؤشر VID/PID الشائع 05C6:9008 فقط. هذا مؤشر اتصال EDL ولا يفتح قناة EDL أو يحدد موديلًا أو programmer متوافقًا.",
+                "mediatek" => "يعرض أجهزة Windows PnP المطابقة لمؤشر VID/PID الشائع 0E8D:0003 فقط. هذا مؤشر Preloader/BROM ولا يقرأ البروتوكول أو يختار Download Agent.",
+                _ => "يقرأ قائمة أجهزة USB الموجودة حاليًا في Windows ويعرض حالة PnP وVID/PID. معرفات Qualcomm وMediaTek وSamsung وGoogle الظاهرة مؤشرات معروفة فقط وليست إثباتًا لطراز الجهاز أو توافق التفليش."
+            },
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -96,9 +124,12 @@ public sealed class UsbDoctorWindow : Window
         {
             new FilterItem("all", "كل أجهزة USB"),
             new FilterItem("known", "المعرفات المعروفة فقط"),
-            new FilterItem("problems", "الأجهزة ذات مشكلة PnP")
+            new FilterItem("problems", "الأجهزة ذات مشكلة PnP"),
+            new FilterItem("qualcomm", "Qualcomm EDL / 9008"),
+            new FilterItem("mediatek", "MediaTek Preloader / BROM")
         };
         _filter.DisplayMemberPath = nameof(FilterItem.Label);
+        _filter.SelectedValuePath = nameof(FilterItem.Id);
         _filter.SelectedIndex = 0;
         _filter.SelectionChanged += (_, _) => ApplyFilter();
         _filter.Width = 220;
@@ -205,6 +236,8 @@ public sealed class UsbDoctorWindow : Window
                  {
                      "known" => device.Identity.Category != "Unknown",
                      "problems" => device.ProblemCode > 0,
+                     "qualcomm" => device.Identity.Category.Equals("Qualcomm", StringComparison.OrdinalIgnoreCase),
+                     "mediatek" => device.Identity.Category.Equals("MediaTek", StringComparison.OrdinalIgnoreCase),
                      _ => true
                  }))
             _visibleDevices.Add(device);

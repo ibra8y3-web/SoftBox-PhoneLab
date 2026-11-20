@@ -118,7 +118,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("qualcomm-soc", "قراءة تلميح المعالج من النظام", "SoC identification hint", "قراءة تعريفية فقط من بيانات Android، ولا تكفي لتحديد منصة EDL أو اختيار programmer؛ محرك الهوية في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("qualcomm-edl", "رصد مؤشر USB Qualcomm EDL / 9008", "Qualcomm EDL USB mode hint", "يرصد VID/PID الشائع 05C6:9008 إذا ظهر في Windows PnP؛ لا يفتح قناة EDL ولا يتحقق من programmer أو توافق الجهاز.", ModuleImplementationStatus.Implemented),
+                new("qualcomm-edl", "رصد مؤشر USB Qualcomm EDL / 9008", "Qualcomm EDL USB mode hint", "يرصد VID/PID الشائع 05C6:9008 في Windows PnP ويفتح عرض Qualcomm المفلتر؛ لا يفتح قناة EDL ولا يتحقق من programmer أو توافق الجهاز.", ModuleImplementationStatus.Implemented, "OpenQualcommUsbDiagnostics"),
                 new("qualcomm-recovery", "استعادة Qualcomm الرسمية المتوافقة", "Supported Qualcomm recovery", "غير منفذة؛ يلزم مصدر رسمي وملف مطابق للموديل وسلسلة ثقة موثقة.", ModuleImplementationStatus.Planned)
             ]),
         new("mediatek-tools", 10, "الشركات والمعالجات", "أدوات MediaTek", "MediaTek Tools",
@@ -126,7 +126,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("mediatek-soc", "قراءة تلميح المعالج من Android", "SoC identification hint", "قد يظهر تعريف المعالج ضمن خصائص الجهاز؛ لا يثبت وضع Preloader. الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("mediatek-preloader", "رصد مؤشر USB MediaTek Preloader/BROM", "MediaTek Preloader/BROM USB hint", "يرصد VID/PID الشائع 0E8D:0003 عند ظهوره في Windows PnP؛ لا يقرأ بروتوكول BROM ولا يختار DA ولا ينفذ تفليشًا.", ModuleImplementationStatus.Implemented),
+                new("mediatek-preloader", "رصد مؤشر USB MediaTek Preloader/BROM", "MediaTek Preloader/BROM USB hint", "يرصد VID/PID الشائع 0E8D:0003 في Windows PnP ويفتح عرض MediaTek المفلتر؛ لا يقرأ بروتوكول BROM ولا يختار DA ولا ينفذ تفليشًا.", ModuleImplementationStatus.Implemented, "OpenMediaTekUsbDiagnostics"),
                 new("mediatek-recovery", "الاستعادة الرسمية المتوافقة", "Supported MediaTek recovery", "غير منفذة؛ يلزم ملف DA موثوق ومتوافق ومصدر رسمي للجهاز المحدد.", ModuleImplementationStatus.Planned)
             ]),
         new("firmware-center", 11, "Firmware والاستعادة", "مركز Firmware", "Firmware Center",
@@ -245,7 +245,7 @@ public static class SoftBoxModuleCatalog
             "إضافة الأصناف وتعديلها وحركات الصرف والإضافة والتنبيه بانخفاض المخزون متاحة.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("stock-items", "إدارة الأصناف والكميات وحد إعادة الطلب", "Inventory items", "يحفظ SKU والكمية والتكلفة والموقع محليًا؛ يفتح تبويب المخزون داخل مركز الصيانة.", ModuleImplementationStatus.Implemented, "OpenPartsInventory"),
+                new("stock-items", "إدارة الأصناف والكميات وحد إعادة الطلب", "Inventory items", "يدير SKU والكمية والتكلفة والموقع وحد إعادة الطلب من شاشة مخزون قطع الغيار الموحدة.", ModuleImplementationStatus.Implemented, "OpenPartsInventory"),
                 new("stock-movements", "حركات المخزون وسجلها", "Stock movements", "يمنع الرصيد السالب ويسجل سبب الحركة.", ModuleImplementationStatus.Implemented),
                 new("supplier-purchasing", "الموردون واستلام المشتريات وفواتير الموردين", "Supplier receipts and purchase invoices", "استلام كمية لصنف موجود مع المورد ورقم الفاتورة وتكلفة الشراء، وتحديث متوسط التكلفة المرجح وتسجيل إيصال الشراء وحركة المخزون في حفظ ذري واحد؛ يدعم تصدير سجل المشتريات CSV. أوامر الشراء متعددة الأصناف واعتماد الفواتير والمدفوعات غير منفذة.", ModuleImplementationStatus.Implemented),
                 new("inventory-catalogue", "إدارة الموردين والتصنيفات والتكلفة وسجل الحركات", "Supplier and stock movement catalogue", "نافذة موسعة لإدارة SKU والتصنيف والمورد وتكلفة الشراء وسعر البيع وحد إعادة الطلب، مع حركات مخزون قابلة للمراجعة وتصدير CSV.", ModuleImplementationStatus.Implemented),
@@ -354,7 +354,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenUpdateCenter", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"

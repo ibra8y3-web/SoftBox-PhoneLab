@@ -679,6 +679,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenUsbDoctor":
                 new UsbDoctorWindow { Owner = this }.Show();
                 break;
+            case "OpenQualcommUsbDiagnostics":
+                new UsbDoctorWindow("qualcomm") { Owner = this }.Show();
+                break;
+            case "OpenMediaTekUsbDiagnostics":
+                new UsbDoctorWindow("mediatek") { Owner = this }.Show();
+                break;
             case "OpenFirmwareCenter":
             {
                 var preflightDevice = SelectedDevice;

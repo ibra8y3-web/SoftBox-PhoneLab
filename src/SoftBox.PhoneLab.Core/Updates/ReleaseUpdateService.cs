@@ -121,7 +121,7 @@ public sealed class ReleaseUpdateService
                     var name = GetString(asset, "name");
                     var url = GetString(asset, "browser_download_url");
                     var size = GetInt64(asset, "size");
-                    if (!string.IsNullOrWhiteSpace(name) && IsOfficialAssetUrl(url) && size >= 0)
+                    if (!string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(url) && IsOfficialAssetUrl(url) && size >= 0)
                         assets.Add(new ReleaseAssetInfo(name, size, url));
                 }
             }

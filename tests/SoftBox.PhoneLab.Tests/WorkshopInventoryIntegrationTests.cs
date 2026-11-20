@@ -169,8 +169,8 @@ public sealed class WorkshopInventoryIntegrationTests
             var snapshot = await store.GetSnapshotAsync();
             var item = Assert.Single(snapshot.Inventory);
             var savedReceipt = Assert.Single(snapshot.InventoryPurchaseReceipts);
-            var purchaseMovement = Assert.Single(snapshot.InventoryMovements.Where(movement =>
-                movement.Reason.Contains("New Parts Supplier", StringComparison.Ordinal)));
+            var purchaseMovement = Assert.Single(snapshot.InventoryMovements, movement =>
+                movement.Reason.Contains("New Parts Supplier", StringComparison.Ordinal));
 
             Assert.Equal(14, item.Quantity);
             Assert.Equal("New Parts Supplier", item.Supplier);
