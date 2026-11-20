@@ -14,8 +14,8 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 
 - Top-level sections: **36 retained** — all 36 In Development.
 - Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): **20 Planned, 39 In Development, 95 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
-- Executable navigation: **54 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- Entry statuses (section rows plus child features): **19 Planned, 39 In Development, 95 Implemented, 10 Tested, 0 Verified and 2 Unsupported**.
+- Executable navigation: **55 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
 ## Status definitions
@@ -34,7 +34,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | # | Section | Current status | Already present | Important missing work |
 |---:|---|---|---|---|
 | 01 | Dashboard | In Development | Live ADB availability, connected-device selection, persisted device-connect/disconnect and inspection notifications, current status | Job counters/queue, historical metrics, storage health and update health aggregation |
-| 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history | Wireless pairing UI, persistent sessions, group targeting and independent background job queue |
+| 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history; real Wireless debugging pairing via adb pair/connect with separate ports and one-time code; protocol tests passed | Persistent device sessions, group targeting and independent background job queue; no physical-phone wireless pairing verification yet |
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
 | 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, public shared-storage browser/transfers, installed third-party package inspection, APK install after manifest inspection and confirmation, allow-listed read-only commands; Fastboot Manager discovers fastboot devices, reads getvar all and supports confirmed reboot to Android | Full package uninstall/split APK workflows, free-form shell commands, private app-data operations and model-specific destructive Fastboot servicing remain unsupported |
 | 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution and DEX/resource analysis; no installation or device action |
@@ -48,7 +48,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 13 | Smart Backup | In Development | ADB shared-storage backup into ZIP with per-file SHA-256; optional `.sbx` AES-256-CBC + HMAC-SHA256 using PBKDF2-HMAC-SHA256 (600,000 iterations); authenticated verification; verified ZIP/SBX restore to a unique new shared-storage directory without overwrite/delete | Scheduled backups, key recovery policy, automatic reconnect jobs and app-private/system data backup (unsupported by design) |
 | 14 | Phone Link Studio | In Development | Verified scrcpy screen mirroring/control; real MP4/MKV screen recording is wired to the selected authorized ADB device, requires user-chosen new output path and finalizes via WM_CLOSE before validating non-empty output file | Hardware recording validation across Android versions/codecs, multi-session concurrent display and app-side recording library management |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
-| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe with bounded timeouts/cancellation | Permitted Android network observations, Wi-Fi details and ADB Wireless pairing; no phone-private network claim |
+| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe with bounded timeouts/cancellation | Permitted Android network observations and Wi-Fi details; ADB Wireless pairing is implemented canonically in Device Center; no phone-private network claim |
 | 17 | Smart Repair AI | In Development | Deterministic local evidence-linked advisor over battery/storage readings, Agent results and component diagnostics with severity, confidence, evidence and safe next steps; external repair guide search | LLM-backed online mode and expanded model-specific offline repair knowledge; current local advisor is rules-based, not an AI model |
 | 18 | One-Click Diagnostic | In Development | One action runs five read-only ADB presets (properties, battery, storage, uptime, third-party apps), supports cancellation and saves a device-masked JSON report | Coordinated opt-in hardware test suite and consolidated lab instrumentation/Agent evidence |
 | 19 | Safe Recovery | In Development | Conservative preflight is wired into Firmware Center; re-hashes selected file, compares exact manufacturer/model against the current authorized device snapshot, and reports Passed/Failed/Unknown/Blocked with evidence; automated tests enforce never-allow while publisher trust, signed compatibility rules, rollback and verified-backup proof are unavailable | Official publisher trust roots, signed model/region/board compatibility database, anti-rollback policy evidence and vendor-authorized recovery workflow; no flashing is enabled |
@@ -131,7 +131,7 @@ The same implementation is shared and linked from related module pages; it must 
 
 ## Current navigation ownership after cleanup
 
-The latest catalog is audited at **53 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
+The latest catalog is audited at **55 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
 
 Latest CI for the combined implementation branch: run #273 — **166 passed, 0 failed, 0 skipped**; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
 
@@ -181,5 +181,17 @@ Section 30 is now In Development rather than Planned. The current implementation
 - OS/runtime, storage free space and operational network interfaces are displayed. The view does not claim that an active interface proves Internet connectivity.
 - The user can export a local JSON report. The view does not download, install, launch or mutate any inspected component.
 - SHA-256 is an integrity fingerprint of the current bytes only; it is not a publisher signature, trusted expected hash or safety certification.
-- All **54** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
+- All **55** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
 - Tests validate missing files, exact byte count and SHA-256 for present files, actual data-directory inventory, root-relative paths and real host metadata without Internet claims.
+
+
+## Additive follow-up — Wireless ADB pairing UI
+
+- Added on branch feature/real-wireless-adb-pairing without creating another top-level section or duplicating the existing pairing service.
+- Section 02 Device Center now opens a dedicated Arabic/RTL WPF window for Android Wireless debugging pairing. It uses the existing bundled Google Platform-Tools ADB executable and runs the real adb pair and adb connect operations.
+- The pairing endpoint and connection endpoint use separate ports, as displayed by Android. Host input must be an IP address; the temporary pairing code must be six ASCII digits. The code is entered into a password control, is not persisted, is cleared after the operation and is never included in exported application support reports.
+- The operation has bounded ADB command timeouts, cancellation and explicit success/failure handling. A connection attempt is not made if pairing has not been confirmed.
+- The new action is routed through the central module action dispatcher and has a fail-closed authorization requirement of DeviceOperations; ReadOnly users cannot invoke it.
+- Automated tests cover IPv4/IPv6 endpoint formatting, port validation, code validation, separate pair/connect ports, pair failure, connect failure and cancellation. These tests use an in-memory command runner only in the isolated test project; no simulated device or success result is exposed in the production UI.
+- Status: **Tested** for protocol orchestration by automated tests; **not Verified** on a physical handset. Android 11+ and a shared Wi-Fi network are required for the pairing-code workflow.
+- No new NuGet package, driver, firmware payload or external executable was added. The feature reuses ADB already bundled by the existing Windows packaging workflow.
