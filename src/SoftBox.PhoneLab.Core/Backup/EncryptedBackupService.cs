@@ -201,7 +201,9 @@ public sealed class EncryptedBackupService
             await DecryptAsync(encryptedPath, temporaryZip, password, cancellationToken);
             var result = await new BackupArchiveService().VerifyArchiveAsync(temporaryZip, cancellationToken);
             var warnings = result.Warnings
-                .Where(warning => !warning.Contains("غير مشفرة", StringComparison.Ordinal))
+                .Where(warning =>
+                    !warning.Contains("غير مشفرة", StringComparison.Ordinal) &&
+                    !warning.Contains("archive is not encrypted", StringComparison.OrdinalIgnoreCase))
                 .Append("تمت مصادقة حاوية SBX المشفرة. فُك ZIP الداخلي مؤقتًا للتحقق من SHA-256 ثم حُذف.")
                 .ToArray();
             return result with { Warnings = warnings };
