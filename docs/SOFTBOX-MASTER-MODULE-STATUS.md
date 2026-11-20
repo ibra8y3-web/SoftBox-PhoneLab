@@ -14,8 +14,8 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 
 - Top-level sections: **36 retained** — all 36 In Development.
 - Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): **19 Planned, 39 In Development, 96 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
-- Executable navigation: **55 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- Entry statuses (section rows plus child features): **18 Planned, 39 In Development, 97 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
+- Executable navigation: **56 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
 ## Status definitions
@@ -48,7 +48,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 13 | Smart Backup | In Development | ADB shared-storage backup into ZIP with per-file SHA-256; optional `.sbx` AES-256-CBC + HMAC-SHA256 using PBKDF2-HMAC-SHA256 (600,000 iterations); authenticated verification; verified ZIP/SBX restore to a unique new shared-storage directory without overwrite/delete | Scheduled backups, key recovery policy, automatic reconnect jobs and app-private/system data backup (unsupported by design) |
 | 14 | Phone Link Studio | In Development | Verified scrcpy screen mirroring/control; real MP4/MKV screen recording is wired to the selected authorized ADB device, requires user-chosen new output path and finalizes via WM_CLOSE before validating non-empty output file | Hardware recording validation across Android versions/codecs, multi-session concurrent display and app-side recording library management |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
-| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe with bounded timeouts/cancellation | Permitted Android network observations, Wi-Fi details and ADB Wireless pairing; no phone-private network claim |
+| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and user-selected ICMP probe; Android ADB read-only IP/interface/default-route/Wi-Fi and airplane-mode observations | More model/Android-version coverage and real handset verification; SSID/password and app-private network data are intentionally not collected |
 | 17 | Smart Repair AI | In Development | Deterministic local evidence-linked advisor over battery/storage readings, Agent results and component diagnostics with severity, confidence, evidence and safe next steps; external repair guide search | LLM-backed online mode and expanded model-specific offline repair knowledge; current local advisor is rules-based, not an AI model |
 | 18 | One-Click Diagnostic | In Development | One action runs five read-only ADB presets (properties, battery, storage, uptime, third-party apps), supports cancellation and saves a device-masked JSON report | Coordinated opt-in hardware test suite and consolidated lab instrumentation/Agent evidence |
 | 19 | Safe Recovery | In Development | Conservative preflight is wired into Firmware Center; re-hashes selected file, compares exact manufacturer/model against the current authorized device snapshot, and reports Passed/Failed/Unknown/Blocked with evidence; automated tests enforce never-allow while publisher trust, signed compatibility rules, rollback and verified-backup proof are unavailable | Official publisher trust roots, signed model/region/board compatibility database, anti-rollback policy evidence and vendor-authorized recovery workflow; no flashing is enabled |
@@ -97,7 +97,7 @@ The same implementation is shared and linked from related module pages; it must 
 - Current solution has three .NET projects: Core, Desktop and Tests, plus the separate Android Gradle project.
 - ADB process invocation uses argument-list APIs, validates serial values and has a bounded command timeout.
 - APK Lab uses a dependency-free .NET Core inspection service for local ZIP entry-read checks, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
-- Network Diagnostics reads local Windows interface configuration and performs one user-selected DNS/ICMP probe with bounded timeouts; Android-private network observations are still unimplemented.
+- Network Diagnostics reads local Windows interface configuration and performs a bounded user-selected DNS/ICMP probe; the Android network tool uses fixed ADB read commands for public IP/interface/default-route and Wi-Fi/airplane-mode toggles. Android SSID, passwords and app-private network data are not read.
 - The workshop database is local JSON under the current Windows user's LocalAppData. It has a schema migration path for its v1/v2 workshop schema.
 - SQLite and Entity Framework Core are **not** currently used.
 - The current desktop UI has meaningful code-behind and services, but it is **not yet a complete MVVM/Clean Architecture implementation**.
@@ -131,7 +131,7 @@ The same implementation is shared and linked from related module pages; it must 
 
 ## Current navigation ownership after cleanup
 
-The latest catalog is audited at **55 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
+The latest catalog is audited at **56 unique executable actions**. Android file, app, read-only command and batch features launch separate tabs in the same authorized-device workspace. Qualcomm and MediaTek launch the shared USB Doctor with live Windows PnP filtering for their common VID/PID identity hints. Parts Inventory has one canonical window/action while the existing Workshop inventory view remains intact. Section 30 now provides local user accounts and role-based tool authorization; all catalog actions have a fail-closed permission entry. Duplicate launch aliases were removed only where they opened the same shared tool; implementations, services, legacy views and data stores remain.
 
 Latest CI for the combined implementation branch: run #273 — **166 passed, 0 failed, 0 skipped**; Restore, Windows x64 publish, Android Agent build/upload and offline tool packaging passed. Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
 
@@ -181,8 +181,19 @@ Section 30 is now In Development rather than Planned. The current implementation
 - OS/runtime, storage free space and operational network interfaces are displayed. The view does not claim that an active interface proves Internet connectivity.
 - The user can export a local JSON report. The view does not download, install, launch or mutate any inspected component.
 - SHA-256 is an integrity fingerprint of the current bytes only; it is not a publisher signature, trusted expected hash or safety certification.
-- All **55** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
+- All **56** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
 - Tests validate missing files, exact byte count and SHA-256 for present files, actual data-directory inventory, root-relative paths and real host metadata without Internet claims.
+
+
+## Follow-up — Android Network Diagnostics
+
+- Section 16 now has a dedicated Android network diagnostics window, in addition to the existing Windows host network workspace.
+- The service invokes only fixed read-only ADB argument arrays for ip route show default, ip -o addr show scope global, settings get global wifi_on and settings get global airplane_mode_on against the selected authorized serial.
+- Parses exposed IPv4/IPv6 interface addresses, default gateway/interface, Wi-Fi and airplane-mode toggles. Empty/blocked/unsupported values remain unavailable and command errors are retained in the report.
+- No SSID, Wi-Fi password, application traffic, private app data, arbitrary shell input or network scan is used.
+- Tests exercise route/address/toggle parsing, missing values, loopback/link-local filtering and safe serial validation. The feature is Implemented; no physical handset was attached, so it is not Verified.
+- Added OpenAndroidNetworkDiagnostics as the 56th canonical action with DeviceRead authorization; Administrator, Technician and ReadOnly roles can run this read-only inspection.
+- No new NuGet dependency or external executable was added.
 
 
 ## Follow-up — Wireless ADB Pairing
