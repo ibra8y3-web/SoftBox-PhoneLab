@@ -213,7 +213,8 @@ public sealed class WirelessAdbPairingWindow : Window
             return;
         }
 
-        _operation = new CancellationTokenSource();
+        var operation = new CancellationTokenSource();
+        _operation = operation;
         SetBusy(true, "جارٍ تنفيذ adb pair ثم adb connect باستخدام المنافذ التي أدخلتها...");
         _output.Clear();
 
@@ -224,7 +225,7 @@ public sealed class WirelessAdbPairingWindow : Window
                 pairingPort,
                 code,
                 connectionPort,
-                _operation.Token);
+                operation.Token);
 
             _output.Text =
                 "PAIR ENDPOINT: " + result.PairingEndpoint + Environment.NewLine +
@@ -248,8 +249,9 @@ public sealed class WirelessAdbPairingWindow : Window
         finally
         {
             _pairingCode.Clear();
-            _operation.Dispose();
-            _operation = null;
+            operation.Dispose();
+            if (ReferenceEquals(_operation, operation))
+                _operation = null;
             _cancelButton.IsEnabled = false;
             _pairButton.IsEnabled = _adb.IsAvailable;
             _host.IsEnabled = true;
