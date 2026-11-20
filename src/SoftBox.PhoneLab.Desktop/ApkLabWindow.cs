@@ -14,6 +14,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class ApkLabWindow : Window
 {
     private readonly ApkInspectionService _inspector = new();
+    private readonly ApkSignatureVerificationService _signatureVerifier = new();
     private readonly TextBox _path = new();
     private readonly TextBox _comparisonPath = new();
     private readonly TextBox _summary = new();
@@ -21,12 +22,14 @@ public sealed class ApkLabWindow : Window
     private readonly ProgressBar _progress = new();
     private readonly Button _inspectButton;
     private readonly Button _compareButton;
+    private readonly Button _verifyButton;
     private readonly Button _cancelButton;
     private readonly ObservableCollection<string> _permissions = [];
     private readonly ObservableCollection<string> _entries = [];
     private readonly ObservableCollection<string> _signatureFiles = [];
     private readonly ObservableCollection<string> _warnings = [];
     private readonly ObservableCollection<string> _comparisonResults = [];
+    private readonly ObservableCollection<string> _signatureVerification = [];
     private CancellationTokenSource? _operation;
 
     public ApkLabWindow()
@@ -43,6 +46,7 @@ public sealed class ApkLabWindow : Window
 
         _inspectButton = CreateButton("تحليل ملف APK", "#14517A", Inspect_Click);
         _compareButton = CreateButton("مقارنة الإصدارين", "#176044", Compare_Click);
+        _verifyButton = CreateButton("التحقق من التوقيع", "#5B3B8A", VerifySignature_Click);
         _cancelButton = CreateButton("إلغاء", "#51333A", Cancel_Click);
         _cancelButton.IsEnabled = false;
 
@@ -71,7 +75,7 @@ public sealed class ApkLabWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "تحليل محلي لبنية ZIP وAndroidManifest.xml والصلاحيات وبصمة SHA-256. لا يتم تثبيت التطبيق أو تعديله أو رفعه إلى الإنترنت.",
+            Text = "تحليل APK محليًا، ومقارنة إصدارين، والتحقق التشفيري من التوقيع وشهادات الموقّعين باستخدام Android SDK apksigner الرسمي. لا يتم تثبيت الملف أو تعديله أو رفعه.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 9, 0, 0),
@@ -90,7 +94,7 @@ public sealed class ApkLabWindow : Window
             Margin = new Thickness(0, 12, 0, 0),
             Child = new TextBlock
             {
-                Text = "تنبيه أمني: قراءة Manifest والصلاحيات ووجود ملفات التوقيع لا تثبت أن التطبيق آمن أو موثوق. هذه النسخة لا تنفذ تحققًا تشفيريًا من شهادات APK ولا تفك موارد التطبيق ولا تثبته على الهاتف.",
+                Text = "تنبيه أمني: نجاح apksigner يثبت صلاحية مخططات توقيع APK المدعومة فقط، ولا يثبت أن الشهادة تخص الناشر الرسمي أو أن التطبيق آمن. قارن بصمة شهادة SHA-256 بمصدر مستقل موثوق. الأداة لا تعدّل APK ولا تثبته.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -101,6 +105,7 @@ public sealed class ApkLabWindow : Window
 
         var toolbar = new Grid { Margin = new Thickness(0, 0, 0, 12) };
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         toolbar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -125,7 +130,11 @@ public sealed class ApkLabWindow : Window
         Grid.SetColumn(_inspectButton, 2);
         toolbar.Children.Add(_inspectButton);
 
-        Grid.SetColumn(_cancelButton, 3);
+        _verifyButton.Margin = new Thickness(0, 0, 8, 0);
+        Grid.SetColumn(_verifyButton, 3);
+        toolbar.Children.Add(_verifyButton);
+
+        Grid.SetColumn(_cancelButton, 4);
         toolbar.Children.Add(_cancelButton);
 
         DockPanel.SetDock(toolbar, Dock.Top);
@@ -203,6 +212,7 @@ public sealed class ApkLabWindow : Window
         tabs.Items.Add(CreateTab("ملفات الأرشيف", _entries));
         tabs.Items.Add(CreateTab("بيانات التوقيع", _signatureFiles));
         tabs.Items.Add(CreateTab("مقارنة إصدارين", _comparisonResults));
+        tabs.Items.Add(CreateTab("التحقق التشفيري", _signatureVerification));
         tabs.Items.Add(CreateTab("التحذيرات والحدود", _warnings));
         Grid.SetRow(tabs, 1);
         body.Children.Add(tabs);
@@ -224,7 +234,8 @@ public sealed class ApkLabWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             _path.Text = dialog.FileName;
-            _status.Text = "تم اختيار الملف. اضغط «تحليل ملف APK» لبدء الفحص.";
+            ReplaceItems(_signatureVerification, []);
+            _status.Text = "تم اختيار الملف. يمكنك تحليل APK أو التحقق التشفيري من توقيعه.";
         }
     }
 
@@ -260,6 +271,7 @@ public sealed class ApkLabWindow : Window
         _operation = new CancellationTokenSource();
         _inspectButton.IsEnabled = false;
         _compareButton.IsEnabled = false;
+        _verifyButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ حساب SHA-256 وقراءة جميع مدخلات الأرشيف وتحليل Manifest...";
@@ -285,9 +297,129 @@ public sealed class ApkLabWindow : Window
             _operation = null;
             _inspectButton.IsEnabled = true;
             _compareButton.IsEnabled = true;
+            _verifyButton.IsEnabled = true;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }
+    }
+
+
+    private async void VerifySignature_Click(object sender, RoutedEventArgs e)
+    {
+        if (_operation is not null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_path.Text))
+        {
+            MessageBox.Show(this, "اختر ملف APK أولًا.", "APK Lab",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        _operation = new CancellationTokenSource();
+        _inspectButton.IsEnabled = false;
+        _compareButton.IsEnabled = false;
+        _verifyButton.IsEnabled = false;
+        _cancelButton.IsEnabled = true;
+        _progress.Visibility = Visibility.Visible;
+        _status.Text = "جارٍ تشغيل Android SDK apksigner للتحقق التشفيري من التوقيع والشهادات دون تعديل الملف...";
+        try
+        {
+            var result = await _signatureVerifier.VerifyAsync(_path.Text.Trim(), _operation.Token);
+            DisplaySignatureVerification(result);
+            _status.Text = result.Status switch
+            {
+                ApkSignatureVerificationStatus.Verified =>
+                    "نجح التحقق التشفيري من توقيع APK. قارن بصمة شهادة SHA-256 بقناة الناشر الرسمية قبل اعتبار الناشر موثوقًا.",
+                ApkSignatureVerificationStatus.InvalidSignature =>
+                    "فشل التحقق التشفيري من توقيع APK؛ لا تثبّت هذا الملف.",
+                ApkSignatureVerificationStatus.ToolUnavailable =>
+                    "لم يتم العثور على apksigner في Android SDK Build-Tools. راجع تبويب التحقق التشفيري لتعليمات الإعداد.",
+                ApkSignatureVerificationStatus.FileChangedDuringVerification =>
+                    "تم رفض النتيجة لأن الملف تغير أثناء التحقق.",
+                _ => "انتهى التحقق."
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            _status.Text = "تم إلغاء التحقق من توقيع APK.";
+        }
+        catch (TimeoutException ex)
+        {
+            _status.Text = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر التحقق من توقيع APK.";
+            MessageBox.Show(this, ex.Message, "فشل التحقق من التوقيع",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _operation.Dispose();
+            _operation = null;
+            _inspectButton.IsEnabled = true;
+            _compareButton.IsEnabled = true;
+            _verifyButton.IsEnabled = true;
+            _cancelButton.IsEnabled = false;
+            _progress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void DisplaySignatureVerification(ApkSignatureVerificationResult result)
+    {
+        var text = new StringBuilder();
+        text.AppendLine("APK: " + result.FileName);
+        text.AppendLine("FILE SIZE: " + FormatBytes(result.FileSizeBytes));
+        text.AppendLine("SHA-256: " + result.Sha256);
+        text.AppendLine("STATUS: " + result.Status);
+        text.AppendLine("ANDROID BUILD TOOLS: " + (result.BuildToolsVersion ?? "NOT FOUND"));
+        text.AppendLine("VERIFICATION: " + (result.CryptographicVerificationPassed ? "CRYPTOGRAPHICALLY VERIFIED" : "NOT VERIFIED"));
+        text.AppendLine();
+
+        if (result.VerifiedSchemes.Count == 0)
+            text.AppendLine("SIGNATURE SCHEMES: NO SCHEME DETAILS RETURNED");
+        else
+            foreach (var scheme in result.VerifiedSchemes.OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase))
+                text.AppendLine($"{scheme.Key}: {(scheme.Value ? "VERIFIED" : "NOT VERIFIED")}");
+
+        text.AppendLine();
+        text.AppendLine("SIGNING CERTIFICATES: " + result.Certificates.Count);
+        foreach (var certificate in result.Certificates)
+        {
+            text.AppendLine($"Signer #{certificate.SignerNumber}");
+            text.AppendLine("  DN: " + (certificate.DistinguishedName ?? "NOT RETURNED"));
+            text.AppendLine("  SHA-256: " + (certificate.Sha256Digest ?? "NOT RETURNED"));
+            text.AppendLine("  SHA-1: " + (certificate.Sha1Digest ?? "NOT RETURNED"));
+            text.AppendLine("  KEY: " + (certificate.PublicKeyAlgorithm ?? "UNKNOWN") +
+                            (certificate.PublicKeySizeBits is int bits ? $" / {bits} bits" : ""));
+        }
+
+        text.AppendLine();
+        text.AppendLine("PUBLISHER TRUST: NOT AUTOMATICALLY ESTABLISHED");
+        text.AppendLine("APK MODIFIED: NO");
+        text.AppendLine("APK INSTALLED: NO");
+        text.AppendLine("LOCAL VERIFICATION ONLY: YES");
+        _summary.Text = text.ToString();
+
+        ReplaceItems(_signatureVerification,
+            new[]
+            {
+                "STATUS: " + result.Status,
+                "SHA-256: " + result.Sha256,
+                "BUILD TOOLS: " + (result.BuildToolsVersion ?? "NOT FOUND")
+            }
+            .Concat(result.VerifiedSchemes.Select(item => item.Key + ": " + (item.Value ? "VERIFIED" : "NOT VERIFIED")))
+            .Concat(result.Certificates.SelectMany(certificate => new[]
+            {
+                $"SIGNER #{certificate.SignerNumber}: {certificate.DistinguishedName ?? "DN unavailable"}",
+                "CERTIFICATE SHA-256: " + (certificate.Sha256Digest ?? "not returned"),
+                "CERTIFICATE SHA-1: " + (certificate.Sha1Digest ?? "not returned"),
+                "PUBLIC KEY: " + (certificate.PublicKeyAlgorithm ?? "unknown") +
+                    (certificate.PublicKeySizeBits is int bits ? $" / {bits} bits" : "")
+            }))
+            .Concat(result.Warnings));
+        ReplaceItems(_warnings, result.Warnings);
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => _operation?.Cancel();
@@ -307,6 +439,7 @@ public sealed class ApkLabWindow : Window
         _operation = new CancellationTokenSource();
         _inspectButton.IsEnabled = false;
         _compareButton.IsEnabled = false;
+        _verifyButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ تحليل الملفين محليًا ومقارنة بيانات Manifest والصلاحيات وأسماء الملفات...";
@@ -337,6 +470,7 @@ public sealed class ApkLabWindow : Window
             _operation = null;
             _inspectButton.IsEnabled = true;
             _compareButton.IsEnabled = true;
+            _verifyButton.IsEnabled = true;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }
@@ -390,6 +524,7 @@ public sealed class ApkLabWindow : Window
 
     private void DisplayResult(ApkInspectionResult result)
     {
+        ReplaceItems(_signatureVerification, ["لم يتم التحقق من توقيع هذا الملف بعد."]);
         var text = new StringBuilder();
         text.AppendLine("FILE: " + result.FileName);
         text.AppendLine("SIZE: " + FormatBytes(result.FileSizeBytes));

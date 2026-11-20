@@ -75,7 +75,7 @@ public sealed class ApkSignatureVerificationServiceTests
         try
         {
             var service = new ApkSignatureVerificationService(
-                new FakeLocator(null),
+                new FakeLocator(available: false),
                 new FakeRunner(new ApkSignerCommandResult(0, ValidOutput, "")));
 
             var result = await service.VerifyAsync(path);
@@ -145,12 +145,11 @@ public sealed class ApkSignatureVerificationServiceTests
         return path;
     }
 
-    private sealed class FakeLocator(ApkSignerTool? tool = null) : IApkSignerToolLocator
+    private sealed class FakeLocator(bool available = true) : IApkSignerToolLocator
     {
-        public ApkSignerTool? Locate() => tool ?? new ApkSignerTool(
-            "java.exe",
-            @"C:\Android\Sdk\build-tools\34.0.0\lib\apksigner.jar",
-            "34.0.0");
+        public ApkSignerTool? Locate() => available
+            ? new ApkSignerTool("java.exe", @"C:\Android\Sdk\build-tools\34.0.0\lib\apksigner.jar", "34.0.0")
+            : null;
     }
 
     private sealed class FakeRunner(
