@@ -69,6 +69,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("adb-core", "اكتشاف أجهزة ADB وقراءة معلوماتها", "ADB discovery and inspection", "مدمج في محرك الاكتشاف والفحص الحالي؛ تشغيل الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
+                new("fastboot-manager", "اكتشاف أجهزة Fastboot وقراءة متغيرات Bootloader", "Fastboot manager", "يستخدم fastboot.exe الرسمي من Android SDK Platform-Tools لاكتشاف الأجهزة وقراءة getvar all، مع إعادة تشغيل النظام بعد تأكيد المستخدم. لا توجد عمليات Flash أو Unlock أو Erase.", ModuleImplementationStatus.InDevelopment, "OpenFastbootManager"),
                 new("agent-bridge", "تثبيت PhoneLab Agent وجلب نتائج الاختبارات", "PhoneLab Agent bridge", "اتصال محلي عبر ADB forward، ويتطلب موافقة المستخدم على الهاتف؛ واجهة الاختبارات موجودة في قسم تشخيص العتاد.", ModuleImplementationStatus.Implemented),
                 new("agent-update", "تحديث PhoneLab Agent", "PhoneLab Agent update", "يفحص ويحدّث مكوّن Agent ضمن دعم التطبيق الحالي.", ModuleImplementationStatus.Implemented, "UpdateAgent"),
                 new("logs", "قراءة سجلات Android المسموح بها", "Android logs", "يجمع حزمة أدلة محدودة؛ السجلات قد تحتوي بيانات شخصية ويجب مراجعتها قبل المشاركة. أداة جمعها في قسم الدعم والسجلات.", ModuleImplementationStatus.Implemented),
