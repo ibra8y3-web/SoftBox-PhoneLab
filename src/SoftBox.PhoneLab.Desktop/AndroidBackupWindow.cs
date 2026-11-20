@@ -271,6 +271,8 @@ public sealed class AndroidBackupWindow : Window
             return;
 
         var encrypted = Path.GetExtension(dialog.FileName).Equals(".sbx", StringComparison.OrdinalIgnoreCase);
+        if (encrypted && _encryptBackup.IsChecked != true)
+            _encryptBackup.IsChecked = true;
         if (encrypted)
         {
             try { EncryptedBackupService.ValidatePassword(_password.Password); }
