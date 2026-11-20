@@ -22,7 +22,7 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
     private IntPtr _windowHandle;
     public string? ActiveSerial { get; private set; }
     public string? ActiveRecordingPath { get; private set; }
-    public bool IsRecording => ActiveRecordingPath is not null && _process is { HasExited: false };
+    public bool IsRecording => ActiveRecordingPath is not null;
 
     public async Task<string> EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {
@@ -59,7 +59,7 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         string model,
         ScrcpyWindowHost host,
         CancellationToken cancellationToken = default)
-        => StartEmbeddedCoreAsync(serial, model, host, recordingPath: null, cancellationToken);
+        => StartEmbeddedCoreAsync(serial, model, host, recordingPath: null, cancellationToken: cancellationToken);
 
     public Task StartEmbeddedRecordingAsync(
         string serial,
