@@ -233,6 +233,7 @@ public sealed class NetworkDiagnosticsWindow : Window
 
         _operation = new CancellationTokenSource();
         _probeButton.IsEnabled = false;
+        _androidInspectButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ حل اسم النطاق عبر DNS ثم إرسال طلب ICMP واحد إلى أول عنوان مناسب...";
@@ -266,6 +267,7 @@ public sealed class NetworkDiagnosticsWindow : Window
             _operation.Dispose();
             _operation = null;
             _probeButton.IsEnabled = true;
+            _androidInspectButton.IsEnabled = _androidService is not null;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }
