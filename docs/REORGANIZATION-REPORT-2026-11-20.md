@@ -40,3 +40,8 @@ No pre-existing tool was moved in this pass. The repository already had a 36-sec
 - CI run #65 succeeded with 53 tests (0 failures), Windows x64 publish, Android Agent build and tool bundling, including the APK two-file comparison: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968
 
 Future moves should occur only when a specific existing tool has a proven ownership mismatch, after searching all navigation references and preserving its service, tests, shortcuts and dependencies.
+## Parts inventory organization
+
+- The existing Parts Inventory owner remains section 24. The advanced catalog editor adds supplier/category/pricing fields and exposes the existing stock ledger without creating a second inventory database.
+- Repair-order part consumption is launched from the selected repair order, uses the same WorkshopStore instance, and records both a usage snapshot on the order and a stock movement.
+- The same inventory service is used for manual adjustments and repair-order consumption; no duplicated part-balance engine was introduced.
