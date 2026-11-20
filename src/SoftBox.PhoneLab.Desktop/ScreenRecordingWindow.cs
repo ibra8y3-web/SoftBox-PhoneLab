@@ -2,6 +2,7 @@ using Microsoft.Win32;
 using SoftBox.PhoneLab.Desktop.Interop;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -85,8 +86,13 @@ public sealed class ScreenRecordingWindow : Window
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
 
-        _host.Background = Brush("#050B12");
-        root.Children.Add(_host);
+        root.Children.Add(new Border
+        {
+            Background = Brush("#050B12"),
+            BorderBrush = Brush("#263D58"),
+            BorderThickness = new Thickness(1),
+            Child = _host
+        });
 
         _status.Text = "اضغط بدء التسجيل واختر مكان حفظ الفيديو.";
         _status.Foreground = Brush("#9FC7E8");
