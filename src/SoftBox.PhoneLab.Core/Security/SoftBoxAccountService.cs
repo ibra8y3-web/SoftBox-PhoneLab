@@ -382,6 +382,30 @@ public sealed class SoftBoxAccountService
         finally { _gate.Release(); }
     }
 
+    public async Task RecordActionInvokedAsync(
+        Guid userId,
+        string actionId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(actionId) || actionId.Length > 100)
+            throw new ArgumentException("معرف الإجراء غير صالح.", nameof(actionId));
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var data = await LoadLockedAsync(cancellationToken);
+            var account = data.Accounts.FirstOrDefault(x => x.Id == userId)
+                ?? throw new KeyNotFoundException("الحساب الحالي غير موجود.");
+            if (!account.IsEnabled)
+                throw new SoftBoxAuthenticationException("الحساب معطل.");
+
+            AddAudit(data, account.Id, account.Id, "ModuleActionInvoked", actionId,
+                $"بدأ المستخدم فتح الأداة المرتبطة بالإجراء {actionId}.");
+            await SaveLockedAsync(data, cancellationToken);
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task RecordSessionLockedAsync(Guid userId, CancellationToken cancellationToken = default)
         => await RecordUserEventAsync(userId, "SessionLocked", "تم قفل جلسة SoftBox.", cancellationToken);
 
