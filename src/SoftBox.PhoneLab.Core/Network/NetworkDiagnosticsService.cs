@@ -154,7 +154,7 @@ public sealed class NetworkDiagnosticsService
                 normalizedHost,
                 resolved.Select(address => address.ToString()).ToArray(),
                 pingAddress.ToString(),
-                "Unavailable: " + ex.InnerException?.Message ?? "ICMP unavailable",
+                "Unavailable: " + (ex.InnerException?.Message ?? ex.Message),
                 null,
                 null);
         }
@@ -175,6 +175,6 @@ public sealed class NetworkDiagnosticsService
             return true;
 
         return Uri.CheckHostName(value) == UriHostNameType.Dns &&
-               value.Contains('.', StringComparison.Ordinal);
+               value.Contains('.');
     }
 }
