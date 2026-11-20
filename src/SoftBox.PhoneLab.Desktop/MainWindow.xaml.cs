@@ -786,6 +786,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenFastbootManager":
                 new FastbootManagerWindow { Owner = this }.Show();
                 break;
+            case "OpenSamsungOdinAssistant":
+                new SamsungOdinAssistantWindow { Owner = this }.Show();
+                break;
             case "OpenDeviceCapabilityCenter":
             {
                 var capabilitySelectedDevice = SelectedDevice;
@@ -967,7 +970,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var authorized = Devices.Where(device => device.IsAuthorized)
             .Select(device => device.Serial).ToArray();
-        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex) { Owner = this }.Show();
+        var manufacturer = _snapshot is not null &&
+                           _snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal)
+            ? _snapshot.Manufacturer
+            : null;
+        new AndroidDeviceToolsWindow(
+            _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer)
+        { Owner = this }.Show();
     }
 
     private void OpenVendorDiagnostics(AndroidVendorKind expectedVendor, string sectionName)
