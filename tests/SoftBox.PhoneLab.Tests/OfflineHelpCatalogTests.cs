@@ -23,6 +23,8 @@ public sealed class OfflineHelpCatalogTests
         Assert.Empty(OfflineHelpCatalog.Search("unrelated-feature-not-in-catalog"));
         Assert.Equal(OfflineHelpCatalog.Articles.Count, OfflineHelpCatalog.Search("").Count);
         Assert.NotNull(OfflineHelpCatalog.Find("apk-lab"));
+        Assert.NotNull(OfflineHelpCatalog.Find("screen-recording"));
+        Assert.Contains(OfflineHelpCatalog.Search("scrcpy MP4 MKV"), article => article.Id == "screen-recording");
         Assert.Null(OfflineHelpCatalog.Find("unknown"));
     }
 
