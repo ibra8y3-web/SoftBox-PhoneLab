@@ -95,7 +95,7 @@ public sealed class WorkshopInventoryIntegrationTests
     }
 
     [Fact]
-    public async Task SchemaV2DatabaseMigratesToV3WithoutLosingExistingOrdersOrStock()
+    public async Task SchemaV2DatabaseMigratesToV4WithoutLosingExistingOrdersOrStock()
     {
         var root = CreateTempDirectory();
         try
@@ -126,12 +126,94 @@ public sealed class WorkshopInventoryIntegrationTests
             Assert.Equal(0m, snapshot.RepairOrders[0].PartsCostEgp);
             Assert.Equal(7, Assert.Single(snapshot.Inventory).Quantity);
             Assert.NotNull(snapshot.InventoryMovements);
-            Assert.Equal(3, snapshot.SchemaVersion);
+            Assert.NotNull(snapshot.InventoryPurchaseReceipts);
+            Assert.Empty(snapshot.InventoryPurchaseReceipts);
+            Assert.Equal(4, snapshot.SchemaVersion);
 
             var reloaded = await new WorkshopStore(root).GetSnapshotAsync();
-            Assert.Equal(3, reloaded.SchemaVersion);
+            Assert.Equal(4, reloaded.SchemaVersion);
             Assert.Equal("Old part", Assert.Single(reloaded.Inventory).Name);
             Assert.Single(reloaded.RepairOrders);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SupplierReceiptAddsStockAndUpdatesWeightedAverageCostAtomically()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new WorkshopStore(root);
+            await store.UpsertInventoryItemAsync(new InventoryItem
+            {
+                Sku = "USB-C-PORT",
+                Name = "USB-C charging port",
+                Quantity = 10,
+                MinimumQuantity = 2,
+                UnitCostEgp = 50m,
+                Supplier = "Previous supplier"
+            });
+
+            var receipt = await store.ReceiveSupplierStockAsync(
+                "USB-C-PORT",
+                quantity: 4,
+                purchaseUnitCostEgp: 80m,
+                supplier: "New Parts Supplier",
+                invoiceReference: "INV-2026-105",
+                technicianName: "Receiving Technician");
+
+            var snapshot = await store.GetSnapshotAsync();
+            var item = Assert.Single(snapshot.Inventory);
+            var savedReceipt = Assert.Single(snapshot.InventoryPurchaseReceipts);
+            var purchaseMovement = Assert.Single(snapshot.InventoryMovements.Where(movement =>
+                movement.Reason.Contains("New Parts Supplier", StringComparison.Ordinal)));
+
+            Assert.Equal(14, item.Quantity);
+            Assert.Equal("New Parts Supplier", item.Supplier);
+            Assert.Equal(58.57m, item.UnitCostEgp);
+            Assert.Equal(4, receipt.Quantity);
+            Assert.Equal(320m, receipt.TotalCostEgp);
+            Assert.Equal("INV-2026-105", savedReceipt.InvoiceReference);
+            Assert.Equal(58.57m, savedReceipt.WeightedAverageUnitCostAfterEgp);
+            Assert.Equal(14, savedReceipt.BalanceAfter);
+            Assert.Equal(4, purchaseMovement.Delta);
+            Assert.Equal(14, purchaseMovement.BalanceAfter);
+            Assert.Equal(80m, purchaseMovement.UnitCostEgp);
+            Assert.Contains("INV-2026-105", purchaseMovement.Reason);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InvalidSupplierReceiptDoesNotChangeInventoryOrCreateReceipt()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new WorkshopStore(root);
+            await store.UpsertInventoryItemAsync(new InventoryItem
+            {
+                Sku = "DISPLAY-001",
+                Name = "Display assembly",
+                Quantity = 2,
+                UnitCostEgp = 900m
+            });
+
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                store.ReceiveSupplierStockAsync(
+                    "DISPLAY-001", 3, 850m, "", "INV-1", "Technician"));
+
+            var snapshot = await store.GetSnapshotAsync();
+            Assert.Equal(2, Assert.Single(snapshot.Inventory).Quantity);
+            Assert.Empty(snapshot.InventoryPurchaseReceipts);
+            Assert.Single(snapshot.InventoryMovements);
         }
         finally
         {
