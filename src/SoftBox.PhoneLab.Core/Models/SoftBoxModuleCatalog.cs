@@ -299,7 +299,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("technician-field", "تسجيل اسم الفني على أمر الصيانة", "Technician attribution field", "حقل اسم فني وليس حساب مستخدم موثق؛ يظهر مع أوامر الصيانة في إدارة مركز الصيانة.", ModuleImplementationStatus.Implemented),
                 new("accounts", "حسابات ومصادقة وأدوار وصلاحيات", "Accounts and roles", "إعداد أول مدير، وتسجيل دخول محلي، وإدارة حسابات مدير وفني وقراءة فقط، وتجزئة كلمات المرور باستخدام PBKDF2-HMAC-SHA256.", ModuleImplementationStatus.Tested, "OpenUserManagement"),
-                new("audit-user", "قفل الجلسة وسجل عمليات حسب هوية المستخدم", "Session locking and per-user audit", "قفل الجلسة يتطلب إعادة المصادقة، وتُسجل أحداث الدخول والفشل وتغيير كلمة المرور ومنع الصلاحيات في سجل محلي محدود الحجم.", ModuleImplementationStatus.Tested)
+                new("audit-user", "قفل الجلسة وسجل عمليات حسب هوية المستخدم", "Session locking and per-user audit", "قفل الجلسة يتطلب إعادة المصادقة، ويُسجل الدخول والفشل وتغيير كلمة المرور ومنع الصلاحيات وبدء تشغيل الأدوات حسب هوية المستخدم في سجل محلي محدود الحجم.", ModuleImplementationStatus.Tested)
             ]),
         new("update-center", 31, "النظام والحماية", "مركز التحديثات", "Update Center",
             "يفحص إصدارات Stable/Beta من GitHub Releases ويعرض رقم الإصدار والملاحظات والملفات المنشورة دون تنزيل أو تثبيت تلقائي.",
