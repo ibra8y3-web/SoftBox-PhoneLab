@@ -262,3 +262,15 @@ No hardware compatibility is claimed. No package is downloaded or installed by t
 - Added automated tests for endpoint and input validation, successful pair/connect command sequencing, pair failure, connect failure and cancellation. No hardware is simulated in the production app.
 - No existing section, service, data store or user setting was deleted. No new third-party package or external binary was needed; the workflow reuses bundled Android Platform-Tools.
 - Automated test status is recorded as **Tested**, not **Verified**. A physical Android 11+ handset on the same Wi-Fi as the Windows PC is still required to prove end-to-end device pairing. Android's official workflow uses separately displayed pairing and connection endpoints. The same ADB tool can now read public Android interface addresses and IP routes over an already-authorized device connection.
+
+
+## Additive Android App Manager — validated Split APK installation
+
+- Extended the existing APK manifest inspector to return the root `split` identifier for text and Android Binary XML manifests.
+- Added Base + split set preflight to the current Android App Manager, using the existing `ApkInspectionService` and `IAdbCommandRunner` boundaries.
+- The selected set must have one Base APK, at least one uniquely named split, the same package name and Version Code in every file, and consistent Version Name values when those are present. All ZIP entries must be readable.
+- The UI lists the target device, package/version and exact files, then asks for confirmation. Base is passed first to `adb install-multiple -r`.
+- SHA-256 is recalculated immediately before ADB execution to detect any file modified after inspection. ADB success requires an explicit `Success` output line.
+- The feature does not independently verify signer certificates; Android's package installer validates signature compatibility. SoftBox does not bypass the platform's package-signature checks.
+- Added isolated tests for manifest split parsing through the installer path, base/split selection and order, mismatched package/version, missing or duplicate split identities, exact ADB targeting, changed-file refusal and failure output.
+- No existing feature or project was removed; no new runtime dependency or external binary was added.
