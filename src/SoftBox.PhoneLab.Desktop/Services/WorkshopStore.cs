@@ -427,9 +427,13 @@ public sealed class WorkshopStore
     {
         if (_cache is not null) return;
         if (!File.Exists(DatabasePath)) { _cache = new WorkshopData(); return; }
-        await using var stream = File.OpenRead(DatabasePath);
-        _cache = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
-            ?? new WorkshopData();
+        await using (var stream = File.OpenRead(DatabasePath))
+        {
+            _cache = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
+                ?? new WorkshopData();
+        }
+
+        // Close the legacy database handle before replacing the file during schema migration (required on Windows).
         var schemaNeedsUpgrade = _cache.SchemaVersion != 3;
         MigrateAndValidate(_cache);
         if (schemaNeedsUpgrade) await SaveLockedAsync(cancellationToken);
