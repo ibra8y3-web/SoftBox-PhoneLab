@@ -50,6 +50,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenAbout"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenPartsInventory"] = SoftBoxAccountPermission.WorkshopOperations,
             ["OpenSamsungDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenSamsungOdinAssistant"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenXiaomiDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenBrandDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenPluginStore"] = SoftBoxAccountPermission.ManagePlugins,
