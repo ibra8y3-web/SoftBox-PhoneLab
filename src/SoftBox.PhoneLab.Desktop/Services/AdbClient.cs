@@ -63,7 +63,7 @@ public sealed class AdbClient : IAdbCommandRunner
 
     public Task<string> RunForDeviceAsync(string serial, params string[] args)
     {
-        if (!Regex.IsMatch(serial, @"^[A-Za-z0-9._:-]{1,128}$"))
+        if (!IsSafeSerial(serial))
             throw new ArgumentException("Invalid ADB serial.", nameof(serial));
         var all = new List<string> { "-s", serial };
         all.AddRange(args);
@@ -86,5 +86,8 @@ public sealed class AdbClient : IAdbCommandRunner
     public async Task ForwardAgentPortAsync(string serial)
         => _ = await RunForDeviceAsync(serial, "forward", "tcp:27831", "tcp:27831");
 
-    public static bool IsSafeSerial(string serial) => Regex.IsMatch(serial, @"^[A-Za-z0-9._:-]{1,128}$");
+    public static bool IsSafeSerial(string serial) =>
+        !string.IsNullOrWhiteSpace(serial) &&
+        !serial.StartsWith("-", StringComparison.Ordinal) &&
+        Regex.IsMatch(serial, @"^[A-Za-z0-9._:-]{1,128}$");
 }
