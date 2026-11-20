@@ -317,12 +317,12 @@ public static class SoftBoxModuleCatalog
                 new("offline-help", "قاعدة مساعدة قابلة للبحث دون إنترنت", "Searchable offline help", "لا يوجد محرك بحث موحد في التوثيق بعد.", ModuleImplementationStatus.Planned)
             ]),
         new("support-logs", 34, "النظام والحماية", "الدعم والسجلات", "Support & Logs",
-            "جمع سجلات Android متاح؛ سجلات التطبيق وحزمة دعم منقحة البيانات لم تكتمل.",
+            "جمع سجلات Android وحزمة دعم محلية بمعلومات الإصدار والبيئة والملفات التي يختارها المستخدم مع تنقيح أسرار شائعة.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("android-logs", "جمع سجلات Android وتحليل أولي", "Android logs and boot hints", "يحفظ أدلة محدودة مع تنبيه خصوصية؛ تحليل إعادة التشغيل heuristic وليس تشخيصًا مؤكدًا.", ModuleImplementationStatus.Implemented, "AndroidLogs"),
                 new("firmware-log", "تقرير فحص Firmware والبصمة", "Firmware inspection report", "يعرض SHA-256 وبنية الأرشيف دون تفليش؛ أداة الفحص والتقرير في قسم Firmware Center.", ModuleImplementationStatus.Implemented),
-                new("app-debug-bundle", "حزمة دعم لسجلات التطبيق بعد تنقيح الأسرار", "Redacted application support bundle", "لا توجد حتى الآن حزمة Debug Package أو سجل Crash منظم.", ModuleImplementationStatus.Planned)
+                new("app-debug-bundle", "حزمة دعم محلية مع تنقيح كلمات المرور وTokens", "Offline redacted support bundle", "تضم معلومات النظام وإصدار SoftBox والملفات التي يختارها المستخدم فقط، مع تنقيح حقول Password/Token/Authorization/Serial قبل إنشاء ZIP؛ لا يتم رفعها.", ModuleImplementationStatus.Implemented, "OpenSupportBundle")
             ]),
         new("settings", 35, "النظام والحماية", "الإعدادات", "Settings",
             "إعدادات المركز واللغة والعملة والمنطقة الزمنية موجودة؛ إعدادات التطبيق العامة والثيم والاختصارات لم تكتمل.",
@@ -344,7 +344,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
