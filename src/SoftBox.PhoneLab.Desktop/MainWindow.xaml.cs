@@ -686,6 +686,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenAbout":
                 new AboutWindow { Owner = this }.Show();
                 break;
+            case "OpenRepairAdvisor":
+                if (_snapshot is null)
+                {
+                    MessageBox.Show(this, "افحص جهازًا مصرحًا به أولًا حتى تتوفر أدلة فعلية للتحليل.",
+                        "مساعد الإصلاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    new RepairAdvisorWindow(
+                        _snapshot,
+                        _agentSnapshot,
+                        Components.Select(component => component.Diagnostic).ToArray(),
+                        SelectedDevice?.IsAuthorized == true) { Owner = this }.Show();
+                }
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
