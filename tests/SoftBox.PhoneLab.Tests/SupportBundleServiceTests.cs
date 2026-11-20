@@ -52,7 +52,9 @@ public sealed class SupportBundleServiceTests
             Assert.DoesNotContain("private-token", content);
             Assert.DoesNotContain("DEVICE-123456", content);
             Assert.Contains("status=ready", content);
-            Assert.Contains("my-secret", ReadEntry(archive, "system-diagnostics.txt") is string diag && diag.Contains("my-secret") ? "x" : "");
+            var diagnostics = ReadEntry(archive, "system-diagnostics.txt");
+            Assert.DoesNotContain("my-secret", diagnostics);
+            Assert.Contains("[REDACTED]", diagnostics);
         }
         finally
         {
