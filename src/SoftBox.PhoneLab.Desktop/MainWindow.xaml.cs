@@ -548,8 +548,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "RepairGuides":
                 RepairGuides_Click(this, new RoutedEventArgs());
                 break;
-            case "OpenGlobalWorkshop":
-                GlobalWorkshop_Click(this, new RoutedEventArgs());
+            case "OpenWorkshopBackup":
+                OpenWorkshopAtTab(4);
+                break;
+            case "OpenWorkshopInventory":
+                OpenWorkshopAtTab(2);
+                break;
+            case "OpenGlobalWorkshopHistory":
+                OpenGlobalWorkshopAtTab(0);
+                break;
+            case "OpenGlobalWorkshopReports":
+                OpenGlobalWorkshopAtTab(2);
+                break;
+            case "OpenGlobalWorkshopSettings":
+                OpenGlobalWorkshopAtTab(1);
                 break;
             case "ExportDeviceReport":
                 Export_Click(this, new RoutedEventArgs());
@@ -586,6 +598,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var window = new GlobalWorkshopWindow { Owner = this };
         window.Show();
     }
+    private void OpenWorkshopAtTab(int tabIndex)
+    {
+        var window = new WorkshopCenterWindow(tabIndex) { Owner = this };
+        window.Show();
+    }
+
+    private void OpenGlobalWorkshopAtTab(int tabIndex)
+    {
+        var window = new GlobalWorkshopWindow(tabIndex) { Owner = this };
+        window.Show();
+    }
+
 
     private async void UsbTransport_Click(object sender, RoutedEventArgs e)
     {

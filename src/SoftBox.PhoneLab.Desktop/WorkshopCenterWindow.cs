@@ -14,6 +14,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class WorkshopCenterWindow : Window
 {
     private readonly WorkshopStore _store = new();
+    private readonly int _initialTabIndex;
     private readonly DataGrid _ordersGrid = GridView();
     private readonly DataGrid _customersGrid = GridView();
     private readonly DataGrid _inventoryGrid = GridView();
@@ -44,8 +45,9 @@ public sealed class WorkshopCenterWindow : Window
     private RepairOrder? _selectedOrder;
     private WorkshopData _snapshot = new();
 
-    public WorkshopCenterWindow()
+    public WorkshopCenterWindow(int initialTabIndex = 0)
     {
+        _initialTabIndex = Math.Clamp(initialTabIndex, 0, 4);
         Title = "SoftBox PhoneLab Professional | مركز الصيانة";
         Width = 1500;
         Height = 940;
@@ -80,6 +82,7 @@ public sealed class WorkshopCenterWindow : Window
         tabs.Items.Add(new TabItem { Header = "قطع الغيار والمخزون", Content = BuildInventoryTab() });
         tabs.Items.Add(new TabItem { Header = "سجل العمليات", Content = BuildEventsTab() });
         tabs.Items.Add(new TabItem { Header = "النسخ الاحتياطي", Content = BuildBackupTab() });
+        tabs.SelectedIndex = _initialTabIndex;
         root.Children.Add(tabs);
         return root;
     }

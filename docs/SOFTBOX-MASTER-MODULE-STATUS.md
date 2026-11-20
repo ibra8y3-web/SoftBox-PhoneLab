@@ -24,14 +24,14 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
 | 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, Android evidence capture | ADB GUI manager, app/package manager, Android file manager and safe command catalog |
 | 05 | APK Lab | Planned | No APK inspection workbench | Manifest, package/version, signing-certificate, hash, archive-integrity and version-diff analysis |
-| 06 | Samsung Tools | In Development | Optional official Samsung USB driver in the Windows bundle; generic Android/ADB inspection | Samsung Download Mode visibility, model-specific service functions and official compatible recovery workflows |
+| 06 | Samsung Tools | In Development | Samsung device identification through the shared device engine; official Samsung USB driver is surfaced under USB Doctor | Samsung Download Mode visibility, model-specific service functions and official compatible recovery workflows |
 | 07 | Xiaomi Tools | Planned | Generic Android/ADB path only | Xiaomi/Redmi/POCO identity, region compatibility and supported model-specific workflows |
 | 08 | Android Brands | In Development | Generic manufacturer/model identification and community identity profiles | Dedicated, evidenced modules for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
 | 09 | Qualcomm Tools | Planned | SoC identification hints may be read from Android | Qualcomm USB/EDL detection, signed compatible recovery sources and a verified model support matrix |
 | 10 | MediaTek Tools | Planned | SoC identification hints may be read from Android | Preloader/BROM discovery, driver diagnostics and verified model-specific official recovery |
 | 11 | Firmware Center | In Development | Local archive inspection, SHA-256 and common Android OTA metadata/payload detection | Trusted source catalog, download manager, signature verification, region/model compatibility and firmware library |
 | 12 | USB Doctor | In Development | ADB/Fastboot inventory, transport explanations and optional official Samsung driver | Windows Device Manager inventory, VID/PID, driver health/conflict/signature diagnosis and broader OEM driver catalog |
-| 13 | Smart Backup | Planned | Workshop JSON database backup/restore only | Phone-file backup, integrity manifests, encryption/key management, scheduling and restore verification |
+| 13 | Smart Backup | Planned | Workshop JSON database backup/restore only; its shortcut opens the existing workshop backup tab | Phone-file backup, integrity manifests, encryption/key management, scheduling and restore verification |
 | 14 | Phone Link Studio | In Development | Authorized Android screen mirror/control using scrcpy | Integrated recording, multiple independent sessions, clipboard/audio controls and quality profiles |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
 | 16 | Network Diagnostics | Planned | No dedicated network diagnostics workspace | Host DNS/latency/connectivity tests, permitted Android network observations and ADB Wireless diagnosis |
@@ -42,7 +42,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 21 | Batch Operations | Planned | Multiple devices can be discovered and displayed | Explicit target selection, concurrent limits, per-device isolation/results and independent cancellation |
 | 22 | Repair History | In Development | Workshop order records, timeline notes and capped local activity events | Unified per-device diagnostic/session history, searchable reports and controlled retention |
 | 23 | Workshop Manager | In Development | Customers, repair orders, status tracking, QR ticket, estimates/final cost, workshop settings and reports | Intake accessory checklist, customer approval flow, photos with consent, receipts, quotes, invoices and multi-user workflow |
-| 24 | Parts Inventory | In Development | SKU items, quantities, thresholds, stock adjustments and event history | Suppliers, purchase orders, part consumption on repair orders, cost/sale accounting and analytics |
+| 24 | Parts Inventory | In Development | SKU items, quantities, thresholds, stock adjustments and event history; its shortcut opens the existing inventory tab | Suppliers, purchase orders, part consumption on repair orders, cost/sale accounting and analytics |
 | 25 | Service Reports | In Development | Device JSON reports; workshop text/HTML and UTF-8 CSV exports | Native PDF/Excel outputs, unified analytics, invoice templates and signed report provenance |
 | 26 | Plugin Store | Planned | No plugin installation/catalog runtime | Trusted catalog, signature verification, dependencies, permissions, updates and uninstall lifecycle |
 | 27 | Plugin SDK | Planned | No public contracts or SDK package | Versioned API, manifest, examples, templates, permission declarations and developer documentation |
@@ -58,7 +58,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 
 ## Existing tools and their canonical sections
 
-The same implementation is shared and linked from related module pages; it must not be copied into a second implementation.
+The same implementation is shared and linked from related module pages; it must not be copied into a second implementation. Each existing tool has one canonical executable navigation action; related modules describe the dependency without adding a second Run button.
 
 | Existing implementation | Canonical section | Notes |
 |---|---|---|

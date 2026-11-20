@@ -63,6 +63,21 @@ public sealed class SoftBoxModuleCatalogTests
     }
 
     [Fact]
+    public void ExistingToolsHaveOneCanonicalNavigationEntry()
+    {
+        var actions = SoftBoxModuleCatalog.All
+            .SelectMany(x => x.Features)
+            .Where(x => x.ActionId is not null)
+            .Select(x => x.ActionId!)
+            .ToList();
+
+        Assert.Equal(actions.Count, actions.Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(
+            SoftBoxModuleCatalog.SupportedActionIds.OrderBy(x => x, StringComparer.Ordinal),
+            actions.OrderBy(x => x, StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void PlannedAndUnsupportedFeaturesNeverExposeRunButtons()
     {
         var unfinished = SoftBoxModuleCatalog.All.SelectMany(x => x.Features)

@@ -14,6 +14,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class GlobalWorkshopWindow : Window
 {
     private readonly WorkshopStore _store = new();
+    private readonly int _initialTabIndex;
     private WorkshopData _data = new();
     private RepairOrder? _selectedOrder;
 
@@ -43,8 +44,9 @@ public sealed class GlobalWorkshopWindow : Window
     private readonly TextBox _defaultWarranty = Box(90);
     private readonly ComboBox _reportLanguage = new() { Width = 110, Margin = new Thickness(5), ItemsSource = new[] { "ar", "en" }, SelectedIndex = 0 };
 
-    public GlobalWorkshopWindow()
+    public GlobalWorkshopWindow(int initialTabIndex = 0)
     {
+        _initialTabIndex = Math.Clamp(initialTabIndex, 0, 2);
         Title = "SoftBox PhoneLab Global | Workshop Operations";
         Width = 1500;
         Height = 950;
@@ -75,6 +77,7 @@ public sealed class GlobalWorkshopWindow : Window
         tabs.Items.Add(new TabItem { Header = "العمليات والضمان", Content = BuildOrdersPage() });
         tabs.Items.Add(new TabItem { Header = "بيانات المركز الدولية", Content = BuildSettingsPage() });
         tabs.Items.Add(new TabItem { Header = "تصدير وتقارير", Content = BuildExportsPage() });
+        tabs.SelectedIndex = _initialTabIndex;
         root.Children.Add(tabs);
         return root;
     }

@@ -11,10 +11,12 @@ The product name remains **SoftBox**. The master navigation follows the 36 secti
 - \`MainWindow.xaml\` contains the sidebar navigation entries; each item uses the corresponding stable module ID as its Tag.
 - \`MainWindow.xaml.cs\` routes navigation to \`ModuleSectionWindow\` and maps only declared action IDs to existing commands/windows.
 - \`ModuleSectionWindow\` is a shared page host. It only renders an actionable button when a real existing action is wired. Planned/unsupported entries are status information, not fake controls.
-- \`tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs\` checks the 36-module count/order, unique IDs, feature metadata, valid action identifiers and the absence of actions for Planned/Unsupported features.
+- \`tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs\` checks the 36-module count/order, unique IDs, feature metadata, valid and unique canonical action identifiers and the absence of actions for Planned/Unsupported features.
 - \`docs/SOFTBOX-MASTER-MODULE-STATUS.md\` is the audited feature matrix and phase roadmap.
 
 ## Add a section or tool without duplication
+
+The current catalog enforces a single canonical executable action for each existing tool. Where a feature is relevant elsewhere, the module page explains where the shared tool lives rather than showing another Run button. Workshop and global-workshop shortcuts can open a specific existing tab; they do not create another implementation.
 
 1. Search the repository and the feature matrix to confirm the function does not already exist.
 2. If it exists, keep the original service and move/link its navigation entry to the correct canonical module. Do not create a second implementation.
