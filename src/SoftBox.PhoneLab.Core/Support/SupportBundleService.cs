@@ -31,6 +31,9 @@ public sealed class SupportBundleService
     private static readonly Regex SecretAssignment = new(
         @"(?im)\b(password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization)\b(\s*[:=]\s*)([^\s,;]+)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex AuthorizationHeader = new(
+        @"(?im)(\\b(?:authorization|proxy-authorization)\\b\\s*[:=]\\s*)(?:Bearer|Basic)\\s+[^\\r\\n,;]+",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex BearerSecret = new(
         @"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]{8,}",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -147,7 +150,8 @@ public sealed class SupportBundleService
     public static string RedactSensitiveData(string content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        var redacted = SecretAssignment.Replace(content, match =>
+        var redacted = AuthorizationHeader.Replace(content, "$1[REDACTED]");
+        redacted = SecretAssignment.Replace(redacted, match =>
             match.Groups[1].Value + match.Groups[2].Value + "[REDACTED]");
         redacted = BearerSecret.Replace(redacted, "Bearer [REDACTED]");
         redacted = DeviceSerial.Replace(redacted, match =>
