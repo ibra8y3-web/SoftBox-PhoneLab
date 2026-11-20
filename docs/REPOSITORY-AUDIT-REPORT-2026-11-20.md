@@ -28,9 +28,9 @@
 | Sections Planned | 14 |
 | Catalog entries including sections and child features | 151 |
 | Implemented entries | 58 |
-| Tested entries | 4 |
+| Tested entries | 5 |
 | In Development entries | 23 |
-| Planned entries | 64 |
+| Planned entries | 63 |
 | Unsupported entries | 2 |
 | Verified entries | 0 |
 
@@ -40,10 +40,10 @@ These are catalog status counts, not a percentage of product completion. `Verifi
 
 ### Section 05 — APK Lab
 
-- Added local, read-only APK inspection: full-file SHA-256, reading non-directory ZIP entries, text XML and Android Binary XML manifest parsing, package/version/SDK/permission extraction, and structural discovery of v1 signing metadata and APK Signing Block.
+- Added local, read-only APK inspection: full-file SHA-256, reading non-directory ZIP entries, text XML and Android Binary XML manifest parsing, package/version/SDK/permission extraction, structural discovery of v1 signing metadata and APK Signing Block, and two-file metadata/permission/archive-path comparison.
 - Added a WPF workspace and wired it to the existing APK Lab section.
-- Added five automated tests covering text/binary manifests, metadata extraction, SHA-256, signature-file discovery, missing manifest, corrupt ZIP and input extension validation.
-- Cryptographic certificate/signature verification, Android resource resolution, DEX analysis and APK version comparison remain Planned.
+- Added automated tests covering text/binary manifests, metadata extraction, SHA-256, signature-file discovery, missing manifest, corrupt ZIP, input validation, two-file version/permission/path comparison and mismatched package warnings.
+- Cryptographic certificate/signature verification, Android resource resolution and DEX analysis remain Planned. The two-file APK metadata/permission/path comparison is implemented and tested.
 
 ### Section 16 — Network Diagnostics
 
