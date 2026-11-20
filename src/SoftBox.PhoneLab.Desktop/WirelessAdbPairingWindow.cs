@@ -15,6 +15,7 @@ public sealed class WirelessAdbPairingWindow : Window
     private readonly IAdbCommandRunner _adb;
     private readonly WirelessAdbPairingService _service;
     private readonly TextBox _host = InputBox();
+    private readonly TextBox _connectionHost = InputBox();
     private readonly TextBox _pairingPort = InputBox();
     private readonly TextBox _connectionPort = InputBox();
     private readonly PasswordBox _pairingCode = new()
@@ -124,13 +125,14 @@ public sealed class WirelessAdbPairingWindow : Window
         var form = new Grid { Margin = new Thickness(0, 0, 0, 12) };
         form.ColumnDefinitions.Add(new ColumnDefinition());
         form.ColumnDefinitions.Add(new ColumnDefinition());
-        for (var index = 0; index < 4; index++)
+        for (var index = 0; index < 5; index++)
             form.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        AddField(form, "عنوان IP للهاتف", _host, 0, 0, 2);
+        AddField(form, "IP من نافذة Pair device", _host, 0, 0, 2);
         AddField(form, "منفذ الاقتران (من نافذة Pair using pairing code)", _pairingPort, 1, 0);
         AddField(form, "منفذ Wireless debugging للاتصال", _connectionPort, 1, 1);
-        AddField(form, "رمز الاقتران المؤقت (6 أرقام)", _pairingCode, 2, 0, 2);
+        AddField(form, "IP من شاشة Wireless debugging للاتصال", _connectionHost, 2, 0, 2);
+        AddField(form, "رمز الاقتران المؤقت (6 أرقام)", _pairingCode, 3, 0, 2);
 
         var actions = new StackPanel
         {
@@ -140,7 +142,7 @@ public sealed class WirelessAdbPairingWindow : Window
         actions.Children.Add(_pairButton);
         _cancelButton.Margin = new Thickness(8, 0, 0, 0);
         actions.Children.Add(_cancelButton);
-        Grid.SetRow(actions, 3);
+        Grid.SetRow(actions, 4);
         Grid.SetColumnSpan(actions, 2);
         form.Children.Add(actions);
 
@@ -206,6 +208,19 @@ public sealed class WirelessAdbPairingWindow : Window
             return;
         }
 
+        if (!System.Net.IPAddress.TryParse(_host.Text.Trim(), out _))
+        {
+            _status.Text = "أدخل IP صالحًا من نافذة Pair device.";
+            _pairingCode.Clear();
+            return;
+        }
+        if (!System.Net.IPAddress.TryParse(_connectionHost.Text.Trim(), out _))
+        {
+            _status.Text = "أدخل IP صالحًا من شاشة Wireless debugging الرئيسية.";
+            _pairingCode.Clear();
+            return;
+        }
+
         var code = _pairingCode.Password;
         if (!WirelessAdbPairingService.IsValidPairingCode(code))
         {
@@ -221,14 +236,17 @@ public sealed class WirelessAdbPairingWindow : Window
         try
         {
             var result = await _service.PairAndConnectAsync(
-                _host.Text,
+                _host.Text.Trim(),
                 pairingPort,
                 code,
+                _connectionHost.Text.Trim(),
                 connectionPort,
                 operation.Token);
 
             _output.Text =
+                "PAIR IP: " + result.PairingHost + Environment.NewLine +
                 "PAIR ENDPOINT: " + result.PairingEndpoint + Environment.NewLine +
+                "CONNECT IP: " + result.ConnectionHost + Environment.NewLine +
                 "PAIR RESULT:" + Environment.NewLine + result.PairOutput + Environment.NewLine + Environment.NewLine +
                 "CONNECT ENDPOINT: " + result.ConnectEndpoint + Environment.NewLine +
                 "CONNECT RESULT:" + Environment.NewLine + result.ConnectOutput + Environment.NewLine;
@@ -255,6 +273,7 @@ public sealed class WirelessAdbPairingWindow : Window
             _cancelButton.IsEnabled = false;
             _pairButton.IsEnabled = _adb.IsAvailable;
             _host.IsEnabled = true;
+            _connectionHost.IsEnabled = true;
             _pairingPort.IsEnabled = true;
             _connectionPort.IsEnabled = true;
             _pairingCode.IsEnabled = true;
@@ -268,6 +287,7 @@ public sealed class WirelessAdbPairingWindow : Window
         _pairButton.IsEnabled = !busy && _adb.IsAvailable;
         _cancelButton.IsEnabled = busy;
         _host.IsEnabled = !busy;
+        _connectionHost.IsEnabled = !busy;
         _pairingPort.IsEnabled = !busy;
         _connectionPort.IsEnabled = !busy;
         _pairingCode.IsEnabled = !busy;
