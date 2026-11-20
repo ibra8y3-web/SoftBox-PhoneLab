@@ -34,7 +34,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 13 | Smart Backup | Planned | Workshop JSON database backup/restore only; its shortcut opens the existing workshop backup tab | Phone-file backup, integrity manifests, encryption/key management, scheduling and restore verification |
 | 14 | Phone Link Studio | In Development | Authorized Android screen mirror/control using scrcpy | Integrated recording, multiple independent sessions, clipboard/audio controls and quality profiles |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
-| 16 | Network Diagnostics | Planned | No dedicated network diagnostics workspace | Host DNS/latency/connectivity tests, permitted Android network observations and ADB Wireless diagnosis |
+| 16 | Network Diagnostics | In Development | Local Windows interface inventory, DNS resolution and one user-selected ICMP probe with bounded timeouts/cancellation | Permitted Android network observations, Wi-Fi details and ADB Wireless pairing; no phone-private network claim |
 | 17 | Smart Repair AI | Planned | External iFixit repair-guide search only (not AI) | Evidence-linked reasoning, confidence-ranked hypotheses and a locally searchable repair knowledge base |
 | 18 | One-Click Diagnostic | In Development | One action reads available system properties and rebuilds component evidence | A consent-aware orchestrator for supported non-destructive tests, cancellation and one combined report |
 | 19 | Safe Recovery | Planned | Read-only firmware pre-inspection exists in Firmware Center | A central compatibility/consent/backup gate and only officially supported recovery integrations; no flashing is currently implemented |
@@ -71,6 +71,7 @@ The same implementation is shared and linked from related module pages; it must 
 | ADB/Fastboot transport inspector and Samsung driver installer | USB Doctor | Generic discovery cannot promise visibility of every vendor-specific mode |
 | Local firmware archive inspection | Firmware Center | Hash/archive structure is not publisher-signature or compatibility verification |
 | Local APK archive and Manifest inspection | APK Lab | SHA-256, ZIP entry readability, text/AXML metadata and signature-structure discovery; does not validate publisher trust |
+| Windows host network interface and DNS/ICMP probe | Network Diagnostics | Reads local interface properties; probes only one explicitly selected host and does not inspect Android-private Wi-Fi data |
 | TRACE Boardviewer launcher and verified JSON board-map importer | Device Intelligence | Boardviewer is a separate third-party app; native formats are not decoded into PhoneLab 3D |
 | Customer/order/inventory local store | Workshop Manager / Parts Inventory | One Windows workstation, JSON storage, no multi-branch synchronization |
 | Workshop international settings, warranty and printable reports | Workshop Manager / Service Reports | Currency code formats labels; there is no FX conversion or automatic tax calculation |
@@ -82,6 +83,7 @@ The same implementation is shared and linked from related module pages; it must 
 - Current solution has three .NET projects: Core, Desktop and Tests, plus the separate Android Gradle project.
 - ADB process invocation uses argument-list APIs, validates serial values and has a bounded command timeout.
 - APK Lab uses a dependency-free .NET Core inspection service for local ZIP validation, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
+- Network Diagnostics reads local Windows interface configuration and performs one user-selected DNS/ICMP probe with bounded timeouts; Android-private network observations are still unimplemented.
 - The workshop database is local JSON under the current Windows user's LocalAppData. It has a schema migration path for its v1/v2 workshop schema.
 - SQLite and Entity Framework Core are **not** currently used.
 - The current desktop UI has meaningful code-behind and services, but it is **not yet a complete MVVM/Clean Architecture implementation**.
