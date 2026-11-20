@@ -38,6 +38,6 @@ ApkInspectionServiceTests covers:
 The generated test fixtures validate parser behavior; they are not claimed to be real handset or vendor firmware compatibility tests.
 ## CI evidence — 20 November 2026
 
-PhoneLab CI run #48 completed successfully: 40 tests passed, 0 failed, 0 skipped; Windows x64 publish succeeded; Android Agent build succeeded; the offline tool bundle and Windows artifact upload succeeded.
+PhoneLab CI run #48 first validated APK Lab with 40 tests passing. The later complete run #57, which includes APK Lab and Network Diagnostics source, passed 51 tests (0 failed, 0 skipped); Windows x64 publish, Android Agent build, offline tool bundling and Windows artifact upload all succeeded. Run #57: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114
 
 The added APK tests run only against generated local fixtures. No physical-device compatibility claim is made.
