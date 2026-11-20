@@ -57,6 +57,14 @@ public sealed class SoftBoxAuthorizationPolicyTests
     }
 
     [Fact]
+    public void AndroidNetworkDiagnosticsIsReadOnlyAndRequiresDeviceReadPermission()
+    {
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Administrator, "OpenAndroidNetworkDiagnostics"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenAndroidNetworkDiagnostics"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidNetworkDiagnostics"));
+    }
+
+    [Fact]
     public void UnknownActionIdsAreDeniedForEveryRole()
     {
         foreach (var role in Enum.GetValues<SoftBoxUserRole>())
