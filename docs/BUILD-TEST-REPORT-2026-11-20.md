@@ -42,3 +42,20 @@ The Windows x64 package from this run was uploaded as a GitHub Actions artifact 
 https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44752020306/artifacts/14636351322
 
 GitHub Actions artifacts are temporary workflow outputs; this is not a permanent GitHub Release.
+
+## Follow-up verification — Network Diagnostics (run #57)
+
+- Workflow: PhoneLab CI, run #57; result: Success.
+- Tested source commit: `0b6f7bc10490327cbd3a3ee1804f872841dea501`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114
+- Restore: passed.
+- Unit tests: 51 passed, 0 failed, 0 skipped.
+- Windows x64 self-contained publish: passed.
+- Android Agent build and artifact upload: passed.
+- Offline USB, scrcpy and TRACE Boardviewer bundle validation: passed.
+- Windows x64 artifact: 227,161,431 bytes; artifact ID `14637025549`.
+- Artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114/artifacts/14637025549
+
+The APK Lab code was already validated by run #48 (40 tests). Run #57 includes both APK Lab and Network Diagnostics code, including single-label local DNS host validation. Network Diagnostics tests validate input handling; they do not make an external DNS or live ICMP request in the test suite.
+
+No physical Android handset or USB device was attached during these CI runs.
