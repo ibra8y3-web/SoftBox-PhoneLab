@@ -554,6 +554,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenNetworkDiagnostics":
                 new NetworkDiagnosticsWindow { Owner = this }.Show();
                 break;
+            case "OpenAndroidDeviceTools":
+            case "OpenAndroidBatchTools":
+                OpenAndroidToolsWindow();
+                break;
+            case "OpenPhoneBackup":
+                OpenAndroidBackupWindow();
+                break;
             case "OpenWorkshopBackup":
                 OpenWorkshopAtTab(4);
                 break;
@@ -598,6 +605,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
+
+    private void OpenAndroidToolsWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "أدوات Android",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var authorized = Devices.Where(device => device.IsAuthorized)
+            .Select(device => device.Serial).ToArray();
+        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized) { Owner = this }.Show();
+    }
+
+    private void OpenAndroidBackupWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "Smart Backup",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new AndroidBackupWindow(_adb, selected.Serial) { Owner = this }.Show();
+    }
 
     private void GlobalWorkshop_Click(object sender, RoutedEventArgs e)
     {
