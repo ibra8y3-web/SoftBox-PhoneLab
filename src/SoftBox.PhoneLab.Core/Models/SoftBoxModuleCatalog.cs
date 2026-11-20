@@ -89,19 +89,19 @@ public static class SoftBoxModuleCatalog
                 new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات والملفات", "APK version and permission comparison", "يقارن اسم الحزمة وبيانات الإصدار وSHA-256 والصلاحيات وأسماء مدخلات الأرشيف بين ملفين محليين؛ لا يقارن محتوى كل ملف ولا يثبت صحة التوقيع.", ModuleImplementationStatus.Tested)
             ]),
         new("samsung-tools", 6, "الشركات والمعالجات", "أدوات Samsung", "Samsung Tools",
-            "الموجود حاليًا تعريف Samsung USB الاختياري وأدوات Android العامة؛ لا يوجد بعد محرك صيانة Samsung خاص.",
+            "يتضمن تعريف USB الرسمي الاختياري وقراءة خصائص One UI وCSC وPDA وBootloader عبر ADB؛ لا يدعم Download Mode أو التفليش.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("samsung-driver", "مثبت تعريف Samsung USB الرسمي الاختياري", "Samsung USB driver installer", "مضمن في حزمة Windows مع تحقق مثبت التعريف؛ مكان تشغيله الأساسي قسم طبيب USB، ولا يعني دعم Download Mode أو التفليش.", ModuleImplementationStatus.Implemented),
-                new("samsung-adb", "قراءة معلومات Samsung عبر ADB العام", "Generic Samsung ADB inspection", "استخدم محرك ذكاء الأجهزة للفحص العام؛ لم تُبنَ عمليات خاصة بالموديلات.", ModuleImplementationStatus.Implemented),
+                new("samsung-adb", "قراءة خصائص One UI وCSC وPDA وBootloader", "Samsung vendor property diagnostics", "يقرأ مجموعة getprop ثابتة على الجهاز المصرح به ويعرض الخصائص المتاحة والفارغة مع حفظ تقرير JSON.", ModuleImplementationStatus.Implemented, "OpenSamsungDiagnostics"),
                 new("samsung-service", "أدوات Download Mode وعمليات Samsung الخاصة", "Samsung service operations", "غير منفذة؛ لا يوجد دعم تفليش أو تجاوز حماية.", ModuleImplementationStatus.Planned)
             ]),
         new("xiaomi-tools", 7, "الشركات والمعالجات", "أدوات Xiaomi وRedmi وPOCO", "Xiaomi Tools",
-            "لا يوجد حاليًا محرك Xiaomi مخصص؛ المتاح فقط بروتوكولات Android العامة عند دعم الجهاز.",
-            ModuleImplementationStatus.Planned,
+            "يدعم قراءة خصائص Xiaomi/Redmi/POCO وMIUI/HyperOS والمنطقة ونسخة البناء من الجهاز المصرح به؛ لا يدعم عمليات Fastboot خاصة بالشركة.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("xiaomi-identity", "تحديد موديلات Xiaomi ومناطقها", "Xiaomi model and region identity", "تحتاج قاعدة موديلات موثقة ومصفوفة توافق.", ModuleImplementationStatus.Planned),
-                new("xiaomi-fastboot", "عمليات Xiaomi Fastboot الرسمية المتوافقة", "Supported Xiaomi Fastboot", "لم يتم تنفيذ إجراءات الشركة الخاصة.", ModuleImplementationStatus.Planned)
+                new("xiaomi-identity", "قراءة موديل الجهاز واسم البناء والمنطقة ونسخة MIUI/HyperOS", "Xiaomi vendor property diagnostics", "يجمع getprop من قائمة مفاتيح ثابتة ويعرض القيم التي يوفرها ROM فقط؛ لا يخمن المنطقة أو موديل اللوحة.", ModuleImplementationStatus.Implemented, "OpenXiaomiDiagnostics"),
+                new("xiaomi-fastboot", "عمليات Xiaomi Fastboot الرسمية المتوافقة", "Supported Xiaomi Fastboot", "لم يتم تنفيذ إجراءات الشركة الخاصة؛ يجب التحقق من سياسة Xiaomi وفتح Bootloader رسميًا لكل موديل قبل أي عملية.", ModuleImplementationStatus.Planned)
             ]),
         new("android-brands", 8, "الشركات والمعالجات", "شركات Android الأخرى", "Android Brands",
             "قاعدة التعريف العامة قد تتعرف على شركات متعددة؛ وحدات الصيانة الخاصة بكل شركة لم تُبنَ بعد.",
@@ -109,7 +109,8 @@ public static class SoftBoxModuleCatalog
             [
                 new("brand-recognition", "قراءة الشركة والموديل من خصائص Android", "Generic brand recognition", "تُقرأ بيانات الشركة والموديل المتاحة من الجهاز عبر محرك ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("brand-catalog", "مطابقة ملفات تعريف المجتمع", "Community device identities", "مصدر مجتمعي يساعد في التعرف ولا يثبت إصدار اللوحة أو التوافق؛ تحديث الكتالوج موجود في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("brand-specific", "وحدات صيانة خاصة بكل شركة", "Brand-specific service modules", "Pixel وMotorola وOPPO وvivo وغيرها لا تملك بعد وحدات مستقلة مكتملة.", ModuleImplementationStatus.Planned)
+                new("brand-generic-properties", "قراءة خصائص الشركة والموديل والبناء والتحقق من Verified Boot", "Generic vendor property diagnostics", "يقرأ مفاتيح Android العامة من الهاتف المصرح به، ويعرض القيم المتاحة دون ادعاء توافق موديل أو دعم بروتوكول شركة.", ModuleImplementationStatus.Implemented, "OpenBrandDiagnostics"),
+                new("brand-specific", "وحدات صيانة خاصة بكل شركة", "Brand-specific service modules", "Pixel وMotorola وOPPO وvivo وغيرها لا تملك بعد عمليات صيانة خاصة مكتملة؛ المتاح حاليًا قراءة خصائص Android العامة.", ModuleImplementationStatus.Planned)
             ]),
         new("qualcomm-tools", 9, "الشركات والمعالجات", "أدوات Qualcomm", "Qualcomm Tools",
             "قراءة تلميح SoC من Android ورصد مؤشر USB الشائع EDL/9008 عبر جرد Windows PnP؛ لا يوجد بعد بروتوكول EDL أو استعادة منخفضة المستوى.",
@@ -348,7 +349,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
