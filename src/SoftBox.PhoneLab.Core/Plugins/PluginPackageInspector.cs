@@ -134,8 +134,12 @@ public sealed class PluginPackageInspector
         var name = entry.FullName;
         if (string.IsNullOrWhiteSpace(name) || name.Length > 512 ||
             name.StartsWith("/", StringComparison.Ordinal) || name.Contains('\\') ||
-            name.Contains(':') || name.Any(char.IsControl) ||
-            name.Split('/').Any(segment => segment is "." or ".."))
+            name.Contains(':') || name.Any(char.IsControl))
+            throw new InvalidDataException("Unsafe path detected in plugin package.");
+
+        var normalized = name.EndsWith("/", StringComparison.Ordinal) ? name[..^1] : name;
+        if (normalized.Length == 0 ||
+            normalized.Split('/').Any(segment => segment is "" or "." or ".."))
             throw new InvalidDataException("Unsafe path detected in plugin package.");
 
         var unixFileType = (entry.ExternalAttributes >> 16) & 0xF000;
