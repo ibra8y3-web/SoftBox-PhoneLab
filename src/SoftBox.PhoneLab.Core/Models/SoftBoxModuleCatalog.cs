@@ -186,7 +186,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("host-network-interfaces", "قراءة واجهات Windows وعناوين IP والبوابات وDNS", "Windows network interfaces", "يقرأ بيانات واجهات الشبكة المحلية المتاحة من النظام دون إرسال طلبات خارجية.", ModuleImplementationStatus.Implemented),
                 new("host-network-probe", "حل DNS واختبار ICMP لهدف يختاره المستخدم", "User-selected DNS and ICMP probe", "يجري حل DNS ثم طلب Ping واحدًا لعنوان واحد؛ قد يحجب الجدار الناري ICMP ولا يعني فشل DNS.", ModuleImplementationStatus.Implemented, "OpenNetworkDiagnostics"),
-                new("phone-network", "قراءة معلومات الشبكة المسموح بها من الهاتف وتشخيص ADB اللاسلكي", "Android network observations and ADB Wireless", "لم يُنفذ هذا المسار؛ لا تُعرض بيانات هاتف خاصة أو نتائج غير متاحة.", ModuleImplementationStatus.Planned)
+                new("phone-network", "تشخيص شبكة Android عبر ADB", "Android network diagnostics", "يقرأ عناوين IPv4/IPv6 العامة ومسار الشبكة الافتراضي والبوابة واسم الواجهة وحالتي Wi-Fi ووضع الطيران عبر أوامر قراءة فقط؛ القيم المحجوبة تظهر غير متاحة. لا يقرأ SSID أو كلمات مرور Wi-Fi، ويلزم اختبار فعلي لكل إصدار ومصنّع.", ModuleImplementationStatus.Implemented, "OpenAndroidNetworkDiagnostics")
             ]),
         new("smart-repair-ai", 17, "الذكاء والمعرفة", "مساعد الإصلاح الذكي", "Smart Repair AI",
             "يتضمن الآن محرك استدلال محليًا قائمًا على قواعد وأدلة فعلية؛ لا يدّعي أنه نموذج AI أو تشخيص مادي نهائي.",
@@ -356,7 +356,7 @@ public static class SoftBoxModuleCatalog
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
-        "OpenWorkshopBackup", "OpenGlobalWorkshopHistory", "OpenWirelessAdbPairing",
+        "OpenWorkshopBackup", "OpenGlobalWorkshopHistory", "OpenWirelessAdbPairing", "OpenAndroidNetworkDiagnostics",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement"
     };
 
