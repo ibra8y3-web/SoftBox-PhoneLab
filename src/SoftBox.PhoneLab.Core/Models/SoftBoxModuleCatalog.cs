@@ -77,13 +77,14 @@ public static class SoftBoxModuleCatalog
                 new("command-center", "مركز أوامر Android", "Android command center", "لا توجد بعد واجهة أوامر مصنفة ذات قائمة سماح ومخاطر وسجل تنفيذ.", ModuleImplementationStatus.Planned)
             ]),
         new("apk-lab", 5, "أدوات Android", "مختبر APK", "APK Lab",
-            "تحليل محلي للملفات دون تثبيت أو تعديل: بيانات Manifest، الصلاحيات، سلامة ZIP وبصمة SHA-256.",
+            "تحليل محلي للملفات دون تثبيت أو تعديل: بيانات Manifest، الصلاحيات، قابلية قراءة ZIP وبصمة SHA-256.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("apk-manifest", "قراءة AndroidManifest.xml والصلاحيات والإصدار", "Manifest, permissions and version", "يقرأ XML النصي وAndroid Binary XML ويعرض اسم الحزمة والإصدار وSDK والصلاحيات من الملف المحدد محليًا.", ModuleImplementationStatus.Implemented, "OpenApkLab"),
-                new("apk-archive", "فحص بنية ZIP وقراءة جميع المدخلات", "ZIP archive integrity", "يفتح جميع مدخلات الأرشيف ويقرأها، ويبلغ عن تلف ZIP أو تجاوز حد الحجم الآمن.", ModuleImplementationStatus.Implemented),
-                new("apk-hash", "حساب SHA-256 للملف الكامل", "Full-file SHA-256", "يحسب البصمة الفعلية لبايتات ملف APK المختار، ولا يطابقها مع مصدر خارجي تلقائيًا.", ModuleImplementationStatus.Implemented),
-                new("apk-signature-detection", "اكتشاف بيانات توقيع APK", "APK signature metadata detection", "يرصد ملفات توقيع v1 ووجود APK Signing Block؛ هذا رصد بنيوي فقط وليس تحققًا تشفيريًا.", ModuleImplementationStatus.Implemented),
+                new("apk-manifest", "قراءة AndroidManifest.xml والصلاحيات والإصدار", "Manifest, permissions and version", "تم اختبار XML النصي وAndroid Binary XML واستخراج اسم الحزمة والإصدار وSDK والصلاحيات.", ModuleImplementationStatus.Tested, "OpenApkLab"),
+                new("apk-archive", "قراءة مدخلات أرشيف ZIP وفحص قابلية فكها", "ZIP entry readability", "تم اختبار قراءة المدخلات ورفض ملف ZIP غير صالح؛ لا يُعد ذلك تحققًا من CRC أو مصدر الملف.", ModuleImplementationStatus.Tested),
+                new("apk-hash", "حساب SHA-256 للملف الكامل", "Full-file SHA-256", "تم اختبار مطابقة SHA-256 المحسوب مع بايتات الملف الفعلية؛ لا يثبت ذلك موثوقية الناشر.", ModuleImplementationStatus.Tested),
+                new("apk-v1-signature-files", "اكتشاف ملفات توقيع APK v1", "Detect v1 signing files", "اختبار رصد ملفات META-INF الخاصة بتوقيع v1؛ لا يتحقق من صحة التوقيع التشفيرية.", ModuleImplementationStatus.Tested),
+                new("apk-signing-block", "رصد بنية APK Signing Block", "Detect APK Signing Block", "الكود يرصد البنية وموضعها في الأرشيف، لكن هذا المسار لم يُغطَّ بعد باختبار مستقل ولا يتحقق من التوقيع.", ModuleImplementationStatus.Implemented),
                 new("apk-signature-verification", "التحقق التشفيري من الشهادة وسلسلة الثقة", "Cryptographic signature verification", "غير منفذ؛ وجود ملفات توقيع لا يثبت صحتها أو موثوقية الناشر.", ModuleImplementationStatus.Planned),
                 new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات", "APK version comparison", "لم يتم تنفيذ مقارنة ملفين أو تحليل فروق المحتوى بعد.", ModuleImplementationStatus.Planned)
             ]),
