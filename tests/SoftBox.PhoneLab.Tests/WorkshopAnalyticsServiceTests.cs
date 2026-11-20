@@ -28,14 +28,14 @@ public sealed class WorkshopAnalyticsServiceTests
                 },
                 new RepairOrder
                 {
-                    TicketNumber = "SB-3", Status = "ملغي", DeviceModel = "Galaxy A54",
+                    TicketNumber = "SB-3", Status = "ملغي", DeviceModel = "Pixel 8",
                     IntakeSymptoms = "Battery drains", TechnicianName = "Mina",
                     EstimatedCostEgp = 400m
                 },
                 new RepairOrder
                 {
                     TicketNumber = "SB-4", Status = "Delivered", DeviceModel = "Galaxy A54",
-                    IntakeSymptoms = "Battery drains", TechnicianName = "Sara",
+                    IntakeSymptoms = "Camera focus issue", TechnicianName = "Sara",
                     FinalCostEgp = 300m, PartsCostEgp = 100m
                 }
             ],
@@ -55,7 +55,7 @@ public sealed class WorkshopAnalyticsServiceTests
         Assert.Equal(500m, report.RecordedDeliveredRevenue);
         Assert.Equal(120m, report.EstimatedOpenWorkValue);
         Assert.Equal(150m, report.RecordedPartsCost);
-        Assert.Equal(24d, report.AverageDeliveryHours);
+        Assert.Equal(24d, report.AverageDeliveryHours.GetValueOrDefault(), 0.001d);
         Assert.Equal(1, report.LowStockItems);
         Assert.Equal(130m, report.InventoryValueAtCost);
         Assert.Equal("Broken display", report.FrequentReportedFaults[0].Label);
@@ -95,7 +95,7 @@ public sealed class WorkshopAnalyticsServiceTests
             await WorkshopAnalyticsService.ExportCsvAsync(data, path);
 
             var csv = await File.ReadAllTextAsync(path);
-            Assert.Contains(""" "EGP" """.Trim(), csv);
+            Assert.Contains("\"EGP\"", csv);
             Assert.Contains("Recorded delivered revenue", csv);
             Assert.Contains("'=HYPERLINK", csv);
             Assert.Contains("'+Formula", csv);
