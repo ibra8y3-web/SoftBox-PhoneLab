@@ -665,6 +665,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenAndroidWorkflow":
                 OpenAndroidWorkflowWindow();
                 break;
+            case "OpenFastbootManager":
+                new FastbootManagerWindow { Owner = this }.Show();
+                break;
             case "OpenUsbDoctor":
                 new UsbDoctorWindow { Owner = this }.Show();
                 break;
