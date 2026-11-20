@@ -163,3 +163,10 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Receipts update stock quantity and weighted-average unit cost and create a matching positive inventory movement. The operation is serialized and persisted in one store write; in-memory changes roll back if persistence fails.
 - Parts Inventory now provides supplier receipt entry and CSV export for receipt history. Multi-line purchase orders, payment tracking and approval workflows remain unimplemented.
 - Integration tests cover weighted-average cost, stock balance, invoice linkage, invalid supplier rejection and v2-to-v4 migration.
+## Android Fastboot manager
+
+- Added `FastbootService`, which locates the official Platform-Tools `fastboot.exe` beside the configured ADB executable, in the bundled Tools directory or PATH.
+- Device discovery parses Fastboot-only rows and validates the device serial before exposing it to the UI.
+- The manager reads `fastboot getvar all` for the selected serial and provides a user-confirmed `fastboot reboot` to Android.
+- The service intentionally exposes no arbitrary command execution, flash, unlock, erase, format or boot operations.
+- Added unit tests for Fastboot device parsing, deduplication and rejection of unsafe/non-Fastboot entries.
