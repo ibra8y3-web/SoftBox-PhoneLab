@@ -193,6 +193,11 @@ public sealed class WorkshopStore
                 ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
             order.QuoteDecisionHistory ??= [];
             order.Timeline ??= [];
+            if (string.Equals(order.Status, "ملغي", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("لا يمكن تسجيل قرار عرض سعر على أمر صيانة ملغي.");
+            if (order.QuoteDecisionHistory.Count >= 10000)
+                throw new InvalidOperationException("تم بلوغ الحد الأقصى لسجل قرارات العرض لهذا الأمر.");
 
             var quotedAmount = order.CurrentQuoteAmountEgp;
             if (quotedAmount <= 0 || quotedAmount > 100_000_000m)
@@ -204,6 +209,10 @@ public sealed class WorkshopStore
             if (decision == CustomerQuoteDecision.Approved && quotedAmount < alreadyPaid)
                 throw new InvalidOperationException("قيمة العرض الجديد أقل من الدفعات المسجلة بالفعل.");
 
+            var previousUpdatedAt = order.UpdatedAtUtc;
+            var previousDatabaseUpdatedAt = _cache.UpdatedAtUtc;
+            var previousTimelineCount = order.Timeline.Count;
+            var previousEvents = _cache.Events.ToArray();
             var decisionRecord = new CustomerQuoteDecisionRecord
             {
                 Decision = decision,
@@ -226,7 +235,21 @@ public sealed class WorkshopStore
             });
             AddEvent("قرار عرض سعر", order.TicketNumber,
                 $"{decision} | {contactMethod} | بواسطة {recordedBy}");
-            await SaveLockedAsync(cancellationToken);
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                order.QuoteDecisionHistory.Remove(decisionRecord);
+                if (order.Timeline.Count > previousTimelineCount)
+                    order.Timeline.RemoveRange(previousTimelineCount, order.Timeline.Count - previousTimelineCount);
+                order.UpdatedAtUtc = previousUpdatedAt;
+                _cache.UpdatedAtUtc = previousDatabaseUpdatedAt;
+                _cache.Events.Clear();
+                _cache.Events.AddRange(previousEvents);
+                throw;
+            }
             return decisionRecord;
         }
         finally { _gate.Release(); }
@@ -262,9 +285,15 @@ public sealed class WorkshopStore
             await EnsureLoadedLockedAsync(cancellationToken);
             var order = _cache!.RepairOrders.FirstOrDefault(item => item.Id == orderId)
                 ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
-            if (order.Status.Equals("ملغي", StringComparison.OrdinalIgnoreCase) ||
-                order.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(order.Status, "ملغي", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("لا يمكن تسجيل دفعة على أمر صيانة ملغي.");
+            order.Payments ??= [];
+            if (order.Payments.Count >= 100000)
+                throw new InvalidOperationException("تم بلوغ الحد الأقصى لسجل الدفعات لهذا الأمر.");
+            if (!string.IsNullOrWhiteSpace(reference) &&
+                order.Payments.Any(payment => string.Equals(payment.Reference, reference, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("مرجع الدفع مسجل بالفعل في أمر الصيانة.");
             if (!order.HasCurrentQuoteApproval)
                 throw new InvalidOperationException("يجب تسجيل موافقة العميل على السعر الحالي قبل تسجيل دفعة.");
 
@@ -278,8 +307,11 @@ public sealed class WorkshopStore
             if (amountEgp > remaining)
                 throw new InvalidOperationException($"قيمة الدفعة تتجاوز الرصيد المتبقي ({remaining:0.00}).");
 
-            order.Payments ??= [];
             order.Timeline ??= [];
+            var previousUpdatedAt = order.UpdatedAtUtc;
+            var previousDatabaseUpdatedAt = _cache.UpdatedAtUtc;
+            var previousTimelineCount = order.Timeline.Count;
+            var previousEvents = _cache.Events.ToArray();
             var payment = new RepairPaymentRecord
             {
                 AmountEgp = amountEgp,
@@ -300,7 +332,21 @@ public sealed class WorkshopStore
             });
             AddEvent("دفعة أمر صيانة", order.TicketNumber,
                 $"{amountEgp:0.00} {method} | المتبقي {payment.BalanceAfterPaymentEgp:0.00} | بواسطة {recordedBy}");
-            await SaveLockedAsync(cancellationToken);
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                order.Payments.Remove(payment);
+                if (order.Timeline.Count > previousTimelineCount)
+                    order.Timeline.RemoveRange(previousTimelineCount, order.Timeline.Count - previousTimelineCount);
+                order.UpdatedAtUtc = previousUpdatedAt;
+                _cache.UpdatedAtUtc = previousDatabaseUpdatedAt;
+                _cache.Events.Clear();
+                _cache.Events.AddRange(previousEvents);
+                throw;
+            }
             return payment;
         }
         finally { _gate.Release(); }

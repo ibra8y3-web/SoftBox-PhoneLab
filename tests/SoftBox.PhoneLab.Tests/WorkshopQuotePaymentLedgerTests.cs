@@ -172,6 +172,59 @@ public sealed class WorkshopQuotePaymentLedgerTests
         finally { DeleteDirectory(root); }
     }
 
+
+    [Fact]
+    public async Task DuplicatePaymentReferenceIsRejectedWithoutAddingAnotherPayment()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new WorkshopStore(root);
+            var order = await CreatePricedOrderAsync(store, 300m);
+            await store.RecordQuoteDecisionAsync(
+                order.Id, CustomerQuoteDecision.Approved, "حضور العميل", "Technician A");
+            await store.RecordPaymentAsync(order.Id, 50m, "تحويل بنكي", "Technician A", "REF-ABC");
+
+            await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                store.RecordPaymentAsync(order.Id, 50m, "تحويل بنكي", "Technician A", "ref-abc"));
+
+            var snapshot = await store.GetSnapshotAsync();
+            Assert.Single(Assert.Single(snapshot.RepairOrders).Payments);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
+    [Fact]
+    public async Task FailedAtomicSaveRollsBackPaymentFromInMemorySnapshotAndAllowsRetry()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new WorkshopStore(root);
+            var order = await CreatePricedOrderAsync(store, 300m);
+            await store.RecordQuoteDecisionAsync(
+                order.Id, CustomerQuoteDecision.Approved, "حضور العميل", "Technician A");
+            var before = await store.GetSnapshotAsync();
+            var beforeUpdatedAt = before.UpdatedAtUtc;
+
+            File.Delete(store.DatabasePath);
+            Directory.CreateDirectory(store.DatabasePath);
+
+            await Assert.ThrowsAnyAsync<Exception>(() =>
+                store.RecordPaymentAsync(order.Id, 50m, "نقدًا", "Technician A"));
+
+            var afterFailure = await store.GetSnapshotAsync();
+            Assert.Empty(Assert.Single(afterFailure.RepairOrders).Payments);
+            Assert.Equal(beforeUpdatedAt, afterFailure.UpdatedAtUtc);
+
+            Directory.Delete(store.DatabasePath, recursive: true);
+            var retry = await store.RecordPaymentAsync(order.Id, 50m, "نقدًا", "Technician A");
+            Assert.Equal(250m, retry.BalanceAfterPaymentEgp);
+            Assert.Single(Assert.Single((await store.GetSnapshotAsync()).RepairOrders).Payments);
+        }
+        finally { DeleteDirectory(root); }
+    }
+
     private static async Task<RepairOrder> CreatePricedOrderAsync(WorkshopStore store, decimal estimate)
         => await store.CreateRepairOrderAsync(new RepairOrder
         {
