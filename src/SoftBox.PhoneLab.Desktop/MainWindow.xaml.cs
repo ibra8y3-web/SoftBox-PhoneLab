@@ -551,6 +551,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenApkLab":
                 new ApkLabWindow { Owner = this }.Show();
                 break;
+            case "OpenNetworkDiagnostics":
+                new NetworkDiagnosticsWindow { Owner = this }.Show();
+                break;
             case "OpenWorkshopBackup":
                 OpenWorkshopAtTab(4);
                 break;
