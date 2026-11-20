@@ -86,7 +86,7 @@ public static class SoftBoxModuleCatalog
                 new("apk-v1-signature-files", "اكتشاف ملفات توقيع APK v1", "Detect v1 signing files", "اختبار رصد ملفات META-INF الخاصة بتوقيع v1؛ لا يتحقق من صحة التوقيع التشفيرية.", ModuleImplementationStatus.Tested),
                 new("apk-signing-block", "رصد بنية APK Signing Block", "Detect APK Signing Block", "الكود يرصد البنية وموضعها في الأرشيف، لكن هذا المسار لم يُغطَّ بعد باختبار مستقل ولا يتحقق من التوقيع.", ModuleImplementationStatus.Implemented),
                 new("apk-signature-verification", "التحقق التشفيري من الشهادة وسلسلة الثقة", "Cryptographic signature verification", "غير منفذ؛ وجود ملفات توقيع لا يثبت صحتها أو موثوقية الناشر.", ModuleImplementationStatus.Planned),
-                new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات", "APK version comparison", "لم يتم تنفيذ مقارنة ملفين أو تحليل فروق المحتوى بعد.", ModuleImplementationStatus.Planned)
+                new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات والملفات", "APK version and permission comparison", "يقارن اسم الحزمة وبيانات الإصدار وSHA-256 والصلاحيات وأسماء مدخلات الأرشيف بين ملفين محليين؛ لا يقارن محتوى كل ملف ولا يثبت صحة التوقيع.", ModuleImplementationStatus.Tested)
             ]),
         new("samsung-tools", 6, "الشركات والمعالجات", "أدوات Samsung", "Samsung Tools",
             "الموجود حاليًا تعريف Samsung USB الاختياري وأدوات Android العامة؛ لا يوجد بعد محرك صيانة Samsung خاص.",
