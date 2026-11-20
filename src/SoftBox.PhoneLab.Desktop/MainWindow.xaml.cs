@@ -755,7 +755,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenNetworkDiagnostics":
                 new NetworkDiagnosticsWindow { Owner = this }.Show();
                 break;
-            case "OpenAndroidFileManager":
+            case "OpenWirelessAdbPairing":\n                new WirelessAdbPairingWindow(_adb) { Owner = this }.Show();\n                break;\n            case "OpenAndroidFileManager":
                 OpenAndroidToolsWindow(0);
                 break;
             case "OpenAndroidAppManager":
