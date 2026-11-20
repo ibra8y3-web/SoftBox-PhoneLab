@@ -231,5 +231,23 @@ The current catalog statuses are implementation classifications, not a completio
 - PR #2 CI run #273 passed **166 tests** (0 failures, 0 skipped), Restore, Windows x64 publish, Android Agent build and offline bundle packaging: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393
 - Windows x64 artifact (227,451,055 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44786097393/artifacts/14653329474
 - The final PR #2 head records each permitted module-action invocation against the authenticated user and denies launching an action if its audit entry cannot be written. The ReadOnly role can run allow-listed read-only command/workflow/batch inspections but not interactive screen control; auto mirror and Agent installation are disabled for read-only sessions.
-- PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged. The PR remains a separate reviewable addition until merged.
-- PR #2 changes no existing source file by deletion; existing workshop/repair history data stores remain unchanged.
+- PR #2 was merged into main through merge commit `137be00700785b3409f71e2400870f8c6d73db10`. Its latest CI #274 passed 166 tests, Windows x64 publish, Android Agent build and offline package validation.
+
+
+
+## PR #3 — Offline Readiness Center
+
+- Pull request: https://github.com/ibra8y3-web/SoftBox-PhoneLab/pull/3
+- Extends the existing Offline Center section 28 with a real read-only inventory of the seven expected application bundle files plus local device-profile and board-map directories.
+- Reports actual file presence, readability, size, modified time, executable version metadata and SHA-256. SHA-256 is a content fingerprint, not a trusted publisher signature or a pre-approved source hash.
+- Reports current OS/runtime, active network interfaces and installation-volume free space without claiming Internet access. A user-triggered JSON export remains local.
+- Rejects reparse points and fails closed when link status cannot be established; directory scans skip reparse points and stop after 10,000 files.
+- PR #3 CI run #279 passed **171 tests**, Restore, Windows x64 publish, Android Agent build/upload, offline dependency bundling and artifact upload: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44788760474
+- Windows artifact (227,459,925 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44788760474/artifacts/14654323613
+
+
+## PR #3 current implementation state
+
+The Offline Readiness feature has been added to the existing section 28 and classified Tested after CI #279. The overall section remains In Development because the larger Offline Center scope (Internet reachability, trusted source hashes/signatures, package repair/install and full local dependency inventory) is not implemented.
+
+No hardware compatibility is claimed. No package is downloaded or installed by the Offline Center. The local SHA-256 shown is computed from the current file bytes only.

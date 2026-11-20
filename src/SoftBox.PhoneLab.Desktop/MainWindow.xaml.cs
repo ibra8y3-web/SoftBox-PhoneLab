@@ -811,6 +811,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenHelpCenter":
                 new HelpCenterWindow { Owner = this }.Show();
                 break;
+            case "OpenOfflineCenter":
+                new OfflineCenterWindow() { Owner = this }.Show();
+                break;
             case "OpenApplicationSettings":
                 new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.Show();
                 break;

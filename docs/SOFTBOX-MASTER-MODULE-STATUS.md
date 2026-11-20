@@ -10,12 +10,12 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 - Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 5 Tested, 63 Planned, 23 In Development and 2 Unsupported.
 - No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
 
-### Current additive branch snapshot — User & Technician Management follow-up
+### Current additive branch snapshot — Offline Readiness Center follow-up
 
 - Top-level sections: **36 retained** — all 36 In Development.
 - Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): **21 Planned, 39 In Development, 95 Implemented, 8 Tested, 0 Verified and 2 Unsupported**.
-- Executable navigation: **53 unique ActionIds**, all routed, with no duplicate executable action IDs.
+- Entry statuses (section rows plus child features): **20 Planned, 39 In Development, 95 Implemented, 9 Tested, 0 Verified and 2 Unsupported**.
+- Executable navigation: **54 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
 ## Status definitions
@@ -60,7 +60,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 25 | Service Reports | In Development | Device JSON diagnostics; repair-order HTML/text/UTF-8 CSV includes parts and parts cost; inventory and movement CSV exports | Native PDF/Excel, signed report provenance and aggregated analytics dashboards |
 | 26 | Plugin Store | In Development | Local ZIP/Manifest inspection, permission allow-list validation, Zip Slip/symlink/duplicate-path/size/ratio checks and package SHA-256; install and code execution remain disabled | Publisher signature/trusted-root verification, permission grant UI, dependency manager, install/update/uninstall lifecycle and sandboxed runtime |
 | 27 | Plugin SDK | In Development | Version-1 manifest contract, semantic version validation, known permission identifiers, fail-closed unknown permissions, sample manifest and developer quickstart | Public SDK assembly/contracts, actual host API, runtime IPC, sample executable plugin and compatibility test host |
-| 28 | Offline Center | In Development | Local ADB, APK analysis, USB inventory, firmware library, workshop/activity data, settings and offline Help Center; support bundle stays local | Unified online/offline state, local component inventory and offline policy controls |
+| 28 | Offline Center | In Development | Read-only local package inventory for the SoftBox EXE, ADB, Fastboot, scrcpy, Android Agent APK, Samsung USB Driver and TRACE Boardviewer; actual presence/missing/unreadable state, file size, modified time, executable version metadata and SHA-256; actual file counts and aggregate sizes in device-profile and board-map directories; OS/runtime/network-interface/storage inventory; JSON export; link/Junction paths rejected | Internet reachability validation, expected-source hash/signature verification, package repair/download/install and broader local component discovery remain unimplemented |
 | 29 | Security & Privacy | In Development | ADB argument-list invocation and serial validation; allow-listed read-only shell presets; Agent consent; safe public-storage paths; secret-redacted local support ZIP; masked device history identifiers | Encrypted local workshop/history storage, managed keys, signed updater/plugin trust roots and formal threat model |
 | 30 | User & Technician Management | In Development | First-run administrator bootstrap; mandatory local sign-in; administrator/technician/read-only roles; PBKDF2-HMAC-SHA256 password verifiers; password lockout; account administration; self-service password change; manual session lock/re-authentication; bounded audit for sign-in, account, session, denied-action and module-action events | Windows OS account binding and dedicated ACL/DPAPI protection; unattended idle timeout; custom per-user permission editor; password recovery policy; full attribution of every internal WorkshopStore mutation and all nested device-operation outcomes; central multi-workstation identity |
 | 31 | Update Center | In Development | Official GitHub Stable/Beta release metadata inspection and local device-catalog refresh | Signed application update manifest, trusted publisher roots, secure staged download/install, rollback and release-channel enforcement |
@@ -170,3 +170,16 @@ Section 30 is now In Development rather than Planned. The current implementation
 - Audit events cover authentication, accounts, session events, denied actions and module launch; not every internal WorkshopStore write or the final result of every nested device command.
 - Account/audit storage is local to one Windows profile; no central identity or multi-workstation account synchronization.
 - No permanent account delete action; accounts are disabled to preserve attribution and history.
+
+
+## Follow-up — Offline Readiness Center (PR #3)
+
+- Section 28 was extended in place; no extra top-level section was created.
+- The Offline Readiness window reads only the current application directory. It checks the seven known bundle items: SoftBox executable, ADB, Fastboot, scrcpy, Android Agent APK, Samsung USB Driver and TRACE Boardviewer.
+- Each file is reported as Available, Missing or Unreadable using actual file-system state. Available files display byte size, modified time, version metadata where available and SHA-256 calculated from the actual file bytes.
+- Device-profile and board-map folders are inventoried using the files actually present, with a 10,000-file scan cap and reparse-point traversal disabled.
+- OS/runtime, storage free space and operational network interfaces are displayed. The view does not claim that an active interface proves Internet connectivity.
+- The user can export a local JSON report. The view does not download, install, launch or mutate any inspected component.
+- SHA-256 is an integrity fingerprint of the current bytes only; it is not a publisher signature, trusted expected hash or safety certification.
+- All **54** executable action IDs have one matching authorization requirement. The Offline Center is a read-only action and is available to ReadOnly accounts.
+- Tests validate missing files, exact byte count and SHA-256 for present files, actual data-directory inventory, root-relative paths and real host metadata without Internet claims.

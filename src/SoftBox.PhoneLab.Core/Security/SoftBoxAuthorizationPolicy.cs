@@ -40,6 +40,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenSupportBundle"] = SoftBoxAccountPermission.ExportData,
             ["OpenUpdateCenter"] = SoftBoxAccountPermission.ManageUpdates,
             ["OpenHelpCenter"] = SoftBoxAccountPermission.ViewWorkspace,
+            ["OpenOfflineCenter"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenApplicationSettings"] = SoftBoxAccountPermission.ManageSettings,
             ["OpenAbout"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenPartsInventory"] = SoftBoxAccountPermission.WorkshopOperations,
