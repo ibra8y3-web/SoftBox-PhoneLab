@@ -1031,6 +1031,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }.Show();
     }
 
+    private void OpenScreenRecording()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتفًا مصرحًا به عبر ADB قبل تسجيل الشاشة.",
+                "تسجيل الشاشة", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_screenMirror.IsRecording)
+        {
+            MessageBox.Show(this, "يوجد تسجيل نشط بالفعل. أوقف التسجيل الحالي واحفظه أولًا.",
+                "تسجيل الشاشة", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var window = new ScreenRecordingWindow(_screenMirror, selected.Serial, selected.Model ?? selected.DisplayName)
+        {
+            Owner = this
+        };
+        window.Show();
+    }
+
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
     {
         var selected = SelectedDevice;
