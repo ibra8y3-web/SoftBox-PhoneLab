@@ -169,7 +169,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("screen-mirror", "عرض والتحكم في شاشة هاتف مصرح به", "Authorized screen mirroring and control", "يستخدم scrcpy الرسمي؛ يحتاج اتصال ADB مصرحًا به.", ModuleImplementationStatus.Implemented, "MirrorScreen"),
                 new("screen-record", "تسجيل شاشة الهاتف الفعلية وحفظ MP4/MKV", "Android screen recording", "يشغّل scrcpy على الجهاز المحدد مع خيار --record إلى مسار يختاره المستخدم؛ عند الإيقاف يتم إرسال WM_CLOSE لإنهاء الحاوية والتحقق من وجود ملف غير فارغ.", ModuleImplementationStatus.Implemented, "OpenScreenRecording"),
-                new("multi-session", "إدارة عدة جلسات عرض مستقلة", "Multi-device screen sessions", "الاكتشاف المتعدد موجود، لكن إدارة عدة عروض مستقلة غير منفذة.", ModuleImplementationStatus.Planned)
+                new("multi-session", "إدارة عدة جلسات عرض مستقلة", "Multi-device screen sessions", "نافذة عرض متعددة تسمح بفتح حتى أربع جلسات scrcpy مستقلة في الوقت نفسه؛ لكل جهاز عملية ونافذة مدمجة وإيقاف منفصل. يعاد اكتشاف الأجهزة والتحقق من تصريح ADB قبل كل تشغيل، والجهاز المنقطع يُغلق عرضه عند تحديث القائمة. لا يبدأ تسجيلًا ولا يغيّر بيانات الهاتف.", ModuleImplementationStatus.InDevelopment, "OpenMultiScreenSessions")
             ]),
         new("hardware-diagnostics", 15, "الاتصال والتشخيص", "تشخيص العتاد", "Hardware Diagnostics",
             "توجد اختبارات Agent وCamera2 وقراءات النظام والقياس الخارجي؛ بعض الفحوص يدوية أو تتطلب معدات.",
@@ -354,7 +354,7 @@ public static class SoftBoxModuleCatalog
     {
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenUpdateCenter", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
-        "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
+        "OpenWorkshop", "MirrorScreen", "OpenMultiScreenSessions", "AnalyzeScreen", "MeasurementRig",
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenDashboardAnalytics", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
