@@ -28,7 +28,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenAndroidFileManager"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenAndroidAppManager"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenAndroidCommandCenter"] = SoftBoxAccountPermission.DeviceRead,
-            ["OpenAndroidBatchTools"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenAndroidBatchTools"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenAndroidWorkflow"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenFastbootManager"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenUsbDoctor"] = SoftBoxAccountPermission.DeviceRead,
