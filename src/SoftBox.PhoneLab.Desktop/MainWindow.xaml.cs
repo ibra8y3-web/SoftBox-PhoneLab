@@ -669,8 +669,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new UsbDoctorWindow { Owner = this }.Show();
                 break;
             case "OpenFirmwareCenter":
-                new FirmwareCenterWindow { Owner = this }.Show();
+            {
+                var selected = SelectedDevice;
+                var hasMatchingAuthorizedSnapshot = selected is { IsAuthorized: true } &&
+                    _snapshot is not null &&
+                    _snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal);
+                new FirmwareCenterWindow(
+                    hasMatchingAuthorizedSnapshot ? _snapshot : null,
+                    hasMatchingAuthorizedSnapshot)
+                {
+                    Owner = this
+                }.Show();
                 break;
+            }
             case "OpenDeviceHistory":
                 OpenActivityCenter(0, true);
                 break;
