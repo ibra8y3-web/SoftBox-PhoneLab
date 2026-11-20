@@ -205,11 +205,11 @@ public static class SoftBoxModuleCatalog
                 new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported)
             ]),
         new("workflow-automation", 20, "الأتمتة والإنتاجية", "أتمتة سير العمل", "Workflow Automation",
-            "لم يتم بناء محرك Workflow لتسلسل العمليات والشروط والإلغاء وإعادة المحاولة.",
-            ModuleImplementationStatus.Planned,
+            "إنشاء وحفظ وتشغيل سلاسل فحص Android من خطوات قراءة فقط محددة مسبقًا مع تتبع النتائج والإلغاء.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("workflow-builder", "إنشاء وحفظ قوالب Workflow", "Workflow builder", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned),
-                new("workflow-runner", "تشغيل الخطوات وتتبع التقدم والإلغاء", "Workflow runner", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
+                new("workflow-builder", "إنشاء وحفظ قوالب Workflow بصيغة JSON", "Workflow builder and JSON templates", "محرر خطوات من قائمة سماح، مع حفظ وتحميل ملفات JSON محلية والتحقق من المخطط قبل القبول.", ModuleImplementationStatus.Implemented, "OpenAndroidWorkflow"),
+                new("workflow-runner", "تشغيل متتابع مع تقدم وإلغاء وتقرير لكل خطوة", "Sequential workflow runner", "ينفذ خطوات القراءة فقط على الجهاز المحدد، ويتوقف عند الفشل أو الإلغاء ويسجل ناتج كل خطوة؛ لا ينفذ أوامر Shell حرة.", ModuleImplementationStatus.Implemented, "OpenAndroidWorkflow")
             ]),
         new("batch-operations", 21, "الأتمتة والإنتاجية", "العمليات الجماعية", "Batch Operations",
             "تنفيذ أوامر Android غير المدمرة على أجهزة ADB المصرح بها بالتوازي المحدود وعزل نتيجة كل جهاز.",
@@ -341,7 +341,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
