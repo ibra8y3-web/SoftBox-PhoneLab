@@ -33,7 +33,7 @@ public sealed class AdbClient
 
     public Task<string> RunAsync(params string[] args) => RunAsync((IReadOnlyList<string>)args, CancellationToken.None);
 
-    public async Task<string> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
+    public async Task<string> RunAsync(IReadOnlyList<string> args, CancellationToken cancellationToken, TimeSpan? commandTimeout = null)
     {
         if (!IsAvailable) throw new FileNotFoundException("ADB not found. Install official Android SDK Platform-Tools and add adb.exe to PATH or Tools/platform-tools.");
         var start = new ProcessStartInfo(_executable!)
@@ -45,7 +45,7 @@ public sealed class AdbClient
         using var process = new Process { StartInfo = start };
         if (!process.Start()) throw new InvalidOperationException("Could not start ADB.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(16));
+        timeout.CancelAfter(commandTimeout ?? TimeSpan.FromSeconds(16));
         var stdout = process.StandardOutput.ReadToEndAsync(timeout.Token);
         var stderr = process.StandardError.ReadToEndAsync(timeout.Token);
         try { await process.WaitForExitAsync(timeout.Token); }
@@ -68,6 +68,19 @@ public sealed class AdbClient
         var all = new List<string> { "-s", serial };
         all.AddRange(args);
         return RunAsync(all, CancellationToken.None);
+    }
+
+    public Task<string> RunForDeviceAsync(
+        string serial,
+        IReadOnlyList<string> args,
+        CancellationToken cancellationToken,
+        TimeSpan? commandTimeout = null)
+    {
+        if (!IsSafeSerial(serial))
+            throw new ArgumentException("Invalid ADB serial.", nameof(serial));
+        var all = new List<string> { "-s", serial };
+        all.AddRange(args);
+        return RunAsync(all, cancellationToken, commandTimeout);
     }
 
     public async Task ForwardAgentPortAsync(string serial)
