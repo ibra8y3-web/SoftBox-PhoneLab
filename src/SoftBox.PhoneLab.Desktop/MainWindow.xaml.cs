@@ -312,7 +312,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
-        if (_settings.AutoOpenScreenMirror)
+        var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
+            SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
+        if (_settings.AutoOpenScreenMirror && canControlDevice)
         {
             try
             {
@@ -326,6 +328,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
             }
             catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
+        }
+        else if (!canControlDevice)
+        {
+            MirrorStatus = "تم إيقاف التحكم التلقائي في شاشة الهاتف لأن دور الحساب الحالي للقراءة فقط.";
         }
         else
         {
