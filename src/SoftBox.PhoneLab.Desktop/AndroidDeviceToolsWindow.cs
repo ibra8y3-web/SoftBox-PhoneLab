@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using SoftBox.PhoneLab.Core.Apk;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
@@ -38,6 +39,7 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly Button _mkdirButton;
     private readonly Button _packageRefreshButton;
     private readonly Button _packageDetailsButton;
+    private readonly Button _installApkButton;
     private readonly Button _commandButton;
     private readonly Button _batchButton;
     private readonly Button _cancelButton;
@@ -72,6 +74,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _mkdirButton = ButtonControl("إنشاء مجلد", "#176044", CreateFolder_Click);
         _packageRefreshButton = ButtonControl("قراءة التطبيقات", "#14517A", LoadPackages_Click);
         _packageDetailsButton = ButtonControl("تفاصيل الحزمة", "#243B56", PackageDetails_Click);
+        _installApkButton = ButtonControl("تثبيت / تحديث APK", "#176044", InstallApk_Click);
         _commandButton = ButtonControl("تنفيذ الأمر الآمن", "#14517A", RunCommand_Click);
         _batchButton = ButtonControl("تنفيذ على الأجهزة المحددة", "#14517A", RunBatch_Click);
         _cancelButton = ButtonControl("إلغاء العملية", "#51333A", Cancel_Click);
@@ -224,12 +227,12 @@ public sealed class AndroidDeviceToolsWindow : Window
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
 
-        _packageRefreshButton.Margin = new Thickness(0, 0, 8, 8);
-        Grid.SetColumn(_packageRefreshButton, 0);
-        grid.Children.Add(_packageRefreshButton);
-        _packageDetailsButton.Margin = new Thickness(0, 0, 8, 8);
-        Grid.SetColumn(_packageDetailsButton, 1);
-        grid.Children.Add(_packageDetailsButton);
+        var packageActions = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+        packageActions.Children.Add(_packageRefreshButton);
+        packageActions.Children.Add(_packageDetailsButton);
+        packageActions.Children.Add(_installApkButton);
+        Grid.SetColumnSpan(packageActions, 2);
+        grid.Children.Add(packageActions);
 
         _packages.ItemsSource = _packageNames;
         _packages.Background = Brush("#071625");
@@ -463,6 +466,41 @@ public sealed class AndroidDeviceToolsWindow : Window
         });
     }
 
+    private async void InstallApk_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار ملف APK لتثبيته أو تحديثه على الهاتف",
+            Filter = "Android Package (*.apk)|*.apk",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        await RunOperationAsync("جارٍ تحليل APK محليًا قبل عرض تأكيد التثبيت...", async token =>
+        {
+            var inspection = await new ApkInspectionService().InspectAsync(dialog.FileName, token);
+            if (string.IsNullOrWhiteSpace(inspection.PackageName))
+                throw new InvalidDataException("لم يتمكن المحلل من قراءة اسم الحزمة من Manifest؛ لن يتم إرسال الملف إلى الهاتف.");
+
+            var confirmation = MessageBox.Show(this,
+                $"الحزمة: {inspection.PackageName}\nالإصدار: {inspection.VersionName ?? "غير متاح"}\n" +
+                $"Version Code: {inspection.VersionCode?.ToString() ?? "غير متاح"}\nSHA-256: {inspection.Sha256}\n\n" +
+                "سيتم إرسال APK إلى الجهاز المحدد واستخدام ADB install -r. قد يرفض Android التحديث عند اختلاف توقيع الناشر. لا يتم تجاوز هذا الفحص. هل توافق؟",
+                "تأكيد تثبيت APK", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (confirmation != MessageBoxResult.Yes)
+                return "ألغى المستخدم تثبيت APK؛ لم يتم إرسال أي ملف إلى الهاتف.";
+
+            var result = await _service.InstallApkAsync(_serial, dialog.FileName, token);
+            _packageDetails.Text = result;
+            return result.Contains("Success", StringComparison.OrdinalIgnoreCase)
+                ? "أبلغ Android عن نجاح تثبيت/تحديث APK. لم يتم تجاوز قيود التوقيع أو النظام."
+                : "انتهى أمر ADB. راجع المخرجات لتحديد النتيجة الفعلية.";
+        });
+    }
+
     private async void RunCommand_Click(object sender, RoutedEventArgs e)
     {
         if (_commandPreset.SelectedItem is not PresetItem preset)
@@ -541,6 +579,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _mkdirButton.IsEnabled = !busy;
         _packageRefreshButton.IsEnabled = !busy;
         _packageDetailsButton.IsEnabled = !busy;
+        _installApkButton.IsEnabled = !busy;
         _commandButton.IsEnabled = !busy;
         _batchButton.IsEnabled = !busy;
     }
