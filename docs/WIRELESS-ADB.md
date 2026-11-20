@@ -7,7 +7,7 @@ SoftBox uses the official Android SDK Platform-Tools already bundled with the Wi
 1. `adb pair <phone-ip>:<pairing-port> <six-digit-code>`
 2. `adb connect <phone-ip>:<wireless-debugging-port>`
 
-The pairing port is read from the temporary **Pair device with pairing code** dialog. The connection port is read separately from the main **Wireless debugging** screen. They are not interchangeable.
+The pairing IP and port are read from the temporary **Pair device with pairing code** dialog. The connection IP and port are read separately from the main **Wireless debugging** screen. The two endpoints may differ and must not be assumed to be identical.
 
 ## Phone requirements
 
@@ -21,7 +21,7 @@ Official instructions: https://developer.android.com/tools/adb#connect-to-a-devi
 
 ## SoftBox behavior
 
-- The operator enters an IP address, pairing port, temporary six-digit ASCII pairing code and the separate connection port shown by Android.
+- The operator enters the pairing IP and port, the connection IP and port, plus the six-digit temporary code shown by Android.
 - The service validates the IP, both port ranges and the code before starting ADB.
 - SoftBox executes the existing ADB binary using argument-list process invocation; it does not invoke a command shell.
 - The password field is cleared before ADB execution. SoftBox does not save the pairing code in preferences, logs or reports.
