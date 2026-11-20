@@ -792,6 +792,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenSamsungServiceOperations":
                 OpenSamsungServiceOperations();
                 break;
+            case "OpenAndroidLogAnalyzer":
+                if (SelectedDevice is { IsAuthorized: true } logAnalyzerDevice)
+                    new AndroidLogAnalyzerWindow(_adb, logAnalyzerDevice.Serial) { Owner = this }.Show();
+                else
+                    MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "محلل Logcat",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                break;
             case "OpenDeviceCapabilityCenter":
             {
                 var capabilitySelectedDevice = SelectedDevice;
