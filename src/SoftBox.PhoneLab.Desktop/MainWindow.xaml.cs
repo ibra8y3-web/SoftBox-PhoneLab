@@ -665,16 +665,43 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         window.Show();
     }
 
-    private void OpenModuleAction(string actionId)
+    private async void OpenModuleAction(string actionId)
     {
         if (!SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId))
         {
-            _ = _accountService.RecordAccessDeniedAsync(_currentUser.Id, actionId);
+            try
+            {
+                await _accountService.RecordAccessDeniedAsync(_currentUser.Id, actionId);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "تم منع الإجراء، لكن تعذر حفظ سجل محاولة الصلاحيات: " + ex.Message,
+                    "سجل الأمان • SoftBox",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
             MessageBox.Show(this,
                 "حسابك الحالي لا يملك الصلاحية المطلوبة لتنفيذ هذه الأداة. تواصل مع مدير SoftBox إذا كنت تحتاج إلى هذه الصلاحية.",
                 "الصلاحيات • SoftBox",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            await _accountService.RecordActionInvokedAsync(_currentUser.Id, actionId);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this,
+                "تعذر تسجيل العملية في سجل التدقيق المحلي، لذلك لم يتم تشغيل الأداة.\\n\\n" + ex.Message,
+                "سجل الأمان • SoftBox",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
             return;
         }
 
