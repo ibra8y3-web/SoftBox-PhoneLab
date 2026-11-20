@@ -73,7 +73,7 @@ public sealed class AndroidLogAnalyzerWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = $"الجهاز: {_serial.Length > 4 ? "••••" + _serial[^4..] : "••••"}. يقرأ آخر 3000 سطر من سجل Android، ثم يجمع مؤشرات الانهيارات وANR والذاكرة والصلاحيات وSELinux والحرارة والتخزين وUSB والشبكة. لا يتم تنفيذ أوامر تعديل.",
+            Text = $"الجهاز: {(_serial.Length > 4 ? "••••" + _serial[^4..] : "••••")}. يقرأ آخر 3000 سطر من سجل Android، ثم يجمع مؤشرات الانهيارات وANR والذاكرة والصلاحيات وSELinux والحرارة والتخزين وUSB والشبكة. لا يتم تنفيذ أوامر تعديل.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             FontSize = 11,
