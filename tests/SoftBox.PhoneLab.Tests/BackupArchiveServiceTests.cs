@@ -21,7 +21,7 @@ public sealed class BackupArchiveServiceTests
 
             var manifest = await _service.CreateArchiveAsync(root, archive, "••••1234", "/sdcard/DCIM");
             Assert.Equal(2, manifest.FileCount);
-            Assert.Equal(24 + 4, manifest.TotalBytes);
+            Assert.Equal(new FileInfo(Path.Combine(root, "DCIM", "Camera", "photo.txt")).Length + 4, manifest.TotalBytes);
             Assert.All(manifest.Files, file => Assert.Matches("^[0-9a-f]{64}$", file.Sha256));
 
             var verified = await _service.VerifyArchiveAsync(archive);
