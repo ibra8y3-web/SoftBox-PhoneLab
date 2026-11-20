@@ -14,6 +14,13 @@ PhoneLab discovers authorized Android phones over ADB, reads available device id
 
 The curated catalog is a starter set. The additional community model-code database greatly broadens Android model-name matching, but it is not guaranteed to contain every regional variant or every phone ever sold. Community-only matches are shown as likely, not confirmed.
 
+### Android network diagnostics
+- Section 16 includes a dedicated read-only Android network inspection window for the currently selected authorized ADB device.
+- Reads global IPv4/IPv6 addresses, default route, gateway, interface name, Wi-Fi enabled state and airplane-mode state using fixed ADB arguments (ip route, ip addr, and Android global settings).
+- Does not read SSIDs, Wi-Fi passwords, app traffic or private app data. Unsupported commands or values hidden by a vendor/Android version are reported as unavailable with the command error; no network value is guessed.
+- Automated parser tests cover IPv4/IPv6 route parsing, missing values, loopback/link-local filtering, toggle states and device-serial validation. Physical-device verification remains pending.
+- See [Android network diagnostics and limitations](docs/ANDROID-NETWORK-DIAGNOSTICS.md).
+
 ### Wireless ADB pairing
 - Device Center includes a dedicated pairing-code workflow using the already bundled Android Platform-Tools binary.
 - Enter the pairing IP/port and temporary code from Android's **Pair device with pairing code** dialog, plus the connection IP/port from the main **Wireless debugging** screen. SoftBox accepts separate addresses for both endpoints.
