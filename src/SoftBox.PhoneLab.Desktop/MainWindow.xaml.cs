@@ -701,6 +701,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         SelectedDevice?.IsAuthorized == true) { Owner = this }.Show();
                 }
                 break;
+            case "OpenOneClickDiagnostic":
+                if (SelectedDevice is not { IsAuthorized: true } selected)
+                {
+                    MessageBox.Show(this, "اختر هاتف Android مصرحًا به عبر ADB أولًا.",
+                        "الفحص الشامل", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    new OneClickDiagnosticWindow(
+                        _adb,
+                        selected.Serial,
+                        _snapshot,
+                        _agentSnapshot,
+                        Components.Select(component => component.Diagnostic).ToArray()) { Owner = this }.Show();
+                }
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
