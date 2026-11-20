@@ -25,7 +25,8 @@ public sealed class EncryptedBackupServiceTests
             await _archives.CreateArchiveAsync(source, zip, "••••1234", "/sdcard/Documents");
             await _encrypted.EncryptAsync(zip, encrypted, "correct horse battery staple");
             Assert.True(File.Exists(encrypted));
-            Assert.DoesNotContain("secret customer-owned data", await File.ReadAllTextAsync(encrypted).ContinueWith(t => t.Result, TaskContinuationOptions.OnlyOnFaulted));
+            var encryptedBytes = await File.ReadAllBytesAsync(encrypted);
+            Assert.True(encryptedBytes.AsSpan().IndexOf(System.Text.Encoding.UTF8.GetBytes("secret customer-owned data")) < 0);
 
             await _encrypted.DecryptAsync(encrypted, restored, "correct horse battery staple");
             var verification = await _archives.VerifyArchiveAsync(restored);
