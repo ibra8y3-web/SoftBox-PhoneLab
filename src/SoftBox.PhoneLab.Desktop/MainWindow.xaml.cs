@@ -483,6 +483,90 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             "إذا استمر نقل الملفات دون ADB فقد تحتاج إلى تعريف ADB الخاص بالشركة المصنّعة أو إلغاء تصاريح USB debugging القديمة ثم إعادة التوصيل.",
             "تهيئة اتصال USB", MessageBoxButton.OK, MessageBoxImage.Information);
     }
+    private void WorkshopCenter_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new WorkshopCenterWindow { Owner = this };
+        window.Show();
+    }
+
+    private async void UsbTransport_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            StatusMessage = "جارٍ قراءة حالات ADB وFastboot المتاحة دون تغيير وضع الهاتف...";
+            Notify(nameof(StatusMessage));
+            var report = await new UsbTransportInspector(_adb).InspectAsync();
+            var message =
+                "=== ADB ===\n" + report.AdbDevices +
+                "\n=== FASTBOOT ===\n" + report.FastbootDevices +
+                "\n\n" + string.Join("\n\n", report.Notes);
+            MessageBox.Show(this, message, "تشخيص أوضاع اتصال USB", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusMessage = "اكتمل استعلام أوضاع USB. راجع الملاحظات؛ بعض الأوضاع تحتاج تعريفات أو أدوات خاصة بالشركة.";
+        }
+        catch (Exception ex) { StatusMessage = "تعذر تشخيص أوضاع USB: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
+    private async void AndroidLogs_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            StatusMessage = "اختر هاتفًا حاصلًا على تصريح ADB أولًا.";
+            Notify(nameof(StatusMessage));
+            return;
+        }
+        var dialog = new SaveFileDialog
+        {
+            Title = "حفظ سجلات Android للقراءة والتحليل",
+            Filter = "Android diagnostic log (*.txt)|*.txt",
+            FileName = $"PhoneLab-Android-{DateTime.Now:yyyyMMdd-HHmmss}.txt"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            StatusMessage = "جارٍ جمع logcat وخصائص النظام والبطارية والحرارة بوضع القراءة فقط...";
+            Notify(nameof(StatusMessage));
+            var service = new AndroidForensicsService(_adb);
+            var logs = await service.CaptureAndroidLogsAsync(selected.Serial, dialog.FileName);
+            var assessment = AndroidForensicsService.AnalyzeBootLoop(logs);
+            StatusMessage = "تم حفظ سجلات Android. نتائج تحليل الإقلاع مؤشرات أولية فقط.";
+            MessageBox.Show(this,
+                $"تم حفظ السجلات في:\n{dialog.FileName}\n\nالنتيجة الأولية: {assessment.Verdict}\n\n" +
+                (assessment.Evidence.Count == 0 ? "لم تظهر أنماط مطابقة في الجزء المحفوظ." : string.Join("\n", assessment.Evidence)) +
+                "\n\n" + assessment.Limitation +
+                "\n\nتنبيه خصوصية: قد تحتوي السجلات على بيانات تطبيقات أو أسماء حسابات أو مسارات خاصة؛ راجع الملف قبل إرساله لأي شخص.",
+                "سجلات Android وتحليل أولي", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex) { StatusMessage = "فشل جمع السجلات: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
+    private async void FirmwareInspect_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار حزمة Firmware / OTA لفحصها دون تثبيت",
+            Filter = "Android firmware archives|*.zip;*.bin;*.tar;*.md5;*.img|All files|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            StatusMessage = "جارٍ حساب SHA-256 وفحص بنية الأرشيف محليًا دون تنفيذ أوامر على الهاتف...";
+            Notify(nameof(StatusMessage));
+            var result = await AndroidForensicsService.InspectFirmwareArchiveAsync(dialog.FileName);
+            var details =
+                $"الملف: {result.FileName}\nالحجم: {result.SizeBytes:N0} bytes\nSHA-256: {result.Sha256}\n" +
+                $"ZIP: {result.IsZip}\nAndroid metadata: {result.HasAndroidMetadata}\nPayload: {result.HasPayload}\nUpdater script: {result.HasUpdaterScript}\n\n" +
+                string.Join("\n", result.MetadataLines) + "\n\n" + result.Assessment;
+            MessageBox.Show(this, details, "فحص حزمة Firmware — دون تفليش", MessageBoxButton.OK, MessageBoxImage.Information);
+            StatusMessage = "اكتمل فحص الحزمة وحساب SHA-256. لم يتم تفليش أو تعديل أي جهاز.";
+        }
+        catch (Exception ex) { StatusMessage = "تعذر فحص الحزمة: " + ex.Message; }
+        Notify(nameof(StatusMessage));
+    }
+
     private async void Inspect_Click(object sender, RoutedEventArgs e) => await InspectSelectedAsync();
     private async void Agent_Click(object sender, RoutedEventArgs e) => await RefreshAgentAsync();
 

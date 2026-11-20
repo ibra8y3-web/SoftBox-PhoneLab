@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SoftBox.PhoneLab.Core\SoftBox.PhoneLab.Core.csproj" />
     <PackageReference Include="System.IO.Ports" Version="10.0.0" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
     <Content Include="..\..\data\boardmaps\**\*.json" Link="Data\boardmaps\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\data\device-profiles\**\*.json" Link="Data\device-profiles\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />

@@ -32,3 +32,10 @@ PhoneLab integrates or downloads the following third-party software/data. Downlo
 ## AndroidX
 
 - AndroidX Core KTX 1.15.0 is declared by the Android Agent and distributed under its upstream AndroidX/Apache-2.0 terms.
+ 
+## QRCoder 1.6.0
+
+- Project: https://github.com/codebude/QRCoder
+- NuGet package: https://www.nuget.org/packages/QRCoder/1.6.0
+- License: MIT.
+- Used locally to encode a repair-ticket identifier as a PNG QR code. QR payloads do not include customer names or phone numbers.

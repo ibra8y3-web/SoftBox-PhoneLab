@@ -78,7 +78,7 @@ jobs:
           $apkTarget = Join-Path $publish "Agent/SoftBox-PhoneLab-Agent.apk"
           if (!(Test-Path $apkTarget) -and (Test-Path $apkSource)) { Move-Item $apkSource $apkTarget }
           if (!(Test-Path $apkTarget)) { throw "PhoneLab Agent APK missing from the offline package." }
-          if (!(Test-Path (Join-Path $tools "platform-tools/adb.exe")) -or !(Test-Path (Join-Path $tools "scrcpy/scrcpy.exe"))) { throw "Offline USB/screen dependencies incomplete." }
+          if (!(Test-Path (Join-Path $tools "platform-tools/adb.exe")) -or !(Test-Path (Join-Path $tools "platform-tools/fastboot.exe")) -or !(Test-Path (Join-Path $tools "scrcpy/scrcpy.exe"))) { throw "Offline USB/screen/fastboot dependencies incomplete." }
 
           $drivers = Join-Path $publish "Drivers"
           New-Item -ItemType Directory -Force -Path $drivers | Out-Null

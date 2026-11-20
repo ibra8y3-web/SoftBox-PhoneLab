@@ -8,7 +8,7 @@
  Foreground="{StaticResource TextBrush}" FlowDirection="RightToLeft"
  FontFamily="Segoe UI Variable Text, Segoe UI">
  <Grid Margin="20">
-  <Grid.RowDefinitions><RowDefinition Height="94"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
+  <Grid.RowDefinitions><RowDefinition Height="112"/><RowDefinition Height="*"/><RowDefinition Height="38"/></Grid.RowDefinitions>
 
   <Border Grid.Row="0" Background="#0F1E32" BorderBrush="#263D58" BorderThickness="1" CornerRadius="15" Padding="16,10">
    <Grid>
@@ -28,7 +28,7 @@
       </StackPanel>
      </Border>
     </StackPanel>
-    <WrapPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Width="990">
+    <WrapPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Width="1240">
      <Button Content="بحث USB" Click="Refresh_Click" Margin="0,0,8,0"/>
      <Button Content="تهيئة USB" Click="SetupUsb_Click" Margin="0,0,8,0"/>
      <Button Content="مساعدة الاتصال" Click="ConnectionHelp_Click" Margin="0,0,8,0"/>
@@ -43,7 +43,11 @@
      <Button Content="اختبارات الهاتف" Click="PhoneTests_Click" Margin="0,0,7,0"/>
      <Button Content="أجهزة القياس" Click="MeasurementRig_Click" Margin="0,0,7,0"/>
      <Button Content="أدلة الإصلاح" Click="RepairGuides_Click" Margin="0,0,7,0"/>
-     <Button Content="تصدير التقرير" Click="Export_Click"/>
+     <Button Content="تصدير التقرير" Click="Export_Click" Margin="0,0,7,0"/>
+     <Button Content="مركز الصيانة" Background="#075F94" Click="WorkshopCenter_Click" Margin="0,0,7,0"/>
+     <Button Content="تشخيص أوضاع USB" Click="UsbTransport_Click" Margin="0,0,7,0"/>
+     <Button Content="سجلات Android" Click="AndroidLogs_Click" Margin="0,0,7,0"/>
+     <Button Content="فحص حزمة Firmware" Click="FirmwareInspect_Click"/>
     </WrapPanel>
    </Grid>
   </Border>

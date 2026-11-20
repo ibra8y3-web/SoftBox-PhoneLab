@@ -38,11 +38,23 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - On first authorized USB connection, Windows installs the bundled Agent APK and opens it. The phone displays a per-session consent dialog; the local-only ADB bridge starts only after the user taps Allow.
 - Exports device identity, Agent telemetry, external meter readings, component results and test limitations in JSON.
 
+### Professional workshop management and local records
+- Offline repair-shop workspace for customers, repair orders, status tracking, intake symptoms, pre-repair findings, work performed, post-repair test results and estimates/final costs.
+- Generates a unique repair-ticket number and a QR PNG that contains only that ticket number, not customer contact data.
+- Customer directory, parts inventory, low-stock threshold flag, stock in/out movements and a capped activity history.
+- JSON-backed local database stored under the current Windows user's LocalAppData. Manual backup and restore are built in; no customer records are uploaded to a cloud service.
+- Exports a technician-entered text report for each repair order.
+
+### USB transport, Android evidence and firmware inspection
+- Read-only ADB/Fastboot transport inspection. The report explains the difference between MTP, authorized ADB, Fastboot and vendor-specific Download/EDL/Preloader modes.
+- Captures a bounded Android evidence bundle: recent logcat, system properties, battery and thermal service state, and boot uptime. A heuristic can flag log patterns worth reviewing for reboot/boot-loop investigation.
+- Inspects a selected firmware archive locally, computes SHA-256 and looks for common Android OTA metadata/payload entries. It does not flash, unlock, wipe, execute package scripts or assert that a package is authentic or compatible.
+
 ## Repository modules
 
 | Module | Purpose |
 |---|---|
-| src/SoftBox.PhoneLab.Desktop | Windows WPF app, live mirror, screen-photo analysis and measurement dashboard |
+| src/SoftBox.PhoneLab.Desktop | Windows WPF app, live mirror, screen-photo analysis, measurement dashboard, workshop center and read-only forensics |
 | src/SoftBox.PhoneLab.Core | Device snapshots, model profiles, parsing and diagnostic evidence mapping |
 | agent | Android PhoneLab Agent, Camera2 diagnostics and local ADB-forward bridge |
 | data/device-profiles | Curated starter device identity catalog |
@@ -56,7 +68,7 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Official Android SDK Platform-Tools (adb.exe).
 - Android phone with a data USB cable and USB debugging authorization.
 - The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the official Samsung USB driver installer in one download. The Samsung driver is optional and intended only for Samsung phones.
-- The bundled ADB, scrcpy, TRACE Boardviewer and Agent work offline after downloading this Windows artifact. Internet is needed only for optional model-catalog refreshes and online repair-guide search. USB debugging approval and any required OEM ADB driver remain local setup requirements.
+- The bundled ADB/Fastboot Platform-Tools, scrcpy, TRACE Boardviewer, QR generation library and Agent work offline after downloading this Windows artifact. Internet is needed only for optional model-catalog refreshes and online repair-guide search. USB debugging approval and any required OEM ADB driver remain local setup requirements.
 
 ## Build Windows
 
@@ -80,7 +92,9 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 4. PhoneLab reads the identifiers and offers display, Camera2, touch, audio, flashlight, vibration, sensor and hardware-inventory tests.
 5. Use the physical display photo analyzer with a real camera photo of the screen during a uniform test pattern.
 6. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
-7. Review every component's evidence and export a JSON report.
+7. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records.
+8. Use سجلات Android to save private logs for review, or فحص حزمة Firmware to calculate SHA-256 and inspect OTA metadata without flashing.
+9. Review every component's evidence and export a JSON report.
 
 ## Diagnostic color contract
 
@@ -96,7 +110,11 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - The identity catalog combines curated profiles with a runtime-updated community Android model-code mapping. Community matches improve identity lookup but are not proof of board revision.
 - Camera2 cannot expose every proprietary camera path on every vendor firmware. Reported autofocus state does not establish optical sharpness; an image capture alone is not an optical-quality test.
 - Full battery capacity, internal resistance, PMIC rail and charging-IC pin measurements require appropriate test equipment and safe model-specific connections.
-- ADB is not raw USB hardware access. MTP-only devices do not expose the ADB diagnostic channel.
+- ADB is not raw USB hardware access. MTP-only devices do not expose the ADB diagnostic channel. Generic Fastboot discovery cannot enumerate every Samsung Download, Qualcomm EDL, MediaTek Preloader or OEM recovery interface. OEM-specific drivers are not all included; the bundled optional driver covers Samsung only.
+- The workshop store is local JSON persistence, not a multi-PC synchronized database. Backups are not encrypted by PhoneLab; protect the Windows account and backup media.
+- The QR ticket contains only a repair identifier. It is not a cloud lookup link.
+- Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
+- Firmware inspection verifies file hash and basic archive structure only. SHA-256 identifies exact bytes; it does not prove the publisher, signature, region, model compatibility or safe installation. No flashing, bootloader unlocking or data wipe is implemented.
 - Generic iPhone diagnosis is not implemented.
 
-See docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
+See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
