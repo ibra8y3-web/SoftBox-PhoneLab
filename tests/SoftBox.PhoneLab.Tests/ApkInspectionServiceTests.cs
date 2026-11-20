@@ -125,7 +125,76 @@ public sealed class ApkInspectionServiceTests
         }
     }
 
-    private static string CreateApk(byte[]? manifest, bool includeSignatureFiles = false)
+    [Fact]
+    public async Task CompareAsyncReportsVersionPermissionAndArchiveEntryChanges()
+    {
+        const string firstManifest = """
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+                      package="com.example.compare"
+                      android:versionCode="10"
+                      android:versionName="1.0">
+              <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application android:label="Compare Demo" />
+            </manifest>
+            """;
+        const string secondManifest = """
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+                      package="com.example.compare"
+                      android:versionCode="11"
+                      android:versionName="2.0">
+              <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="35" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <application android:label="Compare Demo" />
+            </manifest>
+            """;
+
+        var firstPath = CreateApk(Encoding.UTF8.GetBytes(firstManifest));
+        var secondPath = CreateApk(Encoding.UTF8.GetBytes(secondManifest), extraEntry: "res/xml/new_settings.xml");
+        try
+        {
+            var result = await _service.CompareAsync(firstPath, secondPath);
+
+            Assert.True(result.SamePackage);
+            Assert.True(result.VersionNameChanged);
+            Assert.True(result.VersionCodeChanged);
+            Assert.False(result.Sha256Matches);
+            Assert.True(result.EntryListsComplete);
+            Assert.Contains("android.permission.CAMERA", result.AddedPermissions);
+            Assert.Contains("android.permission.INTERNET", result.RemovedPermissions);
+            Assert.Contains("res/xml/new_settings.xml", result.AddedArchiveEntries);
+            Assert.Empty(result.RemovedArchiveEntries);
+            Assert.Contains(result.Warnings, warning => warning.Contains("محتوى كل ملف", StringComparison.Ordinal));
+        }
+        finally
+        {
+            File.Delete(firstPath);
+            File.Delete(secondPath);
+        }
+    }
+
+    [Fact]
+    public async Task CompareAsyncWarnsWhenPackageNamesDiffer()
+    {
+        const string firstManifest = "<manifest package=\"com.example.first\" />";
+        const string secondManifest = "<manifest package=\"com.example.second\" />";
+        var firstPath = CreateApk(Encoding.UTF8.GetBytes(firstManifest));
+        var secondPath = CreateApk(Encoding.UTF8.GetBytes(secondManifest));
+        try
+        {
+            var result = await _service.CompareAsync(firstPath, secondPath);
+
+            Assert.False(result.SamePackage);
+            Assert.Contains(result.Warnings, warning => warning.Contains("اسما الحزمة مختلفان", StringComparison.Ordinal));
+        }
+        finally
+        {
+            File.Delete(firstPath);
+            File.Delete(secondPath);
+        }
+    }
+
+    private static string CreateApk(byte[]? manifest, bool includeSignatureFiles = false, string? extraEntry = null)
     {
         var path = Path.Combine(Path.GetTempPath(), $"softbox-apk-{Guid.NewGuid():N}.apk");
         using var file = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.None);
@@ -136,6 +205,8 @@ public sealed class ApkInspectionServiceTests
 
         WriteEntry(archive, "classes.dex", [0x64, 0x65, 0x78, 0x0A]);
         WriteEntry(archive, "res/raw/payload.bin", [0x01, 0x02, 0x03, 0x04]);
+        if (!string.IsNullOrWhiteSpace(extraEntry))
+            WriteEntry(archive, extraEntry, [0x05, 0x06, 0x07]);
 
         if (includeSignatureFiles)
         {
