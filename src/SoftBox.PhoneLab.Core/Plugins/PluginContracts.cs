@@ -81,7 +81,7 @@ public static class PluginManifestValidator
             manifest.Publisher.Any(char.IsControl))
             errors.Add("Publisher is required and must be at most 160 characters.");
         if (string.IsNullOrWhiteSpace(manifest.Description) || manifest.Description.Length > 2000 ||
-            manifest.Description.Any(char.IsControl) && manifest.Description.Contains('\0'))
+            manifest.Description.Contains('\0'))
             errors.Add("Description is required and must be at most 2000 characters.");
 
         if (manifest.RequestedPermissions is null || manifest.RequestedPermissions.Count > 32)
