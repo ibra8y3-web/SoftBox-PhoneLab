@@ -394,9 +394,9 @@ public sealed class PartsInventoryWindow : Window
             var panel = new StackPanel { Margin = new Thickness(18) };
             panel.Children.Add(new TextBlock { Text = $"{item.Name} ({item.Sku}) — الرصيد الحالي: {item.Quantity}", Foreground = PartsInventoryWindow.Brush("#B7C9DE"), TextWrapping = TextWrapping.Wrap });
             panel.Children.Add(new TextBlock { Text = "تغيير الكمية (+ إضافة / - صرف)", Margin = new Thickness(0, 12, 0, 5), Foreground = Brush("#9FC7E8") });
-            PartsInventoryWindow.Configure(_delta); _delta.Text = "1"; panel.Children.Add(_delta);
+            Configure(_delta); _delta.Text = "1"; panel.Children.Add(_delta);
             panel.Children.Add(new TextBlock { Text = "سبب الحركة", Margin = new Thickness(0, 12, 0, 5), Foreground = Brush("#9FC7E8") });
-            PartsInventoryWindow.Configure(_reason); _reason.Text = "تعديل رصيد المخزون"; panel.Children.Add(_reason);
+            Configure(_reason); _reason.Text = "تعديل رصيد المخزون"; panel.Children.Add(_reason);
             var save = PartsInventoryWindow.ButtonControl("تأكيد الحركة", "#176044", Save_Click);
             panel.Children.Add(save);
             Content = panel;
