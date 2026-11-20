@@ -129,7 +129,7 @@ public sealed class NetworkDiagnosticsService
 
         try
         {
-            var reply = await ping.SendPingAsync(pingAddress, PingTimeout, pingCancellation.Token);
+            var reply = await ping.SendPingAsync(pingAddress, PingTimeout, cancellationToken: pingCancellation.Token);
             return new NetworkProbeResult(
                 normalizedHost,
                 resolved.Select(address => address.ToString()).ToArray(),
