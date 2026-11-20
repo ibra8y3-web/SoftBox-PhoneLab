@@ -74,7 +74,7 @@ public sealed class AndroidNetworkDiagnosticsService(AdbClient adb)
 public static class AndroidNetworkDiagnosticsParser
 {
     private static readonly Regex AddressLine = new(
-        @"^\\s*\\d+:\\s+(?<interface>[^\\s]+)\\s+(?<family>inet6?)\\s+(?<address>[^\\s]+)",
+        @"^\s*\d+:\s+(?<interface>[^\s]+)\s+(?<family>inet6?)\s+(?<address>[^\s]+)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     public static AndroidNetworkDiagnosticsSnapshot Parse(
