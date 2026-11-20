@@ -5,6 +5,7 @@ using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Core.Settings;
 using SoftBox.PhoneLab.Core.Models;
+using SoftBox.PhoneLab.Core.Security;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
@@ -38,6 +39,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly ReportService _reports = new();
     private readonly LocalActivityStore _activity = new();
     private readonly PhoneLabSettingsService _settingsService = new();
+    private readonly SoftBoxAccountService _accountService;
+    private AuthenticatedSoftBoxUser _currentUser;
     private PhoneLabSettings _settings = new();
     private readonly DispatcherTimer _timer;
     private bool _busy;
@@ -58,6 +61,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public ObservableCollection<DeviceListItem> Devices { get; } = [];
     public ObservableCollection<ComponentViewModel> Components { get; } = [];
     public ObservableCollection<PropertyLine> DeviceFacts { get; } = [];
+    public string CurrentUserDisplay => $"{_currentUser.DisplayName} • {SoftBoxAccountService.RoleLabel(_currentUser.Role)}";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -95,8 +99,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private DeviceListItem? SelectedDevice => DevicesList?.SelectedItem as DeviceListItem;
 
-    public MainWindow()
+    public MainWindow(SoftBoxAccountService accountService, AuthenticatedSoftBoxUser currentUser)
     {
+        _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
+        _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
         InitializeComponent();
         DataContext = this;
         _discovery = new PhoneDiscoveryService(_adb);
@@ -132,7 +138,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Closed += (_, _) => { _timer.Stop(); _screenMirror.Dispose(); };
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
+        Notify(nameof(CurrentUserDisplay));
         BuildScene();
+    }
+
+    private async void LockSession_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await _accountService.RecordSessionLockedAsync(_currentUser.Id);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تعذر تسجيل حدث قفل الجلسة: " + ex.Message,
+                "SoftBox", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        var authentication = new SoftBoxAuthenticationWindow(_accountService, initialSetup: false)
+        {
+            Owner = this
+        };
+        var result = authentication.ShowDialog();
+        if (result != true || authentication.AuthenticatedUser is null)
+        {
+            Application.Current.Shutdown();
+            return;
+        }
+
+        _currentUser = authentication.AuthenticatedUser;
+        try
+        {
+            await _accountService.RecordSessionUnlockedAsync(_currentUser.Id);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تمت إعادة المصادقة، لكن تعذر تسجيل فتح الجلسة: " + ex.Message,
+                "SoftBox", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        Notify(nameof(CurrentUserDisplay));
     }
 
     public async Task RefreshDevicesAsync()
@@ -289,7 +333,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         Notify(nameof(MirrorStatus));
 
-        if (_settings.AutoInstallAgent)
+        var canInstallAgent = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
+            SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
+        if (_settings.AutoInstallAgent && canInstallAgent)
         {
             try
             {
@@ -301,6 +347,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 AgentStatus = "تعذر تجهيز Agent تلقائيًا: " + ex.Message + " قد تحتاج إلى السماح بالتثبيت عبر USB في إعدادات الشركة المصنّعة.";
             }
+        }
+        else if (!canInstallAgent)
+        {
+            AgentStatus = "دور القراءة فقط يمنع تثبيت Agent أو إرسال طلب تثبيت إلى الهاتف.";
         }
         else
         {
@@ -602,12 +652,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var window = new ModuleSectionWindow(module, OpenModuleAction) { Owner = this };
+        var window = new ModuleSectionWindow(
+            module,
+            OpenModuleAction,
+            actionId => SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId)) { Owner = this };
         window.Show();
     }
 
     private void OpenModuleAction(string actionId)
     {
+        if (!SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId))
+        {
+            _ = _accountService.RecordAccessDeniedAsync(_currentUser.Id, actionId);
+            MessageBox.Show(this,
+                "حسابك الحالي لا يملك الصلاحية المطلوبة لتنفيذ هذه الأداة. تواصل مع مدير SoftBox إذا كنت تحتاج إلى هذه الصلاحية.",
+                "الصلاحيات • SoftBox",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
         switch (actionId)
         {
             case "RefreshDevices":
@@ -719,6 +783,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             case "OpenAbout":
                 new AboutWindow { Owner = this }.Show();
+                break;
+            case "OpenUserManagement":
+                new UserManagementWindow(_accountService, _currentUser) { Owner = this }.Show();
                 break;
             case "OpenPartsInventory":
                 new PartsInventoryWindow() { Owner = this }.Show();
