@@ -1,6 +1,6 @@
 # SoftBox Master Module Audit and Development Roadmap
 
-Audit baseline: repository \`main\`, commit \`97bce485d71c309bf517790b8d6faa46bbd0a70b\`, 20 November 2026.
+Audit baseline: pre-implementation \`main\` snapshot, commit \`12650bed442498f7746432de42bea95b1a622381\`, 20 November 2026. APK Lab changes are recorded on \`feature/apk-lab-real-apk-inspector\` until CI review is complete.
 
 This document maps the supplied **SoftBox – Universal Smart Device Service & Repair Platform** specification to the code that already exists. It is an implementation inventory, not a claim that every module is complete.
 
