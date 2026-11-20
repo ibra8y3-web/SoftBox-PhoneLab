@@ -564,6 +564,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenUsbDoctor":
                 new UsbDoctorWindow { Owner = this }.Show();
                 break;
+            case "OpenFirmwareCenter":
+                new FirmwareCenterWindow { Owner = this }.Show();
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
