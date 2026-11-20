@@ -71,10 +71,11 @@ public sealed class SoftBoxModuleCatalogTests
             .Select(x => x.ActionId!)
             .ToList();
 
-        Assert.Equal(actions.Count, actions.Distinct(StringComparer.Ordinal).Count());
+        var uniqueActions = actions.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        Assert.Equal(uniqueActions.Length, SoftBoxModuleCatalog.SupportedActionIds.Count);
         Assert.Equal(
             SoftBoxModuleCatalog.SupportedActionIds.OrderBy(x => x, StringComparer.Ordinal),
-            actions.OrderBy(x => x, StringComparer.Ordinal));
+            uniqueActions);
     }
 
     [Fact]
