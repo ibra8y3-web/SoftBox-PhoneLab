@@ -23,6 +23,11 @@ public sealed class GlobalWorkshopWindow : Window
     private readonly DataGrid _timeline = GridView();
     private readonly DataGrid _partsUsed = GridView();
     private readonly TextBlock _partsCost = new() { Foreground = Brush("#9FC7E8"), Margin = new Thickness(6, 4, 6, 4) };
+    private readonly TextBlock _analyticsSummary = new() { Foreground = Brush("#B7DDF7"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(6, 10, 6, 10) };
+    private readonly DataGrid _analyticsFaults = GridView();
+    private readonly DataGrid _analyticsModels = GridView();
+    private readonly DataGrid _analyticsTechnicians = GridView();
+    private readonly DataGrid _analyticsMonthly = GridView();
     private readonly TextBox _search = Box(250);
     private readonly ComboBox _statusFilter = new() { Width = 170, Margin = new Thickness(5), ItemsSource = StatusesWithAll(), SelectedIndex = 0 };
     private readonly ComboBox _status = new() { Width = 175, Margin = new Thickness(5), ItemsSource = Statuses(), SelectedIndex = 1 };
@@ -155,6 +160,9 @@ public sealed class GlobalWorkshopWindow : Window
         actions.Children.Add(Button("إضافة ملاحظة للسجل", async (_, _) => await AddNoteAsync()));
         actions.Children.Add(Button("صرف قطعة من المخزون", async (_, _) => await OpenPartsUsageAsync()));
         actions.Children.Add(Button("تقرير للطباعة", async (_, _) => await ExportSelectedHtmlAsync()));
+        actions.Children.Add(Button("إيصال استلام", async (_, _) => await ExportSelectedDocumentAsync(WorkshopDocumentKind.IntakeReceipt)));
+        actions.Children.Add(Button("عرض سعر", async (_, _) => await ExportSelectedDocumentAsync(WorkshopDocumentKind.EstimateQuote)));
+        actions.Children.Add(Button("فاتورة خدمة", async (_, _) => await ExportSelectedDocumentAsync(WorkshopDocumentKind.ServiceInvoice)));
         Grid.SetRow(_partsCost, 3);
         actions.Children.Add(_partsCost);
         Grid.SetRow(actions, 3);
@@ -200,6 +208,30 @@ public sealed class GlobalWorkshopWindow : Window
             Text = "تقارير HTML قابلة للطباعة أو الحفظ PDF من المتصفح، وملفات CSV UTF-8 لفتحها في Excel أو Google Sheets أو أنظمة ERP. كل ملف يوضح رمز العملة. لا تتم مشاركة البيانات تلقائيًا.",
             TextWrapping = TextWrapping.Wrap, Foreground = Brush("#B7C9DE"), Margin = new Thickness(0, 8, 0, 15)
         });
+        panel.Children.Add(new TextBlock { Text = "تحليلات التشغيل الفعلية", FontSize = 20, FontWeight = FontWeights.Bold, Foreground = Brush("#7DD3FC"), Margin = new Thickness(0, 10, 0, 6) });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "تعتمد المؤشرات على السجلات المحلية المحفوظة. الإيراد محسوب من قيمة الأوامر المسلمة فقط، ولا يمثل الربح أو التحصيل النقدي أو الضرائب.",
+            TextWrapping = TextWrapping.Wrap, Foreground = Brush("#B7C9DE"), Margin = new Thickness(0, 4, 0, 8)
+        });
+        panel.Children.Add(_analyticsSummary);
+        _analyticsFaults.Columns.Add(Column("وصف العطل المسجل", nameof(WorkshopFrequency.Label), 2));
+        _analyticsFaults.Columns.Add(Column("العدد", nameof(WorkshopFrequency.Count), .5));
+        _analyticsModels.Columns.Add(Column("موديل الجهاز", nameof(WorkshopFrequency.Label), 2));
+        _analyticsModels.Columns.Add(Column("عدد الأوامر", nameof(WorkshopFrequency.Count), .5));
+        _analyticsTechnicians.Columns.Add(Column("الفني", nameof(WorkshopTechnicianMetric.TechnicianName), 1.2));
+        _analyticsTechnicians.Columns.Add(Column("الأوامر", nameof(WorkshopTechnicianMetric.AssignedOrders), .6));
+        _analyticsTechnicians.Columns.Add(Column("المسلمة", nameof(WorkshopTechnicianMetric.DeliveredOrders), .6));
+        _analyticsTechnicians.Columns.Add(Column("إيراد الأوامر المسلمة", nameof(WorkshopTechnicianMetric.RecordedDeliveredRevenue), 1));
+        _analyticsMonthly.Columns.Add(Column("الشهر UTC", nameof(WorkshopMonthlyRevenue.Month), .8));
+        _analyticsMonthly.Columns.Add(Column("الأوامر المسلمة", nameof(WorkshopMonthlyRevenue.DeliveredOrders), .8));
+        _analyticsMonthly.Columns.Add(Column("الإيراد المسجل", nameof(WorkshopMonthlyRevenue.RecordedRevenue), 1));
+        panel.Children.Add(AnalyticsGrid("أوصاف الأعطال الأكثر تكرارًا", _analyticsFaults, 170));
+        panel.Children.Add(AnalyticsGrid("أكثر الموديلات استقبالًا", _analyticsModels, 150));
+        panel.Children.Add(AnalyticsGrid("أداء الفنيين حسب السجلات", _analyticsTechnicians, 190));
+        panel.Children.Add(AnalyticsGrid("الإيراد المسجل شهريًا", _analyticsMonthly, 220));
+        panel.Children.Add(Button("تصدير التحليلات CSV", async (_, _) => await ExportAnalyticsCsvAsync()));
+        panel.Children.Add(new TextBlock { Text = "تصدير ونسخ البيانات", FontSize = 18, FontWeight = FontWeights.Bold, Foreground = Brush("#7DD3FC"), Margin = new Thickness(0, 18, 0, 6) });
         panel.Children.Add(Button("تصدير كل أوامر الصيانة CSV", async (_, _) => await ExportOrdersCsvAsync()));
         panel.Children.Add(Button("تصدير المخزون CSV", async (_, _) => await ExportInventoryCsvAsync()));
         panel.Children.Add(Button("نسخة احتياطية كاملة", async (_, _) => await BackupAsync()));
@@ -228,6 +260,7 @@ public sealed class GlobalWorkshopWindow : Window
         var delivered = _data.RepairOrders.Count(x => x.Status == "تم التسليم");
         var activeWarranty = _data.RepairOrders.Count(x => WorkshopInternationalRules.IsWarrantyActive(x.WarrantyEndsAtUtc, DateTimeOffset.UtcNow));
         var lowStock = _data.Inventory.Count(x => x.NeedsRestock);
+        RefreshAnalytics();
         _dashboard.Text = "مفتوح: " + open + "  |  تم التسليم: " + delivered + "  |  ضمان سارٍ: " + activeWarranty + "  |  مخزون منخفض: " + lowStock + "  |  العملة: " + settings.CurrencyCode;
         SetResult("تم تحديث بيانات المركز.");
     }
@@ -367,6 +400,75 @@ public sealed class GlobalWorkshopWindow : Window
         catch (Exception ex) { SetResult("تعذر تصدير التقرير: " + ex.Message); }
     }
 
+    private void RefreshAnalytics()
+    {
+        var report = WorkshopAnalyticsService.Analyze(_data, DateTimeOffset.UtcNow);
+        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(_data.Settings?.CurrencyCode);
+        var averageDuration = report.AverageDeliveryHours.HasValue
+            ? report.AverageDeliveryHours.Value.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ساعة"
+            : "لا تتوفر مدة تسليم صالحة";
+
+        _analyticsSummary.Text =
+            $"إجمالي الأوامر: {report.TotalOrders}  |  مفتوح: {report.OpenOrders}  |  تم التسليم: {report.DeliveredOrders}  |  ملغي: {report.CancelledOrders}\n" +
+            $"الإيراد المسجل للأوامر المسلمة: {WorkshopInternationalRules.FormatMoney(report.RecordedDeliveredRevenue, currency, _data.Settings?.CultureName)}  |  تقديرات الأعمال المفتوحة: {WorkshopInternationalRules.FormatMoney(report.EstimatedOpenWorkValue, currency, _data.Settings?.CultureName)}\n" +
+            $"تكلفة قطع الغيار المسجلة: {WorkshopInternationalRules.FormatMoney(report.RecordedPartsCost, currency, _data.Settings?.CultureName)}  |  قيمة المخزون بالتكلفة: {WorkshopInternationalRules.FormatMoney(report.InventoryValueAtCost, currency, _data.Settings?.CultureName)}  |  مخزون منخفض: {report.LowStockItems}\n" +
+            $"متوسط المدة من الاستلام إلى التسليم: {averageDuration}";
+
+        _analyticsFaults.ItemsSource = report.FrequentReportedFaults;
+        _analyticsModels.ItemsSource = report.MostServicedModels;
+        _analyticsTechnicians.ItemsSource = report.TechnicianPerformance;
+        _analyticsMonthly.ItemsSource = report.MonthlyDeliveredRevenue;
+    }
+
+    private async Task ExportAnalyticsCsvAsync()
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export workshop analytics",
+            Filter = "CSV|*.csv",
+            FileName = "SoftBox-Workshop-Analytics.csv"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            await WorkshopAnalyticsService.ExportCsvAsync(_data, dialog.FileName);
+            SetResult("تم تصدير تحليلات الورشة الفعلية إلى CSV.");
+        }
+        catch (Exception ex) { SetResult("تعذر تصدير التحليلات: " + ex.Message); }
+    }
+
+    private async Task ExportSelectedDocumentAsync(WorkshopDocumentKind kind)
+    {
+        if (_selectedOrder is null)
+        {
+            SetResult("اختر أمر صيانة أولًا.");
+            return;
+        }
+
+        var suffix = kind switch
+        {
+            WorkshopDocumentKind.IntakeReceipt => "RECEIPT",
+            WorkshopDocumentKind.EstimateQuote => "ESTIMATE",
+            WorkshopDocumentKind.ServiceInvoice => "INVOICE",
+            _ => "DOCUMENT"
+        };
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export workshop document",
+            Filter = "HTML|*.html",
+            FileName = _selectedOrder.TicketNumber + "-" + suffix + ".html"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            await WorkshopServiceDocumentExporter.ExportAsync(_data, _selectedOrder, kind, dialog.FileName);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dialog.FileName) { UseShellExecute = true });
+            SetResult("تم إنشاء المستند وفتحه. راجع البيانات ثم استخدم Ctrl+P للطباعة أو حفظ PDF.");
+        }
+        catch (Exception ex) { SetResult("تعذر إنشاء المستند: " + ex.Message); }
+    }
+
     private async Task ExportOrdersCsvAsync()
     {
         var dialog = new SaveFileDialog { Title = "Export repair orders", Filter = "CSV|*.csv", FileName = "PhoneLab-Orders.csv" };
@@ -423,6 +525,22 @@ public sealed class GlobalWorkshopWindow : Window
 
     private static int ParseInt(string text) => string.IsNullOrWhiteSpace(text) ? 0 : int.Parse(text, System.Globalization.CultureInfo.CurrentCulture);
     private static decimal ParseMoney(string text) => string.IsNullOrWhiteSpace(text) ? 0 : decimal.Parse(text, System.Globalization.CultureInfo.CurrentCulture);
+
+    private static UIElement AnalyticsGrid(string title, DataGrid grid, double height)
+    {
+        grid.Height = height;
+        var panel = new StackPanel { Margin = new Thickness(0, 8, 0, 8) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontSize = 13,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Brush("#B7DDF7"),
+            Margin = new Thickness(5, 3, 5, 3)
+        });
+        panel.Children.Add(grid);
+        return panel;
+    }
 
     private static UIElement AddEditorField(Grid grid, string label, Control control, int column)
     {

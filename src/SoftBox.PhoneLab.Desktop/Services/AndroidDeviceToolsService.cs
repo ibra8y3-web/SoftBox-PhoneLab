@@ -1,9 +1,17 @@
 using System.IO;
 using System.Text.RegularExpressions;
+using System.Security.Cryptography;
+using SoftBox.PhoneLab.Core.Apk;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 public sealed record AndroidPackageInfo(string PackageName);
+public sealed record AndroidSplitApkFile(string FullPath, string FileName, string? SplitName, string Sha256);
+public sealed record AndroidSplitApkInstallPlan(
+    string PackageName,
+    string? VersionName,
+    long VersionCode,
+    IReadOnlyList<AndroidSplitApkFile> Files);
 public sealed record AndroidBatchResult(string DeviceSerial, bool Success, string Output, string? Error);
 public enum AndroidVendorKind { Generic, Samsung, Xiaomi }
 public sealed record AndroidVendorDiagnostics(
@@ -18,6 +26,7 @@ public sealed record AndroidVendorDiagnostics(
 /// </summary>
 public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
 {
+    private readonly ApkInspectionService _apkInspector = new();
     private static readonly TimeSpan TransferTimeout = TimeSpan.FromHours(2);
     private static readonly IReadOnlyDictionary<string, string[]> ReadOnlyPresets =
         new Dictionary<string, string[]>(StringComparer.Ordinal)
@@ -132,6 +141,151 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             ["install", "-r", Path.GetFullPath(apkFilePath)],
             cancellationToken,
             TimeSpan.FromMinutes(10));
+    }
+
+    /// <summary>
+    /// Inspects a local base APK and its configuration/feature splits before any device write.
+    /// A valid set has exactly one base manifest, one or more uniquely named splits, one package
+    /// name and one shared version code.
+    /// </summary>
+    public async Task<AndroidSplitApkInstallPlan> PrepareSplitApkInstallAsync(
+        IReadOnlyList<string> apkFilePaths,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(apkFilePaths);
+        if (apkFilePaths.Count is < 2 or > 32)
+            throw new ArgumentException("حدد ملف APK أساسيًا وملف Split واحدًا على الأقل، وبحد أقصى 32 ملفًا.", nameof(apkFilePaths));
+
+        var fullPaths = apkFilePaths
+            .Select(path => string.IsNullOrWhiteSpace(path)
+                ? throw new ArgumentException("مسار APK فارغ.", nameof(apkFilePaths))
+                : Path.GetFullPath(path))
+            .ToArray();
+
+        if (fullPaths.Distinct(StringComparer.OrdinalIgnoreCase).Count() != fullPaths.Length)
+            throw new InvalidDataException("تم اختيار ملف APK نفسه أكثر من مرة.");
+
+        var inspected = new List<(string Path, ApkInspectionResult Result)>(fullPaths.Length);
+        foreach (var path in fullPaths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!Path.GetExtension(path).Equals(".apk", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("كل الملفات المحددة يجب أن تكون APK.", nameof(apkFilePaths));
+            if (!File.Exists(path))
+                throw new FileNotFoundException("ملف APK محلي غير موجود.", path);
+
+            var result = await _apkInspector.InspectAsync(path, cancellationToken);
+            if (!result.ArchiveEntriesReadable ||
+                result.ManifestFormat == ApkManifestFormat.Unavailable ||
+                !IsSafePackageName(result.PackageName) ||
+                result.VersionCode is null)
+                throw new InvalidDataException(
+                    "تعذر التحقق من قراءة ZIP واسم الحزمة وVersion Code من Manifest للملف: " + Path.GetFileName(path));
+
+            inspected.Add((path, result));
+        }
+
+        var packageNames = inspected.Select(item => item.Result.PackageName!)
+            .Distinct(StringComparer.Ordinal).ToArray();
+        if (packageNames.Length != 1)
+            throw new InvalidDataException("تم رفض المجموعة: أسماء الحزم داخل ملفات APK ليست متطابقة.");
+
+        var versionCodes = inspected.Select(item => item.Result.VersionCode!.Value)
+            .Distinct().ToArray();
+        if (versionCodes.Length != 1)
+            throw new InvalidDataException("تم رفض المجموعة: Version Code غير متطابق بين ملفات APK.");
+
+        var versionNames = inspected.Select(item => item.Result.VersionName)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal).ToArray();
+        if (versionNames.Length > 1)
+            throw new InvalidDataException("تم رفض المجموعة: Version Name غير متطابق بين ملفات APK.");
+
+        var baseApks = inspected.Where(item => string.IsNullOrWhiteSpace(item.Result.SplitName)).ToArray();
+        var splitApks = inspected.Where(item => !string.IsNullOrWhiteSpace(item.Result.SplitName)).ToArray();
+        if (baseApks.Length != 1 || splitApks.Length != inspected.Count - 1)
+            throw new InvalidDataException("يجب أن تحتوي المجموعة على ملف Base واحد فقط، وبقية الملفات يجب أن تحمل Split Name في Manifest.");
+
+        var splitNames = splitApks.Select(item => item.Result.SplitName!).ToArray();
+        if (splitNames.Any(name => name.Length > 255 || name.Any(char.IsControl)) ||
+            splitNames.Distinct(StringComparer.Ordinal).Count() != splitNames.Length)
+            throw new InvalidDataException("Split Name مفقود أو غير صالح أو مكرر بين الملفات.");
+
+        var ordered = new[] { baseApks[0] }
+            .Concat(splitApks.OrderBy(item => item.Result.SplitName, StringComparer.Ordinal))
+            .ToArray();
+
+        return new AndroidSplitApkInstallPlan(
+            packageNames[0],
+            versionNames.FirstOrDefault(),
+            versionCodes[0],
+            ordered.Select(item => new AndroidSplitApkFile(
+                item.Path,
+                Path.GetFileName(item.Path),
+                string.IsNullOrWhiteSpace(item.Result.SplitName) ? null : item.Result.SplitName,
+                item.Result.Sha256)).ToArray());
+    }
+
+    /// <summary>
+    /// Installs a previously inspected set with the base APK first. Each local file is re-hashed
+    /// immediately before ADB is invoked so a changed file cannot silently replace the inspected bytes.
+    /// Android remains responsible for validating signer compatibility during installation.
+    /// </summary>
+    public async Task<string> InstallSplitApkSetAsync(
+        string serial,
+        AndroidSplitApkInstallPlan plan,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateAuthorizedSerial(serial);
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!IsSafePackageName(plan.PackageName) || plan.VersionCode < 0 ||
+            plan.Files is null || plan.Files.Count is < 2 or > 32)
+            throw new InvalidDataException("بيانات مجموعة Split APK غير صالحة.");
+
+        var baseFiles = plan.Files.Where(file => string.IsNullOrWhiteSpace(file.SplitName)).ToArray();
+        var splitFiles = plan.Files.Where(file => !string.IsNullOrWhiteSpace(file.SplitName)).ToArray();
+        if (baseFiles.Length != 1 ||
+            splitFiles.Length != plan.Files.Count - 1 ||
+            splitFiles.Select(file => file.SplitName!).Distinct(StringComparer.Ordinal).Count() != splitFiles.Length)
+            throw new InvalidDataException("خطة التثبيت لا تحتوي Base واحدًا وملفات Split فريدة.");
+
+        var orderedFiles = new[] { baseFiles[0] }
+            .Concat(splitFiles.OrderBy(file => file.SplitName, StringComparer.Ordinal))
+            .ToArray();
+        var arguments = new List<string> { "install-multiple", "-r" };
+
+        foreach (var file in orderedFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var fullPath = Path.GetFullPath(file.FullPath);
+            if (!Path.GetExtension(fullPath).Equals(".apk", StringComparison.OrdinalIgnoreCase) ||
+                !File.Exists(fullPath) ||
+                !string.Equals(Path.GetFileName(fullPath), file.FileName, StringComparison.Ordinal) ||
+                !Regex.IsMatch(file.Sha256 ?? "", "^[0-9a-f]{64}$", RegexOptions.CultureInvariant))
+                throw new InvalidDataException("تغير مسار أحد ملفات APK أو بيانات بصمته بعد الفحص.");
+
+            await using var stream = new FileStream(
+                fullPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken)).ToLowerInvariant();
+            if (!string.Equals(hash, file.Sha256, StringComparison.Ordinal))
+                throw new InvalidDataException("تغير محتوى ملف APK بعد الفحص؛ أُوقف التثبيت: " + file.FileName);
+
+            arguments.Add(fullPath);
+        }
+
+        var output = await RunDeviceAsync(
+            serial,
+            arguments,
+            cancellationToken,
+            TimeSpan.FromMinutes(15));
+        var confirmed = output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(line => line.Trim().Equals("Success", StringComparison.OrdinalIgnoreCase));
+        if (!confirmed)
+            throw new InvalidOperationException(
+                "لم يؤكد Android نجاح install-multiple. قد يكون هناك اختلاف في توقيع المطور أو توافق الملفات أو إصدار النظام. مخرجات ADB: " + output);
+
+        return output.Trim();
     }
 
     public async Task<string> UninstallThirdPartyPackageAsync(

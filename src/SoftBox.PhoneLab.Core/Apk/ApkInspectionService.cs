@@ -26,6 +26,7 @@ public sealed record ApkInspectionResult(
     int EntryCount,
     IReadOnlyList<string> Entries,
     string? PackageName,
+    string? SplitName,
     string? ApplicationLabel,
     string? VersionName,
     long? VersionCode,
@@ -210,6 +211,7 @@ public sealed class ApkInspectionService
             entryCount,
             displayedEntries,
             manifestInfo.PackageName,
+            manifestInfo.SplitName,
             manifestInfo.ApplicationLabel,
             manifestInfo.VersionName,
             manifestInfo.VersionCode,
@@ -602,6 +604,7 @@ public sealed class ApkInspectionService
     private sealed class ManifestInfo
     {
         public string? PackageName { get; private set; }
+        public string? SplitName { get; private set; }
         public string? ApplicationLabel { get; private set; }
         public string? VersionName { get; private set; }
         public long? VersionCode { get; private set; }
@@ -615,6 +618,7 @@ public sealed class ApkInspectionService
             {
                 case "manifest":
                     PackageName = Get(attributes, "package") ?? PackageName;
+                    SplitName = Get(attributes, "split") ?? SplitName;
                     VersionName = Get(attributes, "versionName") ?? VersionName;
                     var low = ParseUInt32(Get(attributes, "versionCode"));
                     var high = ParseUInt32(Get(attributes, "versionCodeMajor"));

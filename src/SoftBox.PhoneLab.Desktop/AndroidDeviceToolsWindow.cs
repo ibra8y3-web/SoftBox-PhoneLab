@@ -43,6 +43,7 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly Button _packageRefreshButton;
     private readonly Button _packageDetailsButton;
     private readonly Button _installApkButton;
+    private readonly Button _installSplitApksButton;
     private readonly Button _uninstallAppButton;
     private readonly Button _commandButton;
     private readonly Button _batchButton;
@@ -85,6 +86,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _packageRefreshButton = ButtonControl("قراءة التطبيقات", "#14517A", LoadPackages_Click);
         _packageDetailsButton = ButtonControl("تفاصيل الحزمة", "#243B56", PackageDetails_Click);
         _installApkButton = ButtonControl("تثبيت / تحديث APK", "#176044", InstallApk_Click);
+        _installSplitApksButton = ButtonControl("تثبيت Split APK", "#145F85", InstallSplitApks_Click);
         _uninstallAppButton = ButtonControl("إزالة التطبيق المحدد", "#7A3434", UninstallPackage_Click);
         _commandButton = ButtonControl("تنفيذ الأمر الآمن", "#14517A", RunCommand_Click);
         _batchButton = ButtonControl("تنفيذ على الأجهزة المحددة", "#14517A", RunBatch_Click);
@@ -243,6 +245,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         packageActions.Children.Add(_packageRefreshButton);
         packageActions.Children.Add(_packageDetailsButton);
         packageActions.Children.Add(_installApkButton);
+        packageActions.Children.Add(_installSplitApksButton);
         packageActions.Children.Add(_uninstallAppButton);
         Grid.SetColumnSpan(packageActions, 2);
         grid.Children.Add(packageActions);
@@ -479,6 +482,48 @@ public sealed class AndroidDeviceToolsWindow : Window
         });
     }
 
+    private async void InstallSplitApks_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار Base APK وملفات Split التابعة للتطبيق نفسه",
+            Filter = "Android Split APK set (*.apk)|*.apk",
+            CheckFileExists = true,
+            Multiselect = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        await RunOperationAsync("جارٍ فحص مجموعة Split APK محليًا قبل عرض تأكيد التثبيت...", async token =>
+        {
+            var plan = await _service.PrepareSplitApkInstallAsync(dialog.FileNames, token);
+            var files = string.Join(Environment.NewLine, plan.Files.Select(file =>
+                $"• {(file.SplitName is null ? "BASE" : "SPLIT: " + file.SplitName)} — {file.FileName}"));
+            var confirmation = MessageBox.Show(this,
+                $"الجهاز المستهدف: {_serial}\nالحزمة: {plan.PackageName}\n" +
+                $"الإصدار: {plan.VersionName ?? "غير متاح"}\nVersion Code: {plan.VersionCode}\n\n" +
+                $"الملفات بعد ترتيب Base أولًا ({plan.Files.Count}):\n{files}\n\n" +
+                "تم فحص Manifest وZIP وتطابق Package Name وVersion Code، وحُسبت SHA-256 لكل ملف. " +
+                "لم يتحقق SoftBox تشفيريًا من شهادات المطور؛ Android سيتحقق من توافق التوقيع أثناء التثبيت وقد يرفض المجموعة. " +
+                "سيتم استخدام ADB install-multiple -r على الجهاز المحدد. هل توافق؟",
+                "تأكيد تثبيت Split APK", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (confirmation != MessageBoxResult.Yes)
+                return "ألغى المستخدم تثبيت Split APK؛ لم يتم إرسال ملفات إلى الهاتف.";
+
+            var result = await _service.InstallSplitApkSetAsync(_serial, plan, token);
+            if (!_packageNames.Contains(plan.PackageName))
+                _packageNames.Add(plan.PackageName);
+            _packageDetails.Text =
+                "PACKAGE: " + plan.PackageName + Environment.NewLine +
+                "VERSION: " + (plan.VersionName ?? "Unknown") + Environment.NewLine +
+                "VERSION CODE: " + plan.VersionCode + Environment.NewLine +
+                "SPLIT FILES: " + plan.Files.Count + Environment.NewLine + Environment.NewLine +
+                "ADB INSTALL-MULTIPLE RESULT:" + Environment.NewLine + result;
+            return "أكد Android نجاح تثبيت مجموعة Split APK للحزمة: " + plan.PackageName;
+        });
+    }
+
     private async void UninstallPackage_Click(object sender, RoutedEventArgs e)
     {
         if (_packages.SelectedItem is not string packageName)
@@ -626,6 +671,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _packageRefreshButton.IsEnabled = !busy;
         _packageDetailsButton.IsEnabled = !busy;
         _installApkButton.IsEnabled = !busy;
+        _installSplitApksButton.IsEnabled = !busy;
         _uninstallAppButton.IsEnabled = !busy;
         _commandButton.IsEnabled = !busy;
         _batchButton.IsEnabled = !busy;

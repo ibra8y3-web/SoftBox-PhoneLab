@@ -74,6 +74,7 @@ public static class SoftBoxModuleCatalog
                 new("agent-update", "تحديث PhoneLab Agent", "PhoneLab Agent update", "يفحص ويحدّث مكوّن Agent ضمن دعم التطبيق الحالي.", ModuleImplementationStatus.Implemented, "UpdateAgent"),
                 new("logs", "قراءة سجلات Android المسموح بها", "Android logs", "يجمع حزمة أدلة محدودة؛ السجلات قد تحتوي بيانات شخصية ويجب مراجعتها قبل المشاركة. أداة جمعها في قسم الدعم والسجلات.", ModuleImplementationStatus.Implemented),
                 new("app-manager", "إدارة تطبيقات الطرف الثالث وتفاصيل الحزم", "Installed app inspection and third-party removal", "يعرض الحزم الخارجية وتفاصيل dumpsys، ويثبت APK بعد الفحص والتأكيد، ويزيل حزمة مختارة فقط بعد إعادة التحقق من قائمة pm list packages -3 وموافقة صريحة؛ لا يزيل تطبيقات النظام أو يصل إلى بيانات التطبيقات الخاصة.", ModuleImplementationStatus.Implemented, "OpenAndroidAppManager"),
+                new("split-apk-install", "تثبيت مجموعات Split APK", "Validated split APK set installation", "داخل مدير التطبيقات: يفحص ملف Base وملفات Split محليًا، ويتحقق من تطابق اسم الحزمة وVersion Code ووجود Base واحد وSplit Names فريدة، ثم يعيد التحقق من SHA-256 لكل ملف قبل ADB install-multiple. Android يتحقق من توافق توقيع التطبيق أثناء التثبيت؛ لا يدّعي SoftBox تحققًا تشفيريًا مستقلًا من شهادة المطور.", ModuleImplementationStatus.Tested),
                 new("file-manager", "مدير ملفات Android عبر ADB", "Android shared-storage file manager", "استعراض ورفع وتنزيل ملفات وإنشاء مجلدات داخل التخزين المشترك المسموح به فقط؛ لا يصل إلى /data أو بيانات التطبيقات الخاصة.", ModuleImplementationStatus.Implemented, "OpenAndroidFileManager"),
                 new("command-center", "مركز أوامر Android بقائمة قراءة فقط", "Allow-listed Android command center", "أوامر getprop والبطارية والتخزين وuptime والتطبيقات والخدمات من قائمة ثابتة؛ لا يقبل أوامر Shell حرة.", ModuleImplementationStatus.Implemented, "OpenAndroidCommandCenter")
             ]),
@@ -239,7 +240,7 @@ public static class SoftBoxModuleCatalog
                 new("customers", "إدارة العملاء", "Customer management", "إضافة وتعديل بيانات العملاء مع تخزين محلي.", ModuleImplementationStatus.Implemented),
                 new("repair-orders", "إنشاء أوامر الصيانة ومتابعة الحالات", "Repair orders", "أرقام Ticket وحالة الجهاز ونتائج ما قبل/بعد الإصلاح.", ModuleImplementationStatus.Implemented, "OpenWorkshop"),
                 new("warranty", "الإعدادات الدولية والضمان وسجل الفني", "International profile and warranty", "العملة واللغة والمنطقة الزمنية ومدة الضمان وسجل المتابعة وتقارير HTML.", ModuleImplementationStatus.Implemented),
-                new("quotes-invoices", "إيصالات الاستلام وعروض الأسعار والفواتير", "Receipts, quotes and invoices", "لا توجد دورة موافقات وفواتير مالية مكتملة بعد.", ModuleImplementationStatus.Planned)
+                new("quotes-invoices", "إيصالات الاستلام وعروض الأسعار والفواتير", "Receipts, quotes and invoices", "تمت إضافة مستندات HTML قابلة للطباعة لإيصال الاستلام وعرض السعر المبدئي وفاتورة الخدمة من بيانات أمر الصيانة؛ موافقات العملاء وحالة السداد وحساب الضرائب والفوترة الإلكترونية غير منفذة.", ModuleImplementationStatus.InDevelopment)
             ]),
         new("parts-inventory", 24, "إدارة مركز الصيانة", "مخزون قطع الغيار", "Parts Inventory",
             "إضافة الأصناف وتعديلها وحركات الصرف والإضافة والتنبيه بانخفاض المخزون متاحة.",
@@ -259,7 +260,7 @@ public static class SoftBoxModuleCatalog
                 new("device-json-report", "تقرير تشخيص الجهاز بصيغة JSON", "Device diagnostic JSON report", "يتضمن القراءات والاختبارات وحدود التفسير.", ModuleImplementationStatus.Implemented, "ExportDeviceReport"),
                 new("workshop-html", "تقرير صيانة HTML قابل للطباعة أو PDF من المتصفح", "Printable workshop report", "يدعم العربية والإنجليزية وبيانات المركز والضمان؛ يفتح تبويب التقارير في الإدارة العالمية.", ModuleImplementationStatus.Implemented, "OpenGlobalWorkshopReports"),
                 new("workshop-csv", "تصدير أوامر الصيانة والمخزون CSV", "Repair and inventory CSV export", "تصدير UTF-8 مع حماية حقول CSV من تفسيرها كصيغ.", ModuleImplementationStatus.Implemented),
-                new("analytics", "تحليلات الأعطال والإيرادات وأداء الفنيين", "Service analytics", "لا توجد لوحة تحليلات شاملة مبنية على قاعدة بيانات موحدة بعد.", ModuleImplementationStatus.Planned)
+                new("analytics", "تحليلات الأعطال والإيرادات وأداء الفنيين", "Service analytics", "يعرض مؤشرات فعلية محسوبة من أوامر الصيانة والمخزون المحفوظة: حالات الأوامر، الإيراد المسجل للأوامر المسلمة، قيمة التقديرات المفتوحة، أوصاف الأعطال المتكررة، الموديلات، أداء الفنيين، الإيراد الشهري والمخزون؛ لا يحسب الربح أو الضرائب.", ModuleImplementationStatus.Tested)
             ]),
         new("plugin-store", 26, "التوسعة والمكونات", "متجر الإضافات", "Plugin Store",
             "يتضمن فحص حزم ZIP وManifest والصلاحيات وبصمة SHA-256 محليًا؛ لا يوجد تثبيت أو تشغيل لأن توقيع الناشر وجذر الثقة غير مفعّلين.",
