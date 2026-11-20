@@ -309,12 +309,12 @@ public static class SoftBoxModuleCatalog
                 new("notification-inbox", "صندوق إشعارات محفوظ مع حالات القراءة", "Persistent notification inbox", "يحفظ وقت الإشعار ونوعه وعنوانه ورسالة مختصرة والقسم المرتبط وبصمة الجهاز الاختيارية؛ يدعم القراءة الفردية أو الجماعية.", ModuleImplementationStatus.Implemented, "OpenNotificationCenter")
             ]),
         new("help-center", 33, "النظام والحماية", "مركز المساعدة", "Help Center",
-            "تعليمات الاتصال وAgent وأدلة المشروع متاحة جزئيًا.",
+            "مركز مساعدة محلي قابل للبحث بالعربية والإنجليزية ويشرح أدوات SoftBox الحالية وحدود التوافق والأمان.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("connection-help", "تعليمات USB وADB", "USB and ADB connection help", "نافذة المساعدة العامة للاتصال متاحة في قسم مركز المساعدة.", ModuleImplementationStatus.Implemented),
+                new("connection-help", "تعليمات USB وADB", "USB and ADB connection help", "نافذة المساعدة العامة لتوصيل USB وADB متاحة.", ModuleImplementationStatus.Implemented, "ConnectionHelp"),
                 new("agent-help", "تعليمات PhoneLab Agent", "PhoneLab Agent help", "إرشادات فتح وتفويض تطبيق الهاتف.", ModuleImplementationStatus.Implemented, "AgentHelp"),
-                new("offline-help", "قاعدة مساعدة قابلة للبحث دون إنترنت", "Searchable offline help", "لا يوجد محرك بحث موحد في التوثيق بعد.", ModuleImplementationStatus.Planned)
+                new("offline-help", "قاعدة مساعدة قابلة للبحث دون إنترنت", "Searchable offline help", "كتالوج محلي لمقالات الاتصال وADB وAPK والنسخ وFirmware وUSB والشبكات وWorkflow والدعم، مع بحث بالعربية والإنجليزية.", ModuleImplementationStatus.Implemented, "OpenHelpCenter")
             ]),
         new("support-logs", 34, "النظام والحماية", "الدعم والسجلات", "Support & Logs",
             "جمع سجلات Android وحزمة دعم محلية بمعلومات الإصدار والبيئة والملفات التي يختارها المستخدم مع تنقيح أسرار شائعة.",
@@ -344,7 +344,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
