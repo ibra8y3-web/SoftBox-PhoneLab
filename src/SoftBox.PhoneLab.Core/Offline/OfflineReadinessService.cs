@@ -289,31 +289,39 @@ public sealed class OfflineReadinessService
 
     private bool HasReparsePointInPath(string fullPath)
     {
-        var current = _applicationRoot;
-        if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-            return true;
-
-        var relative = Path.GetRelativePath(_applicationRoot, fullPath);
-        foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.RemoveEmptyEntries))
+        try
         {
-            current = Path.Combine(current, segment);
-            try
-            {
-                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
-                    return true;
-            }
-            catch (FileNotFoundException)
-            {
-                return false;
-            }
-            catch (DirectoryNotFoundException)
-            {
-                return false;
-            }
-        }
+            var current = _applicationRoot;
+            if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                return true;
 
-        return false;
+            var relative = Path.GetRelativePath(_applicationRoot, fullPath);
+            foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                         StringSplitOptions.RemoveEmptyEntries))
+            {
+                current = Path.Combine(current, segment);
+                try
+                {
+                    if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                        return true;
+                }
+                catch (FileNotFoundException)
+                {
+                    return false;
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    return false;
+                }
+            }
+
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or SecurityException or ArgumentException or NotSupportedException)
+        {
+            // Fail closed: if link status cannot be established, do not follow the path.
+            return true;
+        }
     }
 
     private string ResolveInsideRoot(string relativePath)
