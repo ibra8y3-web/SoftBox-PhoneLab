@@ -68,13 +68,14 @@ public sealed class GlobalWorkshopWindow : Window
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
 
+        DockPanel.SetDock(_result, Dock.Bottom);
+        root.Children.Add(_result);
+
         var tabs = new TabControl();
         tabs.Items.Add(new TabItem { Header = "العمليات والضمان", Content = BuildOrdersPage() });
         tabs.Items.Add(new TabItem { Header = "بيانات المركز الدولية", Content = BuildSettingsPage() });
         tabs.Items.Add(new TabItem { Header = "تصدير وتقارير", Content = BuildExportsPage() });
         root.Children.Add(tabs);
-        DockPanel.SetDock(_result, Dock.Bottom);
-        root.Children.Add(_result);
         return root;
     }
 
