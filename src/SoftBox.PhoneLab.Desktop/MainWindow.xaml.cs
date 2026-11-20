@@ -689,6 +689,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenPartsInventory":
                 new PartsInventoryWindow() { Owner = this }.Show();
                 break;
+            case "OpenSamsungDiagnostics":
+                OpenVendorDiagnostics(AndroidVendorKind.Samsung, "Samsung Tools");
+                break;
+            case "OpenXiaomiDiagnostics":
+                OpenVendorDiagnostics(AndroidVendorKind.Xiaomi, "Xiaomi Tools");
+                break;
+            case "OpenBrandDiagnostics":
+                OpenVendorDiagnostics(AndroidVendorKind.Generic, "Android Brands");
+                break;
             case "OpenRepairAdvisor":
                 if (_snapshot is null)
                 {
@@ -781,6 +790,31 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var authorized = Devices.Where(device => device.IsAuthorized)
             .Select(device => device.Serial).ToArray();
         new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency) { Owner = this }.Show();
+    }
+
+    private void OpenVendorDiagnostics(AndroidVendorKind expectedVendor, string sectionName)
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتفًا حاصلًا على تصريح ADB أولًا.", sectionName,
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var detectedVendor = AndroidDeviceToolsService.NormalizeVendor(selected.Manufacturer);
+        if (expectedVendor != AndroidVendorKind.Generic && detectedVendor != expectedVendor)
+        {
+            MessageBox.Show(this,
+                $"القسم المحدد هو {sectionName}، لكن الشركة التي قرأها SoftBox للجهاز الحالي هي: {selected.Manufacturer}. اختر جهاز الشركة المطلوبة أولًا.",
+                sectionName, MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        new VendorDiagnosticsWindow(_adb, selected.Serial, selected.Manufacturer, selected.Model ?? selected.DisplayName)
+        {
+            Owner = this
+        }.Show();
     }
 
     private void OpenAndroidWorkflowWindow()
