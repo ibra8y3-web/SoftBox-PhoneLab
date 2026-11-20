@@ -162,6 +162,14 @@ public sealed class OfflineReadinessService
                 "تعذر التحقق من المسار: " + ex.Message);
         }
 
+        if (HasReparsePointInPath(fullPath))
+        {
+            return new OfflinePackageStatus(
+                definition.Id, definition.NameAr, definition.Category, definition.RelativePath,
+                OfflinePackageAvailability.Unreadable, null, null, null, null,
+                "المسار يحتوي على رابط رمزي أو Junction؛ تم رفض اتباعه خارج مجلد تثبيت SoftBox.");
+        }
+
         if (!File.Exists(fullPath))
         {
             return new OfflinePackageStatus(
@@ -221,6 +229,11 @@ public sealed class OfflineReadinessService
                 false, 0, 0, false, "تعذر التحقق من المسار: " + ex.Message);
         }
 
+        if (HasReparsePointInPath(fullPath))
+            return new OfflineDataDirectoryStatus(definition.Id, definition.NameAr, definition.RelativePath,
+                Directory.Exists(fullPath), 0, 0, true,
+                "المجلد يحتوي على رابط رمزي أو Junction؛ تم رفض اتباعه خارج مجلد تثبيت SoftBox.");
+
         if (!Directory.Exists(fullPath))
             return new OfflineDataDirectoryStatus(definition.Id, definition.NameAr, definition.RelativePath,
                 false, 0, 0, false, "المجلد المحلي غير موجود داخل حزمة التطبيق.");
@@ -272,6 +285,35 @@ public sealed class OfflineReadinessService
                 true, count, bytes, true,
                 "المجلد موجود لكن تعذرت قراءة كامل محتوياته: " + ex.Message);
         }
+    }
+
+    private bool HasReparsePointInPath(string fullPath)
+    {
+        var current = _applicationRoot;
+        if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+            return true;
+
+        var relative = Path.GetRelativePath(_applicationRoot, fullPath);
+        foreach (var segment in relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, segment);
+            try
+            {
+                if ((File.GetAttributes(current) & FileAttributes.ReparsePoint) != 0)
+                    return true;
+            }
+            catch (FileNotFoundException)
+            {
+                return false;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private string ResolveInsideRoot(string relativePath)
