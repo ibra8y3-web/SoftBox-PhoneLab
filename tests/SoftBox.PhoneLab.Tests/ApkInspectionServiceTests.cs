@@ -40,7 +40,7 @@ public sealed class ApkInspectionServiceTests
             Assert.Contains("android.permission.INTERNET", result.Permissions);
             Assert.Equal(expectedHash, result.Sha256);
             Assert.Equal(ApkManifestFormat.PlainXml, result.ManifestFormat);
-            Assert.True(result.ArchiveIntegrityChecked);
+            Assert.True(result.ArchiveEntriesReadable);
             Assert.True(result.HasV1SignatureFiles);
             Assert.Contains(result.Warnings, warning => warning.Contains("لم يتم التحقق تشفيريًا", StringComparison.Ordinal));
         }
@@ -67,7 +67,7 @@ public sealed class ApkInspectionServiceTests
             Assert.Equal("Camera Demo", result.ApplicationLabel);
             Assert.Contains("android.permission.CAMERA", result.Permissions);
             Assert.Matches("^[0-9a-f]{64}$", result.Sha256);
-            Assert.True(result.ArchiveIntegrityChecked);
+            Assert.True(result.ArchiveEntriesReadable);
         }
         finally
         {
@@ -83,7 +83,7 @@ public sealed class ApkInspectionServiceTests
         {
             var result = await _service.InspectAsync(path);
 
-            Assert.True(result.ArchiveIntegrityChecked);
+            Assert.True(result.ArchiveEntriesReadable);
             Assert.Null(result.PackageName);
             Assert.Null(result.VersionName);
             Assert.Equal(ApkManifestFormat.Unavailable, result.ManifestFormat);
