@@ -51,6 +51,12 @@ public sealed class TraceBoardViewerService
 
     public async Task<string> EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {
+        var bundledPath = Path.Combine(AppContext.BaseDirectory, "Tools", $"TRACE-Boardviewer-{Version}.exe");
+        if (File.Exists(bundledPath))
+        {
+            if (await VerifyAsync(bundledPath, cancellationToken)) return bundledPath;
+            throw new InvalidDataException("SHA-256 verification failed for bundled TRACE Boardviewer.");
+        }
         Directory.CreateDirectory(InstallDirectory);
         if (File.Exists(ExecutablePath))
         {

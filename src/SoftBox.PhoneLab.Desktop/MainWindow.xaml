@@ -1,6 +1,7 @@
 <Window x:Class="SoftBox.PhoneLab.Desktop.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:interop="clr-namespace:SoftBox.PhoneLab.Desktop.Interop"
  Title="SoftBox PhoneLab | Professional Diagnostics"
  Width="1640" Height="1000" MinWidth="1320" MinHeight="820"
  WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}"
@@ -29,6 +30,8 @@
     </StackPanel>
     <WrapPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Width="990">
      <Button Content="بحث USB" Click="Refresh_Click" Margin="0,0,8,0"/>
+     <Button Content="تهيئة USB" Click="SetupUsb_Click" Margin="0,0,8,0"/>
+     <Button Content="مساعدة الاتصال" Click="ConnectionHelp_Click" Margin="0,0,8,0"/>
      <Button Content="قراءة وفحص النظام" Background="#075F94" BorderBrush="#168BCB" Click="Inspect_Click" Margin="0,0,8,0"/>
      <Button Content="تحديث Agent" Click="Agent_Click" Margin="0,0,8,0"/>
      <Button Content="عرض شاشة الهاتف" Click="MirrorScreen_Click" Margin="0,0,7,0"/>

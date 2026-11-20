@@ -15,6 +15,7 @@ public sealed class AdbClient
         var env = Environment.GetEnvironmentVariable("SOFTBOX_ADB");
         if (!string.IsNullOrWhiteSpace(env)) candidates.Add(env);
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "Tools", "platform-tools", "adb.exe"));
+        candidates.Add(Path.Combine(AppContext.BaseDirectory, "Tools", "adb.exe"));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "adb.exe"));
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         candidates.AddRange(path.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
@@ -23,6 +24,11 @@ public sealed class AdbClient
     }
 
     public bool IsAvailable => !string.IsNullOrWhiteSpace(_executable) && File.Exists(_executable);
+
+    public async Task StartServerAsync(CancellationToken cancellationToken = default)
+    {
+        await RunAsync(["start-server"], cancellationToken);
+    }
     public string Executable => _executable ?? "adb.exe not found";
 
     public Task<string> RunAsync(params string[] args) => RunAsync((IReadOnlyList<string>)args, CancellationToken.None);

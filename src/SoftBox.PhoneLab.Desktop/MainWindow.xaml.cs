@@ -25,7 +25,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
     private readonly DeviceProfileCatalog _deviceProfiles = new();
-    private readonly ScreenMirrorService _screenMirror = new();
+    private readonly ScreenMirrorService _screenMirror;
+    private readonly PhoneLabAgentInstaller _agentInstaller;
+    private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
+    private bool _refreshing;
+    private bool _suppressDeviceSelection;
     private readonly TraceBoardViewerService _traceBoardViewer = new();
     private ExternalMeasurementSample? _measurementSnapshot;
     private readonly RepairKnowledgeService _repairKnowledge = new();
@@ -38,7 +42,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private double _yaw = -32;
     private double _pitch = 23;
     private double _zoom = 25;
-    private string _deviceSignature = "";
+    private string _deviceSignature = "\\0";
     private DeviceSnapshot? _snapshot;
     private AgentSnapshot? _agentSnapshot;
     private BoardMap _boardMap = new();
@@ -64,7 +68,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string ScanStatus { get; private set; } = "بانتظار جهاز";
     public string StatusMessage { get; private set; } = "PhoneLab جاهز لاكتشاف أجهزة Android المصرّح بها.";
     public string BoardMapNotice => _boardMap.AccuracyNotice;
-    public string AgentStatus { get; private set; } = "لم تتم مزامنة تطبيق PhoneLab Agent بعد.";
+    public string AgentStatus { get; private set; } = "سيُثبت Agent تلقائيًا بعد تصريح ADB، ثم يطلب موافقتك على الهاتف.";
+    public string MirrorStatus { get; private set; } = "بعد تصريح USB debugging ستظهر شاشة الهاتف هنا تلقائيًا ويمكن التحكم بها من داخل PhoneLab.";
     public string SelectedPartName => _selectedComponent?.Name ?? "اختر قطعة من المجسم";
     public string SelectedPartStatus => _selectedComponent?.StatusLabel ?? "لم تختبر";
     public Brush SelectedPartBrush => _selectedComponent?.StatusBrush ?? MakeBrush("#64748B");
@@ -92,6 +97,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _discovery = new PhoneDiscoveryService(_adb);
         _inspection = new DeviceInspectionEngine(_adb);
         _agentBridge = new AgentBridgeClient(_adb);
+        _agentInstaller = new PhoneLabAgentInstaller(_adb);
+        _screenMirror = new ScreenMirrorService(_adb);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
         Loaded += async (_, _) =>
@@ -104,7 +111,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _timer.Start();
             _ = SyncDeviceCatalogQuietlyAsync();
         };
-        Closed += (_, _) => _timer.Stop();
+        Closed += (_, _) => { _timer.Stop(); _screenMirror.Dispose(); };
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
         BuildScene();
@@ -112,14 +119,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public async Task RefreshDevicesAsync()
     {
-        if (_busy || !_adb.IsAvailable) return;
+        if (_busy || _refreshing) return;
+        if (!_adb.IsAvailable)
+        {
+            StatusMessage = "أدوات ADB غير موجودة. استخدم حزمة PhoneLab المتكاملة.";
+            Notify(nameof(StatusMessage)); return;
+        }
+        _refreshing = true;
         try
         {
             var list = await _discovery.DiscoverAsync();
-            var signature = string.Join("|", list.Select(x => $"{x.Serial}:{x.State}"));
+            var signature = string.Join("|", list.Select(d => d.Serial + ":" + d.State));
             if (signature == _deviceSignature) return;
             _deviceSignature = signature;
             var previous = SelectedDevice?.Serial;
+            if (_screenMirror.ActiveSerial is string active && !list.Any(d => d.Serial == active && d.IsAuthorized))
+            {
+                _screenMirror.Stop();
+                PhoneScreenHost.DetachWindow();
+                MirrorStatus = "انقطع اتصال الهاتف. سيُفتح العرض مجددًا عند توصيله والتصريح به.";
+                Notify(nameof(MirrorStatus));
+            }
+            _preparedSerials.RemoveWhere(id => !list.Any(d => d.Serial == id));
             Devices.Clear();
             foreach (var device in list)
             {
@@ -136,21 +157,116 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 Devices.Add(item);
             }
-            DevicesList.SelectedItem = Devices.FirstOrDefault(x => x.Serial == previous)
-                ?? Devices.FirstOrDefault(x => x.IsAuthorized) ?? Devices.FirstOrDefault();
+            _suppressDeviceSelection = true;
+            DevicesList.SelectedItem = Devices.FirstOrDefault(d => d.Serial == previous)
+                ?? Devices.FirstOrDefault(d => d.IsAuthorized) ?? Devices.FirstOrDefault();
+            _suppressDeviceSelection = false;
             if (Devices.Count == 0)
             {
-                ClearDevice("لم يتم العثور على جهاز ADB. تأكد من الكابل وتعريف USB وموافقة الهاتف.");
+                ClearDevice("لا يوجد جهاز ADB متصل.");
+                StatusMessage = "لم يتم رصد ADB. ظهور الهاتف في مستكشف الملفات يعني نقل MTP فقط، وليس تصريح تشخيص USB.";
+                AgentStatus = "بانتظار اتصال ADB مصرح به.";
+                Notify(nameof(StatusMessage)); Notify(nameof(AgentStatus)); return;
             }
-            StatusMessage = Devices.Count == 0 ? "لا يوجد جهاز مصرح." : $"تم اكتشاف {Devices.Count} جهاز/أجهزة.";
+            var selected = SelectedDevice;
+            if (selected is null || !selected.IsAuthorized)
+            {
+                ClearDevice("الهاتف ظاهر لكن لم يمنح تصريح ADB بعد.");
+                var waiting = Devices.FirstOrDefault(d => d.State.Equals("unauthorized", StringComparison.OrdinalIgnoreCase));
+                StatusMessage = waiting is not null
+                    ? "افتح قفل الشاشة ووافق على «السماح بتصحيح أخطاء USB»، واختر السماح دائمًا لهذا الكمبيوتر."
+                    : "تم رصد USB دون قناة ADB جاهزة. افحص تعريف ADB ووضع USB ثم أعد التوصيل.";
+                Notify(nameof(StatusMessage)); return;
+            }
+            StatusMessage = "تم رصد هاتف مصرح به. جارٍ فتح الشاشة وتجهيز Agent تلقائيًا...";
             Notify(nameof(StatusMessage));
+            await EnsureSelectedDeviceReadyAsync(selected);
+        }
+        catch (Exception ex) { StatusMessage = "فشل اكتشاف USB/ADB: " + ex.Message; Notify(nameof(StatusMessage)); }
+        finally { _suppressDeviceSelection = false; _refreshing = false; }
+    }
+
+    private async Task EnsureSelectedDeviceReadyAsync(DeviceListItem selected)
+    {
+        if (!selected.IsAuthorized) return;
+        if (_preparedSerials.Add(selected.Serial) || _screenMirror.ActiveSerial != selected.Serial)
+        {
+            _preparedSerials.Add(selected.Serial);
+            await PrepareConnectedDeviceAsync(selected);
+        }
+        if (SelectedDevice?.Serial == selected.Serial) await InspectSelectedAsync();
+    }
+
+    private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
+    {
+        try
+        {
+            WorkspaceTabs.SelectedIndex = 1;
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            var deadline = DateTime.UtcNow.AddSeconds(6);
+            while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
+                await Task.Delay(100);
+            if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero) throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف.");
+            await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
+            MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
+        }
+        catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
+        Notify(nameof(MirrorStatus));
+        try
+        {
+            await _agentInstaller.InstallAndRequestConsentAsync(selected.Serial);
+            AgentStatus = "تم تثبيت Agent وإرسال طلب الموافقة. وافق على شاشة الهاتف لتفعيل الاختبارات.";
+            _ = WatchForAgentConsentAsync(selected.Serial);
         }
         catch (Exception ex)
         {
-            StatusMessage = "فشل اكتشاف USB/ADB: " + ex.Message;
-            Notify(nameof(StatusMessage));
+            AgentStatus = "تعذر تجهيز Agent تلقائيًا: " + ex.Message + " قد تحتاج إلى السماح بالتثبيت عبر USB في إعدادات الشركة المصنّعة.";
         }
+        StatusMessage = "الاتصال الأساسي جاهز. وافق على طلب PhoneLab الظاهر على الهاتف لتفعيل الاختبارات.";
+        Notify(nameof(AgentStatus)); Notify(nameof(StatusMessage));
     }
+
+    private async Task WatchForAgentConsentAsync(string serial)
+    {
+        for (var i = 0; i < 24; i++)
+        {
+            if (!Devices.Any(d => d.Serial == serial && d.IsAuthorized)) return;
+            try
+            {
+                var snapshot = await _agentBridge.ReadSnapshotAsync(serial);
+                if (snapshot is not null)
+                {
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        _agentSnapshot = snapshot; ApplyDeviceFacts(); ApplyAgentFacts(snapshot); RebuildDiagnostics();
+                        AgentStatus = "تم الاتصال بـ Agent " + snapshot.AgentVersion + "؛ الاختبارات والقراءات متاحة.";
+                        Notify(nameof(AgentStatus));
+                    });
+                    return;
+                }
+            }
+            catch { }
+            await Task.Delay(1200);
+        }
+        await Dispatcher.InvokeAsync(() =>
+        {
+            AgentStatus = "لم يصل رد Agent. وافق على طلب الاتصال في الهاتف، أو اضغط تهيئة USB لإعادة المحاولة.";
+            Notify(nameof(AgentStatus));
+        });
+    }
+
+    private async Task OpenEmbeddedMirrorAsync(DeviceListItem selected)
+    {
+        WorkspaceTabs.SelectedIndex = 1;
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+        var deadline = DateTime.UtcNow.AddSeconds(6);
+        while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
+            await Task.Delay(100);
+        await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
+        MirrorStatus = "متصل الآن: " + selected.DisplayName + " — عرض وتحكم مباشر داخل PhoneLab.";
+        Notify(nameof(MirrorStatus));
+    }
+
 
     private async Task InspectSelectedAsync()
     {
@@ -194,7 +310,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized || _snapshot is null)
         {
-            AgentStatus = "اقرأ بيانات الهاتف أولًا، ثم افتح PhoneLab Agent على الهاتف.";
+            AgentStatus = "اختر هاتفًا مصرحًا به عبر ADB. سيُثبت Agent تلقائيًا ويطلب موافقتك على الهاتف.";
             Notify(nameof(AgentStatus)); return;
         }
         try
@@ -303,23 +419,62 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
+
+    private async void SetupUsb_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await _adb.StartServerAsync();
+            _deviceSignature = "\\0";
+            await RefreshDevicesAsync();
+            if (SelectedDevice is { IsAuthorized: true } selected)
+            {
+                _preparedSerials.Remove(selected.Serial);
+                await EnsureSelectedDeviceReadyAsync(selected);
+            }
+            else
+            {
+                StatusMessage = "تم تشغيل ADB. فعّل USB debugging ووافق على رسالة الثقة في الهاتف.";
+                Notify(nameof(StatusMessage));
+            }
+        }
+        catch (Exception ex) { StatusMessage = "تعذر بدء ADB: " + ex.Message; Notify(nameof(StatusMessage)); }
+    }
+
+    private void ConnectionHelp_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(this,
+            "ظهور الهاتف في مستكشف الملفات يعني نقل ملفات MTP فقط، وليس اتصال ADB.\\n\\n" +
+            "1) إعدادات الهاتف > حول الهاتف > اضغط رقم الإصدار 7 مرات.\\n" +
+            "2) افتح خيارات المطور وفعّل تصحيح أخطاء USB.\\n" +
+            "3) افتح قفل الشاشة ثم وصّل كابل بيانات.\\n" +
+            "4) وافق على «السماح بتصحيح أخطاء USB» واختر «السماح دائمًا من هذا الكمبيوتر».\\n" +
+            "5) سيُثبت PhoneLab Agent تلقائيًا ويطلب موافقة ثانية على الهاتف.\\n\\n" +
+            "إذا استمر نقل الملفات دون ADB فقد تحتاج إلى تعريف ADB الخاص بالشركة المصنّعة أو إلغاء تصاريح USB debugging القديمة ثم إعادة التوصيل.",
+            "تهيئة اتصال USB", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
     private async void Inspect_Click(object sender, RoutedEventArgs e) => await InspectSelectedAsync();
     private async void Agent_Click(object sender, RoutedEventArgs e) => await RefreshAgentAsync();
 
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
     {
         var selected = SelectedDevice;
-        if (selected is null || !selected.IsAuthorized) { StatusMessage = "اختر هاتفًا مصرحًا به أولًا."; Notify(nameof(StatusMessage)); return; }
+        if (selected is null || !selected.IsAuthorized)
+        {
+            StatusMessage = "اختر هاتفًا مصرحًا به. نقل الملفات MTP وحده لا يكفي لعرض الشاشة.";
+            Notify(nameof(StatusMessage)); return;
+        }
         try
         {
-            StatusMessage = "جارٍ تجهيز scrcpy الرسمي والتحقق من SHA-256...";
+            StatusMessage = "جارٍ فتح شاشة الهاتف داخل مساحة العمل...";
             Notify(nameof(StatusMessage));
-            await _screenMirror.StartAsync(selected.Serial, _snapshot?.Model ?? selected.DisplayName);
-            StatusMessage = "تم تشغيل عرض شاشة الهاتف الحقيقية في نافذة مستقلة.";
+            await OpenEmbeddedMirrorAsync(selected);
+            StatusMessage = "تم دمج شاشة الهاتف الحقيقية داخل PhoneLab.";
         }
         catch (Exception ex) { StatusMessage = "تعذر تشغيل عرض الشاشة: " + ex.Message; }
         Notify(nameof(StatusMessage));
     }
+
 
     private async void AnalyzeScreen_Click(object sender, RoutedEventArgs e)
     {
@@ -501,15 +656,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void Devices_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
+        if (_suppressDeviceSelection) return;
         var selected = SelectedDevice;
         if (selected is null) return;
         if (!selected.IsAuthorized)
         {
             ClearDevice(selected.StateText);
-            return;
+            StatusMessage = "الهاتف غير مصرح به عبر ADB. افتح قفل الشاشة ووافق على رسالة USB debugging.";
+            Notify(nameof(StatusMessage)); return;
         }
-        _ = InspectSelectedAsync();
+        _ = EnsureSelectedDeviceReadyAsync(selected);
     }
+
 
     private void Components_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
     {
