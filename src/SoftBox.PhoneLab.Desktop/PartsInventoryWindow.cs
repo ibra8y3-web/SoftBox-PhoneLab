@@ -76,8 +76,10 @@ public sealed class PartsInventoryWindow : Window
         actions.Children.Add(ButtonControl("قطعة جديدة", "#14517A", NewItem_Click));
         actions.Children.Add(ButtonControl("حفظ الصنف", "#176044", SaveItem_Click));
         actions.Children.Add(ButtonControl("حركة مخزون", "#243B56", AdjustStock_Click));
+        actions.Children.Add(ButtonControl("استلام شراء من مورد", "#176044", ReceivePurchase_Click));
         actions.Children.Add(ButtonControl("تصدير الأصناف CSV", "#243B56", ExportCsv_Click));
         actions.Children.Add(ButtonControl("تصدير الحركات CSV", "#243B56", ExportMovements_Click));
+        actions.Children.Add(ButtonControl("تصدير مشتريات CSV", "#243B56", ExportPurchases_Click));
         actions.Children.Add(ButtonControl("تحديث", "#243B56", async (_, _) => await RefreshAsync()));
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -274,6 +276,87 @@ public sealed class PartsInventoryWindow : Window
         {
             _status.Text = "تعذر تسجيل الحركة: " + ex.Message;
             MessageBox.Show(this, ex.Message, "حركة مخزون", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void ReceivePurchase_Click(object sender, RoutedEventArgs e)
+    {
+        if (_list.SelectedItem is not InventoryItem item)
+        {
+            _status.Text = "اختر صنفًا موجودًا في المخزون أولًا.";
+            return;
+        }
+
+        var prompt = new SupplierReceiptWindow(item) { Owner = this };
+        if (prompt.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var receipt = await _store.ReceiveSupplierStockAsync(
+                item.Sku,
+                prompt.Quantity,
+                prompt.PurchaseUnitCostEgp,
+                prompt.Supplier,
+                prompt.InvoiceReference,
+                prompt.TechnicianName);
+
+            await RefreshAsync();
+            _list.SelectedItem = _items.FirstOrDefault(candidate =>
+                candidate.Sku.Equals(receipt.Sku, StringComparison.OrdinalIgnoreCase));
+            _status.Text =
+                $"تم استلام {receipt.Quantity} × {receipt.ItemName} من {receipt.Supplier}. " +
+                $"الرصيد: {receipt.BalanceAfter}. متوسط تكلفة الوحدة الجديد: {receipt.WeightedAverageUnitCostAfterEgp:0.00}.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تسجيل استلام المورد: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "استلام مشتريات",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void ExportPurchases_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var snapshot = await _store.GetSnapshotAsync();
+            var rows = new List<string>
+            {
+                Csv("ReceivedAtUtc", "SKU", "ItemName", "Supplier", "InvoiceReference", "Quantity",
+                    "PurchaseUnitCost", "TotalCost", "WeightedAverageCostAfter", "BalanceAfter", "Technician")
+            };
+            rows.AddRange(snapshot.InventoryPurchaseReceipts
+                .OrderBy(receipt => receipt.ReceivedAtUtc)
+                .Select(receipt => Csv(
+                    receipt.ReceivedAtUtc.ToString("O"),
+                    receipt.Sku,
+                    receipt.ItemName,
+                    receipt.Supplier,
+                    receipt.InvoiceReference,
+                    receipt.Quantity.ToString(CultureInfo.InvariantCulture),
+                    receipt.PurchaseUnitCostEgp.ToString(CultureInfo.InvariantCulture),
+                    receipt.TotalCostEgp.ToString(CultureInfo.InvariantCulture),
+                    receipt.WeightedAverageUnitCostAfterEgp.ToString(CultureInfo.InvariantCulture),
+                    receipt.BalanceAfter.ToString(CultureInfo.InvariantCulture),
+                    receipt.TechnicianName)));
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "تصدير سجل مشتريات المخزون",
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = "SoftBox-Inventory-Purchases.csv"
+            };
+            if (dialog.ShowDialog(this) != true)
+                return;
+            await File.WriteAllTextAsync(dialog.FileName, string.Join(Environment.NewLine, rows), new UTF8Encoding(true));
+            _status.Text = "تم تصدير سجل المشتريات: " + dialog.FileName;
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "فشل تصدير المشتريات: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "تصدير مشتريات",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
