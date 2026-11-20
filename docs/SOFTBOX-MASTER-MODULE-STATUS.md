@@ -13,8 +13,8 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 ### Current additive branch snapshot — Offline Readiness Center follow-up
 
 - Top-level sections: **36 retained** — all 36 In Development.
-- Child features: **129**; catalog entries including section rows: **165**.
-- Entry statuses (section rows plus child features): **18 Planned, 39 In Development, 96 Implemented, 10 Tested, 0 Verified and 2 Unsupported**.
+- Child features: **130**; catalog entries including section rows: **166**.
+- Entry statuses (section rows plus child features): **18 Planned, 39 In Development, 96 Implemented, 11 Tested, 0 Verified and 2 Unsupported**.
 - Executable navigation: **55 unique ActionIds**, all routed, with no duplicate executable action IDs.
 - The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
@@ -36,7 +36,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 01 | Dashboard | In Development | Live ADB availability, connected-device selection, persisted device-connect/disconnect and inspection notifications, current status | Job counters/queue, historical metrics, storage health and update health aggregation |
 | 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history; real Wireless debugging pairing via adb pair/connect with separate IP/port endpoints and one-time code; protocol tests passed | Persistent device sessions, group targeting and independent background job queue; no physical-phone wireless pairing verification yet |
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
-| 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, public shared-storage browser/transfers, installed third-party package inspection, APK install after manifest inspection and confirmation, confirmed removal of a revalidated third-party package, allow-listed read-only commands; Fastboot Manager discovers fastboot devices, reads getvar all and supports confirmed reboot to Android | Split APK workflows, free-form shell commands, private app-data operations and model-specific destructive Fastboot servicing remain unsupported |
+| 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, public shared-storage browser/transfers, installed third-party package inspection, single APK install, validated Base+Split APK set installation using ADB install-multiple, confirmed removal of a revalidated third-party package, allow-listed read-only commands; Fastboot Manager discovers fastboot devices, reads getvar all and supports confirmed reboot to Android | SoftBox does not independently verify APK publisher certificates/signers; Android Package Manager enforces signer compatibility during install. Free-form shell commands, private app-data operations and model-specific destructive Fastboot servicing remain unsupported |
 | 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution and DEX/resource analysis; no installation or device action |
 | 06 | Samsung Tools | In Development | Official Samsung USB driver entry under USB Doctor; fixed-key getprop collection for One UI, CSC, PDA, bootloader and Verified Boot with JSON report | Download Mode service protocol, model-specific recovery and officially verified firmware workflow |
 | 07 | Xiaomi Tools | In Development | Xiaomi/Redmi/POCO fixed-key getprop collection for model/build/MIUI-HyperOS/region/Verified Boot with JSON report | Model/region compatibility database and official model-specific Fastboot/recovery workflows |
@@ -212,3 +212,17 @@ Section 30 is now In Development rather than Planned. The current implementation
 - The result is displayed as successful only when ADB returns its explicit `Success` output. Failed/unknown output is never converted into a success state.
 - No system-package selector, arbitrary shell input, private app-data access, new executable or new NuGet dependency was added.
 - Automated tests cover the command sequence, rejection of non-third-party/system packages, invalid package names, invalid device serials and ADB failure output. The operation still requires a real authorized Android device for hardware verification.
+
+
+
+## Follow-up — Validated Android Split APK installation
+
+- The existing Android App Manager now accepts one Base APK and one or more APK split files (up to 32 total) through a multi-select file picker.
+- SoftBox inspects every selected APK locally, including full ZIP entry readability, SHA-256, AndroidManifest parsing, package name, Version Code and the root Manifest split identifier.
+- The set is rejected before any device command unless it has exactly one Base manifest (no split identifier), at least one uniquely named split, one matching package name, matching Version Code and consistent Version Name values when supplied.
+- The install plan orders Base first, then split files by split identifier. A confirmation shows the target device, package/version and exact files before ADB is invoked.
+- Immediately before `adb install-multiple -r`, each local APK is re-hashed; any changed file stops the operation before device access. The result is displayed as success only when ADB returns an explicit `Success` line.
+- SoftBox reports signature metadata only; it does not independently verify publisher certificates or APK signer cryptography. Android's package installer enforces signer compatibility and rejects incompatible split sets. No signature bypass is attempted.
+- Automated tests cover split-manifest parsing, Base/split ordering, package/version mismatches, missing/duplicate Base or split identities, exact selected-device ADB arguments, post-inspection file modification and failure output. These tests use local APK ZIP fixtures and a fake ADB runner inside the test project only.
+- No new NuGet package, external executable, driver or firmware payload was added. The tool reuses the existing APK inspector and ADB command runner.
+- The feature is **Tested** for local preflight and command orchestration; it is not hardware **Verified** until tested on an authorized Android device with a real split APK set.
