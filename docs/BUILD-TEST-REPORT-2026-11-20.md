@@ -158,3 +158,21 @@ The final follow-up adds user-attributed module-action invocation to the bounded
 - No CS* compiler or xUnit analyzer warnings were present in the build log.
 
 The five Offline Readiness tests use isolated local fixture files. They validate actual filesystem inventory and hashing; they do not test Internet reachability, install tools, validate a publisher's signature or prove that a device driver works on physical hardware.
+
+
+## Additive development verification — Wireless ADB and Android Network Diagnostics (CI run #297)
+
+- Workflow: PhoneLab CI, run #297; result: **Success** on source/documentation commit `c373d008b2e78e39e12edfbe386f3d6d6a8e2305`.
+- Run: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44797805010
+- Restore: passed.
+- Unit tests: **198 passed, 0 failed, 0 skipped**.
+- Windows self-contained x64 publish: passed.
+- Android Agent Gradle build/upload: passed.
+- Offline Android Platform-Tools, scrcpy and TRACE Boardviewer bundling: passed.
+- Windows x64 package: **227,456,372 bytes**, artifact ID `14660375282`.
+- Windows package artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44797805010/artifacts/14660375282
+- Android Agent APK: **2,343,509 bytes**, artifact ID `14658529701`.
+- Android Agent artifact: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44797805010/artifacts/14658529701
+- No C# compiler (CS*) or xUnit analyzer warnings were observed in the Windows job log. GitHub Actions did emit a Node.js 20 deprecation notice for its hosted actions; this is an Actions-runtime notice, not an application compiler/test warning.
+
+The added tests cover ADB endpoint formatting and validation, pairing-code validation, real command ordering through the production command-runner interface, pair/connect error handling, cancellation, role restrictions and Android interface/route reads. The fake command runner exists only inside the test project. No physical Android handset was connected; wireless pairing and Android network reads remain unverified on real hardware.
