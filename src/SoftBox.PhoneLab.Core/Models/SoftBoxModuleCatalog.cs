@@ -277,12 +277,12 @@ public static class SoftBoxModuleCatalog
                 new("plugin-sample", "فاحص حزم ZIP ونموذج توثيق للمطور", "Package inspection and developer starter", "فاحص الحزم محليًا لا يحمّل أو يشغّل كود الإضافة؛ توقيع الناشر والتحقق من جذر الثقة لا يزالان مطلوبين.", ModuleImplementationStatus.Implemented)
             ]),
         new("offline-center", 28, "النظام والحماية", "مركز العمل دون إنترنت", "Offline Center",
-            "الوظائف المحلية الأساسية تعمل دون إنترنت بعد تنزيل الحزمة؛ لا توجد لوحة مركزية لإدارة الحالة المحلية.",
+            "لوحة قراءة فقط تفحص حزمة SoftBox المحلية وتعرض الأدوات المرفقة والملفات الناقصة وإصداراتها وأحجامها وبصمات SHA-256 وقواعد البيانات المحلية.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("local-adb", "أدوات ADB والفحوص المحلية", "Local ADB and diagnostics", "تعمل بأدوات الحزمة المحلية بعد تثبيتها؛ مدخل الاكتشاف الأساسي موجود في مركز الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("local-workshop", "قاعدة ورشة العمل والنسخ المحلي", "Local workshop records", "قاعدة JSON محلية ونسخ يدوي؛ ليست مزامنة متعددة الفروع. نسخة الورشة تُفتح من إدارة مركز الصيانة.", ModuleImplementationStatus.Implemented),
-                new("offline-status", "لوحة حالة Offline وإدارة الحزم المحلية", "Offline status dashboard", "لم يتم إنشاء شاشة موحدة لحالة الإنترنت والحزم المخزنة.", ModuleImplementationStatus.Planned)
+                new("offline-status", "فحص جاهزية الحزمة المحلية وتصدير تقرير", "Offline package readiness report", "يفحص وجود ADB وFastboot وscrcpy وAndroid Agent وتعريف Samsung وBoardviewer داخل مجلد الحزمة الحالي، ويحسب بصمات SHA-256 للملفات الموجودة ويحصي ملفات قواعد بيانات الأجهزة واللوحات. لا ينزل أو يثبت أي مكوّن ولا يعتبر واجهة الشبكة دليلًا على الإنترنت.", ModuleImplementationStatus.Tested, "OpenOfflineCenter")
             ]),
         new("security-privacy", 29, "النظام والحماية", "الأمان والخصوصية", "Device Security & Privacy",
             "هناك ضوابط لأوامر ADB وموافقة Agent وفحص للقراءة فقط؛ تشفير البيانات المحلية والإدارة الأمنية المركزية غير مكتملين.",
@@ -354,7 +354,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenUpdateCenter", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement"
