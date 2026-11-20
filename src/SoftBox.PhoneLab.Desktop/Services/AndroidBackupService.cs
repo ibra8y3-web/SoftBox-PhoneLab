@@ -188,6 +188,7 @@ public sealed class AndroidBackupService(AdbClient adb)
             // and never delete/overwrite any pre-existing phone files.
             var tools = new AndroidDeviceToolsService(adb);
             await tools.CreateDirectoryAsync(serial, remoteRestoreRoot, cancellationToken);
+            progress?.Report("تم إنشاء مجلد استعادة جديد لا يحتوي على ملفات سابقة: " + remoteRestoreRoot);
 
             var dataEntries = archive.Entries
                 .Where(entry => !entry.FullName.Equals(BackupArchiveService.ManifestEntryName, StringComparison.Ordinal))
@@ -200,21 +201,18 @@ public sealed class AndroidBackupService(AdbClient adb)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var item = manifest.Files[index];
-                ValidateRestoreRelativePath(item.Path);
-                if (!dataEntries.TryGetValue(item.Path, out var entry))
-                {
-                    errors.Add("ملف غير موجود بعد التحقق: " + item.Path);
-                    continue;
-                }
-
-                var localPath = Path.GetFullPath(Path.Combine(
-                    extractionRoot,
-                    item.Path.Replace('/', Path.DirectorySeparatorChar)));
-                EnsureInsideDirectory(extractionRoot, localPath);
-                Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
-
                 try
                 {
+                    ValidateRestoreRelativePath(item.Path);
+                    if (!dataEntries.TryGetValue(item.Path, out var entry))
+                        throw new InvalidDataException("الملف غير موجود داخل الأرشيف بعد التحقق.");
+
+                    var localPath = Path.GetFullPath(Path.Combine(
+                        extractionRoot,
+                        item.Path.Replace('/', Path.DirectorySeparatorChar)));
+                    EnsureInsideDirectory(extractionRoot, localPath);
+                    Directory.CreateDirectory(Path.GetDirectoryName(localPath)!);
+
                     await using (var source = entry.Open())
                     await using (var destination = new FileStream(
                         localPath, FileMode.CreateNew, FileAccess.Write, FileShare.None,
@@ -243,7 +241,6 @@ public sealed class AndroidBackupService(AdbClient adb)
                     progress?.Report($"تعذر استعادة {item.Path}: {ex.Message}");
                 }
             }
-
             return new BackupRestoreResult(
                 remoteRestoreRoot,
                 manifest.Files.Count,
