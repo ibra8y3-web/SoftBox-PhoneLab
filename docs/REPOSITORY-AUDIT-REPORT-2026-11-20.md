@@ -1,0 +1,89 @@
+# SoftBox Repository Audit Report — 20 November 2026
+
+## Audit scope and baseline
+
+- Repository: `ibra8y3-web/SoftBox-PhoneLab`.
+- Product identity retained: SoftBox — Universal Smart Device Service & Repair Platform.
+- Main baseline used to create the additive development branch: `12650bed442498f7746432de42bea95b1a622381`.
+- Working branch: `feature/apk-lab-real-apk-inspector`.
+- Pull request: https://github.com/ibra8y3-web/SoftBox-PhoneLab/pull/1
+- This report is a repository/code/catalog/CI audit. It is not a claim that every feature was exercised on physical hardware.
+
+## Repository and architecture found
+
+- The existing application is a Windows WPF desktop application on .NET 10 with a Kotlin Android companion Agent.
+- The existing .NET solution contains Core, Desktop and Tests projects, with the Android Gradle project maintained separately.
+- A single `SoftBoxModuleCatalog` defines the 36 product sections, their feature inventory, implementation states and executable action IDs.
+- `ModuleSectionWindow` presents a consistent section experience; an executable button is shown only when a feature has a real ActionId.
+- Existing ADB/device discovery, shared device information, Agent-based device tests, USB/Fastboot inspection, screen mirroring, firmware inspection and workshop/inventory data were retained.
+- The workshop data store is local JSON under the current Windows user's LocalAppData with an existing v1/v2 migration path. SQLite and EF Core were not present and were not introduced as an unrelated migration.
+- The desktop UI has working WPF code-behind and services but is not yet a complete MVVM/Clean Architecture implementation. Application-wide DI, structured logging, plugin host, signed updater and user-account system remain future work.
+
+## Feature inventory snapshot
+
+| Inventory | Count |
+|---|---:|
+| Top-level sections | 36 |
+| Sections In Development | 22 |
+| Sections Planned | 14 |
+| Catalog entries including sections and child features | 151 |
+| Implemented entries | 58 |
+| Tested entries | 4 |
+| In Development entries | 23 |
+| Planned entries | 64 |
+| Unsupported entries | 2 |
+| Verified entries | 0 |
+
+These are catalog status counts, not a percentage of product completion. `Verified` remains zero because CI and generated test fixtures do not establish physical-phone or vendor-specific hardware compatibility.
+
+## Implemented in this change set
+
+### Section 05 — APK Lab
+
+- Added local, read-only APK inspection: full-file SHA-256, reading non-directory ZIP entries, text XML and Android Binary XML manifest parsing, package/version/SDK/permission extraction, and structural discovery of v1 signing metadata and APK Signing Block.
+- Added a WPF workspace and wired it to the existing APK Lab section.
+- Added five automated tests covering text/binary manifests, metadata extraction, SHA-256, signature-file discovery, missing manifest, corrupt ZIP and input extension validation.
+- Cryptographic certificate/signature verification, Android resource resolution, DEX analysis and APK version comparison remain Planned.
+
+### Section 16 — Network Diagnostics
+
+- Added local Windows network-interface inventory with operational state, adapter type, IPv4/IPv6 addresses, gateways and DNS server addresses.
+- Added DNS resolution and a single ICMP echo probe to one user-selected host/IP, with bounded timeout and cancellation.
+- Added a WPF workspace and wired it to the existing Network Diagnostics section.
+- Added tests for accepted DNS/IP inputs, short local hostnames and rejection of URLs/paths/malformed values.
+- Android-private network observations and ADB Wireless pairing remain Planned. The tests do not make external DNS or live ICMP requests.
+
+## Preservation and reorganization
+
+- No existing project, service, module or tool implementation was deleted.
+- Existing product name, project names, namespaces, WPF/.NET 10 stack and Android Agent were retained.
+- Existing tools were not moved: the audited catalog already gives each tool a canonical section/action and shared code path; a speculative relocation risked duplicate navigation or broken references.
+- The two new capabilities were added to their intended existing sections (05 and 16), not as replacement modules.
+- No new NuGet or third-party runtime dependencies were introduced.
+
+## Build and test evidence
+
+- PhoneLab CI run #57: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114
+- Result: Success.
+- Restore: passed.
+- Unit tests: 51 passed, 0 failed, 0 skipped.
+- Windows self-contained x64 publish: passed.
+- Android Agent Gradle build and artifact upload: passed.
+- Offline USB, scrcpy and TRACE Boardviewer bundle checks: passed.
+- Windows package artifact (227,161,431 bytes): https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114/artifacts/14637025549
+- A prior APK-only verification run #48 passed 40/40 tests; run #57 includes both new modules and is the latest source-code verification.
+
+## Known issues and unverified scope
+
+- No physical Android handset, USB chipset, Download Mode, Qualcomm EDL, MediaTek Preloader/BROM, firmware flash or board-level fixture test was performed during this change set.
+- ADB/fastboot coverage remains dependent on device authorization, drivers and the actual mode/protocol supported by the handset.
+- APK signature metadata discovery is not cryptographic signature verification or malware analysis.
+- Network diagnostics currently reads the Windows host. It does not claim to read private Android Wi-Fi information; ICMP may be blocked independently of DNS.
+- Planned sections remain Planned; partial sections retain their In Development classification. See `SOFTBOX-MASTER-MODULE-STATUS.md` for each of the 36 section-by-section gaps.
+- The code was built and tested by GitHub's Windows CI runner. The current Linux execution environment did not provide a local Windows/WPF runtime, so no local desktop launch or screenshot test is claimed.
+
+## Final repository state
+
+- Changes are on the feature branch and submitted as Pull Request #1.
+- Main was not modified directly and the pull request remains open for review.
+- No release or permanent GitHub Release was created. The Windows ZIP linked above is a temporary Actions artifact.
