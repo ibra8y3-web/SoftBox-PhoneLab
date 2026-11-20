@@ -1,6 +1,8 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Security.Cryptography;
+using SoftBox.PhoneLab.Core.Security;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Models;
 
@@ -639,7 +641,7 @@ public sealed class WorkshopStore
             await SaveLockedAsync(cancellationToken);
             var path = destinationPath ?? Path.Combine(
                 Path.GetDirectoryName(DatabasePath)!,
-                $"PhoneLab-Workshop-Backup-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+                $"SoftBox-Workshop-Backup-{DateTime.Now:yyyyMMdd-HHmmss}.sbxbackup");
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
             File.Copy(DatabasePath, path, overwrite: true);
             return path;
@@ -653,12 +655,38 @@ public sealed class WorkshopStore
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            await using var stream = File.OpenRead(sourcePath);
-            var restored = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
-                ?? throw new InvalidDataException("ملف النسخة الاحتياطية فارغ أو غير صالح.");
+            await EnsureLoadedLockedAsync(cancellationToken);
+            var storedBytes = await File.ReadAllBytesAsync(sourcePath, cancellationToken);
+            if (storedBytes.Length is <= 0 or > 256 * 1024 * 1024)
+                throw new InvalidDataException("ملف النسخة الاحتياطية فارغ أو أكبر من الحد الآمن.");
+
+            var jsonBytes = WindowsUserDataProtection.UnprotectOrLegacy(
+                storedBytes, "WorkshopStore.v1", out _);
+            CryptographicOperations.ZeroMemory(storedBytes);
+
+            WorkshopData restored;
+            try
+            {
+                restored = JsonSerializer.Deserialize<WorkshopData>(jsonBytes, _json)
+                    ?? throw new InvalidDataException("ملف النسخة الاحتياطية فارغ أو غير صالح.");
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(jsonBytes);
+            }
+
             MigrateAndValidate(restored);
+            var previous = _cache;
             _cache = restored;
-            await SaveLockedAsync(cancellationToken);
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                _cache = previous;
+                throw;
+            }
         }
         finally { _gate.Release(); }
     }
@@ -732,28 +760,58 @@ public sealed class WorkshopStore
     {
         if (_cache is not null) return;
         if (!File.Exists(DatabasePath)) { _cache = new WorkshopData(); return; }
-        await using (var stream = File.OpenRead(DatabasePath))
+
+        var info = new FileInfo(DatabasePath);
+        if (info.Length is <= 0 or > 256 * 1024 * 1024)
+            throw new InvalidDataException("قاعدة بيانات الورشة فارغة أو أكبر من الحد الآمن.");
+
+        var storedBytes = await File.ReadAllBytesAsync(DatabasePath, cancellationToken);
+        var jsonBytes = WindowsUserDataProtection.UnprotectOrLegacy(
+            storedBytes, "WorkshopStore.v1", out var wasProtected);
+        CryptographicOperations.ZeroMemory(storedBytes);
+
+        WorkshopData restored;
+        try
         {
-            _cache = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
-                ?? new WorkshopData();
+            restored = JsonSerializer.Deserialize<WorkshopData>(jsonBytes, _json)
+                ?? throw new InvalidDataException("قاعدة بيانات الورشة غير صالحة.");
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(jsonBytes);
         }
 
-        // Close the legacy database handle before replacing the file during schema migration (required on Windows).
-        var schemaNeedsUpgrade = _cache.SchemaVersion != 5;
-        MigrateAndValidate(_cache);
-        if (schemaNeedsUpgrade) await SaveLockedAsync(cancellationToken);
+        // Old JSON schemas and plaintext databases are upgraded in one atomic save.
+        var schemaNeedsUpgrade = restored.SchemaVersion != 5 || !wasProtected;
+        MigrateAndValidate(restored);
+        _cache = restored;
+        if (schemaNeedsUpgrade)
+            await SaveLockedAsync(cancellationToken);
     }
 
     private async Task SaveLockedAsync(CancellationToken cancellationToken)
     {
         _cache!.UpdatedAtUtc = DateTimeOffset.UtcNow;
         var temp = DatabasePath + ".tmp";
-        await using (var stream = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None, 65536, useAsync: true))
+        byte[]? jsonBytes = null;
+        byte[]? protectedBytes = null;
+        try
         {
-            await JsonSerializer.SerializeAsync(stream, _cache, _json, cancellationToken);
-            await stream.FlushAsync(cancellationToken);
+            jsonBytes = JsonSerializer.SerializeToUtf8Bytes(_cache, _json);
+            protectedBytes = WindowsUserDataProtection.Protect(jsonBytes, "WorkshopStore.v1");
+            await File.WriteAllBytesAsync(temp, protectedBytes, cancellationToken);
+            File.Move(temp, DatabasePath, overwrite: true);
         }
-        File.Move(temp, DatabasePath, overwrite: true);
+        catch
+        {
+            try { File.Delete(temp); } catch { }
+            throw;
+        }
+        finally
+        {
+            if (jsonBytes is not null) CryptographicOperations.ZeroMemory(jsonBytes);
+            if (protectedBytes is not null) CryptographicOperations.ZeroMemory(protectedBytes);
+        }
     }
 
     private void AddEvent(string category, string reference, string description)

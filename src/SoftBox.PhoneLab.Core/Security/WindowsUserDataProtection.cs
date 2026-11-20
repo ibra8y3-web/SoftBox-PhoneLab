@@ -135,10 +135,16 @@ public static class WindowsUserDataProtection
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private readonly struct DataBlob(int size, IntPtr data)
+    private struct DataBlob
     {
-        public readonly int cbData = size;
-        public readonly IntPtr pbData = data;
+        public int cbData;
+        public IntPtr pbData;
+
+        public DataBlob(int size, IntPtr data)
+        {
+            cbData = size;
+            pbData = data;
+        }
     }
 
     [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]

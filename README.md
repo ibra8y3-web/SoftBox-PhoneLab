@@ -53,7 +53,8 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Offline repair-shop workspace for customers, repair orders, status tracking, intake symptoms, pre-repair findings, work performed, post-repair test results and estimates/final costs.
 - Generates a unique repair-ticket number and a QR PNG that contains only that ticket number, not customer contact data.
 - Customer directory, parts inventory, low-stock threshold flag, stock in/out movements and a capped activity history.
-- JSON-backed local database stored under the current Windows user's LocalAppData. Manual backup and restore are built in; no customer records are uploaded to a cloud service.
+- Local user-account/audit, workshop and device activity databases are protected using Windows DPAPI CurrentUser scope with separate purpose identifiers. Legacy plaintext JSON is migrated to encrypted storage on first successful load; no customer records are uploaded to a cloud service.
+- Workshop backups are exported as encrypted .sbxbackup files; legacy JSON backups remain importable. DPAPI backups are restorable only under the same Windows user context on the same Windows profile; they are not portable between different accounts/devices.
 - Exports a technician-entered text report for each repair order.
 - Creates printable Arabic/English intake receipts, preliminary estimates and service invoices from saved work-order data. Customer quote approval/rejection is recorded with its history, quoted amount, contact method and technician; these are local manual records, not electronic signatures.
 - Records multiple partial/full payments against the currently approved quote, computes the remaining balance, prevents overpayment and prevents price edits/cancellation from invalidating existing money records. Each recorded payment has a printable receipt, but the application does not verify settlement with a bank or payment provider.
@@ -69,13 +70,14 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - From a selected repair order, create a printable intake receipt, preliminary estimate or service invoice using saved repair-order values.
 - The estimate can be marked approved or rejected by recording the contact method, timestamp, quoted amount, technician and notes. Payment entries require approval for the current quote and keep a running balance. Approval and payment entries are manual workshop records, not an electronic signature or external payment confirmation. The invoice shows the recorded balance and payment history; tax calculation, payment processing/refunds and certified e-invoicing remain unsupported.
 - The reports tab calculates operating metrics from saved repair orders and inventory and exports the analytics to UTF-8 CSV. Delivered-order revenue is not a profit or cash-collection figure.
+- Dashboard Analytics reads the persistent local device history and notification inbox, showing known devices, activity over 24 hours/7/30 days, unread notifications, common event categories and a 14-day UTC trend. It reports recorded activity only; it does not claim a background job queue.
 
 ### Global workshop operations
 - A dedicated Global Workshop workspace adds cross-field search and status filtering for repair orders, live operational counts, active-warranty tracking and technician timeline notes.
 - Workshop profile settings include business name, country, address, international phone, email, optional tax registration reference, ISO 4217 three-letter currency code, culture/locale, time-zone ID, report language (Arabic/English) and default warranty duration.
 - Delivered repair orders receive a warranty expiry calculated from their delivery timestamp and configured months. Warranty duration is policy data entered by the workshop; it does not determine statutory consumer rights.
 - Generates print-friendly Arabic or English HTML reports that can be printed or saved as PDF through the browser. Exports repair orders and inventory as UTF-8 CSV for spreadsheet and ERP import.
-- Workshop database schema v1 is upgraded to v2 on load without discarding customer, order, inventory or event records. The currency code labels values; no exchange-rate conversion or tax calculation is performed.
+- Workshop database schemas v1-v5 are validated and upgraded to schema v5 on load without discarding customer, order, inventory or event records; the same first successful load also migrates plaintext JSON to DPAPI-protected storage. The currency code labels values; no exchange-rate conversion or tax calculation is performed.
 
 ## Modular navigation
 
@@ -152,7 +154,8 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - Camera2 cannot expose every proprietary camera path on every vendor firmware. Reported autofocus state does not establish optical sharpness; an image capture alone is not an optical-quality test.
 - Full battery capacity, internal resistance, PMIC rail and charging-IC pin measurements require appropriate test equipment and safe model-specific connections.
 - ADB is not raw USB hardware access. MTP-only devices do not expose the ADB diagnostic channel. Generic Fastboot discovery cannot enumerate every Samsung Download, Qualcomm EDL, MediaTek Preloader or OEM recovery interface. OEM-specific drivers are not all included; the bundled optional driver covers Samsung only.
-- The workshop store is local JSON persistence, not a multi-PC synchronized database. Currency codes and cultures only format values: PhoneLab does not provide exchange rates, tax compliance calculations, e-invoicing certification or statutory warranty interpretation. Backups are not encrypted by PhoneLab; protect the Windows account and backup media.
+- The workshop store is local DPAPI-protected JSON persistence, not a multi-PC synchronized database. The DPAPI key material is managed by Windows for the current user; SoftBox does not export or synchronize it. The encrypted .sbxbackup is restorable under the same Windows user context, not a portable cross-account backup. CSV/HTML/JSON reports exported separately may contain personal data and are not automatically encrypted.
+- Currency codes and cultures only format values: PhoneLab does not provide exchange rates, tax compliance calculations, e-invoicing certification or statutory warranty interpretation.
 - The QR ticket contains only a repair identifier. It is not a cloud lookup link.
 - Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
 - Firmware inspection verifies file hash and basic archive structure only. SHA-256 identifies exact bytes; it does not prove the publisher, signature, region, model compatibility or safe installation. No flashing, bootloader unlocking or data wipe is implemented.

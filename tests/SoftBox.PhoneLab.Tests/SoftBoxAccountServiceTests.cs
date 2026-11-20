@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using SoftBox.PhoneLab.Core.Security;
 using Xunit;
 
@@ -23,13 +24,49 @@ public sealed class SoftBoxAccountServiceTests
             Assert.Equal(SoftBoxUserRole.Administrator, user.Role);
             Assert.True(await service.HasAccountsAsync());
 
-            var json = await File.ReadAllTextAsync(service.StorePath);
-            Assert.DoesNotContain("Correct Horse Battery 42!", json);
-            Assert.Contains("PasswordHash", json);
-            Assert.Contains("PasswordSalt", json);
+            var stored = await File.ReadAllBytesAsync(service.StorePath);
+            Assert.True(WindowsUserDataProtection.IsProtected(stored));
+            var jsonBytes = WindowsUserDataProtection.UnprotectOrLegacy(
+                stored, "SoftBoxAccountStore.v1", out var wasProtected);
+            try
+            {
+                var json = System.Text.Encoding.UTF8.GetString(jsonBytes);
+                Assert.True(wasProtected);
+                Assert.DoesNotContain("Correct Horse Battery 42!", json);
+                Assert.Contains("PasswordHash", json);
+                Assert.Contains("PasswordSalt", json);
+            }
+            finally { CryptographicOperations.ZeroMemory(jsonBytes); }
 
             var login = await service.AuthenticateAsync("admin", "Correct Horse Battery 42!");
             Assert.Equal(user.Id, login.Id);
+        }
+        finally { DeleteTempDirectory(directory); }
+    }
+
+    [Fact]
+    public async Task LegacyPlaintextAccountStoreMigratesToDpapiWithoutLosingLogin()
+    {
+        var directory = CreateTempDirectory();
+        try
+        {
+            var initial = CreateService(directory);
+            var admin = await initial.CreateInitialAdministratorAsync(
+                "admin", "Legacy Administrator", "Legacy Administrator Password 12!");
+
+            var path = initial.StorePath;
+            var protectedBytes = await File.ReadAllBytesAsync(path);
+            var legacyJson = WindowsUserDataProtection.UnprotectOrLegacy(
+                protectedBytes, "SoftBoxAccountStore.v1", out var wasProtected);
+            Assert.True(wasProtected);
+            await File.WriteAllBytesAsync(path, legacyJson);
+            CryptographicOperations.ZeroMemory(legacyJson);
+
+            var migrated = CreateService(directory);
+            Assert.True(await migrated.HasAccountsAsync());
+            Assert.True(WindowsUserDataProtection.IsProtected(await File.ReadAllBytesAsync(path)));
+            Assert.Equal(admin.Id, (await migrated.AuthenticateAsync(
+                "admin", "Legacy Administrator Password 12!")).Id);
         }
         finally { DeleteTempDirectory(directory); }
     }

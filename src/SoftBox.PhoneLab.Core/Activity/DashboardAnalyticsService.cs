@@ -53,8 +53,8 @@ public static class DashboardAnalyticsService
                 var dayEnd = dayStart.AddDays(1);
                 return new DashboardDailyActivity(
                     day.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-                    history.Count(item => IsWithin(item.AtUtc, dayStart, dayEnd)),
-                    notifications.Count(item => IsWithin(item.AtUtc, dayStart, dayEnd)));
+                    history.Count(item => IsWithin(item.AtUtc, dayStart, dayEnd) && item.AtUtc.ToUniversalTime() <= now),
+                    notifications.Count(item => IsWithin(item.AtUtc, dayStart, dayEnd) && item.AtUtc.ToUniversalTime() <= now));
             })
             .ToArray();
 

@@ -1,5 +1,6 @@
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
+using SoftBox.PhoneLab.Core.Security;
 using Xunit;
 
 namespace SoftBox.PhoneLab.Tests;
@@ -131,6 +132,7 @@ public sealed class WorkshopInventoryIntegrationTests
             Assert.Empty(snapshot.RepairOrders[0].QuoteDecisionHistory);
             Assert.Empty(snapshot.RepairOrders[0].Payments);
             Assert.Equal(5, snapshot.SchemaVersion);
+            Assert.True(WindowsUserDataProtection.IsProtected(await File.ReadAllBytesAsync(path)));
 
             var reloaded = await new WorkshopStore(root).GetSnapshotAsync();
             Assert.Equal(5, reloaded.SchemaVersion);
@@ -220,6 +222,42 @@ public sealed class WorkshopInventoryIntegrationTests
         finally
         {
             if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+
+    [Fact]
+    public async Task WorkshopBackupIsEncryptedAndRestoresToAnotherLocalStore()
+    {
+        var sourceRoot = CreateTempDirectory();
+        var targetRoot = CreateTempDirectory();
+        try
+        {
+            var source = new WorkshopStore(sourceRoot);
+            await source.CreateRepairOrderAsync(new RepairOrder
+            {
+                CustomerName = "Private Backup Customer",
+                CustomerPhone = "01000000000",
+                DeviceModel = "Pixel 8",
+                IntakeSymptoms = "Battery issue"
+            });
+
+            var backupPath = Path.Combine(sourceRoot, "manual.sbxbackup");
+            await source.CreateBackupAsync(backupPath);
+            var backupBytes = await File.ReadAllBytesAsync(backupPath);
+            Assert.True(WindowsUserDataProtection.IsProtected(backupBytes));
+            Assert.DoesNotContain("Private Backup Customer", System.Text.Encoding.UTF8.GetString(backupBytes));
+
+            var target = new WorkshopStore(targetRoot);
+            await target.RestoreBackupAsync(backupPath);
+            var restored = await target.GetSnapshotAsync();
+            Assert.Equal("Private Backup Customer", Assert.Single(restored.RepairOrders).CustomerName);
+            Assert.True(WindowsUserDataProtection.IsProtected(await File.ReadAllBytesAsync(target.DatabasePath)));
+        }
+        finally
+        {
+            if (Directory.Exists(sourceRoot)) Directory.Delete(sourceRoot, recursive: true);
+            if (Directory.Exists(targetRoot)) Directory.Delete(targetRoot, recursive: true);
         }
     }
 

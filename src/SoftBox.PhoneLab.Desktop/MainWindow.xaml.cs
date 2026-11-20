@@ -809,6 +809,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenNotificationCenter":
                 OpenActivityCenter(1, false);
                 break;
+            case "OpenDashboardAnalytics":
+                new DashboardAnalyticsWindow(_activity) { Owner = this }.Show();
+                break;
             case "OpenSupportBundle":
                 new SupportBundleWindow { Owner = this }.Show();
                 break;

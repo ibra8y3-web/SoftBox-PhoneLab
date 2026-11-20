@@ -38,6 +38,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenFirmwareCenter"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenDeviceHistory"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenNotificationCenter"] = SoftBoxAccountPermission.ViewWorkspace,
+            ["OpenDashboardAnalytics"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenSupportBundle"] = SoftBoxAccountPermission.ExportData,
             ["OpenUpdateCenter"] = SoftBoxAccountPermission.ManageUpdates,
             ["OpenHelpCenter"] = SoftBoxAccountPermission.ViewWorkspace,
