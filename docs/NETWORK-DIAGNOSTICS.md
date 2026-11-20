@@ -1,4 +1,4 @@
-# Network Diagnostics — Local Windows Host
+# Network Diagnostics — Windows Host and Android
 
 ## Implemented scope
 
@@ -9,19 +9,26 @@
 - Reports DNS addresses separately from ICMP status, round-trip time and TTL.
 - Uses bounded DNS and ping timeouts and supports user cancellation.
 - Rejects URL schemes, paths, query strings, whitespace and malformed host input.
+- Reads public Android network interface addresses using `adb -s <serial> shell ip address show`.
+- Reads public Android IP routes using `adb -s <serial> shell ip route show`.
+- Android reads are scoped to the currently selected, ADB-authorized device; both commands use bounded timeouts, cancellation and a 64 KiB output cap.
+- The UI reports actual command output and distinguishes unavailable/empty output from successful observations. It does not infer Wi-Fi signal, Internet access or network health from an address alone.
+- Wireless ADB pairing is implemented as a separate tool in Device Center; it is not conflated with reading Android network interfaces.
 
 ## Safety and privacy boundaries
 
 - No port scanning, subnet scanning, packet capture, credential collection or remote data upload is implemented.
 - No network probe occurs merely by opening the window; DNS and ICMP are only requested after the user submits a host.
-- The interface list is read from the local Windows host. It is not a reading of the connected phone's private Wi-Fi state.
-- Android network observations and ADB Wireless pairing remain Planned until implemented with an authorized device channel and explicit user action.
+- The Windows interface list is read from the local computer.
+- Android observations are read only from the selected authorized phone through standard ADB shell commands that expose interface addresses and IP routes. They do not reveal Wi-Fi passwords, app-private data or hidden vendor radio state.
+- If the device does not expose the standard `ip` utility or ADB authorization is unavailable, the UI shows the real command failure rather than a fabricated result.
+- Android network reads require an authorized ADB connection. Wireless pairing itself is handled in Device Center and requires the user to enable and approve Wireless debugging on the phone.
 - A firewall or router may block ICMP while DNS resolution works. Ping failure is not reported as DNS failure or proof that the network is offline.
 - Interface addresses and DNS server values may be sensitive; review them before sharing screenshots or logs.
 
 ## Test coverage
 
-`NetworkDiagnosticsServiceTests` covers accepted DNS/IP input and rejection of URL/path/malformed host values without depending on external DNS or internet availability.
+`NetworkDiagnosticsServiceTests` covers host input validation without external DNS/Internet dependencies. `AndroidNetworkDiagnosticsServiceTests` covers selected-device targeting, interface/route output handling, invalid serial rejection (including option-like `-s`), ADB unavailability, empty output and cancellation.
 
 Successful compilation and execution in CI do not replace live network testing in each Windows/network environment.
 
