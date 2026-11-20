@@ -38,7 +38,8 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             ["storage"] = ["shell", "df", "-h", "/storage/emulated/0"],
             ["uptime"] = ["shell", "cat", "/proc/uptime"],
             ["third-party-apps"] = ["shell", "pm", "list", "packages", "-3"],
-            ["services"] = ["shell", "service", "list"]
+            ["services"] = ["shell", "service", "list"],
+            ["logcat"] = ["logcat", "-b", "all", "-d", "-v", "threadtime", "-t", "3000"]
         };
 
     public static IReadOnlyList<string> PresetIds => ReadOnlyPresets.Keys.OrderBy(x => x, StringComparer.Ordinal).ToArray();
