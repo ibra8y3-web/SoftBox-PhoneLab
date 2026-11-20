@@ -65,16 +65,16 @@ public static class SoftBoxModuleCatalog
                 new("compatibility", "مصفوفة القدرات والتوافق لكل موديل", "Per-model capability matrix", "لم تُبنَ بعد قاعدة موثقة تربط كل عملية بموديل وإصدار وبروتوكول.", ModuleImplementationStatus.Planned)
             ]),
         new("android-service", 4, "أدوات Android", "مركز صيانة Android", "Android Service Center",
-            "المسار الأساسي الحالي يتعامل مع ADB المصرح به وAgent؛ مدير التطبيقات والملفات والأوامر الرسومية غير مكتمل.",
+            "مركز موحد لأدوات ADB وAgent وإدارة ملفات التخزين المشترك وقراءة التطبيقات والأوامر الآمنة.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("adb-core", "اكتشاف أجهزة ADB وقراءة معلوماتها", "ADB discovery and inspection", "مدمج في محرك الاكتشاف والفحص الحالي؛ تشغيل الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("agent-bridge", "تثبيت PhoneLab Agent وجلب نتائج الاختبارات", "PhoneLab Agent bridge", "اتصال محلي عبر ADB forward، ويتطلب موافقة المستخدم على الهاتف؛ واجهة الاختبارات موجودة في قسم تشخيص العتاد.", ModuleImplementationStatus.Implemented),
                 new("agent-update", "تحديث PhoneLab Agent", "PhoneLab Agent update", "يفحص ويحدّث مكوّن Agent ضمن دعم التطبيق الحالي.", ModuleImplementationStatus.Implemented, "UpdateAgent"),
                 new("logs", "قراءة سجلات Android المسموح بها", "Android logs", "يجمع حزمة أدلة محدودة؛ السجلات قد تحتوي بيانات شخصية ويجب مراجعتها قبل المشاركة. أداة جمعها في قسم الدعم والسجلات.", ModuleImplementationStatus.Implemented),
-                new("app-manager", "مدير التطبيقات وحزم APK", "Application manager", "عرض/تثبيت/تحديث/إزالة التطبيقات من واجهة موحدة لم يكتمل بعد.", ModuleImplementationStatus.Planned),
-                new("file-manager", "مدير ملفات Android", "Android file manager", "تصفح ونسخ ونقل وإدارة الملفات عبر واجهة رسومية لم يكتمل بعد.", ModuleImplementationStatus.Planned),
-                new("command-center", "مركز أوامر Android", "Android command center", "لا توجد بعد واجهة أوامر مصنفة ذات قائمة سماح ومخاطر وسجل تنفيذ.", ModuleImplementationStatus.Planned)
+                new("app-manager", "عرض التطبيقات الخارجية وتفاصيل الحزم", "Installed app inspection", "يعرض أسماء الحزم الخارجية وتفاصيل dumpsys دون تثبيت أو إزالة أو تعديل التطبيق؛ افتح مركز أدوات Android.", ModuleImplementationStatus.Implemented, "OpenAndroidDeviceTools"),
+                new("file-manager", "مدير ملفات Android عبر ADB", "Android shared-storage file manager", "استعراض ورفع وتنزيل ملفات وإنشاء مجلدات داخل التخزين المشترك المسموح به فقط؛ لا يصل إلى /data أو بيانات التطبيقات الخاصة.", ModuleImplementationStatus.Implemented, "OpenAndroidDeviceTools"),
+                new("command-center", "مركز أوامر Android بقائمة قراءة فقط", "Allow-listed Android command center", "أوامر getprop والبطارية والتخزين وuptime والتطبيقات والخدمات من قائمة ثابتة؛ لا يقبل أوامر Shell حرة.", ModuleImplementationStatus.Implemented, "OpenAndroidDeviceTools")
             ]),
         new("apk-lab", 5, "أدوات Android", "مختبر APK", "APK Lab",
             "تحليل محلي للملفات دون تثبيت أو تعديل: بيانات Manifest، الصلاحيات، قابلية قراءة ZIP وبصمة SHA-256.",
@@ -147,12 +147,13 @@ public static class SoftBoxModuleCatalog
                 new("windows-driver-health", "فحص Device Manager وVendor/Product ID وتعارض التعريفات", "Windows driver health", "لم يتم تنفيذ فحص شامل لتعريفات USB وWindows.", ModuleImplementationStatus.Planned)
             ]),
         new("smart-backup", 13, "الاتصال والتشخيص", "النسخ الاحتياطي الذكي", "Smart Backup",
-            "نسخة مركز الصيانة الاحتياطية موجودة؛ نسخ ملفات الهاتف وتشفيرها وجدولتها لم يبدأ.",
-            ModuleImplementationStatus.Planned,
+            "نسخ مجلدات التخزين المشترك عبر ADB إلى ZIP محلي مع SHA-256 لكل ملف والتحقق من النسخة؛ التشفير والجدولة والاستعادة إلى الهاتف غير مكتملة.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("workshop-backup", "نسخ واستعادة قاعدة بيانات مركز الصيانة", "Workshop database backup", "نسخ JSON محلي واستعادته؛ النسخ الحالي غير مشفر. فتح تبويب النسخ يتم من هذا القسم.", ModuleImplementationStatus.Implemented, "OpenWorkshopBackup"),
-                new("phone-backup", "نسخ ملفات الهاتف المتاحة عبر Android", "Android file backup", "لم يتم تنفيذ نسخ ملفات الهاتف أو التحقق من الاستعادة.", ModuleImplementationStatus.Planned),
-                new("backup-encryption", "تشفير النسخ بكلمة مرور وجدولة النسخ", "Encrypted scheduled backups", "لم يتم تنفيذ التشفير أو المجدول.", ModuleImplementationStatus.Planned)
+                new("phone-backup", "نسخ مجلدات التخزين المشترك من Android", "Android shared-storage backup", "ينقل المجلد المحدد عبر ADB إلى ZIP محلي ويحسب SHA-256 لكل ملف؛ لا ينسخ بيانات التطبيقات الخاصة أو النظام.", ModuleImplementationStatus.Implemented, "OpenPhoneBackup"),
+                new("backup-verify", "التحقق من النسخة ومطابقة بصمات الملفات", "Backup archive verification", "يفحص Manifest ويعيد حساب SHA-256 ومقارنة حجم كل ملف داخل ZIP؛ مغطى باختبارات آلية.", ModuleImplementationStatus.Tested, "OpenPhoneBackup"),
+                new("backup-encryption", "تشفير النسخ بكلمة مرور وجدولة النسخ", "Encrypted scheduled backups", "لم يتم تنفيذ التشفير أو المجدول؛ الأرشيفات الحالية غير مشفرة ويجب حفظها بمكان آمن.", ModuleImplementationStatus.Planned)
             ]),
         new("phone-link", 14, "الاتصال والتشخيص", "استوديو الهاتف", "Phone Link Studio",
             "عرض شاشة Android عبر scrcpy مدمج في مساحة العمل؛ تسجيل الشاشة وتعدد الجلسات غير مكتمل.",
@@ -211,11 +212,11 @@ public static class SoftBoxModuleCatalog
                 new("workflow-runner", "تشغيل الخطوات وتتبع التقدم والإلغاء", "Workflow runner", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
             ]),
         new("batch-operations", 21, "الأتمتة والإنتاجية", "العمليات الجماعية", "Batch Operations",
-            "يمكن اكتشاف عدة أجهزة، لكن لا يوجد تنفيذ جماعي متعدد الأجهزة أو عزل نتائج لكل جهاز.",
-            ModuleImplementationStatus.Planned,
+            "تنفيذ أوامر Android غير المدمرة على أجهزة ADB المصرح بها بالتوازي المحدود وعزل نتيجة كل جهاز.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("batch-selection", "اختيار مجموعة أجهزة وتثبيت هوية كل هدف", "Batch device selection", "قائمة أجهزة متعددة موجودة؛ إدارة قوائم أهداف جماعية لم تُبنَ.", ModuleImplementationStatus.InDevelopment),
-                new("batch-runner", "تنفيذ متوازٍ محدود مع إلغاء لكل جهاز", "Concurrent batch runner", "لم يتم تنفيذ محرك العمليات الجماعية.", ModuleImplementationStatus.Planned)
+                new("batch-selection", "اختيار مجموعة أجهزة مصرح بها", "Authorized multi-device selection", "يتيح اختيار عدة أجهزة من قائمة الاكتشاف الفعلية ويربط كل نتيجة بالمعرف المحدد.", ModuleImplementationStatus.Implemented, "OpenAndroidBatchTools"),
+                new("batch-runner", "تنفيذ متوازٍ محدود لأوامر قراءة فقط", "Bounded read-only batch runner", "ينفذ أوامر الكتالوج الآمنة بحد أقصى 3 أجهزة متزامنة مع إلغاء مشترك ونتيجة مستقلة لكل جهاز.", ModuleImplementationStatus.Implemented, "OpenAndroidBatchTools")
             ]),
         new("repair-history", 22, "إدارة مركز الصيانة", "سجل الصيانة", "Repair History",
             "سجل أوامر وفعاليات المركز موجود؛ سجل تاريخي موحد لكل جهاز وتشخيصاته غير مكتمل.",
@@ -340,7 +341,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
