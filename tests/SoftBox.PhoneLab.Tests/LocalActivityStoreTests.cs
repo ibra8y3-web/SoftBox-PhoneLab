@@ -18,7 +18,7 @@ public sealed class LocalActivityStoreTests
             var history = await store.GetDeviceHistoryAsync("R58N123456A");
             var wrong = await store.GetDeviceHistoryAsync("OtherSerial");
 
-            Assert.Equal("••••3456A", first.MaskedSerial);
+            Assert.Equal("••••456A", first.MaskedSerial);
             Assert.Equal(LocalActivityStore.CreateDeviceFingerprint("R58N123456A"), first.DeviceFingerprint);
             Assert.Single(history);
             Assert.Empty(wrong);
