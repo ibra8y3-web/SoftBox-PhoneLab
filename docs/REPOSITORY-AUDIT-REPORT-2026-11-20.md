@@ -149,3 +149,10 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Reuses the existing shared ScreenMirrorService and verified scrcpy binary; recording uses the scrcpy `--record` argument and supports MP4/MKV output chosen by the user.
 - Stop sends WM_CLOSE to the scrcpy window, waits for process exit and confirms that the output file exists and has non-zero length. This does not prove every codec/audio combination on every handset; physical device validation remains pending.
 - The recording is the Android device stream, not a capture of the Windows desktop. Ending the recording also ends the current scrcpy mirror session.
+## Phone Link recording and Safe Recovery preflight
+
+- Phone Link Studio now exposes a real scrcpy `--record` path for MP4/MKV recording, asks for a new output path and finalizes capture using a graceful window close before validating the output file.
+- Recording is launched only for the selected authorized ADB device. It stops the current embedded scrcpy session; multi-session recording remains out of scope.
+- Firmware Center now includes an inspect-only Safe Recovery preflight. It re-hashes the selected local firmware immediately before evaluating it and compares manufacturer/model text against the selected authorized device snapshot.
+- The preflight reports explicit Passed/Failed/Unknown/Blocked evidence and always denies proceeding while publisher authenticity, signed device compatibility, anti-rollback policy or verified backup evidence is unavailable. No flashing action is enabled.
+- Automated tests cover matching local hash with trust blockers, model/manufacturer mismatch and missing authorized device identity.
