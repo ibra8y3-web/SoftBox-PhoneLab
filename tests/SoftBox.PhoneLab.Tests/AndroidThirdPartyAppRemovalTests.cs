@@ -35,7 +35,7 @@ public sealed class AndroidThirdPartyAppRemovalTests
             service.UninstallThirdPartyPackageAsync(Device, "com.android.settings"));
 
         Assert.Single(adb.Calls);
-        Assert.Equal("pm", adb.Calls[0][4]);
+        Assert.Equal("pm", adb.Calls[0][3]);
     }
 
     [Fact]
