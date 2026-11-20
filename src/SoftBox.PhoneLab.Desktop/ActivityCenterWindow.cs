@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Activity;
+using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,7 +19,8 @@ public sealed class ActivityCenterWindow : Window
     private readonly ObservableCollection<ActivityDisplayItem> _notifications = [];
     private readonly ListBox _historyList = new();
     private readonly ListBox _notificationList = new();
-    private readonly TextBox _details = new();
+    private readonly TextBox _historyDetails = new();
+    private readonly TextBox _notificationDetails = new();
     private readonly TextBlock _status = new();
     private readonly Button _refreshButton;
     private readonly Button _markReadButton;
@@ -130,7 +132,7 @@ public sealed class ActivityCenterWindow : Window
         Grid.SetColumn(_historyList, 0);
         grid.Children.Add(_historyList);
 
-        var details = CreateDetailsBox();
+        var details = CreateDetailsBox(_historyDetails);
         details.Margin = new Thickness(8, 0, 0, 0);
         Grid.SetColumn(details, 1);
         grid.Children.Add(details);
@@ -152,27 +154,27 @@ public sealed class ActivityCenterWindow : Window
         Grid.SetColumn(_notificationList, 0);
         grid.Children.Add(_notificationList);
 
-        var details = CreateDetailsBox();
+        var details = CreateDetailsBox(_notificationDetails);
         details.Margin = new Thickness(8, 0, 0, 0);
         Grid.SetColumn(details, 1);
         grid.Children.Add(details);
         return new TabItem { Header = "Notification Center", Content = grid };
     }
 
-    private TextBox CreateDetailsBox()
+    private static TextBox CreateDetailsBox(TextBox box)
     {
-        _details.IsReadOnly = true;
-        _details.AcceptsReturn = true;
-        _details.TextWrapping = TextWrapping.Wrap;
-        _details.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-        _details.Background = Brush("#071625");
-        _details.Foreground = Brush("#DCEBFA");
-        _details.BorderBrush = Brush("#263D58");
-        _details.Padding = new Thickness(10);
-        _details.FontFamily = new FontFamily("Consolas");
-        _details.FontSize = 10;
-        _details.Text = "اختر عنصرًا من القائمة لعرض التفاصيل.";
-        return _details;
+        box.IsReadOnly = true;
+        box.AcceptsReturn = true;
+        box.TextWrapping = TextWrapping.Wrap;
+        box.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        box.Background = Brush("#071625");
+        box.Foreground = Brush("#DCEBFA");
+        box.BorderBrush = Brush("#263D58");
+        box.Padding = new Thickness(10);
+        box.FontFamily = new FontFamily("Consolas");
+        box.FontSize = 10;
+        box.Text = "اختر عنصرًا من القائمة لعرض التفاصيل.";
+        return box;
     }
 
     private async Task RefreshAsync()
@@ -253,7 +255,7 @@ public sealed class ActivityCenterWindow : Window
             item.Payload is not DeviceHistoryEntry entry)
             return;
 
-        _details.Text = string.Join(Environment.NewLine,
+        _historyDetails.Text = string.Join(Environment.NewLine,
         [
             "DEVICE: " + entry.MaskedSerial,
             "MANUFACTURER: " + entry.Manufacturer,
@@ -272,7 +274,7 @@ public sealed class ActivityCenterWindow : Window
             item.Payload is not SoftBoxNotification notification)
             return;
 
-        _details.Text = string.Join(Environment.NewLine,
+        _notificationDetails.Text = string.Join(Environment.NewLine,
         [
             "TITLE: " + notification.Title,
             "CATEGORY: " + notification.Category,
