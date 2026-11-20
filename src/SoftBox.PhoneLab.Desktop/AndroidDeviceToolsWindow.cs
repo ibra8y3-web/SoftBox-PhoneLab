@@ -359,7 +359,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _batchOutput.Padding = new Thickness(10);
         _batchOutput.FontFamily = new FontFamily("Consolas");
         _batchOutput.FontSize = 10;
-        _batchOutput.Text = "اختر عدة أجهزة مصرح بها من القائمة ثم نفّذ عملية قراءة فقط. الحد الأقصى للتوازي:  + _maximumBatchConcurrency + .";
+        _batchOutput.Text = $"اختر عدة أجهزة مصرح بها من القائمة ثم نفّذ عملية قراءة فقط. الحد الأقصى للتوازي: {_maximumBatchConcurrency}.";
         Grid.SetRow(_batchOutput, 1);
         Grid.SetColumn(_batchOutput, 1);
         grid.Children.Add(_batchOutput);
