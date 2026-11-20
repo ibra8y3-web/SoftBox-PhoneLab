@@ -51,6 +51,26 @@ public sealed class WirelessAdbPairingServiceTests
     }
 
     [Fact]
+    public async Task PairAndConnectAcceptsSeparatePairingAndConnectionHosts()
+    {
+        var adb = new FakeAdbCommandRunner(
+            "Successfully paired to 192.168.1.25:37099",
+            "connected to 192.168.1.26:44123");
+        var service = new WirelessAdbPairingService(adb);
+
+        var result = await service.PairAndConnectAsync(
+            "192.168.1.25", 37099, "123456", "192.168.1.26", 44123);
+
+        Assert.Equal("192.168.1.25:37099", result.PairingEndpoint);
+        Assert.Equal("192.168.1.26:44123", result.ConnectEndpoint);
+        Assert.Equal("192.168.1.25", result.PairingHost);
+        Assert.Equal("192.168.1.26", result.ConnectionHost);
+        Assert.Collection(adb.Calls,
+            call => Assert.Equal(new[] { "pair", "192.168.1.25:37099", "123456" }, call),
+            call => Assert.Equal(new[] { "connect", "192.168.1.26:44123" }, call));
+    }
+
+    [Fact]
     public async Task FailedPairingNeverAttemptsConnection()
     {
         var adb = new FakeAdbCommandRunner("failed: incorrect pairing code");
