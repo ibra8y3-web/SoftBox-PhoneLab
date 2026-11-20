@@ -136,3 +136,10 @@ This is CI verification using generated local test fixtures and a Windows runner
 - Added local ZIP package inspection with package SHA-256, path/duplicate/symlink checks, size and expansion limits, compression-ratio checks, manifest validation and entry-assembly existence checks.
 - Added a local Plugin Store inspection window and sample manifest/developer quickstart.
 - Plugin installation/execution remains disabled: no trusted publisher root/signature verifier, sandboxed runtime, IPC host or permission-grant/revocation lifecycle is implemented. Inspection always returns `PublisherSignatureVerified=false` and `CodeLoadedOrExecuted=false`.
+## Android backup restore
+
+- Added a restore path for ordinary ZIP and authenticated SBX backups. ZIP Manifest/per-file SHA-256 verification or SBX HMAC authentication plus inner Manifest verification runs before files are sent to the phone.
+- Files are restored into a newly generated `SoftBox-Restore-*` subdirectory under the user-selected public shared-storage parent; existing phone files and original folders are never deleted or overwritten by this restore flow.
+- Archive paths are validated against traversal, absolute paths, Windows-incompatible names and reserved device names before local staging. Staging files are removed after transfer.
+- Per-file transfer failures are reported; a connection interruption may leave partial files in the new restore directory. No destructive rollback is attempted.
+- Added unit tests for safe/unsafe restore paths. Real-phone restore and OEM storage permissions still require hardware validation.
