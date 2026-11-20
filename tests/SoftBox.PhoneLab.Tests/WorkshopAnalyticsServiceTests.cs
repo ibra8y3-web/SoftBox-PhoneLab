@@ -86,7 +86,7 @@ public sealed class WorkshopAnalyticsServiceTests
                     new RepairOrder
                     {
                         TicketNumber = "SB-1", Status = "تم التسليم",
-                        DeviceModel = "=HYPERLINK(""bad"")", IntakeSymptoms = "+Formula",
+                        DeviceModel = @"=HYPERLINK(""bad"")", IntakeSymptoms = "+Formula",
                         FinalCostEgp = 250m, DeliveredAtUtc = DateTimeOffset.UtcNow
                     }
                 ]
