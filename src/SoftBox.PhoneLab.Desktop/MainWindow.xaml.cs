@@ -658,9 +658,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenNetworkDiagnostics":
                 new NetworkDiagnosticsWindow { Owner = this }.Show();
                 break;
-            case "OpenAndroidDeviceTools":
+            case "OpenAndroidFileManager":
+                OpenAndroidToolsWindow(0);
+                break;
+            case "OpenAndroidAppManager":
+                OpenAndroidToolsWindow(1);
+                break;
+            case "OpenAndroidCommandCenter":
+                OpenAndroidToolsWindow(2);
+                break;
             case "OpenAndroidBatchTools":
-                OpenAndroidToolsWindow();
+                OpenAndroidToolsWindow(3);
                 break;
             case "OpenAndroidWorkflow":
                 OpenAndroidWorkflowWindow();
@@ -800,7 +808,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
 
-    private void OpenAndroidToolsWindow()
+    private void OpenAndroidToolsWindow(int selectedTabIndex = 0)
     {
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
@@ -812,7 +820,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var authorized = Devices.Where(device => device.IsAuthorized)
             .Select(device => device.Serial).ToArray();
-        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency) { Owner = this }.Show();
+        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex) { Owner = this }.Show();
     }
 
     private void OpenVendorDiagnostics(AndroidVendorKind expectedVendor, string sectionName)
