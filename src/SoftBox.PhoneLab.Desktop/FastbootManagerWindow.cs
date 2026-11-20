@@ -23,6 +23,7 @@ public sealed class FastbootManagerWindow : Window
     private readonly Button _inspectButton;
     private readonly Button _rebootButton;
     private readonly Button _rebootRecoveryButton;
+    private readonly Button _rebootFastbootdButton;
     private CancellationTokenSource? _operation;
 
     public FastbootManagerWindow()
@@ -41,15 +42,18 @@ public sealed class FastbootManagerWindow : Window
         _inspectButton = ButtonControl("قراءة متغيرات الجهاز", "#176044", Inspect_Click);
         _rebootButton = ButtonControl("إعادة تشغيل Android", "#704B20", Reboot_Click);
         _rebootRecoveryButton = ButtonControl("إعادة التشغيل إلى Recovery", "#7A3434", RebootRecovery_Click);
+        _rebootFastbootdButton = ButtonControl("الدخول إلى Fastbootd", "#704B20", RebootFastbootd_Click);
         _inspectButton.IsEnabled = false;
         _rebootButton.IsEnabled = false;
         _rebootRecoveryButton.IsEnabled = false;
+        _rebootFastbootdButton.IsEnabled = false;
         Content = BuildContent();
         _deviceList.SelectionChanged += (_, _) =>
         {
             _inspectButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
             _rebootButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
             _rebootRecoveryButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
+            _rebootFastbootdButton.IsEnabled = _deviceList.SelectedItem is FastbootDevice && _operation is null;
         };
         Loaded += async (_, _) => await RefreshDevicesAsync();
         Closed += (_, _) => _operation?.Cancel();
@@ -92,6 +96,7 @@ public sealed class FastbootManagerWindow : Window
         actions.Children.Add(_inspectButton);
         actions.Children.Add(_rebootButton);
         actions.Children.Add(_rebootRecoveryButton);
+        actions.Children.Add(_rebootFastbootdButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
 
@@ -289,6 +294,34 @@ public sealed class FastbootManagerWindow : Window
         return text.ToString();
     }
 
+    private async void RebootFastbootd_Click(object sender, RoutedEventArgs e)
+    {
+        if (_deviceList.SelectedItem is not FastbootDevice selected)
+        {
+            _status.Text = "اختر جهاز Fastboot أولًا.";
+            return;
+        }
+
+        var confirmation = MessageBox.Show(this,
+            $"إرسال أمر fastboot reboot fastboot إلى الجهاز المحدد:\n{selected.Serial}\n\nسينتقل الجهاز إلى userspace Fastbootd إذا كان Bootloader وFirmware يدعمانه. هذا الأمر لا ينفذ تفليشًا أو مسحًا. متابعة؟",
+            "تأكيد الدخول إلى Fastbootd", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        await RunOperationAsync("جارٍ إرسال أمر Fastbootd...", async token =>
+        {
+            var output = await _fastboot.RebootFastbootdAsync(selected.Serial, token);
+            _devices.Remove(selected);
+            _inspectButton.IsEnabled = false;
+            _rebootButton.IsEnabled = false;
+            _rebootRecoveryButton.IsEnabled = false;
+            _rebootFastbootdButton.IsEnabled = false;
+            _details.Text = "تم إرسال أمر fastboot reboot fastboot إلى الجهاز المحدد.\n" + output +
+                            "\nقد يظهر الجهاز مجددًا بعد انتقاله إلى Fastbootd.";
+            return "أُرسل طلب الانتقال إلى Fastbootd. أعد اكتشاف الأجهزة للتحقق من الوضع الجديد.";
+        });
+    }
+
     private static string LockStateLabel(BootloaderLockState value) => value switch
     {
         BootloaderLockState.Locked => "مقفل وفق المتغير المقروء",
@@ -341,6 +374,7 @@ public sealed class FastbootManagerWindow : Window
         _inspectButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
         _rebootButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
         _rebootRecoveryButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
+        _rebootFastbootdButton.IsEnabled = !busy && _deviceList.SelectedItem is FastbootDevice;
     }
 
     private static Button ButtonControl(string label, string background, RoutedEventHandler handler)
