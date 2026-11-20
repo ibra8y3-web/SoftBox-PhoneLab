@@ -55,7 +55,7 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Windows 10/11 x64.
 - Official Android SDK Platform-Tools (adb.exe).
 - Android phone with a data USB cable and USB debugging authorization.
-- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer and the Android Agent APK in one download.
+- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the official Samsung USB driver installer in one download. The Samsung driver is optional and intended only for Samsung phones.
 - The bundled ADB, scrcpy, TRACE Boardviewer and Agent work offline after downloading this Windows artifact. Internet is needed only for optional model-catalog refreshes and online repair-guide search. USB debugging approval and any required OEM ADB driver remain local setup requirements.
 
 ## Build Windows

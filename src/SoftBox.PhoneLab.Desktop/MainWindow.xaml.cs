@@ -441,6 +441,36 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex) { StatusMessage = "تعذر بدء ADB: " + ex.Message; Notify(nameof(StatusMessage)); }
     }
 
+    private void InstallSamsungUsbDriver_Click(object sender, RoutedEventArgs e)
+    {
+        var driver = Path.Combine(AppContext.BaseDirectory, "Drivers", "Samsung_USB_Driver_v1.9.5.0.exe");
+        if (!File.Exists(driver))
+        {
+            MessageBox.Show(this, "مثبت تعريف Samsung غير موجود داخل هذه الحزمة.", "تعريف USB", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var answer = MessageBox.Show(this,
+            "هذا المثبت الرسمي مخصص لهواتف Samsung فقط.\n\n" +
+            "احفظ عملك وافصل الهاتف قبل التثبيت. سيطلب Windows صلاحية المسؤول. بعد انتهاء التثبيت أعد توصيل الهاتف، افتح قفل الشاشة ووافق على USB debugging.\n\n" +
+            "هل تريد تشغيل المثبت الآن؟",
+            "تثبيت تعريف Samsung USB", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (answer != MessageBoxResult.Yes) return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = driver,
+                UseShellExecute = true
+            });
+            StatusMessage = "تم فتح مثبت تعريف Samsung. أكمل التثبيت ثم أعد توصيل الهاتف واضغط بحث USB.";
+            Notify(nameof(StatusMessage));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تعذر تشغيل مثبت التعريف: " + ex.Message, "تعريف USB", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void ConnectionHelp_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(this,

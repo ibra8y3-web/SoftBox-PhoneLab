@@ -80,6 +80,14 @@ jobs:
           if (!(Test-Path $apkTarget)) { throw "PhoneLab Agent APK missing from the offline package." }
           if (!(Test-Path (Join-Path $tools "platform-tools/adb.exe")) -or !(Test-Path (Join-Path $tools "scrcpy/scrcpy.exe"))) { throw "Offline USB/screen dependencies incomplete." }
 
+          $drivers = Join-Path $publish "Drivers"
+          New-Item -ItemType Directory -Force -Path $drivers | Out-Null
+          $samsungDriver = Join-Path $drivers "Samsung_USB_Driver_v1.9.5.0.exe"
+          Invoke-WebRequest "https://developer.samsung.com/SDP/file/a2fcaf64-7aa3-49f7-b06f-9e646590d528" -OutFile $samsungDriver
+          if (!(Test-Path $samsungDriver) -or (Get-Item $samsungDriver).Length -lt 20000000) { throw "Official Samsung USB driver download is incomplete." }
+          $signature = Get-AuthenticodeSignature -FilePath $samsungDriver
+          if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "Samsung") { throw "Samsung driver Authenticode signature or publisher validation failed." }
+
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:

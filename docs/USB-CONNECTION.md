@@ -19,10 +19,11 @@ PhoneLab requires Android Debug Bridge (ADB), not only Windows file transfer (MT
 - Some Samsung, Xiaomi, Oppo, Vivo and other phones need their Windows ADB USB driver even when MTP works.
 - Revoke old USB debugging authorizations in Developer options, reconnect and approve this computer again.
 - Click **USB setup** in PhoneLab to restart ADB and retry.
+- For a Samsung phone, use **Install Samsung USB Driver** from PhoneLab, finish the Windows installer, then reconnect. Other brands need their own OEM driver.
 
 ## Offline package
 
-The single Windows artifact includes the desktop app, Google Platform-Tools (ADB), verified scrcpy 5.0.1, verified TRACE Boardviewer 1.3.3 and PhoneLab Agent APK. These tools do not self-download on first launch. Optional model-catalog refresh and online repair-guide search still need internet.
+The single Windows artifact includes the desktop app, Google Platform-Tools (ADB), verified scrcpy 5.0.1, verified TRACE Boardviewer 1.3.3, PhoneLab Agent APK and the official Samsung Android USB Driver for Windows 1.9.5.0 installer. The Samsung driver is optional and only for Samsung phones; run it from the PhoneLab button if ADB does not detect a Samsung phone. Other manufacturers may still require their own OEM driver. These bundled tools do not self-download on first launch. Optional model-catalog refresh and online repair-guide search still need internet.
 
 ## Security
 

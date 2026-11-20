@@ -32,6 +32,7 @@
      <Button Content="بحث USB" Click="Refresh_Click" Margin="0,0,8,0"/>
      <Button Content="تهيئة USB" Click="SetupUsb_Click" Margin="0,0,8,0"/>
      <Button Content="مساعدة الاتصال" Click="ConnectionHelp_Click" Margin="0,0,8,0"/>
+     <Button Content="تثبيت تعريف Samsung USB" Click="InstallSamsungUsbDriver_Click" Margin="0,0,8,0"/>
      <Button Content="قراءة وفحص النظام" Background="#075F94" BorderBrush="#168BCB" Click="Inspect_Click" Margin="0,0,8,0"/>
      <Button Content="تحديث Agent" Click="Agent_Click" Margin="0,0,8,0"/>
      <Button Content="عرض شاشة الهاتف" Click="MirrorScreen_Click" Margin="0,0,7,0"/>
