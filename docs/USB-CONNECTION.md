@@ -1,19 +1,32 @@
-# USB connection and first test
+# USB connection and first-time authorization
 
-1. Install Google Android SDK Platform-Tools using the provided PowerShell helper or Google's official download.
-2. Restart PhoneLab after setting the SOFTBOX_ADB environment variable.
-3. On Android, open Settings > About phone and tap Build number until Developer options are enabled (exact labels differ by vendor).
-4. Open Developer options and enable USB debugging.
-5. Connect with a USB data cable. If Android asks for the USB mode, choose File transfer or the available data mode.
-6. Approve the PC RSA debugging prompt on the phone. Do not approve unknown computers.
-7. The Windows app lists the ADB device. A device marked unauthorized needs the on-phone approval.
-8. Select the device and inspect the available read-only system properties.
-9. For interactive tests, install and open the PhoneLab Agent APK. Keep it in the foreground.
-10. In Windows, press Update Agent to import its test evidence.
+PhoneLab requires Android Debug Bridge (ADB), not only Windows file transfer (MTP).
 
-Troubleshooting:
-- Charge-only cable: replace with a known data cable.
-- Device missing from ADB: install the phone vendor's USB driver on Windows where required.
-- Unauthorized: unlock the phone and approve the RSA prompt; revoke old debugging authorizations only on the phone owner's instruction.
-- ADB not found: run scripts/install-platform-tools.ps1 or add platform-tools to PATH.
-- Agent unavailable: confirm the Agent is open on the phone and the correct ADB device is selected.
+## First connection
+
+1. Open Settings > About phone and tap Build number seven times (wording varies by manufacturer).
+2. Open Developer options and enable USB debugging.
+3. Unlock the phone, connect a data-capable USB cable and select File Transfer if asked.
+4. Accept Android's **Allow USB debugging?** prompt. Choose **Always allow from this computer** only for a trusted PC.
+5. PhoneLab detects the authorized ADB device, embeds the live display and installs/updates the bundled Agent APK.
+6. PhoneLab Agent displays a second consent dialog for this session. The local bridge stays stopped until you tap **Allow this connection**.
+
+## If File Explorer sees the phone but PhoneLab does not
+
+- MTP/file transfer alone does not authorize ADB.
+- Unlock the phone and accept the USB debugging prompt.
+- Try another data-capable cable and USB port.
+- Some Samsung, Xiaomi, Oppo, Vivo and other phones need their Windows ADB USB driver even when MTP works.
+- Revoke old USB debugging authorizations in Developer options, reconnect and approve this computer again.
+- Click **USB setup** in PhoneLab to restart ADB and retry.
+
+## Offline package
+
+The single Windows artifact includes the desktop app, Google Platform-Tools (ADB), verified scrcpy 5.0.1, verified TRACE Boardviewer 1.3.3 and PhoneLab Agent APK. These tools do not self-download on first launch. Optional model-catalog refresh and online repair-guide search still need internet.
+
+## Security
+
+- Agent binds only to 127.0.0.1:27831; Windows reaches it using ADB forwarding, not Wi-Fi/LAN.
+- The bridge starts only after explicit user consent. Leaving the Agent Activity stops the server.
+- Remote commands are allow-listed; no arbitrary shell command endpoint exists.
+- USB debugging grants powerful developer access; only authorize trusted PCs.

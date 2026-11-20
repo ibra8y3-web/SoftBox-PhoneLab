@@ -49,6 +49,9 @@ class MainActivity : Activity() {
     private lateinit var resultView: TextView
     private var recorder: MediaRecorder? = null
     private var recordFile: File? = null
+    private var connectionAllowed = false
+    private var consentDialog: AlertDialog? = null
+    private lateinit var bridgeStateView: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +62,8 @@ class MainActivity : Activity() {
         deviceInfo.text = "${Build.MANUFACTURER} ${Build.MODEL}\nAndroid ${Build.VERSION.RELEASE} • API ${Build.VERSION.SDK_INT}"
         hardwareFeatures.addAll(packageManager.systemAvailableFeatures.mapNotNull { it.name }.filter { it.isNotBlank() }.distinct().sorted())
         server = LocalAgentServer({ createSnapshot() }, { command -> dispatchRemoteCommand(command) })
-        findViewById<TextView>(R.id.bridgeState).text = "USB bridge: local-only 127.0.0.1:27831 • keep this app open"
+        bridgeStateView = findViewById(R.id.bridgeState)
+        bridgeStateView.text = "في انتظار موافقتك على اتصال USB من SoftBox PhoneLab."
 
         findViewById<android.widget.Button>(R.id.testDisplay).setOnClickListener { runDisplayTest() }
         findViewById<android.widget.Button>(R.id.testTouch).setOnClickListener { runTouchTest() }
@@ -71,10 +75,54 @@ class MainActivity : Activity() {
         findViewById<android.widget.Button>(R.id.startBatteryCapacity).setOnClickListener { startBatteryCapacityObservation() }
         findViewById<android.widget.Button>(R.id.finishBatteryCapacity).setOnClickListener { finishBatteryCapacityObservation() }
         renderResults()
+        requestConnectionConsent()
     }
 
-    override fun onResume() { super.onResume(); server.start() }
-    override fun onPause() { server.stop(); super.onPause() }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        requestConnectionConsent()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (connectionAllowed) {
+            server.start()
+            bridgeStateView.text = "اتصال USB مصرح • 127.0.0.1:27831"
+        }
+    }
+
+    override fun onPause() {
+        server.stop()
+        super.onPause()
+    }
+
+    private fun requestConnectionConsent() {
+        connectionAllowed = false
+        server.stop()
+        consentDialog?.dismiss()
+        bridgeStateView.text = "في انتظار موافقتك على اتصال USB من SoftBox PhoneLab."
+        consentDialog = AlertDialog.Builder(this)
+            .setTitle("طلب اتصال من SoftBox PhoneLab")
+            .setMessage(
+                "يوجد كمبيوتر متصل بهذا الهاتف عبر USB ويطلب تشغيل PhoneLab Agent.\\n\\n" +
+                "عند السماح، سيتمكن برنامج PhoneLab على هذا الكمبيوتر من قراءة معلومات التشخيص وطلب الاختبارات التي تختار تشغيلها، مثل الشاشة واللمس والصوت والكاميرا والحساسات.\\n\\n" +
+                "الاتصال محلي عبر USB وADB على 127.0.0.1 فقط؛ لا يرفع Agent بياناتك إلى خادم خارجي. يمكنك رفض الطلب، ولن يبدأ استقبال أوامر الاختبار."
+            )
+            .setPositiveButton("السماح لهذا الاتصال") { _, _ ->
+                connectionAllowed = true
+                bridgeStateView.text = "اتصال USB مصرح • 127.0.0.1:27831"
+                server.start()
+            }
+            .setNegativeButton("رفض الاتصال") { _, _ ->
+                connectionAllowed = false
+                bridgeStateView.text = "تم رفض اتصال الكمبيوتر. لن تُستقبل أوامر PhoneLab."
+                server.stop()
+            }
+            .setCancelable(false)
+            .create()
+            .also { it.show() }
+    }
     override fun onDestroy() { stopRecorder(); server.stop(); super.onDestroy() }
 
     private fun dispatchRemoteCommand(command: String): Boolean {
@@ -497,7 +545,7 @@ class MainActivity : Activity() {
         val testObject = JSONObject()
         tests.forEach { (key, value) -> testObject.put(key, value) }
         return JSONObject()
-            .put("agentVersion", "0.4.0")
+            .put("agentVersion", "0.5.0")
             .put("manufacturer", Build.MANUFACTURER)
             .put("brand", Build.BRAND)
             .put("model", Build.MODEL)

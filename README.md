@@ -20,7 +20,7 @@ The curated catalog is a starter set. The additional community model-code databa
 - The only shipped map is a generic educational fallback. No fake IC coordinates are generated for unknown devices.
 
 ### Screen and cameras
-- Launches the official scrcpy Windows client for live USB screen mirroring. The archive's SHA-256 is checked against the official scrcpy Windows installation page before extraction.
+- Automatically opens the authorized phone screen inside the PhoneLab workspace using the official scrcpy Windows client. The bundled scrcpy archive is SHA-256 checked during CI packaging.
 - Agent displays uniform color test patterns. A camera photograph of the physical screen can be analyzed for candidate pixel outliers and luminance non-uniformity. This is a screening aid, not a calibrated optical inspection.
 - Android Camera2 enumerates logical camera IDs and exposed physical camera routes, reads lens and autofocus metadata, captures a JPEG for each route, and records the autofocus state separately. This verifies reported AF state, not chart sharpness, stabilization or optical quality.
 
@@ -35,7 +35,7 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 
 ### Repair knowledge and reports
 - On-demand iFixit repair guide search opens original source pages; PhoneLab does not mirror their copyrighted repair content.
-- Windows Remote Test panel starts allow-listed on-phone tests over ADB-forwarded loopback; results synchronize automatically.
+- On first authorized USB connection, Windows installs the bundled Agent APK and opens it. The phone displays a per-session consent dialog; the local-only ADB bridge starts only after the user taps Allow.
 - Exports device identity, Agent telemetry, external meter readings, component results and test limitations in JSON.
 
 ## Repository modules
@@ -55,8 +55,8 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Windows 10/11 x64.
 - Official Android SDK Platform-Tools (adb.exe).
 - Android phone with a data USB cable and USB debugging authorization.
-- The Windows artifact is self-contained; the Android Agent debug APK is built separately.
-- Internet access is required for the first scrcpy and TRACE Boardviewer installations, optional device-catalog updates and repair-guide search.
+- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer and the Android Agent APK in one download.
+- The bundled ADB, scrcpy, TRACE Boardviewer and Agent work offline after downloading this Windows artifact. Internet is needed only for optional model-catalog refreshes and online repair-guide search. USB debugging approval and any required OEM ADB driver remain local setup requirements.
 
 ## Build Windows
 
@@ -74,10 +74,10 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 
 ## Typical workflow
 
-1. Start PhoneLab and connect the phone over USB.
-2. Enable USB debugging and approve the PC trust prompt.
-3. Select the detected device. PhoneLab reads its identifiers and automatically matches the device-profile catalog.
-4. Use live screen mirror, ten-pattern full-screen display check, Camera2 route capture and reported autofocus, touch, speaker, earpiece, microphone, flashlight, vibration, live sensor events and hardware-feature inventory. Start tests from the Windows Remote Test panel.
+1. Extract the single Windows package and start PhoneLab; ADB, scrcpy, Boardviewer and the Agent APK are included.
+2. Enable USB debugging, unlock the phone and approve the Android system USB debugging trust prompt for this PC. MTP/file-transfer visibility alone is not an ADB diagnostic connection. Some phone brands require their Windows ADB driver.
+3. PhoneLab detects the authorized device, opens the live screen inside its workspace, installs Agent and asks for a second confirmation on the phone. Tap Allow to enable the remote test bridge.
+4. PhoneLab reads the identifiers and offers display, Camera2, touch, audio, flashlight, vibration, sensor and hardware-inventory tests.
 5. Use the physical display photo analyzer with a real camera photo of the screen during a uniform test pattern.
 6. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
 7. Review every component's evidence and export a JSON report.

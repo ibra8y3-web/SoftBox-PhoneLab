@@ -73,7 +73,7 @@ class LocalAgentServer(
                 when {
                     method == "GET" && endpoint == "/health" -> {
                         statusCode = 200; statusText = "OK"
-                        response = JSONObject().put("status", "ok").put("agentVersion", "0.4.0")
+                        response = JSONObject().put("status", "ok").put("agentVersion", "0.5.0")
                     }
                     method == "GET" && endpoint == "/snapshot" -> {
                         statusCode = 200; statusText = "OK"

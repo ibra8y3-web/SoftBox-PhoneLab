@@ -13,6 +13,7 @@ permissions:
 jobs:
   windows:
     name: Windows build, tests and publish
+    needs: android-agent
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -35,6 +36,50 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:IncludeAllContentForSelfExtract=true
+      - name: Download Android Agent into Windows package
+        uses: actions/download-artifact@v4
+        with:
+          name: SoftBox-PhoneLab-Android-Agent-debug
+          path: artifacts/PhoneLab-win-x64/Agent
+
+      - name: Bundle offline USB, screen and BoardView tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $publish = Join-Path $PWD "artifacts/PhoneLab-win-x64"
+          $tools = Join-Path $publish "Tools"
+          New-Item -ItemType Directory -Force -Path $tools | Out-Null
+
+          $platformZip = Join-Path $env:RUNNER_TEMP "platform-tools-windows.zip"
+          Invoke-WebRequest "https://dl.google.com/android/repository/platform-tools-latest-windows.zip" -OutFile $platformZip
+          $platformTemp = Join-Path $env:RUNNER_TEMP "phonelab-platform-tools"
+          Expand-Archive -Path $platformZip -DestinationPath $platformTemp -Force
+          $platformSource = Join-Path $platformTemp "platform-tools"
+          if (!(Test-Path (Join-Path $platformSource "adb.exe"))) { throw "Google Platform-Tools archive did not contain adb.exe." }
+          Copy-Item $platformSource (Join-Path $tools "platform-tools") -Recurse -Force
+
+          $scrcpyZip = Join-Path $env:RUNNER_TEMP "scrcpy-win64-v5.0.1.zip"
+          Invoke-WebRequest "https://github.com/Genymobile/scrcpy/releases/download/v5.0.1/scrcpy-win64-v5.0.1.zip" -OutFile $scrcpyZip
+          $scrcpyHash = (Get-FileHash $scrcpyZip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($scrcpyHash -ne "b12a2c4ee8be317422451fc7dcf8ee20a71b5ea7ef9ad73ddd825a25316227a5") { throw "scrcpy SHA-256 verification failed." }
+          $scrcpyTemp = Join-Path $env:RUNNER_TEMP "phonelab-scrcpy"
+          Expand-Archive -Path $scrcpyZip -DestinationPath $scrcpyTemp -Force
+          $scrcpySource = Get-ChildItem $scrcpyTemp -Directory | Select-Object -First 1
+          if ($null -eq $scrcpySource -or !(Test-Path (Join-Path $scrcpySource.FullName "scrcpy.exe"))) { throw "Verified scrcpy archive missing scrcpy.exe." }
+          New-Item -ItemType Directory -Force -Path (Join-Path $tools "scrcpy") | Out-Null
+          Copy-Item (Join-Path $scrcpySource.FullName "*") (Join-Path $tools "scrcpy") -Recurse -Force
+
+          $boardViewer = Join-Path $tools "TRACE-Boardviewer-1.3.3.exe"
+          Invoke-WebRequest "https://github.com/trace-boardviewer/trace-boardviewer/releases/download/v1.3.3/TRACE-Boardviewer-1.3.3.exe" -OutFile $boardViewer
+          $boardViewerHash = (Get-FileHash $boardViewer -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($boardViewerHash -ne "88a3bace7a3e71cb1e8136561acd4fbb86d8dd8568da6b179bdc46024c8aacd8") { throw "TRACE Boardviewer SHA-256 verification failed." }
+
+          $apkSource = Join-Path $publish "Agent/app-debug.apk"
+          $apkTarget = Join-Path $publish "Agent/SoftBox-PhoneLab-Agent.apk"
+          if (!(Test-Path $apkTarget) -and (Test-Path $apkSource)) { Move-Item $apkSource $apkTarget }
+          if (!(Test-Path $apkTarget)) { throw "PhoneLab Agent APK missing from the offline package." }
+          if (!(Test-Path (Join-Path $tools "platform-tools/adb.exe")) -or !(Test-Path (Join-Path $tools "scrcpy/scrcpy.exe"))) { throw "Offline USB/screen dependencies incomplete." }
+
       - name: Upload Windows package
         uses: actions/upload-artifact@v4
         with:
