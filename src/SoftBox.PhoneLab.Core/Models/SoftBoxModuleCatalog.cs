@@ -77,12 +77,15 @@ public static class SoftBoxModuleCatalog
                 new("command-center", "مركز أوامر Android", "Android command center", "لا توجد بعد واجهة أوامر مصنفة ذات قائمة سماح ومخاطر وسجل تنفيذ.", ModuleImplementationStatus.Planned)
             ]),
         new("apk-lab", 5, "أدوات Android", "مختبر APK", "APK Lab",
-            "تحليل ملفات APK محليًا والتحقق من البيانات الوصفية والتوقيعات.",
-            ModuleImplementationStatus.Planned,
+            "تحليل محلي للملفات دون تثبيت أو تعديل: بيانات Manifest، الصلاحيات، سلامة ZIP وبصمة SHA-256.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("apk-manifest", "قراءة Manifest والصلاحيات والإصدار", "Manifest and permissions", "لم يتم تنفيذ محلل APK بعد.", ModuleImplementationStatus.Planned),
-                new("apk-signature", "التحقق من توقيع APK ومقارنة التوقيعات", "APK signature verification", "لم يتم تنفيذ فحص شهادات APK ومقارنة الإصدارات بعد.", ModuleImplementationStatus.Planned),
-                new("apk-hash", "SHA-256 وفحص سلامة الأرشيف", "APK hashing and archive integrity", "لم يتم تنفيذ الأداة بعد.", ModuleImplementationStatus.Planned)
+                new("apk-manifest", "قراءة AndroidManifest.xml والصلاحيات والإصدار", "Manifest, permissions and version", "يقرأ XML النصي وAndroid Binary XML ويعرض اسم الحزمة والإصدار وSDK والصلاحيات من الملف المحدد محليًا.", ModuleImplementationStatus.Implemented, "OpenApkLab"),
+                new("apk-archive", "فحص بنية ZIP وقراءة جميع المدخلات", "ZIP archive integrity", "يفتح جميع مدخلات الأرشيف ويقرأها، ويبلغ عن تلف ZIP أو تجاوز حد الحجم الآمن.", ModuleImplementationStatus.Implemented),
+                new("apk-hash", "حساب SHA-256 للملف الكامل", "Full-file SHA-256", "يحسب البصمة الفعلية لبايتات ملف APK المختار، ولا يطابقها مع مصدر خارجي تلقائيًا.", ModuleImplementationStatus.Implemented),
+                new("apk-signature-detection", "اكتشاف بيانات توقيع APK", "APK signature metadata detection", "يرصد ملفات توقيع v1 ووجود APK Signing Block؛ هذا رصد بنيوي فقط وليس تحققًا تشفيريًا.", ModuleImplementationStatus.Implemented),
+                new("apk-signature-verification", "التحقق التشفيري من الشهادة وسلسلة الثقة", "Cryptographic signature verification", "غير منفذ؛ وجود ملفات توقيع لا يثبت صحتها أو موثوقية الناشر.", ModuleImplementationStatus.Planned),
+                new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات", "APK version comparison", "لم يتم تنفيذ مقارنة ملفين أو تحليل فروق المحتوى بعد.", ModuleImplementationStatus.Planned)
             ]),
         new("samsung-tools", 6, "الشركات والمعالجات", "أدوات Samsung", "Samsung Tools",
             "الموجود حاليًا تعريف Samsung USB الاختياري وأدوات Android العامة؛ لا يوجد بعد محرك صيانة Samsung خاص.",
@@ -335,7 +338,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
