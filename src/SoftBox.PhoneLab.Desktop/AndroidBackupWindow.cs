@@ -128,7 +128,7 @@ public sealed class AndroidBackupWindow : Window
         form.Children.Add(_archivePath);
 
         var browse = ButtonControl("اختيار مكان الحفظ", "#243B56", BrowseArchive_Click);
-        Grid.SetRow(browse, 2);
+        Grid.SetRow(browse, 3);
         Grid.SetColumn(browse, 1);
         form.Children.Add(browse);
 
