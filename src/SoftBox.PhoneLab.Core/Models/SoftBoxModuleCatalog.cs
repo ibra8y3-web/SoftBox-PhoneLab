@@ -128,13 +128,14 @@ public static class SoftBoxModuleCatalog
                 new("mediatek-recovery", "الاستعادة الرسمية المتوافقة", "Supported MediaTek recovery", "غير منفذة؛ يلزم ملف DA موثوق ومتوافق ومصدر رسمي للجهاز المحدد.", ModuleImplementationStatus.Planned)
             ]),
         new("firmware-center", 11, "Firmware والاستعادة", "مركز Firmware", "Firmware Center",
-            "المتاح فحص أرشيف Firmware محليًا وحساب SHA-256؛ التنزيل والتوافق والتنفيذ غير موجودة.",
+            "فحص أرشيفات محلية وإدارة مكتبة Offline مصنفة حسب الشركة والموديل والمنطقة والإصدار مع إعادة التحقق من SHA-256.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("firmware-inspection", "فحص أرشيف محلي وحساب SHA-256", "Local archive inspection and SHA-256", "يقرأ بنية ZIP وعناصر OTA الشائعة فقط؛ لا يثبت المصدر أو التوافق أو سلامة التوقيع.", ModuleImplementationStatus.Implemented, "InspectFirmware"),
-                new("firmware-library", "مكتبة ملفات مصنفة حسب الشركة والموديل والمنطقة", "Firmware library", "لم يتم بناء قاعدة بيانات ومكتبة تنزيل بعد.", ModuleImplementationStatus.Planned),
-                new("firmware-download", "تنزيل واستكمال وإدارة التنزيلات", "Firmware downloads", "لم يتم بناء مدير التنزيلات بعد.", ModuleImplementationStatus.Planned),
-                new("firmware-compatibility", "محرك توافق موثق قبل الاستخدام", "Firmware compatibility engine", "لم يتم تنفيذ محرك يفحص الموديل والمنطقة وقيود الرجوع.", ModuleImplementationStatus.Planned)
+                new("firmware-library", "استيراد وتنظيم مكتبة Firmware محلية", "Offline firmware library", "ينسخ ملفًا يختاره المستخدم إلى مكتبة منظمة حسب الشركة والموديل والمنطقة والإصدار ويحفظ بياناته محليًا.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
+                new("firmware-hash-verify", "إعادة حساب SHA-256 والتحقق من سلامة الملف المحلي", "Firmware hash revalidation", "يقارن SHA-256 والحجم الحاليين بسجل الاستيراد ويكشف التغيير أو الفقد؛ هذا لا يثبت مصدر الناشر أو التوافق.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
+                new("firmware-download", "تنزيل واستكمال وإدارة التنزيلات من مصادر رسمية", "Official firmware downloads", "لم يضف تنزيل تلقائي بعد؛ يلزم مصدر رسمي موثق وسياسة روابط وتراخيص واستكمال آمن.", ModuleImplementationStatus.Planned),
+                new("firmware-compatibility", "محرك توافق موثق قبل الاستخدام", "Firmware compatibility engine", "لم يتم تنفيذ محرك يفحص الموديل والمنطقة وقيود الرجوع ومصدر الملف قبل أي استخدام.", ModuleImplementationStatus.Planned)
             ]),
         new("usb-doctor", 12, "الاتصال والتشخيص", "طبيب USB", "USB Doctor",
             "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز؛ لا يثبت أو يزيل تعريفات.",
@@ -343,7 +344,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
