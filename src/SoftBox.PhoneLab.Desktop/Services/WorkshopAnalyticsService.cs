@@ -121,7 +121,8 @@ public static class WorkshopAnalyticsService
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         var report = Analyze(data);
-        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(data.Settings?.CurrencyCode);
+        var settings = data.Settings ?? new WorkshopSettings();
+        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(settings.CurrencyCode);
         var rows = new List<string>
         {
             CsvRow("Type", "Name", "Count", "Amount", "Currency", "DurationHours"),
