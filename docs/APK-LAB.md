@@ -36,3 +36,8 @@ ApkInspectionServiceTests covers:
 - Rejection of corrupt ZIP data and non-APK file extensions.
 
 The generated test fixtures validate parser behavior; they are not claimed to be real handset or vendor firmware compatibility tests.
+## CI evidence — 20 November 2026
+
+PhoneLab CI run #48 completed successfully: 40 tests passed, 0 failed, 0 skipped; Windows x64 publish succeeded; Android Agent build succeeded; the offline tool bundle and Windows artifact upload succeeded.
+
+The added APK tests run only against generated local fixtures. No physical-device compatibility claim is made.
