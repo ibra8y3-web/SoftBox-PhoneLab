@@ -25,7 +25,7 @@ public sealed record FirmwareDownloadResult(
 /// requires a user-supplied trusted SHA-256, then imports the verified bytes into the
 /// local FirmwareLibraryService. Redirects and non-HTTPS sources are deliberately rejected.
 /// </summary>
-public sealed class FirmwareDownloadService
+public sealed class FirmwareDownloadService : IDisposable
 {
     public const long MaximumDownloadBytes = 16L * 1024 * 1024 * 1024;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
