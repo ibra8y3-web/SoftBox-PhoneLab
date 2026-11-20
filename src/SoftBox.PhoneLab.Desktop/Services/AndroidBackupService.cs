@@ -1,3 +1,4 @@
+using System.IO;
 using SoftBox.PhoneLab.Core.Backup;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -30,11 +31,8 @@ public sealed class AndroidBackupService(AdbClient adb)
         try
         {
             progress?.Report("جارٍ نقل الملفات المسموح بها من مساحة Android المشتركة عبر ADB...");
-            var pullOutput = await adb.RunForDeviceAsync(
-                serial,
-                ["pull", remote, stagingDirectory],
-                cancellationToken,
-                TimeSpan.FromHours(3));
+            var pullArguments = new List<string> { "-s", serial, "pull", remote, stagingDirectory };
+            await adb.RunAsync(pullArguments, cancellationToken, TimeSpan.FromHours(3));
 
             if (!Directory.Exists(stagingDirectory))
             {
