@@ -47,7 +47,7 @@ public sealed class ApplicationSettingsWindow : Window
         _autoDiscover.Content = "اكتشاف الأجهزة تلقائيًا أثناء تشغيل SoftBox";
         _autoDiscover.IsChecked = settings.AutoDiscoverDevices;
 
-        _interval.ItemsSource = Enumerable.Range(3, 40).Select(value => value * 3).ToArray();
+        _interval.ItemsSource = new[] { 3, 5, 10, 15, 30, 60, 90, 120 };
         _interval.SelectedItem = settings.DiscoveryIntervalSeconds;
         if (_interval.SelectedItem is null)
             _interval.SelectedItem = 3;
