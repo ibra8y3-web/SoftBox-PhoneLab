@@ -168,29 +168,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 {
                     if (current.IsAuthorized)
                     {
-                        await _activity.AddDeviceHistoryAsync(
+                        await RecordDeviceHistoryAsync(
                             current.Serial, current.Manufacturer, current.Model,
                             "DeviceConnected", "تم اكتشاف جهاز Android مصرح به عبر ADB.");
-                        await _activity.AddNotificationAsync(
+                        await AddNotificationAsync(
                             "device", "تم اكتشاف جهاز", $"تم اكتشاف {current.DisplayName} عبر ADB.",
                             "device-center", current.Serial);
                     }
                 }
                 else if (!prior.IsAuthorized && current.IsAuthorized)
                 {
-                    await _activity.AddDeviceHistoryAsync(
+                    await RecordDeviceHistoryAsync(
                         current.Serial, current.Manufacturer, current.Model,
                         "AdbAuthorized", "أصبح الجهاز مصرحًا به عبر ADB.");
-                    await _activity.AddNotificationAsync(
+                    await AddNotificationAsync(
                         "device", "تمت الموافقة على ADB", $"الجهاز {current.DisplayName} أصبح جاهزًا للفحص.",
                         "device-center", current.Serial);
                 }
                 else if (prior.IsAuthorized && !current.IsAuthorized)
                 {
-                    await _activity.AddDeviceHistoryAsync(
+                    await RecordDeviceHistoryAsync(
                         current.Serial, prior.Manufacturer, prior.Model,
                         "AdbAuthorizationLost", "فقد الجهاز تصريح ADB أو تغيرت حالة الاتصال.");
-                    await _activity.AddNotificationAsync(
+                    await AddNotificationAsync(
                         "warning", "تغيرت حالة اتصال الجهاز", $"الجهاز {prior.DisplayName} لم يعد مصرحًا به عبر ADB.",
                         "device-center", current.Serial);
                 }
@@ -200,10 +200,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 if (prior.IsAuthorized)
                 {
-                    await _activity.AddDeviceHistoryAsync(
+                    await RecordDeviceHistoryAsync(
                         prior.Serial, prior.Manufacturer, prior.Model,
                         "DeviceDisconnected", "تم رصد فصل الجهاز عن قناة ADB.");
-                    await _activity.AddNotificationAsync(
+                    await AddNotificationAsync(
                         "device", "تم فصل جهاز", $"تم فصل {prior.DisplayName} عن ADB.",
                         "device-center", prior.Serial);
                 }
@@ -337,7 +337,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             _snapshot = await _inspection.InspectAsync(selected.Serial);
-            await _activity.AddDeviceHistoryAsync(
+            await RecordDeviceHistoryAsync(
                 selected.Serial,
                 _snapshot.Manufacturer,
                 _snapshot.Model,
@@ -381,14 +381,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(AgentStatus)); return;
             }
             _agentSnapshot = agent;
-            await _activity.AddDeviceHistoryAsync(
+            await RecordDeviceHistoryAsync(
                 selected.Serial,
                 _snapshot.Manufacturer,
                 _snapshot.Model,
                 "HardwareDiagnostics",
                 $"تم استلام {agent.Tests.Count} نتيجة اختبار من Agent بإذن المستخدم.",
                 string.Join("; ", agent.Tests.Take(20).Select(test => $"{test.Key}: {test.Value.Status}")));
-            await _activity.AddNotificationAsync(
+            await AddNotificationAsync(
                 "diagnostic", "اكتملت مزامنة الاختبارات", $"استلم SoftBox نتائج {agent.Tests.Count} اختبار من الهاتف.",
                 "hardware-diagnostics", selected.Serial);
             ApplyDeviceFacts();
@@ -636,6 +636,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenFirmwareCenter":
                 new FirmwareCenterWindow { Owner = this }.Show();
                 break;
+            case "OpenDeviceHistory":
+                OpenActivityCenter(0, true);
+                break;
+            case "OpenNotificationCenter":
+                OpenActivityCenter(1, false);
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
@@ -723,6 +729,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         new AndroidBackupWindow(_adb, selected.Serial) { Owner = this }.Show();
+    }
+
+    private async Task RecordDeviceHistoryAsync(
+        string serial,
+        string manufacturer,
+        string model,
+        string eventType,
+        string summary,
+        string evidence = "")
+    {
+        try
+        {
+            await _activity.AddDeviceHistoryAsync(serial, manufacturer, model, eventType, summary, evidence);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning("SoftBox device history was not persisted: {0}", ex.Message);
+        }
+    }
+
+    private async Task AddNotificationAsync(
+        string category,
+        string title,
+        string message,
+        string moduleId,
+        string? serial = null)
+    {
+        try
+        {
+            await _activity.AddNotificationAsync(category, title, message, moduleId, serial);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning("SoftBox notification was not persisted: {0}", ex.Message);
+        }
+    }
+
+    private void OpenActivityCenter(int initialTab, bool filterToSelectedDevice)
+    {
+        var selected = SelectedDevice;
+        var serial = filterToSelectedDevice && selected is { IsAuthorized: true }
+            ? selected.Serial
+            : null;
+        new ActivityCenterWindow(_activity, serial, initialTab) { Owner = this }.Show();
     }
 
     private void GlobalWorkshop_Click(object sender, RoutedEventArgs e)
@@ -1059,11 +1109,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         await _reports.ExportAsync(dialog.FileName, _snapshot, _agentSnapshot, Components.Select(x => x.Diagnostic).ToList(), _measurementSnapshot);
         if (SelectedDevice is { IsAuthorized: true } selected)
         {
-            await _activity.AddDeviceHistoryAsync(
+            await RecordDeviceHistoryAsync(
                 selected.Serial, _snapshot.Manufacturer, _snapshot.Model,
                 "ReportExported", "تم تصدير تقرير تشخيص محلي بموافقة المستخدم.",
                 Path.GetFileName(dialog.FileName));
-            await _activity.AddNotificationAsync(
+            await AddNotificationAsync(
                 "report", "تم تصدير تقرير", $"تم حفظ تقرير الجهاز {selected.DisplayName}.",
                 "service-reports", selected.Serial);
         }
