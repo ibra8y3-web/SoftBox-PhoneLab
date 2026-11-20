@@ -23,7 +23,7 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 02 | Device Center | In Development | ADB auto-discovery every 3 seconds, multiple-device listing and selection | Wireless pairing UI, sessions, group targeting, per-device job isolation and batch controls |
 | 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
 | 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, Android evidence capture | ADB GUI manager, app/package manager, Android file manager and safe command catalog |
-| 05 | APK Lab | Planned | No APK inspection workbench | Manifest, package/version, signing-certificate, hash, archive-integrity and version-diff analysis |
+| 05 | APK Lab | In Development | Local APK Lab window; SHA-256; full ZIP entry read; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution, two-version diff and DEX/resource analysis; no installation or device action |
 | 06 | Samsung Tools | In Development | Samsung device identification through the shared device engine; official Samsung USB driver is surfaced under USB Doctor | Samsung Download Mode visibility, model-specific service functions and official compatible recovery workflows |
 | 07 | Xiaomi Tools | Planned | Generic Android/ADB path only | Xiaomi/Redmi/POCO identity, region compatibility and supported model-specific workflows |
 | 08 | Android Brands | In Development | Generic manufacturer/model identification and community identity profiles | Dedicated, evidenced modules for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
@@ -70,6 +70,7 @@ The same implementation is shared and linked from related module pages; it must 
 | External serial meter dashboard | Hardware Diagnostics | Read-only JSON-Lines protocol; fixture safety/calibration is external |
 | ADB/Fastboot transport inspector and Samsung driver installer | USB Doctor | Generic discovery cannot promise visibility of every vendor-specific mode |
 | Local firmware archive inspection | Firmware Center | Hash/archive structure is not publisher-signature or compatibility verification |
+| Local APK archive and Manifest inspection | APK Lab | SHA-256, ZIP entry readability, text/AXML metadata and signature-structure discovery; does not validate publisher trust |
 | TRACE Boardviewer launcher and verified JSON board-map importer | Device Intelligence | Boardviewer is a separate third-party app; native formats are not decoded into PhoneLab 3D |
 | Customer/order/inventory local store | Workshop Manager / Parts Inventory | One Windows workstation, JSON storage, no multi-branch synchronization |
 | Workshop international settings, warranty and printable reports | Workshop Manager / Service Reports | Currency code formats labels; there is no FX conversion or automatic tax calculation |
@@ -80,6 +81,7 @@ The same implementation is shared and linked from related module pages; it must 
 - Windows UI: WPF on .NET 10; Android companion: Kotlin/Android Agent.
 - Current solution has three .NET projects: Core, Desktop and Tests, plus the separate Android Gradle project.
 - ADB process invocation uses argument-list APIs, validates serial values and has a bounded command timeout.
+- APK Lab uses a dependency-free .NET Core inspection service for local ZIP validation, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
 - The workshop database is local JSON under the current Windows user's LocalAppData. It has a schema migration path for its v1/v2 workshop schema.
 - SQLite and Entity Framework Core are **not** currently used.
 - The current desktop UI has meaningful code-behind and services, but it is **not yet a complete MVVM/Clean Architecture implementation**.
