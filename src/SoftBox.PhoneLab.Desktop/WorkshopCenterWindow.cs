@@ -19,6 +19,9 @@ public sealed class WorkshopCenterWindow : Window
     private readonly DataGrid _eventsGrid = GridView();
     private readonly TextBlock _status = new() { Foreground = Brushes.LightSkyBlue, Margin = new Thickness(8) };
     private readonly TextBox _customerName = Input(210);
+    private readonly TextBox _customerEditName = Input(210);
+    private readonly TextBox _customerEditPhone = Input(155);
+    private readonly TextBox _customerEditNotes = Input(300, true);
     private readonly TextBox _customerPhone = Input(155);
     private readonly TextBox _deviceModel = Input(190);
     private readonly TextBox _serialNote = Input(175);
@@ -129,10 +132,26 @@ public sealed class WorkshopCenterWindow : Window
         };
         DockPanel.SetDock(intro, Dock.Top);
         root.Children.Add(intro);
+        var edit = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+        edit.Children.Add(Field("اسم العميل", _customerEditName));
+        edit.Children.Add(Field("الهاتف", _customerEditPhone));
+        edit.Children.Add(Field("ملاحظات", _customerEditNotes));
+        edit.Children.Add(new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Children = { Button("حفظ / تحديث العميل", async (_, _) => await SaveCustomerAsync()) } });
+        DockPanel.SetDock(edit, Dock.Top);
+        root.Children.Add(edit);
         _customersGrid.Columns.Add(Column("الاسم", nameof(CustomerRecord.Name), 2));
         _customersGrid.Columns.Add(Column("الهاتف", nameof(CustomerRecord.Phone), 1.2));
         _customersGrid.Columns.Add(Column("ملاحظات", nameof(CustomerRecord.Notes), 2));
         _customersGrid.Columns.Add(Column("تاريخ التسجيل UTC", nameof(CustomerRecord.CreatedAtUtc), 1.5));
+        _customersGrid.SelectionChanged += (_, _) =>
+        {
+            if (_customersGrid.SelectedItem is CustomerRecord customer)
+            {
+                _customerEditName.Text = customer.Name;
+                _customerEditPhone.Text = customer.Phone;
+                _customerEditNotes.Text = customer.Notes;
+            }
+        };
         root.Children.Add(_customersGrid);
         return root;
     }
@@ -230,6 +249,25 @@ public sealed class WorkshopCenterWindow : Window
         _ordersGrid.Columns.Add(Column("الحالة", nameof(RepairOrder.Status), 1));
         _ordersGrid.Columns.Add(Column("التقديرية", nameof(RepairOrder.EstimatedCostEgp), .8));
         _ordersGrid.Columns.Add(Column("النهائية", nameof(RepairOrder.FinalCostEgp), .8));
+    }
+
+    private async Task SaveCustomerAsync()
+    {
+        try
+        {
+            var selected = _customersGrid.SelectedItem as CustomerRecord;
+            await _store.UpsertCustomerAsync(new CustomerRecord
+            {
+                Id = selected?.Id ?? Guid.NewGuid(),
+                Name = _customerEditName.Text,
+                Phone = _customerEditPhone.Text,
+                Notes = _customerEditNotes.Text,
+                CreatedAtUtc = selected?.CreatedAtUtc ?? DateTimeOffset.UtcNow
+            });
+            await RefreshAsync();
+            SetStatus("تم حفظ بيانات العميل محليًا.");
+        }
+        catch (Exception ex) { SetStatus("تعذر حفظ العميل: " + ex.Message); }
     }
 
     private async Task CreateOrderAsync()

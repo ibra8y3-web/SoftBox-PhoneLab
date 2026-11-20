@@ -24,6 +24,21 @@ public sealed class UsbTransportInspector(AdbClient adb)
                 await adb.StartServerAsync(cancellationToken);
                 adbOutput = await adb.RunAsync(["devices", "-l"], cancellationToken);
                 adbOk = true;
+                var bootHints = new List<string>();
+                foreach (var line in adbOutput.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Skip(1))
+                {
+                    var parts = line.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < 2 || parts[1] != "device" || !AdbClient.IsSafeSerial(parts[0])) continue;
+                    try
+                    {
+                        var bootMode = (await adb.RunForDeviceAsync(parts[0], "shell", "getprop", "ro.bootmode")).Trim();
+                        var completed = (await adb.RunForDeviceAsync(parts[0], "shell", "getprop", "sys.boot_completed")).Trim();
+                        bootHints.Add($"{parts[0]}: bootmode={ (string.IsNullOrWhiteSpace(bootMode) ? "غير معلن" : bootMode) }, boot_completed={ (string.IsNullOrWhiteSpace(completed) ? "غير معلن" : completed) }");
+                    }
+                    catch { bootHints.Add($"{parts[0]}: ADB ظاهر لكن خصائص وضع الإقلاع غير مقروءة."); }
+                }
+                if (bootHints.Count > 0)
+                    adbOutput += Environment.NewLine + Environment.NewLine + "Boot-mode hints (authorized devices only):" + Environment.NewLine + string.Join(Environment.NewLine, bootHints);
             }
             catch (Exception ex) { adbOutput = ex.Message; }
         }

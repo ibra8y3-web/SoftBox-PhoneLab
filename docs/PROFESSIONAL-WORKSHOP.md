@@ -3,13 +3,13 @@
 ## Local data
 The workshop workspace stores its JSON database at:
 
-\`%LocalAppData%\\SoftBox\\PhoneLab\\Workshop\\workshop.json\`
+`%LocalAppData%\\SoftBox\\PhoneLab\\Workshop\\workshop.json`
 
 No cloud account or network service is used for customer, repair-order or inventory records. The database is written through a temporary file and replacement to reduce the chance of a partially written file after an interrupted save.
 
 ## Repair workflow
 - Creating a repair order records the customer's name and optional phone, device model, optional serial/IMEI note, symptoms reported at intake and estimated cost.
-- A unique ticket reference is generated locally. The optional QR PNG contains only a \`softbox-phonelab://repair/<ticket>\` identifier; it does not embed customer PII and is not a remote tracking URL.
+- A unique ticket reference is generated locally. The optional QR PNG contains only a `softbox-phonelab://repair/<ticket>` identifier; it does not embed customer PII and is not a remote tracking URL.
 - A technician can record findings before repair, work performed, tests/results after repair, status and final cost.
 - The lifecycle statuses are: received, diagnosis, waiting for parts, in repair, ready for pickup, delivered and cancelled.
 - The exported technician report contains the entered facts and a limitation statement. It is not a guarantee or independent certification.

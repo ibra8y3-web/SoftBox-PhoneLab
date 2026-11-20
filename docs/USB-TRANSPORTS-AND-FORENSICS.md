@@ -2,8 +2,8 @@
 
 ## Transport inspection
 The USB diagnostic screen invokes the bundled Google Android SDK Platform-Tools:
-- \`adb devices -l\` lists devices visible to ADB, including the authorization state.
-- \`fastboot devices\` lists devices visible to the generic Fastboot tool when the phone is already in that mode.
+- `adb devices -l` lists devices visible to ADB, including the authorization state. For authorized devices, PhoneLab also reads `ro.bootmode` and `sys.boot_completed` as non-authoritative recovery/boot hints when available.
+- `fastboot devices` lists devices visible to the generic Fastboot tool when the phone is already in that mode.
 
 These are read-only inventory commands. PhoneLab does not reboot the phone into another mode, unlock a bootloader, erase partitions, alter FRP state or flash firmware.
 
@@ -22,7 +22,7 @@ This can help a technician correlate a reported restart with recorded exceptions
 **Privacy warning:** logcat and system properties can contain account labels, notification text, package names, file paths, device serials and application data. Inspect and redact logs before sharing.
 
 ## Firmware archive inspection
-The inspector calculates SHA-256 and checks whether a ZIP contains common Android OTA elements such as \`META-INF/com/android/metadata\`, \`payload.bin\` or an updater binary. Non-ZIP files receive a hash and a basic format assessment.
+The inspector calculates SHA-256 and checks whether a ZIP contains common Android OTA elements such as `META-INF/com/android/metadata`, `payload.bin` or an updater binary. Non-ZIP files receive a hash and a basic format assessment.
 
 A SHA-256 hash proves only the identity of the bytes that were inspected. It does not validate a publisher certificate, cryptographic OTA signature, device/region compatibility or safe installation. PhoneLab does not execute updater scripts or flash, unlock, wipe or otherwise modify the connected phone.
 
