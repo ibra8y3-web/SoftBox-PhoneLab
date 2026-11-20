@@ -44,7 +44,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("live-usb", "حالة محرك ADB", "ADB engine status", "يعرض توفر أداة ADB الفعلية وحالة اكتشاف الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("connected-list", "قائمة الأجهزة المتصلة", "Connected devices", "قائمة أجهزة ADB تتحدث تلقائيًا؛ لوحة مؤشرات العمليات والإحصائيات الشاملة لم تكتمل بعد.", ModuleImplementationStatus.Implemented),
-                new("dashboard-reports", "إحصائيات العمليات والتقارير", "Operations analytics", "لم يتم بناء سجل مركزي للعمليات والإشعارات والإحصائيات بعد.", ModuleImplementationStatus.Planned)
+                new("dashboard-reports", "إحصائيات العمليات والتقارير", "Operations analytics", "نافذة تحليلات فعلية من سجل الأجهزة والإشعارات المحلي: عدد الأجهزة المسجلة، أحداث 24 ساعة و7 و30 يومًا، الإشعارات غير المقروءة، أكثر العمليات والفئات تكرارًا، واتجاه النشاط اليومي لآخر 14 يومًا. لا تدّعي وجود طابور مهام خلفي.", ModuleImplementationStatus.Tested, "OpenDashboardAnalytics")
             ]),
         new("device-center", 2, "مركز الأجهزة", "مركز الأجهزة", "Device Center",
             "اكتشاف أجهزة Android المصرح بها وإظهار حالة اتصال كل جهاز.",
@@ -292,7 +292,7 @@ public static class SoftBoxModuleCatalog
                 new("adb-arguments", "تمرير وسائط البرامج دون بناء أوامر Shell نصية", "Safe process arguments", "AdbClient يستخدم ArgumentList ويقيد Serial ومعلمات Agent المسموح بها.", ModuleImplementationStatus.Implemented),
                 new("agent-consent", "موافقة المستخدم قبل تشغيل جسر Agent", "On-device consent", "جسر Agent لا يبدأ إلا بعد موافقة المستخدم داخل تطبيق الهاتف.", ModuleImplementationStatus.Implemented),
                 new("read-only-forensics", "فحص USB وFirmware والسجلات بوضع قراءة فقط", "Read-only forensic operations", "لا ينفذ هذا المسار Flash أو Unlock أو Wipe أو تجاوز أقفال. فحص أوضاع النقل في طبيب USB.", ModuleImplementationStatus.Implemented),
-                new("encrypted-data", "تشفير قاعدة البيانات والنسخ وإدارة مفاتيح", "At-rest encryption and key management", "نسخ الورشة غير مشفرة حتى الآن.", ModuleImplementationStatus.Planned)
+                new("encrypted-data", "تشفير قاعدة البيانات والنسخ وإدارة مفاتيح", "At-rest encryption and key management", "تُشفّر ملفات حسابات المستخدمين والتدقيق، وقاعدة الورشة، وسجل الأجهزة والإشعارات باستخدام Windows DPAPI CurrentUser مع غرض تشفير منفصل لكل مخزن. تُرحّل ملفات JSON القديمة عند أول قراءة ناجحة. ملفات النسخ .sbxbackup مشفرة ومقيدة بحساب Windows نفسه؛ لا توجد مزامنة مفاتيح أو استعادة عابرة للحسابات والأجهزة.", ModuleImplementationStatus.Tested)
             ]),
         new("user-technician-management", 30, "النظام والحماية", "المستخدمون والفنيون والصلاحيات", "User & Technician Management",
             "حسابات محلية حقيقية بأدوار مدير وفني وقراءة فقط، ومصادقة PBKDF2، وقفل مؤقت بعد محاولات فاشلة، وسجل تدقيق حسب المستخدم.",
@@ -355,7 +355,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenUpdateCenter", "OpenScreenRecording", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenDashboardAnalytics", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement"

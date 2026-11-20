@@ -442,10 +442,22 @@ public sealed class SoftBoxAccountService
         if (info.Length is <= 0 or > MaximumStoreBytes)
             throw new InvalidDataException("ملف حسابات SoftBox فارغ أو تجاوز الحد الآمن للحجم.");
 
-        await using var stream = new FileStream(_storePath, FileMode.Open, FileAccess.Read, FileShare.Read,
-            16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        var data = await JsonSerializer.DeserializeAsync<SoftBoxAccountData>(stream, _json, cancellationToken)
-            ?? throw new InvalidDataException("ملف حسابات SoftBox غير صالح.");
+        var storedBytes = await File.ReadAllBytesAsync(_storePath, cancellationToken);
+        var jsonBytes = WindowsUserDataProtection.UnprotectOrLegacy(
+            storedBytes, "SoftBoxAccountStore.v1", out var wasProtected);
+        CryptographicOperations.ZeroMemory(storedBytes);
+
+        SoftBoxAccountData data;
+        try
+        {
+            data = JsonSerializer.Deserialize<SoftBoxAccountData>(jsonBytes, _json)
+                ?? throw new InvalidDataException("ملف حسابات SoftBox غير صالح.");
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(jsonBytes);
+        }
+
         if (data.SchemaVersion != 1)
             throw new InvalidDataException($"إصدار ملف الحسابات غير مدعوم: {data.SchemaVersion}.");
         data.Accounts ??= [];
@@ -465,6 +477,9 @@ public sealed class SoftBoxAccountService
                 account.FailedLoginAttempts is < 0 or > MaximumFailedAttempts)
                 throw new InvalidDataException($"بيانات مصادقة الحساب {account.UserName} غير صالحة.");
         }
+
+        if (!wasProtected)
+            await SaveLockedAsync(data, cancellationToken);
         return data;
     }
 
@@ -474,12 +489,16 @@ public sealed class SoftBoxAccountService
         Directory.CreateDirectory(directory);
         data.UpdatedAtUtc = DateTimeOffset.UtcNow;
         var temporary = _storePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        byte[]? jsonBytes = null;
+        byte[]? protectedBytes = null;
         try
         {
+            jsonBytes = JsonSerializer.SerializeToUtf8Bytes(data, _json);
+            protectedBytes = WindowsUserDataProtection.Protect(jsonBytes, "SoftBoxAccountStore.v1");
             await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
                 16 * 1024, FileOptions.Asynchronous | FileOptions.WriteThrough))
             {
-                await JsonSerializer.SerializeAsync(stream, data, _json, cancellationToken);
+                await stream.WriteAsync(protectedBytes, cancellationToken);
                 await stream.FlushAsync(cancellationToken);
                 stream.Flush(flushToDisk: true);
             }
@@ -489,6 +508,11 @@ public sealed class SoftBoxAccountService
         {
             try { File.Delete(temporary); } catch { }
             throw;
+        }
+        finally
+        {
+            if (jsonBytes is not null) CryptographicOperations.ZeroMemory(jsonBytes);
+            if (protectedBytes is not null) CryptographicOperations.ZeroMemory(protectedBytes);
         }
     }
 

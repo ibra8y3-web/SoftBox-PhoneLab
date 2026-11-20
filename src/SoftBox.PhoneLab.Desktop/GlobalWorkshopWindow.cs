@@ -635,7 +635,7 @@ public sealed class GlobalWorkshopWindow : Window
 
     private async Task BackupAsync()
     {
-        var dialog = new SaveFileDialog { Title = "Workshop backup", Filter = "JSON backup|*.json", FileName = "PhoneLab-Global-Backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".json" };
+        var dialog = new SaveFileDialog { Title = "Encrypted SoftBox workshop backup", Filter = "SoftBox encrypted backup|*.sbxbackup", DefaultExt = ".sbxbackup", AddExtension = true, FileName = "SoftBox-Workshop-Backup-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".sbxbackup" };
         if (dialog.ShowDialog(this) != true) return;
         try { await _store.CreateBackupAsync(dialog.FileName); SetResult("تم إنشاء النسخة الاحتياطية."); }
         catch (Exception ex) { SetResult("فشل النسخ الاحتياطي: " + ex.Message); }
@@ -643,7 +643,7 @@ public sealed class GlobalWorkshopWindow : Window
 
     private async Task RestoreAsync()
     {
-        var dialog = new OpenFileDialog { Title = "Restore workshop backup", Filter = "JSON backup|*.json", CheckFileExists = true };
+        var dialog = new OpenFileDialog { Title = "Restore encrypted or legacy workshop backup", Filter = "SoftBox backup (*.sbxbackup;*.json)|*.sbxbackup;*.json", CheckFileExists = true };
         if (dialog.ShowDialog(this) != true) return;
         if (MessageBox.Show(this, "سيتم استبدال بيانات المركز الحالية بمحتويات النسخة. هل تريد المتابعة؟", "تأكيد الاستعادة", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         try { await _store.RestoreBackupAsync(dialog.FileName); await RefreshAsync(); SetResult("تمت استعادة البيانات."); }

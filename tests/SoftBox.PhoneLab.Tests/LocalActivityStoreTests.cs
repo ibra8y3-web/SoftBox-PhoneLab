@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Activity;
+using SoftBox.PhoneLab.Core.Security;
 using Xunit;
 
 namespace SoftBox.PhoneLab.Tests;
@@ -22,7 +23,46 @@ public sealed class LocalActivityStoreTests
             Assert.Equal(LocalActivityStore.CreateDeviceFingerprint("R58N123456A"), first.DeviceFingerprint);
             Assert.Single(history);
             Assert.Empty(wrong);
-            Assert.DoesNotContain("R58N123456A", await File.ReadAllTextAsync(store.DatabasePath));
+            var stored = await File.ReadAllBytesAsync(store.DatabasePath);
+            Assert.True(WindowsUserDataProtection.IsProtected(stored));
+            Assert.DoesNotContain("R58N123456A", System.Text.Encoding.UTF8.GetString(stored));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task LegacyPlaintextActivityDatabaseMigratesOnFirstSuccessfulRead()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var path = Path.Combine(root, "activity.json");
+            await File.WriteAllTextAsync(path, """
+                {
+                  "SchemaVersion": 1,
+                  "DeviceHistory": [],
+                  "Notifications": [
+                    {
+                      "Id": "11111111-1111-1111-1111-111111111111",
+                      "AtUtc": "2026-11-20T10:00:00+00:00",
+                      "Category": "legacy",
+                      "Title": "Legacy notification",
+                      "Message": "Keep this record",
+                      "ModuleId": "dashboard",
+                      "DeviceFingerprint": null,
+                      "IsRead": false
+                    }
+                  ]
+                }
+                """);
+
+            var store = new LocalActivityStore(root);
+            var notifications = await store.GetNotificationsAsync();
+
+            Assert.Single(notifications);
+            Assert.Equal("Legacy notification", notifications[0].Title);
+            Assert.True(WindowsUserDataProtection.IsProtected(await File.ReadAllBytesAsync(path)));
+            Assert.Single(await new LocalActivityStore(root).GetNotificationsAsync());
         }
         finally { Directory.Delete(root, recursive: true); }
     }

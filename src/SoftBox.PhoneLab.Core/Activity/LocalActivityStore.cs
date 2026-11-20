@@ -2,6 +2,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using SoftBox.PhoneLab.Core.Security;
 
 namespace SoftBox.PhoneLab.Core.Activity;
 
@@ -33,7 +34,7 @@ public sealed record LocalActivitySnapshot(
 /// <summary>
 /// Offline-first local device history and notification inbox.
 /// Stores a one-way SHA-256 device fingerprint and a masked serial instead of the raw ADB serial.
-/// The JSON store is not encrypted; protect the Windows user profile and review exported data.
+/// The local history and notification database is encrypted with Windows DPAPI for the current Windows user. Legacy plaintext JSON is migrated automatically on first successful load.
 /// </summary>
 public sealed class LocalActivityStore
 {
@@ -224,37 +225,67 @@ public sealed class LocalActivityStore
         }
 
         var info = new FileInfo(_databasePath);
-        if (info.Length > 128 * 1024 * 1024)
-            throw new InvalidDataException("ملف سجل النشاط أكبر من الحد الآمن.");
+        if (info.Length is <= 0 or > 128 * 1024 * 1024)
+            throw new InvalidDataException("ملف سجل النشاط فارغ أو أكبر من الحد الآمن.");
 
-        await using var stream = new FileStream(_databasePath, FileMode.Open, FileAccess.Read, FileShare.Read,
-            32 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        _data = await JsonSerializer.DeserializeAsync<ActivityData>(stream, JsonOptions, cancellationToken)
-            ?? throw new InvalidDataException("ملف سجل النشاط غير صالح.");
-        if (_data.SchemaVersion != SchemaVersion ||
-            _data.DeviceHistory is null || _data.Notifications is null ||
-            _data.DeviceHistory.Count > MaximumDeviceHistory ||
-            _data.Notifications.Count > MaximumNotifications)
+        var storedBytes = await File.ReadAllBytesAsync(_databasePath, cancellationToken);
+        var jsonBytes = WindowsUserDataProtection.UnprotectOrLegacy(
+            storedBytes, "LocalActivityStore.v1", out var wasProtected);
+        CryptographicOperations.ZeroMemory(storedBytes);
+
+        ActivityData restored;
+        try
+        {
+            restored = JsonSerializer.Deserialize<ActivityData>(jsonBytes, JsonOptions)
+                ?? throw new InvalidDataException("ملف سجل النشاط غير صالح.");
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(jsonBytes);
+        }
+
+        if (restored.SchemaVersion != SchemaVersion ||
+            restored.DeviceHistory is null || restored.Notifications is null ||
+            restored.DeviceHistory.Count > MaximumDeviceHistory ||
+            restored.Notifications.Count > MaximumNotifications)
             throw new InvalidDataException("مخطط أو حجم سجل النشاط غير مدعوم.");
+
+        _data = restored;
+        if (!wasProtected)
+        {
+            try
+            {
+                await SaveLockedAsync(cancellationToken);
+            }
+            catch
+            {
+                _data = null;
+                throw;
+            }
+        }
     }
 
     private async Task SaveLockedAsync(CancellationToken cancellationToken)
     {
         var temporary = _databasePath + ".tmp";
+        byte[]? jsonBytes = null;
+        byte[]? protectedBytes = null;
         try
         {
-            await using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write,
-                FileShare.None, 32 * 1024, FileOptions.Asynchronous))
-            {
-                await JsonSerializer.SerializeAsync(stream, _data, JsonOptions, cancellationToken);
-                await stream.FlushAsync(cancellationToken);
-            }
+            jsonBytes = JsonSerializer.SerializeToUtf8Bytes(_data, JsonOptions);
+            protectedBytes = WindowsUserDataProtection.Protect(jsonBytes, "LocalActivityStore.v1");
+            await File.WriteAllBytesAsync(temporary, protectedBytes, cancellationToken);
             File.Move(temporary, _databasePath, overwrite: true);
         }
         catch
         {
             try { File.Delete(temporary); } catch { }
             throw;
+        }
+        finally
+        {
+            if (jsonBytes is not null) CryptographicOperations.ZeroMemory(jsonBytes);
+            if (protectedBytes is not null) CryptographicOperations.ZeroMemory(protectedBytes);
         }
     }
 
