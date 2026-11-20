@@ -18,6 +18,7 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly AndroidDeviceToolsService _service;
     private readonly string _serial;
     private readonly IReadOnlyList<string> _authorizedSerials;
+    private readonly int _maximumBatchConcurrency;
     private readonly TextBox _remoteDirectory = new();
     private readonly TextBox _remoteFile = new();
     private readonly TextBox _folderName = new();
@@ -48,11 +49,15 @@ public sealed class AndroidDeviceToolsWindow : Window
     public AndroidDeviceToolsWindow(
         AdbClient adb,
         string serial,
-        IReadOnlyList<string> authorizedSerials)
+        IReadOnlyList<string> authorizedSerials,
+        int maximumBatchConcurrency = 3)
     {
         if (!AdbClient.IsSafeSerial(serial))
             throw new ArgumentException("معرف ADB غير صالح.", nameof(serial));
         _serial = serial;
+        if (maximumBatchConcurrency is < 1 or > 8)
+            throw new ArgumentOutOfRangeException(nameof(maximumBatchConcurrency));
+        _maximumBatchConcurrency = maximumBatchConcurrency;
         _authorizedSerials = authorizedSerials.Where(AdbClient.IsSafeSerial)
             .Distinct(StringComparer.Ordinal).ToArray();
         if (!_authorizedSerials.Contains(serial, StringComparer.Ordinal))
@@ -354,7 +359,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _batchOutput.Padding = new Thickness(10);
         _batchOutput.FontFamily = new FontFamily("Consolas");
         _batchOutput.FontSize = 10;
-        _batchOutput.Text = "اختر عدة أجهزة مصرح بها من القائمة ثم نفّذ عملية قراءة فقط. الحد الأقصى للتوازي: 3.";
+        _batchOutput.Text = "اختر عدة أجهزة مصرح بها من القائمة ثم نفّذ عملية قراءة فقط. الحد الأقصى للتوازي:  + _maximumBatchConcurrency + .";
         Grid.SetRow(_batchOutput, 1);
         Grid.SetColumn(_batchOutput, 1);
         grid.Children.Add(_batchOutput);
@@ -526,9 +531,9 @@ public sealed class AndroidDeviceToolsWindow : Window
             return;
         }
 
-        await RunOperationAsync("جارٍ تنفيذ العملية المحددة بشكل جماعي وبحد أقصى 3 أجهزة متزامنة...", async token =>
+        await RunOperationAsync("جارٍ تنفيذ العملية المحددة بشكل جماعي وبحد أقصى " + _maximumBatchConcurrency + " أجهزة متزامنة...", async token =>
         {
-            var results = await _service.RunBatchReadOnlyPresetAsync(selected, preset.Id, 3, token);
+            var results = await _service.RunBatchReadOnlyPresetAsync(selected, preset.Id, _maximumBatchConcurrency, token);
             _batchOutput.Text = string.Join(
                 Environment.NewLine + Environment.NewLine + new string('=', 72) + Environment.NewLine,
                 results.Select(result =>
