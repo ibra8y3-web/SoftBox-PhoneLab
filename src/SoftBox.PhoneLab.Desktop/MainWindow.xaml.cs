@@ -683,6 +683,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenApplicationSettings":
                 new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.Show();
                 break;
+            case "OpenAbout":
+                new AboutWindow { Owner = this }.Show();
+                break;
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
