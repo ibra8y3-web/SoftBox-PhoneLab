@@ -151,13 +151,14 @@ public static class SoftBoxModuleCatalog
                 new("windows-driver-health", "فحص حالة PnP ومشكلات تعريف USB", "Windows PnP device health", "يعرض حالة الجهاز ورمز المشكلة المبلغ عنه من Windows؛ لا يتحقق من توقيع التعريف أو يغيره.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor")
             ]),
         new("smart-backup", 13, "الاتصال والتشخيص", "النسخ الاحتياطي الذكي", "Smart Backup",
-            "نسخ مجلدات التخزين المشترك عبر ADB إلى ZIP محلي مع SHA-256 لكل ملف والتحقق من النسخة؛ التشفير والجدولة والاستعادة إلى الهاتف غير مكتملة.",
+            "نسخ مجلدات التخزين المشترك عبر ADB إلى ZIP مع SHA-256 لكل ملف، مع خيار SBX مشفر بكلمة مرور ومصادقة HMAC والتحقق قبل فك مؤقت؛ الجدولة والاستعادة إلى الهاتف غير مكتملتين.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("workshop-backup", "نسخ واستعادة قاعدة بيانات مركز الصيانة", "Workshop database backup", "نسخ JSON محلي واستعادته؛ النسخ الحالي غير مشفر. فتح تبويب النسخ يتم من هذا القسم.", ModuleImplementationStatus.Implemented, "OpenWorkshopBackup"),
                 new("phone-backup", "نسخ مجلدات التخزين المشترك من Android", "Android shared-storage backup", "ينقل المجلد المحدد عبر ADB إلى ZIP محلي ويحسب SHA-256 لكل ملف؛ لا ينسخ بيانات التطبيقات الخاصة أو النظام.", ModuleImplementationStatus.Implemented, "OpenPhoneBackup"),
                 new("backup-verify", "التحقق من النسخة ومطابقة بصمات الملفات", "Backup archive verification", "يفحص Manifest ويعيد حساب SHA-256 ومقارنة حجم كل ملف داخل ZIP؛ مغطى باختبارات آلية.", ModuleImplementationStatus.Tested, "OpenPhoneBackup"),
-                new("backup-encryption", "تشفير النسخ بكلمة مرور وجدولة النسخ", "Encrypted scheduled backups", "لم يتم تنفيذ التشفير أو المجدول؛ الأرشيفات الحالية غير مشفرة ويجب حفظها بمكان آمن.", ModuleImplementationStatus.Planned)
+                new("backup-encryption", "تشفير النسخ بكلمة مرور ومصادقة SBX", "Authenticated password-encrypted backups", "ينشئ حاوية SBX بتشفير AES-256-CBC وHMAC-SHA256 ومفتاح PBKDF2-HMAC-SHA256 (600,000 دورة)، ويتحقق من المصادقة قبل فك مؤقت وفحص Manifest؛ ZIP العادي يظل غير مشفر.", ModuleImplementationStatus.Implemented, "OpenPhoneBackup"),
+                new("backup-scheduler", "جدولة النسخ اليومي/الأسبوعي وعند توصيل جهاز", "Scheduled automatic backups", "لم يبدأ التنفيذ؛ لا توجد مهام Windows مجدولة أو سياسة إعادة اتصال.", ModuleImplementationStatus.Planned)
             ]),
         new("phone-link", 14, "الاتصال والتشخيص", "استوديو الهاتف", "Phone Link Studio",
             "عرض شاشة Android عبر scrcpy مدمج في مساحة العمل؛ تسجيل الشاشة وتعدد الجلسات غير مكتمل.",
