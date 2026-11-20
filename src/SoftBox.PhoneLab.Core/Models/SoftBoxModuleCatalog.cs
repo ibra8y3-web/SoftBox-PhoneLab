@@ -325,17 +325,18 @@ public static class SoftBoxModuleCatalog
                 new("app-debug-bundle", "حزمة دعم محلية مع تنقيح كلمات المرور وTokens", "Offline redacted support bundle", "تضم معلومات النظام وإصدار SoftBox والملفات التي يختارها المستخدم فقط، مع تنقيح حقول Password/Token/Authorization/Serial قبل إنشاء ZIP؛ لا يتم رفعها.", ModuleImplementationStatus.Implemented, "OpenSupportBundle")
             ]),
         new("settings", 35, "النظام والحماية", "الإعدادات", "Settings",
-            "إعدادات المركز واللغة والعملة والمنطقة الزمنية موجودة؛ إعدادات التطبيق العامة والثيم والاختصارات لم تكتمل.",
+            "إعدادات مركز الصيانة وإعدادات تشغيل SoftBox المحلية محفوظة في ملف JSON مع تحقق من القيم.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("workshop-settings", "إعدادات مركز الصيانة الدولية", "International workshop settings", "الاسم والعنوان والدولة والهاتف والبريد والعملة واللغة والمنطقة الزمنية والضمان؛ يفتح تبويب الإعدادات في الإدارة العالمية.", ModuleImplementationStatus.Implemented, "OpenGlobalWorkshopSettings"),
-                new("app-settings", "إعدادات التطبيق والثيم واللغة والاختصارات", "Application preferences", "لا يوجد مدير إعدادات عام شامل بعد.", ModuleImplementationStatus.Planned)
+                new("app-settings", "إعدادات الاكتشاف التلقائي وفتح الشاشة وAgent والتوازي", "Application preferences", "يحفظ إعدادات الاكتشاف والفترة الزمنية وفتح العرض وتهيئة Agent والفحص التلقائي وحد Batch محليًا؛ القيم الافتراضية تحافظ على السلوك السابق.", ModuleImplementationStatus.Implemented, "OpenApplicationSettings")
             ]),
         new("about", 36, "النظام والحماية", "حول SoftBox", "About",
-            "بيانات الإصدار والتراخيص والمكونات موجودة في المستودع والوثائق؛ لا توجد صفحة About مستقلة داخل البرنامج.",
-            ModuleImplementationStatus.Planned,
+            "صفحة مستقلة تعرض هوية SoftBox ورقم الإصدار وبيئة التشغيل والمسارات المحلية ومراجع إشعارات الطرف الثالث إذا كانت مرفقة بالحزمة.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("version-info", "عرض الإصدار والمكونات وتراخيص الطرف الثالث", "Version and third-party notices", "توجد ملفات المشروع وTHIRD-PARTY-NOTICES؛ الصفحة داخل التطبيق لم تُبنَ.", ModuleImplementationStatus.Implemented)
+                new("version-info", "عرض الإصدار وبيئة التشغيل", "Version and runtime information", "يقرأ إصدار Assembly و.NET وWindows ومعمارية التطبيق مباشرة من النظام.", ModuleImplementationStatus.Implemented, "OpenAbout"),
+                new("third-party-notices", "عرض إشعارات ومراجع مكونات الطرف الثالث", "Third-party notices", "يعرض ملف THIRD-PARTY-NOTICES المحلي عند تضمينه مع الحزمة، أو يوضح أنه غير موجود في التثبيت الحالي.", ModuleImplementationStatus.Implemented, "OpenAbout")
             ])
     ];
 
@@ -344,7 +345,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenApplicationSettings", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
