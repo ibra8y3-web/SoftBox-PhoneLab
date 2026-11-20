@@ -18,7 +18,7 @@ public static class SoftBoxAuthorizationPolicy
             ["InspectFirmware"] = SoftBoxAccountPermission.ViewWorkspace,
             ["UsbTransport"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenWorkshop"] = SoftBoxAccountPermission.WorkshopOperations,
-            ["MirrorScreen"] = SoftBoxAccountPermission.DeviceRead,
+            ["MirrorScreen"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenScreenRecording"] = SoftBoxAccountPermission.DeviceOperations,
             ["AnalyzeScreen"] = SoftBoxAccountPermission.DeviceRead,
             ["MeasurementRig"] = SoftBoxAccountPermission.DeviceRead,
