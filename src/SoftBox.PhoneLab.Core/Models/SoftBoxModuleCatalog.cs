@@ -112,20 +112,20 @@ public static class SoftBoxModuleCatalog
                 new("brand-specific", "وحدات صيانة خاصة بكل شركة", "Brand-specific service modules", "Pixel وMotorola وOPPO وvivo وغيرها لا تملك بعد وحدات مستقلة مكتملة.", ModuleImplementationStatus.Planned)
             ]),
         new("qualcomm-tools", 9, "الشركات والمعالجات", "أدوات Qualcomm", "Qualcomm Tools",
-            "يمكن قراءة تلميحات SoC من Android؛ أدوات EDL/9008 المنخفضة المستوى غير موجودة.",
-            ModuleImplementationStatus.Planned,
+            "قراءة تلميح SoC من Android ورصد مؤشر USB الشائع EDL/9008 عبر جرد Windows PnP؛ لا يوجد بعد بروتوكول EDL أو استعادة منخفضة المستوى.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("qualcomm-soc", "قراءة تلميح المعالج من النظام", "SoC identification hint", "قراءة تعريفية فقط من بيانات Android، ولا تكفي لتحديد منصة EDL أو اختيار programmer؛ محرك الهوية في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("qualcomm-edl", "اكتشاف EDL وفحص اتصال 9008", "EDL transport", "لم يتم بناء قارئ Qualcomm EDL مخصص أو التحقق من programmer.", ModuleImplementationStatus.Planned),
-                new("qualcomm-recovery", "استعادة Qualcomm الرسمية المتوافقة", "Supported Qualcomm recovery", "غير منفذة.", ModuleImplementationStatus.Planned)
+                new("qualcomm-edl", "رصد مؤشر USB Qualcomm EDL / 9008", "Qualcomm EDL USB mode hint", "يرصد VID/PID الشائع 05C6:9008 إذا ظهر في Windows PnP؛ لا يفتح قناة EDL ولا يتحقق من programmer أو توافق الجهاز.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
+                new("qualcomm-recovery", "استعادة Qualcomm الرسمية المتوافقة", "Supported Qualcomm recovery", "غير منفذة؛ يلزم مصدر رسمي وملف مطابق للموديل وسلسلة ثقة موثقة.", ModuleImplementationStatus.Planned)
             ]),
         new("mediatek-tools", 10, "الشركات والمعالجات", "أدوات MediaTek", "MediaTek Tools",
-            "لا يوجد قارئ Preloader/BROM أو محرك صيانة MediaTek مخصص حاليًا.",
-            ModuleImplementationStatus.Planned,
+            "قراءة تلميح SoC من Android ورصد مؤشر USB الشائع MediaTek Preloader/BROM عبر Windows PnP؛ لا توجد أدوات DA أو استعادة.",
+            ModuleImplementationStatus.InDevelopment,
             [
                 new("mediatek-soc", "قراءة تلميح المعالج من Android", "SoC identification hint", "قد يظهر تعريف المعالج ضمن خصائص الجهاز؛ لا يثبت وضع Preloader. الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("mediatek-preloader", "اكتشاف Preloader/BROM والتعريفات", "Preloader/BROM discovery", "لم يتم تنفيذ واجهة USB خاصة بـMediaTek.", ModuleImplementationStatus.Planned),
-                new("mediatek-recovery", "الاستعادة الرسمية المتوافقة", "Supported MediaTek recovery", "غير منفذة.", ModuleImplementationStatus.Planned)
+                new("mediatek-preloader", "رصد مؤشر USB MediaTek Preloader/BROM", "MediaTek Preloader/BROM USB hint", "يرصد VID/PID الشائع 0E8D:0003 عند ظهوره في Windows PnP؛ لا يقرأ بروتوكول BROM ولا يختار DA ولا ينفذ تفليشًا.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
+                new("mediatek-recovery", "الاستعادة الرسمية المتوافقة", "Supported MediaTek recovery", "غير منفذة؛ يلزم ملف DA موثوق ومتوافق ومصدر رسمي للجهاز المحدد.", ModuleImplementationStatus.Planned)
             ]),
         new("firmware-center", 11, "Firmware والاستعادة", "مركز Firmware", "Firmware Center",
             "المتاح فحص أرشيف Firmware محليًا وحساب SHA-256؛ التنزيل والتوافق والتنفيذ غير موجودة.",
@@ -137,14 +137,16 @@ public static class SoftBoxModuleCatalog
                 new("firmware-compatibility", "محرك توافق موثق قبل الاستخدام", "Firmware compatibility engine", "لم يتم تنفيذ محرك يفحص الموديل والمنطقة وقيود الرجوع.", ModuleImplementationStatus.Planned)
             ]),
         new("usb-doctor", 12, "الاتصال والتشخيص", "طبيب USB", "USB Doctor",
-            "الموجود فحص ADB/Fastboot العام ومثبت Samsung الاختياري؛ فحص تعريفات Windows التفصيلي لم يكتمل.",
+            "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز؛ لا يثبت أو يزيل تعريفات.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("usb-transports", "فحص أوضاع ADB وFastboot المتاحة", "ADB and Fastboot transport inspection", "استعلامات قراءة فقط؛ لا تكتشف كل أوضاع الشركات مثل EDL وDownload وPreloader.", ModuleImplementationStatus.Implemented, "UsbTransport"),
+                new("usb-pnp-inventory", "جرد أجهزة Windows USB وقراءة VID/PID والحالة", "Windows USB PnP inventory", "يستخدم SetupAPI وConfiguration Manager لقراءة الأجهزة الحالية ورموز المشكلة والخدمة المرتبطة دون تعديل الجهاز.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
+                new("usb-mode-hints", "تمييز مؤشرات Qualcomm وMediaTek وSamsung وGoogle", "Known USB mode hints", "كتالوج محدود لمعرفات VID/PID الشائعة؛ لا يثبت الموديل أو التوافق ولا ينفذ بروتوكول الخدمة.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor"),
                 new("usb-setup", "إرشادات وتجهيز اتصال USB", "USB connection setup", "يفتح تعليمات إعداد أدوات USB وADB ولا يثبت تعريفات مجهولة.", ModuleImplementationStatus.Implemented, "SetupUsb"),
                 new("connection-help", "مساعدة توصيل الهاتف وحل اتصال ADB", "USB connection help", "تعليمات الاتصال الحالية في البرنامج.", ModuleImplementationStatus.Implemented, "ConnectionHelp"),
-                new("samsung-driver", "تثبيت تعريف Samsung الرسمي الاختياري", "Samsung official driver", "مضمن في حزمة Windows.", ModuleImplementationStatus.Implemented, "InstallSamsungDriver"),
-                new("windows-driver-health", "فحص Device Manager وVendor/Product ID وتعارض التعريفات", "Windows driver health", "لم يتم تنفيذ فحص شامل لتعريفات USB وWindows.", ModuleImplementationStatus.Planned)
+                new("samsung-driver", "تثبيت تعريف Samsung الرسمي الاختياري", "Samsung official driver", "مضمن في حزمة Windows؛ لا يعني دعم Download Mode أو عمليات صيانة خاصة.", ModuleImplementationStatus.Implemented, "InstallSamsungDriver"),
+                new("windows-driver-health", "فحص حالة PnP ومشكلات تعريف USB", "Windows PnP device health", "يعرض حالة الجهاز ورمز المشكلة المبلغ عنه من Windows؛ لا يتحقق من توقيع التعريف أو يغيره.", ModuleImplementationStatus.Implemented, "OpenUsbDoctor")
             ]),
         new("smart-backup", 13, "الاتصال والتشخيص", "النسخ الاحتياطي الذكي", "Smart Backup",
             "نسخ مجلدات التخزين المشترك عبر ADB إلى ZIP محلي مع SHA-256 لكل ملف والتحقق من النسخة؛ التشفير والجدولة والاستعادة إلى الهاتف غير مكتملة.",
@@ -341,7 +343,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
