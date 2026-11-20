@@ -37,6 +37,6 @@ No pre-existing tool was moved in this pass. The repository already had a 36-sec
 - Existing WPF/.NET 10 and Kotlin Android Agent structure remains unchanged.
 - No existing source file or user data store was deleted or replaced.
 - No new external runtime package was added.
-- CI run #57 succeeded with 51 tests, Windows x64 publish, Android Agent build and tool bundling: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44753337114
+- CI run #65 succeeded with 53 tests (0 failures), Windows x64 publish, Android Agent build and tool bundling, including the APK two-file comparison: https://github.com/ibra8y3-web/SoftBox-PhoneLab/actions/runs/44754536968
 
 Future moves should occur only when a specific existing tool has a proven ownership mismatch, after searching all navigation references and preserving its service, tests, shortcuts and dependencies.
