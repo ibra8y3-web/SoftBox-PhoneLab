@@ -84,8 +84,10 @@ These are catalog status counts, not a percentage of product completion. `Verifi
 
 ## Final repository state
 
-- Changes are on the feature branch and submitted as Pull Request #1.
-- Main was not modified directly and the pull request remains open for review.
+- The additive changes were integrated into `main) through Pull Request #1.
+- Merge commit: `137be00700785b3409f71e2400870f8c6d73db10`.
+- Pull Request #1 is closed as merged; its 84 changed files include **0 deletions**.
+- The final pre-merge CI on the exact PR head (run #259) passed: 150 tests, 0 failures, 0 skipped; Windows x64 publish, Android Agent build/upload and offline tool bundling passed.
 - No release or permanent GitHub Release was created. The Windows ZIP linked above is a temporary Actions artifact.
 ## Final verification after APK comparison — CI run #65
 
