@@ -193,11 +193,11 @@ public static class SoftBoxModuleCatalog
                 new("offline-knowledge", "قاعدة معرفة محلية قابلة للبحث", "Searchable offline repair knowledge", "مقالات الإصلاح العامة متاحة في Help Center؛ قاعدة تشخيص تفصيلية موسعة للأعطال والموديلات ما زالت قيد التطوير.", ModuleImplementationStatus.InDevelopment, "OpenHelpCenter")
             ]),
         new("one-click-diagnostic", 18, "الذكاء والمعرفة", "الفحص الشامل بزر واحد", "One-Click Diagnostic",
-            "زر الفحص الحالي يقرأ بيانات النظام ويحدّث حالة المكونات؛ لا ينفذ كل اختبارات العتاد تلقائيًا.",
+            "يجمع قراءات ADB غير المدمرة في جلسة واحدة ويصدر تقريرًا مفصلًا مع نتائج جزئية وحدود واضحة.",
             ModuleImplementationStatus.InDevelopment,
             [
-                new("device-inspect", "قراءة بيانات الجهاز وتحديث تقرير المكونات", "Device inspection", "قراءات ADB المتاحة دون تغيير إعدادات الهاتف؛ الفحص العام موجود في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("automated-suite", "تنسيق اختبارات غير مدمرة في جلسة واحدة", "Coordinated diagnostic suite", "لا يوجد حتى الآن Orchestrator يطلب الموافقات وينسق كل الاختبارات.", ModuleImplementationStatus.Planned)
+                new("device-inspect", "قراءة بيانات الجهاز وتحديث تقرير المكونات", "Device inspection", "قراءات ADB المتاحة دون تغيير إعدادات الهاتف؛ الفحص العام موجود في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented, "InspectDevice"),
+                new("automated-suite", "سلسلة قراءات ADB للخصائص والبطارية والتخزين ووقت التشغيل والتطبيقات", "Read-only diagnostic orchestration", "ينفذ خمسة أوامر قراءة محددة على الجهاز المختار، يدعم الإلغاء ويحفظ تقرير JSON؛ لا يشغل اختبارات العتاد أو العمليات الحساسة تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenOneClickDiagnostic")
             ]),
         new("safe-recovery", 19, "Firmware والاستعادة", "الاستعادة الآمنة", "Safe Recovery",
             "يوجد فحص أرشيف فقط؛ لا توجد عمليات تفليش أو استعادة رسمية مفعلة في هذا الإصدار.",
@@ -345,7 +345,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenApplicationSettings", "OpenRepairAdvisor", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
