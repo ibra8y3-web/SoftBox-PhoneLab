@@ -27,6 +27,7 @@ public sealed class AndroidBackupService(AdbClient adb)
         var stagingRoot = Path.Combine(Path.GetTempPath(), "SoftBox-Android-Backup-" + Guid.NewGuid().ToString("N"));
         var stagingDirectory = Path.Combine(stagingRoot, "device-files");
         Directory.CreateDirectory(stagingRoot);
+        Directory.CreateDirectory(stagingDirectory);
 
         try
         {
