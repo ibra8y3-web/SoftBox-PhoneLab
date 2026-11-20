@@ -66,6 +66,11 @@ public sealed class WorkshopCenterWindow : Window
         header.Children.Add(new TextBlock { Text = "مركز إدارة الصيانة", FontSize = 24, FontWeight = FontWeights.Bold, Foreground = Brush("#7DD3FC") });
         header.Children.Add(new TextBlock { Text = "العملاء • أوامر الصيانة • المخزون • سجل العمليات • النسخ الاحتياطي المحلي", Margin = new Thickness(0, 5, 0, 7), Foreground = Brush("#9CB3CC") });
         header.Children.Add(_status);
+        header.Children.Add(Button("Global Workshop | الإدارة الدولية", (_, _) =>
+        {
+            var window = new GlobalWorkshopWindow { Owner = this };
+            window.Show();
+        }));
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
 
@@ -283,7 +288,8 @@ public sealed class WorkshopCenterWindow : Window
                 DeviceModel = _deviceModel.Text,
                 SerialOrImeiNote = _serialNote.Text,
                 IntakeSymptoms = _symptoms.Text,
-                EstimatedCostEgp = estimated
+                EstimatedCostEgp = estimated,
+                WarrantyMonths = _snapshot.Settings.DefaultWarrantyMonths
             };
             var created = await _store.CreateRepairOrderAsync(order);
             _customerName.Clear(); _customerPhone.Clear(); _deviceModel.Clear(); _serialNote.Clear(); _symptoms.Clear(); _estimate.Clear();

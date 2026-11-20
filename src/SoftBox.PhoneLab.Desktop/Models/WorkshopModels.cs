@@ -2,12 +2,28 @@ namespace SoftBox.PhoneLab.Desktop.Models;
 
 public sealed class WorkshopData
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = 2;
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public WorkshopSettings Settings { get; set; } = new();
     public List<CustomerRecord> Customers { get; set; } = [];
     public List<RepairOrder> RepairOrders { get; set; } = [];
     public List<InventoryItem> Inventory { get; set; } = [];
     public List<WorkshopEvent> Events { get; set; } = [];
+}
+
+public sealed class WorkshopSettings
+{
+    public string BusinessName { get; set; } = "SoftBox PhoneLab Repair Center";
+    public string Country { get; set; } = "";
+    public string Address { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string TaxRegistrationNumber { get; set; } = "";
+    public string CurrencyCode { get; set; } = "EGP";
+    public string CultureName { get; set; } = "ar-EG";
+    public string ReportLanguage { get; set; } = "ar";
+    public string TimeZoneId { get; set; } = TimeZoneInfo.Local.Id;
+    public int DefaultWarrantyMonths { get; set; } = 3;
 }
 
 public sealed class CustomerRecord
@@ -33,11 +49,23 @@ public sealed class RepairOrder
     public string WorkPerformed { get; set; } = "";
     public string ResultsAfterRepair { get; set; } = "";
     public string Status { get; set; } = "تم الاستلام";
+    public string TechnicianName { get; set; } = "";
     public decimal EstimatedCostEgp { get; set; }
     public decimal FinalCostEgp { get; set; }
+    public int WarrantyMonths { get; set; }
+    public DateTimeOffset? WarrantyEndsAtUtc { get; set; }
     public DateTimeOffset ReceivedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? DeliveredAtUtc { get; set; }
+    public List<RepairOrderNote> Timeline { get; set; } = [];
+}
+
+public sealed class RepairOrderNote
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public DateTimeOffset AtUtc { get; set; } = DateTimeOffset.UtcNow;
+    public string TechnicianName { get; set; } = "";
+    public string Note { get; set; } = "";
 }
 
 public sealed class InventoryItem

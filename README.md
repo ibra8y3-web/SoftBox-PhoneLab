@@ -50,17 +50,24 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Captures a bounded Android evidence bundle: recent logcat, system properties, battery and thermal service state, and boot uptime. A heuristic can flag log patterns worth reviewing for reboot/boot-loop investigation.
 - Inspects a selected firmware archive locally, computes SHA-256 and looks for common Android OTA metadata/payload entries. It does not flash, unlock, wipe, execute package scripts or assert that a package is authentic or compatible.
 
+### Global workshop operations
+- A dedicated Global Workshop workspace adds cross-field search and status filtering for repair orders, live operational counts, active-warranty tracking and technician timeline notes.
+- Workshop profile settings include business name, country, address, international phone, email, optional tax registration reference, ISO 4217 three-letter currency code, culture/locale, time-zone ID, report language (Arabic/English) and default warranty duration.
+- Delivered repair orders receive a warranty expiry calculated from their delivery timestamp and configured months. Warranty duration is policy data entered by the workshop; it does not determine statutory consumer rights.
+- Generates print-friendly Arabic or English HTML reports that can be printed or saved as PDF through the browser. Exports repair orders and inventory as UTF-8 CSV for spreadsheet and ERP import.
+- Workshop database schema v1 is upgraded to v2 on load without discarding customer, order, inventory or event records. The currency code labels values; no exchange-rate conversion or tax calculation is performed.
+
 ## Repository modules
 
 | Module | Purpose |
 |---|---|
-| src/SoftBox.PhoneLab.Desktop | Windows WPF app, live mirror, screen-photo analysis, measurement dashboard, workshop center and read-only forensics |
+| src/SoftBox.PhoneLab.Desktop | Windows WPF app, live mirror, screen-photo analysis, measurement dashboard, workshop center, global workshop operations and read-only forensics |
 | src/SoftBox.PhoneLab.Core | Device snapshots, model profiles, parsing and diagnostic evidence mapping |
 | agent | Android PhoneLab Agent, Camera2 diagnostics and local ADB-forward bridge |
 | data/device-profiles | Curated starter device identity catalog |
 | data/boardmaps | Verified-map format and generic fallback |
 | hardware/measurement-rig | Safe external measurement integration notes |
-| tests | Parser and diagnostic unit tests |
+| tests | Parser, diagnostic, warranty and international formatting unit tests |
 
 ## Requirements
 
@@ -92,7 +99,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 4. PhoneLab reads the identifiers and offers display, Camera2, touch, audio, flashlight, vibration, sensor and hardware-inventory tests.
 5. Use the physical display photo analyzer with a real camera photo of the screen during a uniform test pattern.
 6. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
-7. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records.
+7. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records. Open Global Workshop for searchable operations, warranty tracking, technician history, international center settings and HTML/CSV exports.
 8. Use سجلات Android to save private logs for review, or فحص حزمة Firmware to calculate SHA-256 and inspect OTA metadata without flashing.
 9. Review every component's evidence and export a JSON report.
 
@@ -111,7 +118,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - Camera2 cannot expose every proprietary camera path on every vendor firmware. Reported autofocus state does not establish optical sharpness; an image capture alone is not an optical-quality test.
 - Full battery capacity, internal resistance, PMIC rail and charging-IC pin measurements require appropriate test equipment and safe model-specific connections.
 - ADB is not raw USB hardware access. MTP-only devices do not expose the ADB diagnostic channel. Generic Fastboot discovery cannot enumerate every Samsung Download, Qualcomm EDL, MediaTek Preloader or OEM recovery interface. OEM-specific drivers are not all included; the bundled optional driver covers Samsung only.
-- The workshop store is local JSON persistence, not a multi-PC synchronized database. Backups are not encrypted by PhoneLab; protect the Windows account and backup media.
+- The workshop store is local JSON persistence, not a multi-PC synchronized database. Currency codes and cultures only format values: PhoneLab does not provide exchange rates, tax compliance calculations, e-invoicing certification or statutory warranty interpretation. Backups are not encrypted by PhoneLab; protect the Windows account and backup media.
 - The QR ticket contains only a repair identifier. It is not a cloud lookup link.
 - Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
 - Firmware inspection verifies file hash and basic archive structure only. SHA-256 identifies exact bytes; it does not prove the publisher, signature, region, model compatibility or safe installation. No flashing, bootloader unlocking or data wipe is implemented.

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Models;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -104,6 +105,9 @@ public sealed class WorkshopStore
             order.DeviceModel = order.DeviceModel.Trim();
             order.IntakeSymptoms = order.IntakeSymptoms.Trim();
             order.Status = "تم الاستلام";
+            if (order.WarrantyMonths is < 0 or > 120) order.WarrantyMonths = _cache.Settings.DefaultWarrantyMonths;
+            order.Timeline ??= [];
+            order.Timeline.Add(new RepairOrderNote { TechnicianName = order.TechnicianName, Note = "Device checked in." });
             order.ReceivedAtUtc = DateTimeOffset.UtcNow;
             order.UpdatedAtUtc = order.ReceivedAtUtc;
             _cache.RepairOrders.Add(order);
@@ -131,9 +135,12 @@ public sealed class WorkshopStore
             current.EstimatedCostEgp = Math.Max(0, order.EstimatedCostEgp);
             current.FinalCostEgp = Math.Max(0, order.FinalCostEgp);
             current.SerialOrImeiNote = order.SerialOrImeiNote;
+            current.TechnicianName = order.TechnicianName;
+            if (order.WarrantyMonths is < 0 or > 120) throw new ArgumentOutOfRangeException(nameof(order));
+            current.WarrantyMonths = order.WarrantyMonths;
             current.UpdatedAtUtc = DateTimeOffset.UtcNow;
-            if (current.Status == "تم التسليم" && current.DeliveredAtUtc is null)
-                current.DeliveredAtUtc = DateTimeOffset.UtcNow;
+            if (current.Status == "تم التسليم" && current.DeliveredAtUtc is null) current.DeliveredAtUtc = DateTimeOffset.UtcNow;
+            if (current.Status == "تم التسليم") current.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(current.DeliveredAtUtc, current.WarrantyMonths);
             AddEvent("أمر صيانة", current.TicketNumber,
                 previousStatus == current.Status ? "تحديث تفاصيل ونتيجة الإصلاح." : $"تغيير الحالة من «{previousStatus}» إلى «{current.Status}».");
             await SaveLockedAsync(cancellationToken);
@@ -223,7 +230,7 @@ public sealed class WorkshopStore
             await using var stream = File.OpenRead(sourcePath);
             var restored = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
                 ?? throw new InvalidDataException("ملف النسخة الاحتياطية فارغ أو غير صالح.");
-            Validate(restored);
+            MigrateAndValidate(restored);
             _cache = restored;
             await SaveLockedAsync(cancellationToken);
         }
@@ -235,6 +242,7 @@ public sealed class WorkshopStore
         var snapshot = await GetSnapshotAsync(cancellationToken);
         var order = snapshot.RepairOrders.FirstOrDefault(x => x.TicketNumber == ticketNumber)
             ?? throw new KeyNotFoundException("أمر الصيانة غير موجود.");
+        var currency = WorkshopInternationalRules.NormalizeCurrencyCode(snapshot.Settings.CurrencyCode);
         var text = string.Join(Environment.NewLine,
         [
             "SOFTBOX PHONELAB PROFESSIONAL — REPAIR REPORT",
@@ -249,14 +257,49 @@ public sealed class WorkshopStore
             $"Findings before repair: {order.FindingsBeforeRepair}",
             $"Work performed: {order.WorkPerformed}",
             $"Results after repair: {order.ResultsAfterRepair}",
-            $"Estimated cost EGP: {order.EstimatedCostEgp:0.00}",
-            $"Final cost EGP: {order.FinalCostEgp:0.00}",
+            $"Estimated cost {currency}: {order.EstimatedCostEgp:0.00}",
+            $"Final cost {currency}: {order.FinalCostEgp:0.00}",
+            $"Warranty months: {order.WarrantyMonths}",
+            $"Warranty ends UTC: {order.WarrantyEndsAtUtc:O}",
             "",
             "This report records technician-entered observations. It is not a certification of hardware safety or repair quality."
         ]);
         await File.WriteAllTextAsync(destinationPath, text, cancellationToken);
     }
 
+    public async Task SaveSettingsAsync(WorkshopSettings settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        settings.BusinessName = (settings.BusinessName ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(settings.BusinessName)) throw new ArgumentException("Business name is required.");
+        settings.CurrencyCode = WorkshopInternationalRules.NormalizeCurrencyCode(settings.CurrencyCode);
+        settings.CultureName = WorkshopInternationalRules.NormalizeCultureName(settings.CultureName);
+        if (settings.DefaultWarrantyMonths is < 0 or > 120) throw new ArgumentOutOfRangeException(nameof(settings));
+        if (string.IsNullOrWhiteSpace(settings.TimeZoneId)) throw new ArgumentException("Time zone ID is required.", nameof(settings));
+        try { _ = TimeZoneInfo.FindSystemTimeZoneById(settings.TimeZoneId); }
+        catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+        { throw new ArgumentException("Time zone ID is not supported on this computer.", nameof(settings), ex); }
+        await _gate.WaitAsync(cancellationToken);
+        try { await EnsureLoadedLockedAsync(cancellationToken); _cache!.Settings = settings; AddEvent("Workshop settings", settings.BusinessName, "Settings updated."); await SaveLockedAsync(cancellationToken); }
+        finally { _gate.Release(); }
+    }
+
+    public async Task AddTimelineNoteAsync(Guid orderId, string technicianName, string note, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(note)) throw new ArgumentException("Timeline note is required.", nameof(note));
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureLoadedLockedAsync(cancellationToken);
+            var order = _cache!.RepairOrders.FirstOrDefault(x => x.Id == orderId) ?? throw new KeyNotFoundException("Repair order not found.");
+            order.Timeline ??= [];
+            var entry = new RepairOrderNote { TechnicianName = (technicianName ?? "").Trim(), Note = note.Trim(), AtUtc = DateTimeOffset.UtcNow };
+            order.Timeline.Add(entry); order.UpdatedAtUtc = entry.AtUtc;
+            AddEvent("Technician note", order.TicketNumber, entry.TechnicianName + ": " + entry.Note);
+            await SaveLockedAsync(cancellationToken);
+        }
+        finally { _gate.Release(); }
+    }
     private async Task EnsureLoadedLockedAsync(CancellationToken cancellationToken)
     {
         if (_cache is not null) return;
@@ -264,7 +307,9 @@ public sealed class WorkshopStore
         await using var stream = File.OpenRead(DatabasePath);
         _cache = await JsonSerializer.DeserializeAsync<WorkshopData>(stream, _json, cancellationToken)
             ?? new WorkshopData();
-        Validate(_cache);
+        var schemaNeedsUpgrade = _cache.SchemaVersion != 2;
+        MigrateAndValidate(_cache);
+        if (schemaNeedsUpgrade) await SaveLockedAsync(cancellationToken);
     }
 
     private async Task SaveLockedAsync(CancellationToken cancellationToken)
@@ -288,14 +333,22 @@ public sealed class WorkshopStore
     private static WorkshopData Clone(WorkshopData data)
         => JsonSerializer.Deserialize<WorkshopData>(JsonSerializer.Serialize(data)) ?? new WorkshopData();
 
-    private static void Validate(WorkshopData data)
+    private static void MigrateAndValidate(WorkshopData data)
     {
-        if (data.SchemaVersion != 1) throw new InvalidDataException($"إصدار قاعدة البيانات غير مدعوم: {data.SchemaVersion}.");
-        data.Customers ??= [];
-        data.RepairOrders ??= [];
-        data.Inventory ??= [];
-        data.Events ??= [];
+        if (data.SchemaVersion is < 1 or > 2) throw new InvalidDataException($"Unsupported workshop database schema: {data.SchemaVersion}.");
+        data.Settings ??= new WorkshopSettings();
+        data.Settings.CurrencyCode = WorkshopInternationalRules.NormalizeCurrencyCode(data.Settings.CurrencyCode);
+        data.Settings.CultureName = WorkshopInternationalRules.NormalizeCultureName(data.Settings.CultureName);
+        data.Customers ??= []; data.RepairOrders ??= []; data.Inventory ??= []; data.Events ??= [];
+        foreach (var order in data.RepairOrders)
+        {
+            order.Timeline ??= [];
+            if (order.WarrantyMonths is < 0 or > 120) order.WarrantyMonths = data.Settings.DefaultWarrantyMonths;
+            if (order.DeliveredAtUtc is not null && order.WarrantyEndsAtUtc is null)
+                order.WarrantyEndsAtUtc = WorkshopInternationalRules.CalculateWarrantyEnd(order.DeliveredAtUtc, order.WarrantyMonths);
+        }
+        if (data.SchemaVersion == 1) data.SchemaVersion = 2;
         if (data.Customers.Count > 100000 || data.RepairOrders.Count > 100000 || data.Inventory.Count > 100000)
-            throw new InvalidDataException("ملف البيانات يتجاوز الحدود الآمنة.");
+            throw new InvalidDataException("Workshop database exceeds safe size limits.");
     }
 }
