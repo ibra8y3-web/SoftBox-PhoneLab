@@ -259,18 +259,19 @@ public static class SoftBoxModuleCatalog
                 new("analytics", "تحليلات الأعطال والإيرادات وأداء الفنيين", "Service analytics", "لا توجد لوحة تحليلات شاملة مبنية على قاعدة بيانات موحدة بعد.", ModuleImplementationStatus.Planned)
             ]),
         new("plugin-store", 26, "التوسعة والمكونات", "متجر الإضافات", "Plugin Store",
-            "لا توجد حاليًا بنية تثبيت أو توقيع أو إدارة صلاحيات للإضافات.",
-            ModuleImplementationStatus.Planned,
+            "يتضمن فحص حزم ZIP وManifest والصلاحيات وبصمة SHA-256 محليًا؛ لا يوجد تثبيت أو تشغيل لأن توقيع الناشر وجذر الثقة غير مفعّلين.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("plugin-discovery", "فهرس وبحث الإضافات", "Plugin catalog", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned),
-                new("plugin-signing", "التحقق من المصدر والتوقيع والاعتماديات", "Plugin signature verification", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
+                new("plugin-package-inspection", "فحص Manifest وبنية الحزمة والصلاحيات والبصمة", "Local package inspection", "يفحص ZIP ويدعم منع Zip Slip والروابط الرمزية والحزم الضخمة والصلاحيات غير المعروفة؛ لا يثبت أو يشغّل DLL.", ModuleImplementationStatus.Implemented, "OpenPluginStore"),
+                new("plugin-signing", "التحقق من توقيع الناشر وجذر الثقة", "Plugin publisher signature verification", "غير منفذ؛ يظل PublisherSignatureVerified=false ولا يسمح بتحميل أو تشغيل الحزمة.", ModuleImplementationStatus.Planned),
+                new("plugin-install", "تثبيت الإضافات وإدارة الاعتماديات والصلاحيات", "Plugin installation and permission grants", "غير منفذ حتى إنشاء منظومة توقيع وموافقة وعزل موثوقة.", ModuleImplementationStatus.Planned)
             ]),
         new("plugin-sdk", 27, "التوسعة والمكونات", "حزمة تطوير الإضافات", "Plugin SDK",
-            "لا يوجد Plugin Contracts أو SDK مستقل أو نموذج إضافة قابل للبناء بعد.",
-            ModuleImplementationStatus.Planned,
+            "أصبح هناك نموذج Manifest بإصدار 1 وقائمة صلاحيات محددة ومدقق توافق fail-closed؛ لا يوجد Host لتشغيل الإضافات.",
+            ModuleImplementationStatus.InDevelopment,
             [
-                new("plugin-contracts", "واجهات Plugin API وManifest وإصدارات", "Plugin contracts and manifest", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned),
-                new("plugin-sample", "مثال إضافة وتوثيق المطور", "Sample plugin and developer docs", "لم يبدأ التنفيذ.", ModuleImplementationStatus.Planned)
+                new("plugin-contracts", "عقود Plugin Manifest وإصدارات API والصلاحيات", "Plugin manifest and permission contracts", "عقود Core تفرض semantic versioning ومعرفات مستقرة وترفض الصلاحيات المجهولة أو الخطرة.", ModuleImplementationStatus.Implemented),
+                new("plugin-sample", "فاحص حزم ZIP ونموذج توثيق للمطور", "Package inspection and developer starter", "فاحص الحزم محليًا لا يحمّل أو يشغّل كود الإضافة؛ توقيع الناشر والتحقق من جذر الثقة لا يزالان مطلوبين.", ModuleImplementationStatus.Implemented)
             ]),
         new("offline-center", 28, "النظام والحماية", "مركز العمل دون إنترنت", "Offline Center",
             "الوظائف المحلية الأساسية تعمل دون إنترنت بعد تنزيل الحزمة؛ لا توجد لوحة مركزية لإدارة الحالة المحلية.",
@@ -349,7 +350,7 @@ public static class SoftBoxModuleCatalog
         "RefreshDevices", "InspectDevice", "UpdateDeviceCatalog", "OpenPhoneTests",
         "AndroidLogs", "InstallSamsungDriver", "InspectFirmware", "UsbTransport",
         "OpenWorkshop", "MirrorScreen", "AnalyzeScreen", "MeasurementRig",
-        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
+        "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenAndroidDeviceTools", "OpenAndroidBatchTools", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenUsbDoctor", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenSupportBundle", "OpenHelpCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopInventory", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings"
