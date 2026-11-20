@@ -21,7 +21,6 @@ public sealed class ScreenRecordingWindow : Window
     private readonly Button _startButton;
     private readonly Button _stopButton;
     private readonly TextBlock _status = new();
-    private string? _recordingPath;
     private bool _allowClose;
 
     public ScreenRecordingWindow(ScreenMirrorService mirror, string serial, string model)
@@ -142,7 +141,6 @@ public sealed class ScreenRecordingWindow : Window
                 throw new InvalidOperationException("لم يتم إنشاء مساحة عرض الهاتف.");
 
             await _mirror.StartEmbeddedRecordingAsync(_serial, _model, _host, dialog.FileName);
-            _recordingPath = Path.GetFullPath(dialog.FileName);
             _status.Text = "التسجيل نشط الآن. استخدم زر إيقاف التسجيل وحفظ الملف لإنهاء الفيديو بطريقة سليمة.";
             _startButton.IsEnabled = false;
             _stopButton.IsEnabled = true;
@@ -174,7 +172,6 @@ public sealed class ScreenRecordingWindow : Window
         try
         {
             var result = await _mirror.StopRecordingAsync();
-            _recordingPath = null;
             _status.Text = $"تم حفظ التسجيل والتحقق من الملف: {result.FullName}\nالحجم: {result.Length:N0} بايت. تم إيقاف عرض scrcpy ويمكن إعادة فتحه من Phone Link Studio.";
             _startButton.IsEnabled = true;
             _stopButton.IsEnabled = false;
@@ -212,7 +209,6 @@ public sealed class ScreenRecordingWindow : Window
             try
             {
                 var result = await _mirror.StopRecordingAsync();
-                _recordingPath = null;
                 _status.Text = $"تم حفظ التسجيل: {result.FullName} ({result.Length:N0} bytes).";
                 _allowClose = true;
                 Close();
@@ -238,6 +234,11 @@ public sealed class ScreenRecordingWindow : Window
         {
             _startButton.IsEnabled = false;
             _stopButton.IsEnabled = false;
+        }
+        else
+        {
+            _startButton.IsEnabled = !_mirror.IsRecording;
+            _stopButton.IsEnabled = _mirror.IsRecording && _mirror.ActiveSerial == _serial;
         }
     }
 
