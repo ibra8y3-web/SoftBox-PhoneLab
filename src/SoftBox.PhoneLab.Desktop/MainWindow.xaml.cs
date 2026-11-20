@@ -257,7 +257,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task EnsureSelectedDeviceReadyAsync(DeviceListItem selected)
     {
         if (!selected.IsAuthorized) return;
-        if (_preparedSerials.Add(selected.Serial) || _screenMirror.ActiveSerial != selected.Serial)
+        if (_preparedSerials.Add(selected.Serial) || (_settings.AutoOpenScreenMirror && _screenMirror.ActiveSerial != selected.Serial))
         {
             _preparedSerials.Add(selected.Serial);
             await PrepareConnectedDeviceAsync(selected);
