@@ -753,8 +753,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new ApkLabWindow { Owner = this }.Show();
                 break;
             case "OpenNetworkDiagnostics":
-                new NetworkDiagnosticsWindow { Owner = this }.Show();
+            {
+                var networkDevice = SelectedDevice;
+                var serial = networkDevice is { IsAuthorized: true } ? networkDevice.Serial : null;
+                new NetworkDiagnosticsWindow(_adb, serial) { Owner = this }.Show();
                 break;
+            }
             case "OpenWirelessAdbPairing":
                 new WirelessAdbPairingWindow(_adb) { Owner = this }.Show();
                 break;
