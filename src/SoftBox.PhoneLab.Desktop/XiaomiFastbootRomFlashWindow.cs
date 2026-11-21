@@ -441,13 +441,18 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
         }
         finally
         {
+            var executionWasStarted = _running;
             _running = false;
             _browseButton.IsEnabled = true;
             _inspectButton.IsEnabled = true;
-            // A write attempt invalidates the old preflight. Require a fresh device and package inspection.
-            _plan = null;
-            _lastDeviceState = null;
-            _flashButton.IsEnabled = false;
+            if (executionWasStarted)
+            {
+                // Any write attempt invalidates the preflight, including a partial flash.
+                // Require a fresh device and package inspection before another attempt.
+                _plan = null;
+                _lastDeviceState = null;
+                _flashButton.IsEnabled = false;
+            }
         }
     }
 
