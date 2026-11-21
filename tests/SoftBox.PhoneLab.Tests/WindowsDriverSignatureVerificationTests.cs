@@ -40,7 +40,7 @@ public sealed class WindowsDriverSignatureVerificationTests
 
         Assert.Equal(new[]
         {
-            "verify", "/v", "/pa", "/c",
+            "verify", "/v", "/kp", "/c",
             @"C:\Drivers\oem.cat",
             @"C:\Drivers\driver.sys"
         }, arguments);

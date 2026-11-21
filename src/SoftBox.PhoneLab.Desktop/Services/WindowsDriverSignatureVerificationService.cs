@@ -2,6 +2,7 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -214,15 +215,13 @@ public sealed class WindowsDriverSignatureVerificationService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(catalogPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(memberPath);
-        return
-        [
-            "verify",
-            "/v",
-            "/pa",
-            "/c",
-            Path.GetFullPath(catalogPath),
-            Path.GetFullPath(memberPath)
-        ];
+        var arguments = new List<string> { "verify", "/v" };
+        if (Path.GetExtension(memberPath).Equals(".sys", StringComparison.OrdinalIgnoreCase))
+            arguments.Add("/kp");
+        arguments.Add("/c");
+        arguments.Add(Path.GetFullPath(catalogPath));
+        arguments.Add(Path.GetFullPath(memberPath));
+        return arguments;
     }
 
     private static string? FindWindowsSdkSignTool()
