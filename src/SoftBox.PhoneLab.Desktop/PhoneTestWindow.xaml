@@ -28,6 +28,13 @@
      <Button Tag="hardware" Content="جرد المكونات المدعومة" Click="RunTest_Click" Margin="3"/>
      <Button Tag="battery_capacity_start" Content="بدء رصد البطارية" Click="RunTest_Click" Margin="3"/>
      <Button Tag="battery_capacity_finish" Content="حساب تقدير البطارية" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="bluetooth" Content="Bluetooth" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="wifi" Content="Wi-Fi" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="nfc" Content="NFC" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="gps" Content="GPS" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="fingerprint" Content="البصمة" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="physical_buttons" Content="الأزرار" Click="RunTest_Click" Margin="3"/>
+     <Button Tag="sim" Content="SIM" Click="RunTest_Click" Margin="3"/>
     </UniformGrid>
    </StackPanel>
   </Border>
@@ -43,6 +50,7 @@
   </Border>
   <DockPanel Grid.Row="3" Margin="0,12,0,0">
    <TextBlock Text="الاختبار يُنفذ على الهاتف عبر ADB المحلي. أبقِ Agent مفتوحًا وغير مقيد من Android." Foreground="#D8B779" FontSize="9" VerticalAlignment="Center"/>
+   <Button DockPanel.Dock="Left" Content="تصدير سجلات Agent" Click="ExportTelemetry_Click" Margin="8,0,0,0"/>
    <Button DockPanel.Dock="Left" Content="تحديث الآن" Click="Refresh_Click" Margin="8,0,0,0"/>
   </DockPanel>
  </Grid>

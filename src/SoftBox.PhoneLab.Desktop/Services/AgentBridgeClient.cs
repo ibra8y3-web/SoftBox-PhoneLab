@@ -22,13 +22,22 @@ public sealed class AgentBridgeClient(AdbClient adb)
         return await JsonSerializer.DeserializeAsync<AgentSnapshot>(stream, JsonOptions, cancellationToken);
     }
 
+    public async Task<string> ReadTelemetryAsync(string serial, CancellationToken cancellationToken = default)
+    {
+        await adb.ForwardAgentPortAsync(serial);
+        using var response = await Http.GetAsync("http://127.0.0.1:27831/telemetry", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsStringAsync(cancellationToken);
+    }
+
     public async Task SendCommandAsync(string serial, string command, CancellationToken cancellationToken = default)
     {
         var allowed = new HashSet<string>(StringComparer.Ordinal)
         {
             "display", "touch", "speaker", "earpiece", "microphone", "flashlight",
             "vibration", "camera", "sensors", "hardware",
-            "battery_capacity_start", "battery_capacity_finish"
+            "battery_capacity_start", "battery_capacity_finish",
+            "bluetooth", "wifi", "nfc", "gps", "fingerprint", "physical_buttons", "sim"
         };
         if (!allowed.Contains(command)) throw new ArgumentException("Unsupported PhoneLab Agent command.", nameof(command));
 

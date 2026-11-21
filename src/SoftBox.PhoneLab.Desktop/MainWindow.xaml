@@ -253,7 +253,7 @@ nel>
        <TextBlock Text="PhoneLab Agent" FontSize="14" FontWeight="Bold"/>
        <TextBlock Text="{Binding AgentStatus}" FontSize="9.5" Foreground="#90A8C3" TextWrapping="Wrap" Margin="0,6,0,10"/>
        <Button Content="فتح تعليمات تطبيق الهاتف" Click="AgentHelp_Click" HorizontalAlignment="Stretch"/>
-       <TextBlock Text="اختبارات Agent: شاشة وألوان، تغطية اللمس، السماعة، الميكروفون، الاهتزاز، الكاميرا، وحصر المستشعرات. يجب تثبيت التطبيق وتركه مفتوحًا أثناء المزامنة." FontSize="9" Foreground="#7D94AE" TextWrapping="Wrap" Margin="0,10,0,0"/>
+       <TextBlock Text="اختبارات Agent: الشاشة واللمس والكاميرا والصوت والاهتزاز والحساسات وBluetooth وWi-Fi وNFC وGPS والبصمة والأزرار وSIM. يتضمن رصد البطارية المجدول وسجلات JSONL والتقاط الأعطال وتصدير تقرير محلي." FontSize="9" Foreground="#7D94AE" TextWrapping="Wrap" Margin="0,10,0,0"/>
       </StackPanel>
      </Border>
     </StackPanel>

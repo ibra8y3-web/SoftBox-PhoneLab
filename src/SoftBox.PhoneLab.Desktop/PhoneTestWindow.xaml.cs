@@ -1,4 +1,7 @@
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Text;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
@@ -10,15 +13,17 @@ public partial class PhoneTestWindow : Window
 {
     private readonly Func<string, Task> _sendCommand;
     private readonly Func<Task<AgentSnapshot?>> _readSnapshot;
+    private readonly Func<Task<string>>? _readTelemetry;
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(2) };
     private bool _refreshing;
     public ObservableCollection<string> ResultLines { get; } = [];
 
-    public PhoneTestWindow(string deviceName, Func<string, Task> sendCommand, Func<Task<AgentSnapshot?>> readSnapshot)
+    public PhoneTestWindow(string deviceName, Func<string, Task> sendCommand, Func<Task<AgentSnapshot?>> readSnapshot, Func<Task<string>>? readTelemetry = null)
     {
         InitializeComponent();
         _sendCommand = sendCommand;
         _readSnapshot = readSnapshot;
+        _readTelemetry = readTelemetry;
         DeviceTitle.Text = deviceName;
         ResultsList.ItemsSource = ResultLines;
         _timer.Tick += async (_, _) => await RefreshResultsAsync();
@@ -43,6 +48,36 @@ public partial class PhoneTestWindow : Window
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshResultsAsync();
+
+    private async void ExportTelemetry_Click(object sender, RoutedEventArgs e)
+    {
+        if (_readTelemetry is null)
+        {
+            SyncStatus.Text = "تصدير سجلات Agent غير متاح في هذا الاتصال.";
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "حفظ سجلات وتشخيصات PhoneLab Agent",
+            Filter = "JSON report (*.json)|*.json",
+            DefaultExt = ".json",
+            AddExtension = true,
+            FileName = "SoftBox-Agent-Diagnostics-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".json"
+        };
+        if (dialog.ShowDialog(this) != true) return;
+
+        try
+        {
+            var json = await _readTelemetry();
+            File.WriteAllText(dialog.FileName, json, new UTF8Encoding(false));
+            SyncStatus.Text = "تم تصدير تقرير Agent محليًا. راجعه قبل مشاركته لأنه قد يحتوي رسائل أعطال تقنية.";
+        }
+        catch (Exception ex)
+        {
+            SyncStatus.Text = "تعذر تصدير سجلات Agent: " + ex.Message;
+        }
+    }
 
     private async Task RefreshResultsAsync()
     {

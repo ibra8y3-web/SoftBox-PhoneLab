@@ -1527,7 +1527,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     await Dispatcher.InvokeAsync(() => { _agentSnapshot = latest; ApplyDeviceFacts(); ApplyAgentFacts(latest); RebuildDiagnostics(); });
                 }
                 return latest;
-            }) { Owner = this };
+            }, () => _agentBridge.ReadTelemetryAsync(selected.Serial)) { Owner = this };
         window.Show();
     }
     private async void ImportBoardMap_Click(object sender, RoutedEventArgs e)
