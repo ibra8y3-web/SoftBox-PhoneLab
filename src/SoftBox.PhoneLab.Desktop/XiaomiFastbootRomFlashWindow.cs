@@ -163,7 +163,7 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
         _confirmation.Padding = new Thickness(8);
         _confirmation.MinWidth = 300;
         _confirmation.ToolTip = "اكتب FLASH ROM وآخر أربعة أحرف من Serial؛ أضف WIPE عندما تتطلب الحزمة مسح البيانات.";
-        content.Add(Panel(new StackPanel
+        content.Children.Add(Panel(new StackPanel
         {
             Children =
             {
@@ -188,7 +188,7 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
                         "2) فك حزمة ROM محليًا دون تشغيل أي ملف منها.\n" +
                         "3) اختر flash_all.bat أو flash_all_except_storage.bat ثم افحصها هنا.\n" +
                         "4) راجع كل خطوة والصورة وبصمتها وقرار Anti-Rollback قبل التأكيد.";
-        content.Add(Panel(_details));
+        content.Children.Add(Panel(_details));
 
         root.Children.Add(new ScrollViewer
         {
@@ -444,8 +444,10 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
             _running = false;
             _browseButton.IsEnabled = true;
             _inspectButton.IsEnabled = true;
-            _flashButton.IsEnabled = _plan?.CanExecute == true &&
-                _lastDeviceState?.LockState == BootloaderLockState.Unlocked;
+            // A write attempt invalidates the old preflight. Require a fresh device and package inspection.
+            _plan = null;
+            _lastDeviceState = null;
+            _flashButton.IsEnabled = false;
         }
     }
 
