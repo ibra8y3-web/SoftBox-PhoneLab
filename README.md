@@ -204,3 +204,14 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - Samsung: the selected authorized ADB device can be sent to Download Mode, and the Odin assistant can inspect the exact process/window and invoke Start once through UI Automation after explicit device/COM, firmware and backup confirmation. Start invocation is not a flash-success result; hardware and Odin-version testing remain required.
 - Xiaomi: the new full-ROM action is linked from the Xiaomi Fastboot service window. The technician must extract the ROM first. The BAT file is parsed but never executed; supported Fastboot steps are issued separately with serial/Product/bootloader rechecks and image SHA-256 validation. Unsupported or ambiguous script commands fail closed, so not every Xiaomi ROM layout is guaranteed to be accepted.
 - No physical Samsung or Xiaomi handset test is claimed by the code change or CI build.
+
+
+## Device Access Diagnostics and Official Account Recovery — 21 November 2026
+
+- A new read-only Android access diagnostic is available under Security & Privacy. It checks the selected authorized ADB serial, reads public `dumpsys device_policy` and `dumpsys window` output, and displays basic SIM/operator properties where the OEM build exposes them.
+- The report distinguishes a visible lock screen from an unknown state; it does not reveal whether a PIN/Pattern is configured. Device Owner/Profile Owner indicators are management evidence, not an MDM removal action. Missing indicators do not prove that a device is unmanaged.
+- Google FRP, Xiaomi Mi Account activation lock, Samsung FRP, screen-lock removal, MDM removal and SIM/network-lock bypass are explicitly catalogued as **Unsupported**, with no executable Run button.
+- The window links to official Google, Samsung, Xiaomi and Android Enterprise recovery channels. Carrier network unlock remains a request to the original carrier based on its IMEI/contract eligibility checks; SoftBox does not write Baseband/NV.
+- Read-only parser tests are included. Physical-device coverage across OEM models and Android releases remains unverified; no all-phone compatibility claim is made.
+
+See [Device Access Diagnostics and Official Recovery](docs/DEVICE-ACCESS-AND-RECOVERY.md).
