@@ -1,5 +1,6 @@
+using System;
+using System.Linq;
 using System.Text.RegularExpressions;
-
 namespace SoftBox.PhoneLab.Core.Security;
 
 public enum KeyguardVisibility
