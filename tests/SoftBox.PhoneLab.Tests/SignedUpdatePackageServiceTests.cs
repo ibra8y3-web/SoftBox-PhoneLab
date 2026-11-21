@@ -29,7 +29,7 @@ public sealed class SignedUpdatePackageServiceTests
             var asset = new ReleaseAssetInfo("SoftBox-Windows-x64.zip", bytes.Length,
                 "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
 
-            var staged = await service.DownloadAndStageAsync(asset, "v1.2.3");
+            var staged = await service.DownloadAndStageAsync(asset, "v1.2.3", "1.0.0");
 
             Assert.Equal("1.2.3", staged.Version);
             Assert.True(File.Exists(Path.Combine(staged.StageDirectory, "SoftBox.PhoneLab.Desktop.exe")));
@@ -61,6 +61,27 @@ public sealed class SignedUpdatePackageServiceTests
     }
 
     [Fact]
+    public async Task RejectsUpdateWhenCurrentVersionIsBelowManifestMinimum()
+    {
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "update.zip");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            await CreateSignedPackageAsync(package, rsa, "1.2.3");
+            var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
+            await trust.TrustPublicKeyAsync("SoftBox Release Publisher", rsa.ExportSubjectPublicKeyInfoPem());
+            var service = new SignedUpdatePackageService(trustStore: trust, rootDirectory: Path.Combine(root, "updates"));
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                service.VerifyAndStageAsync(package, "1.2.3", "0.9.0"));
+
+            Assert.False(Directory.Exists(Path.Combine(root, "updates", "Staged")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public async Task RejectsUntrustedAssetUrlAndInvalidPackagePaths()
     {
         var root = CreateTempDirectory();
@@ -85,16 +106,37 @@ public sealed class SignedUpdatePackageServiceTests
             Directory.CreateDirectory(stage);
             var exe = Path.Combine(install, "SoftBox.exe");
             File.WriteAllText(exe, "old");
+            var stagedExe = Path.Combine(stage, "SoftBox.exe");
+            File.WriteAllText(stagedExe, "new");
+            var stagedHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("new"))).ToLowerInvariant();
             var service = new SignedUpdatePackageService(rootDirectory: Path.Combine(root, "updates"));
             var info = new SignedUpdateStageInfo("1.2.3", stage, "SoftBox.exe", "SoftBox Release Publisher",
-                [new("SoftBox.exe", 3, new string('a', 64))], DateTimeOffset.UtcNow);
+                [new("SoftBox.exe", 3, stagedHash), new("NewDependency.dll", 0, new string('b', 64))], DateTimeOffset.UtcNow);
 
-            var script = service.BuildInstallScript(info, install, exe, 1234, "1.2.2");
+            // The additional file is part of the signed manifest and is physically present in the staged package.
+            File.WriteAllBytes(Path.Combine(stage, "NewDependency.dll"), []);
+            info = info with { Files = [new("SoftBox.exe", 3, stagedHash), new("NewDependency.dll", 0, new string('b', 64))] };
+
+            var encodedScript = service.BuildInstallScript(info, install, exe, 1234, "1.2.2");
+            var script = DecodePowerShell(encodedScript);
 
             Assert.Contains("Wait-Process -Id", script);
+            Assert.Contains("Get-Process -Id", script);
             Assert.Contains("Get-FileHash", script);
             Assert.Contains("rollbackRoot", script);
+            Assert.Contains("InstalledFilePaths", script);
+            Assert.Contains("$backupReady", script);
             Assert.Contains("Start-Process", script);
+
+            var rollback = Path.Combine(root, "updates", "Rollback", "previous");
+            Directory.CreateDirectory(rollback);
+            File.WriteAllText(Path.Combine(rollback, "SoftBox.exe"), "old");
+            var state = new SignedUpdateRollbackState(install, exe, rollback, "1.2.2", "1.2.3",
+                DateTimeOffset.UtcNow, ["SoftBox.exe", "NewDependency.dll"]);
+            var rollbackScript = DecodePowerShell(service.BuildRollbackScript(state, 1234));
+            Assert.Contains("installedFilePaths", rollbackScript);
+            Assert.Contains("Remove-Item -LiteralPath $target", rollbackScript);
+        }
         }
         finally { Directory.Delete(root, recursive: true); }
     }
@@ -118,8 +160,9 @@ public sealed class SignedUpdatePackageServiceTests
         }
 
         // The detached package signature uses the same deterministic archive payload and publisher RSA PSS algorithm.
-        using var source = ZipFile.OpenRead(path);
-        var payload = await PluginSignaturePayload.ComputeAsync(source.Entries);
+        byte[] payload;
+        using (var source = ZipFile.OpenRead(path))
+            payload = await PluginSignaturePayload.ComputeAsync(source.Entries);
         var keyId = PluginPublisherTrustStore.GetKeyId(rsa.ExportSubjectPublicKeyInfoPem());
         var signature = new PluginPackageSignature(keyId,
             Convert.ToBase64String(rsa.SignData(payload, HashAlgorithmName.SHA256, RSASignaturePadding.Pss)),
@@ -141,6 +184,9 @@ public sealed class SignedUpdatePackageServiceTests
         }
         File.Move(temp, path, overwrite: true);
     }
+
+    private static string DecodePowerShell(string encoded)
+        => Encoding.Unicode.GetString(Convert.FromBase64String(encoded));
 
     private static string CreateTempDirectory()
     {
