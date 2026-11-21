@@ -76,6 +76,17 @@ public sealed class SamsungOdinAutomationPolicyTests
         Assert.Contains(decision.Blockers, item => item.Contains("نسخة احتياطية"));
     }
 
+
+    [Fact]
+    public void RejectsNullOrBlankFirmwarePackageNamesWithoutThrowing()
+    {
+        var decision = SamsungOdinAutomationPolicy.Evaluate(
+            ValidEvidence() with { ExpectedPackageNames = [null!, "", "   "] });
+
+        Assert.False(decision.CanInvokeStart);
+        Assert.Contains(decision.Blockers, item => item.Contains("لا توجد أسماء حزم"));
+    }
+
     private static SamsungOdinAutomationEvidence ValidEvidence()
         => new(
             @"C:\Tools\Odin\Odin.exe",
