@@ -142,7 +142,7 @@ public sealed class XiaomiFastbootRomFlashPlanBuilderTests
         root.Write("android-info.txt", "require product=ruby\n");
         root.Write("images/boot.img", "boot");
         var script = root.Write("flash_all.bat",
-            "fastboot %* flash boot images\\boot.img\nfastboot %* " + verb + " userdata\\n");
+            "fastboot %* flash boot images\\boot.img\nfastboot %* " + verb + " userdata\n");
 
         var plan = await XiaomiFastbootRomFlashPlanBuilder.BuildAsync(script, "ruby");
         var wipe = Assert.Single(plan.Steps.Where(step => step.Kind == XiaomiFastbootRomStepKind.WipeUserData));
