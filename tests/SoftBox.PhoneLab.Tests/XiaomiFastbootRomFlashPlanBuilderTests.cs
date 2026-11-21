@@ -116,14 +116,14 @@ public sealed class XiaomiFastbootRomFlashPlanBuilderTests
     public async Task UserdataImageIsMarkedAsDestructiveAndAllowedOnlyInCleanFlashScript()
     {
         using var root = new RomFixture();
-        root.Write("android-info.txt", "require product=ruby\\n");
+        root.Write("android-info.txt", "require product=ruby\n");
         root.Write("images/boot.img", "boot");
         root.Write("images/userdata.img", "userdata-image");
         var clean = root.Write("flash_all.bat",
-            "fastboot %* flash boot images\\\\boot.img\\n" +
-            "fastboot %* flash userdata images\\\\userdata.img\\n");
+            "fastboot %* flash boot images\\boot.img\n" +
+            "fastboot %* flash userdata images\\userdata.img\n");
         var preserve = root.Write("flash_all_except_storage.bat",
-            "fastboot %* flash userdata images\\\\userdata.img\\n");
+            "fastboot %* flash userdata images\\userdata.img\n");
 
         var plan = await XiaomiFastbootRomFlashPlanBuilder.BuildAsync(clean, "ruby");
 
@@ -139,10 +139,10 @@ public sealed class XiaomiFastbootRomFlashPlanBuilderTests
     public async Task UserdataEraseAndFormatAreExplicitDestructivePlanSteps(string verb)
     {
         using var root = new RomFixture();
-        root.Write("android-info.txt", "require product=ruby\\n");
+        root.Write("android-info.txt", "require product=ruby\n");
         root.Write("images/boot.img", "boot");
         var script = root.Write("flash_all.bat",
-            "fastboot %* flash boot images\\\\boot.img\\nfastboot %* " + verb + " userdata\\n");
+            "fastboot %* flash boot images\\boot.img\nfastboot %* " + verb + " userdata\\n");
 
         var plan = await XiaomiFastbootRomFlashPlanBuilder.BuildAsync(script, "ruby");
         var wipe = Assert.Single(plan.Steps.Where(step => step.Kind == XiaomiFastbootRomStepKind.WipeUserData));
