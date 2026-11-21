@@ -15,6 +15,10 @@ public sealed class PluginWorkflowRunner
 {
     private const int MaximumWorkflowBytes = 64 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true, MaxDepth = 12 };
+    private readonly PluginPackageInspector _inspector;
+
+    public PluginWorkflowRunner(PluginPackageInspector? inspector = null)
+        => _inspector = inspector ?? new PluginPackageInspector();
 
     public async Task<PluginWorkflowRunReport> RunAsync(
         string packagePath,
@@ -39,6 +43,25 @@ public sealed class PluginWorkflowRunner
 
         if (!File.Exists(packagePath))
             throw new FileNotFoundException("حزمة الإضافة غير موجودة.", packagePath);
+
+        // Revalidate the exact on-disk archive at execution time. A UI inspection result is not a trust grant.
+        var inspection = await _inspector.InspectAsync(packagePath, cancellationToken);
+        if (inspection.PackageErrors.Count != 0 ||
+            !inspection.ManifestValidation.IsValid ||
+            !inspection.PublisherSignatureVerified ||
+            inspection.Manifest is null)
+            throw new UnauthorizedAccessException("رفض المشغل الحزمة: التوقيع أو بنية الإضافة غير موثوقين.");
+
+        var verifiedManifest = inspection.Manifest;
+        if (!string.Equals(verifiedManifest.Id, manifest.Id, StringComparison.Ordinal) ||
+            !string.Equals(verifiedManifest.Version, manifest.Version, StringComparison.Ordinal) ||
+            !string.Equals(verifiedManifest.Publisher, manifest.Publisher, StringComparison.Ordinal) ||
+            !string.Equals(verifiedManifest.ExecutionMode, "read-only-workflow", StringComparison.Ordinal))
+            throw new UnauthorizedAccessException("بيانات Manifest المقدمة لا تطابق الحزمة الموقّعة.");
+
+        if (verifiedManifest.RequestedPermissions is null ||
+            verifiedManifest.RequestedPermissions.Any(permission => !grantedPermissions.Contains(permission)))
+            throw new UnauthorizedAccessException("صلاحيات Workflow الممنوحة لا تطابق الصلاحيات الموقعة في Manifest.");
 
         using var archive = ZipFile.OpenRead(packagePath);
         var entries = archive.Entries.Where(entry => entry.FullName == "workflow.json").ToArray();
