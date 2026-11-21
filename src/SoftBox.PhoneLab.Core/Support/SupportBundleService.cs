@@ -29,11 +29,12 @@ public sealed class SupportBundleService
     private const int MaximumNotesCharacters = 4_000;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     // Redact common secret/identifier fields when logs are serialized as JSON or JSONL.
+    // Redact common secret/identifier fields when logs are serialized as JSON or JSONL.
     private static readonly Regex JsonSecretProperty = new(
-        "\\\"(?<key>password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization|client[_-]?secret)\\\"\\\\s*:\\\\s*\\\"(?:\\\\\\\\.|[^\\\"\\\\\\\\])*\\\"",
+        "\"(?<key>password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization|client[_-]?secret)\"\\s*:\\s*\"(?:\\\\.|[^\"\\\\])*\"",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex JsonDeviceIdentifierProperty = new(
-        "\\\"(?<key>serial|device[_-]?serial|adb[_-]?serial|adb[_-]?id|device[_-]?id|android[_-]?id|imei|imsi|iccid)\\\"\\\\s*:\\\\s*\\\"(?:\\\\\\\\.|[^\\\"\\\\\\\\])*\\\"",
+        "\"(?<key>serial|device[_-]?serial|adb[_-]?serial|adb[_-]?id|device[_-]?id|android[_-]?id|imei|imsi|iccid)\"\\s*:\\s*\"(?:\\\\.|[^\"\\\\])*\"",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex SecretAssignment = new(
         @"(?im)\b(password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization)\b(\s*[:=]\s*)([^\s,;]+)",

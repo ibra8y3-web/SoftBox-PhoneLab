@@ -76,6 +76,29 @@ public sealed class DeviceDiagnosticEngineTests
     }
 
     [Fact]
+    public void ConflictingSoCStringsFallBackToGenericInsteadOfChoosingOneVendor()
+    {
+        var plan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
+            Device("Qualcomm Snapdragon / MediaTek Dimensity"), null, true, false, false));
+
+        Assert.Equal("android-generic", plan.EngineId);
+        Assert.Equal(DiagnosticEngineIdentityConfidence.ConflictingSocEvidence, plan.IdentityConfidence);
+        Assert.Contains(plan.Warnings, warning => warning.Contains("more than one SoC family", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void UnsafeSerialCannotUnlockDiagnosticProcedures()
+    {
+        var plan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
+            Device("SM8650") with { Serial = "--bad;serial" }, null, true, true, true));
+
+        Assert.All(plan.Procedures.Where(item => item.Transport.StartsWith("ADB", StringComparison.Ordinal)),
+            item => Assert.False(item.CanExecute));
+        Assert.False(Assert.Single(plan.Procedures, item => item.Id == "fastboot-read-only").CanExecute);
+        Assert.False(Assert.Single(plan.Procedures, item => item.Id == "agent-hardware-diagnostics").CanExecute);
+    }
+
+    [Fact]
     public void SoCEngineNeverGrantsPrivateServiceProtocolOrFirmwareWrite()
     {
         var plan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(

@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Activity;
+using SoftBox.PhoneLab.Core.Compatibility;
 using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Core.Models;
 using System.Text.Json;
@@ -95,7 +96,8 @@ public sealed class DeviceQuickDiagnosticService(AndroidDeviceToolsService andro
 
         var safeDevice = device is null ? null : device with { Serial = "" };
         var enginePlan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
-            device, null, AdbAuthorized: true, AgentConnected: agent is not null, FastbootDetected: false));
+            device, null, AdbAuthorized: true, AgentConnected: agent is not null,
+            FastbootDetected: false, AuthorizedSerial: serial));
         limitations.Add("محرك المعالج يختار خطة تشخيص حسب SoC المبلغ عنه أو ملف موثوق؛ لا يرسل بروتوكولات OEM خاصة ولا ينفذ تفليشًا.");
         return new OneClickDiagnosticReport(
             LocalActivityStore.CreateDeviceFingerprint(serial),

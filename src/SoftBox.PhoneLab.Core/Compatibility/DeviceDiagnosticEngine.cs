@@ -55,7 +55,8 @@ public sealed record DeviceDiagnosticEngineContext(
     bool FastbootDetected,
     bool VerifiedBoardMapAvailable = false,
     bool OemPackageSelected = false,
-    DiagnosticEngineSettings? Settings = null);
+    DiagnosticEngineSettings? Settings = null,
+    string? AuthorizedSerial = null);
 
 public sealed record DiagnosticEngineProcedure(
     string Id,
@@ -126,13 +127,16 @@ public static class DeviceDiagnosticEngine
             throw new ArgumentOutOfRangeException(nameof(context), string.Join(" ", settingsErrors));
 
         var device = context.Device;
+        var safeSerial = IsSafeSerial(context.AuthorizedSerial ?? device?.Serial);
+        var adbReady = context.AdbAuthorized && safeSerial;
+        var fastbootReady = context.FastbootDetected && safeSerial;
         var reportedSoc = device is not null && !IsUnknown(device.Soc) ? device.Soc : "";
         var verifiedProfileFamily = context.Profile is { IdentityVerified: true } profile
             ? string.Join(" ", new[] { profile.HardwareFamily }.Concat(profile.SocAliases))
             : "";
         var matchText = !string.IsNullOrWhiteSpace(reportedSoc) ? reportedSoc : verifiedProfileFamily;
-        var matched = string.IsNullOrWhiteSpace(matchText)
-            ? []
+        EngineDefinition[] matched = string.IsNullOrWhiteSpace(matchText)
+            ? Array.Empty<EngineDefinition>()
             : Engines.Where(engine => engine.SocPattern.IsMatch(matchText)).ToArray();
 
         EngineDefinition? selected = matched.Length == 1 ? matched[0] : null;
@@ -149,20 +153,20 @@ public static class DeviceDiagnosticEngine
         var family = selected?.HardwareFamily ?? "Android / SoC not conclusively identified";
         var procedures = new List<DiagnosticEngineProcedure>
         {
-            ADB("android-properties", "Android properties / model identity", context.AdbAuthorized),
-            ADB("battery-telemetry", "Battery / thermal telemetry", context.AdbAuthorized),
-            ADB("storage-health-observations", "Storage capacity observations", context.AdbAuthorized),
-            ADB("system-uptime", "System uptime and boot evidence", context.AdbAuthorized),
-            ADB("installed-app-inventory", "Installed third-party app inventory", context.AdbAuthorized),
+            ADB("android-properties", "Android properties / model identity", adbReady),
+            ADB("battery-telemetry", "Battery / thermal telemetry", adbReady),
+            ADB("storage-health-observations", "Storage capacity observations", adbReady),
+            ADB("system-uptime", "System uptime and boot evidence", adbReady),
+            ADB("installed-app-inventory", "Installed third-party app inventory", adbReady),
             new(
                 "agent-hardware-diagnostics",
                 "Agent hardware diagnostics (display, touch, cameras, sensors, radio, NFC and SIM)",
                 "PhoneLab Agent / ADB forward",
-                context.AgentConnected
+                context.AgentConnected && adbReady
                     ? DiagnosticProcedureState.Available
-                    : context.AdbAuthorized ? DiagnosticProcedureState.NeedsSetup : DiagnosticProcedureState.Blocked,
-                context.AgentConnected && context.AdbAuthorized,
-                context.AgentConnected && context.AdbAuthorized
+                    : adbReady ? DiagnosticProcedureState.NeedsSetup : DiagnosticProcedureState.Blocked,
+                context.AgentConnected && adbReady,
+                context.AgentConnected && adbReady
                     ? "The Agent session is present; only implemented tests and declared Android capabilities can be invoked."
                     : "No active Agent bridge session was supplied to the planner.",
                 "Install/open the official Agent, authorize the phone and establish its local bridge."),
@@ -170,9 +174,9 @@ public static class DeviceDiagnosticEngine
                 "fastboot-read-only",
                 "Fastboot variables (read-only)",
                 "Fastboot",
-                context.FastbootDetected ? DiagnosticProcedureState.Available : DiagnosticProcedureState.Unknown,
-                context.FastbootDetected,
-                context.FastbootDetected ? "The selected serial was independently detected in Fastboot." :
+                fastbootReady ? DiagnosticProcedureState.Available : DiagnosticProcedureState.Unknown,
+                fastbootReady,
+                fastbootReady ? "The selected serial was independently detected in Fastboot." :
                     "ADB presence does not imply Fastboot mode or a Fastboot connection.",
                 "Enter bootloader mode by the official device-specific method, then rediscover the exact serial.")
         };
@@ -254,6 +258,11 @@ public static class DeviceDiagnosticEngine
                 "No current authorized ADB session was provided.",
             authorized ? "Run the matching preconfigured read-only diagnostic preset." :
                 "Reconnect and approve USB debugging for this computer.");
+
+    private static bool IsSafeSerial(string? value)
+        => !string.IsNullOrWhiteSpace(value) && value.Length <= 128 &&
+           value.All(character => char.IsLetterOrDigit(character) ||
+                                  character is '.' or '_' or ':' or '-');
 
     private static bool IsUnknown(string? value)
         => string.IsNullOrWhiteSpace(value) ||
