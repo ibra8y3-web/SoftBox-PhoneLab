@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -35,7 +36,7 @@ public sealed record AndroidTelephonyDiagnosticsReport(
 public static class AndroidTelephonyDiagnosticsParser
 {
     private static readonly Regex FieldPattern(string name) => new(
-        @"\\b" + Regex.Escape(name) + @"\\s*=\\s*([^,;\\r\\n}]+)",
+        @"\b" + Regex.Escape(name) + @"\s*=\s*([^,;\r\n}]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly IReadOnlyDictionary<int, string> RadioTechnologies =
