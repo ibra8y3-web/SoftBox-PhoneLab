@@ -90,7 +90,24 @@ public sealed class SamsungOdinUiAutomationService
             .Where(name => !string.IsNullOrWhiteSpace(name))
             .ToArray();
 
-        var windows = new List<(Process Process, AutomationElement Window, string ActualPath)>();
+        if (string.IsNullOrWhiteSpace(selectedOdinExecutable) || !File.Exists(selectedOdinExecutable))
+        {
+            var invalid = SamsungOdinAutomationPolicy.Evaluate(new SamsungOdinAutomationEvidence(
+                selectedOdinExecutable ?? "", "", "", 0, false, false,
+                expectedPackages, Array.Empty<string>(),
+                operatorConfirmedCompatibility, operatorConfirmedBackup)
+            {
+                OperatorConfirmedComPortMatchesSelectedDevice = operatorConfirmedComPortMatchesSelectedDevice
+            });
+            invalid = invalid with
+            {
+                Blockers = invalid.Blockers.Append("ملف Odin المحدد غير موجود أو غير صالح.").ToArray(),
+                CanInvokeStart = false
+            };
+            return (new SamsungOdinUiAutomationReport(invalid, null, null, null, false), null);
+        }
+
+        var windows = new List<(int ProcessId, AutomationElement Window, string ActualPath)>();
         foreach (var process in Process.GetProcesses())
         {
             try
@@ -111,7 +128,7 @@ public sealed class SamsungOdinUiAutomationService
                 {
                     var title = SafeName(candidate);
                     if (title.Contains("Odin", StringComparison.OrdinalIgnoreCase))
-                        windows.Add((process, candidate, normalizedActual));
+                        windows.Add((process.Id, candidate, normalizedActual));
                 }
             }
             catch (Exception ex) when (ex is InvalidOperationException or
@@ -121,10 +138,14 @@ public sealed class SamsungOdinUiAutomationService
             {
                 // An inaccessible process is not considered evidence.
             }
+            finally
+            {
+                process.Dispose();
+            }
         }
 
         var unique = windows
-            .GroupBy(item => item.Process.Id)
+            .GroupBy(item => item.ProcessId)
             .Select(group => group.First())
             .ToArray();
 
@@ -228,7 +249,7 @@ public sealed class SamsungOdinUiAutomationService
         }
 
         return (new SamsungOdinUiAutomationReport(
-            decision, match.Process.Id, SafeName(match.Window),
+            decision, match.ProcessId, SafeName(match.Window),
             com.Success ? com.Value.ToUpperInvariant() : null, false),
             startButtons.Count == 1 ? startButtons[0] : null);
     }
