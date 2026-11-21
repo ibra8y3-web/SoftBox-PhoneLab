@@ -108,6 +108,20 @@ public sealed class BoardMapCsvImporterTests
     }
 
     [Fact]
+    public void BoardCatalogRequiresExactSourceRevisionAndPhysicalMapConfirmation()
+    {
+        var map = BoardMapCsvImporter.Parse(
+            ValidCsv, new string('a', 64), TestDevice, Metadata());
+        Assert.True(BoardMapCatalog.IsVerifiedForDevice(map, TestDevice));
+
+        var differentBoard = TestDevice with { BoardRevision = "REV2" };
+        Assert.False(BoardMapCatalog.IsVerifiedForDevice(map, differentBoard));
+
+        var noRevisionRead = TestDevice with { BoardRevision = "غير متاح" };
+        Assert.True(BoardMapCatalog.IsVerifiedForDevice(map, noRevisionRead));
+    }
+
+    [Fact]
     public void RejectsMalformedQuotedCsv()
     {
         var malformed = ValidCsv + "R1,\"broken,50,50,1,1,Top,0,F.Cu,0402,1k,GND\r\n";

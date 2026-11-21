@@ -1812,6 +1812,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var material = new DiffuseMaterial(new SolidColorBrush(ParseColor(colorHex)));
         var geometry = new GeometryModel3D(mesh, material) { BackMaterial = material };
         var transform = new Transform3DGroup();
+        transform.Children.Add(new RotateTransform3D(
+            new AxisAngleRotation3D(new Vector3D(0, 0, 1), part.RotationDegrees)));
         transform.Children.Add(new ScaleTransform3D(part.Width, part.Height, part.Depth));
         transform.Children.Add(new TranslateTransform3D(part.X, part.Y, part.Z));
         return new ModelVisual3D { Content = geometry, Transform = transform };

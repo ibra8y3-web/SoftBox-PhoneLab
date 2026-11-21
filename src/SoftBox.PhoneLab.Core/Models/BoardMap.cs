@@ -45,7 +45,7 @@ public sealed class BoardNet
     public string[] References { get; init; } = [];
 }
 
-public sealed class BoardPart
+public sealed record BoardPart
 {
     public string Id { get; init; } = "";
     public string Reference { get; init; } = "";

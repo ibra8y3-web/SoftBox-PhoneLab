@@ -44,10 +44,10 @@ public sealed class BoardMapCsvImportWindow : Window
         Background = Brush("#081321");
         Foreground = Brush("#EAF3FF");
 
-        _sourceName.Text = "Technician-reviewed BoardView CSV export";
-        _sourceUri.Text = "https://";
-        _sourceDocument.Text = Path.GetFileName(_csvPath);
-        _sourceLicense.Text = "Technician-supplied / permission confirmed";
+        _sourceName.Text = "";
+        _sourceUri.Text = "";
+        _sourceDocument.Text = "";
+        _sourceLicense.Text = "";
         _reviewer.Text = Environment.UserName;
         _hardwareRevision.Text = _device.HardwareRevision == "غير متاح" ? "" : _device.HardwareRevision;
         _boardRevision.Text = _device.BoardRevision == "غير متاح" ? "" : _device.BoardRevision;

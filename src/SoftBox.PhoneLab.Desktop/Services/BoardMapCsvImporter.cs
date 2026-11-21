@@ -137,7 +137,9 @@ public static class BoardMapCsvImporter
             layerSet.Add((layer, side));
 
             var nets = Get("Nets").Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
-                .Distinct(StringComparer.OrdinalIgnoreCase).Take(256).ToArray();
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            if (nets.Length > 256)
+                throw new InvalidDataException($"CSV row {rowIndex + 1} contains more than 256 net names.");
             if (nets.Any(net => net.Length > 80 || net.Any(char.IsControl)))
                 throw new InvalidDataException($"CSV row {rowIndex + 1} contains an invalid net name.");
             foreach (var net in nets)
@@ -298,6 +300,8 @@ public static class BoardMapCsvImporter
                 inQuotes = true;
                 continue;
             }
+            if (character == '"')
+                throw new InvalidDataException("CSV has an unexpected quote inside an unquoted field.");
             if (character == ',')
             {
                 row.Add(field.ToString());
