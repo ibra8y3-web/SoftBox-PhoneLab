@@ -369,13 +369,7 @@ catch {{
         var state = JsonSerializer.Deserialize<SignedUpdateRollbackState>(json, JsonOptions);
         if (state is null)
             throw new InvalidDataException("بيانات الرجوع إلى الإصدار السابق غير صالحة.");
-        var expectedRoot = Path.GetFullPath(Path.Combine(_updatesRoot, "Rollback"));
-        var backup = Path.GetFullPath(state.BackupDirectory);
-        var install = Path.GetFullPath(state.InstallDirectory);
-        var executable = Path.GetFullPath(state.ExecutablePath);
-        if (!IsChildPath(expectedRoot, backup) || !Directory.Exists(backup) ||
-            !Directory.Exists(install) || !IsChildPath(install, executable) || !File.Exists(executable))
-            throw new InvalidDataException("مسارات النسخة السابقة غير صالحة أو لم تعد موجودة.");
+        ValidateRollbackState(state);
         return state;
     }
 
@@ -384,21 +378,38 @@ catch {{
         ArgumentNullException.ThrowIfNull(state);
         if (parentProcessId <= 0)
             throw new ArgumentOutOfRangeException(nameof(parentProcessId));
+        ValidateRollbackState(state);
+        foreach (var relativePath in state.InstalledFilePaths ?? [])
+            ValidateRelativePath(relativePath);
+
         var configuration = JsonSerializer.Serialize(new
         {
             installRoot = Path.GetFullPath(state.InstallDirectory),
             executable = Path.GetFullPath(state.ExecutablePath),
             backupRoot = Path.GetFullPath(state.BackupDirectory),
             parentProcessId,
-            statePath = RollbackStatePath
+            statePath = RollbackStatePath,
+            installedFilePaths = state.InstalledFilePaths ?? []
         });
         return BuildEncodedPowerShell($@"
 $ErrorActionPreference = 'Stop'
 $config = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(configuration))}')) | ConvertFrom-Json
-Wait-Process -Id ([int]$config.parentProcessId) -Timeout 90 -ErrorAction SilentlyContinue
+$running = Get-Process -Id ([int]$config.parentProcessId) -ErrorAction SilentlyContinue
+if ($running) {{
+    Wait-Process -Id ([int]$config.parentProcessId) -Timeout 90
+    if (Get-Process -Id ([int]$config.parentProcessId) -ErrorAction SilentlyContinue) {{ throw 'SoftBox is still running; rollback was not started.' }}
+}}
 $backupPrefix = [IO.Path]::GetFullPath($config.backupRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
 $installPrefix = [IO.Path]::GetFullPath($config.installRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-if (!(Test-Path -LiteralPath $config.backupRoot)) {{ throw 'Rollback snapshot is missing' }}
+if (!(Test-Path -LiteralPath $config.backupRoot -PathType Container)) {{ throw 'Rollback snapshot is missing' }}
+if (Get-ChildItem -LiteralPath $config.backupRoot -Force -Recurse | Where-Object {{ $_.Attributes -band [IO.FileAttributes]::ReparsePoint }}) {{ throw 'Rollback snapshot contains a reparse point.' }}
+foreach ($relativePath in $config.installedFilePaths) {{
+    $target = [IO.Path]::GetFullPath((Join-Path $config.installRoot $relativePath))
+    $backupFile = [IO.Path]::GetFullPath((Join-Path $config.backupRoot $relativePath))
+    if (!$target.StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase) -or
+        !$backupFile.StartsWith($backupPrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe rollback path' }}
+    if (!(Test-Path -LiteralPath $backupFile) -and (Test-Path -LiteralPath $target)) {{ Remove-Item -LiteralPath $target -Force }}
+}}
 Get-ChildItem -LiteralPath $config.backupRoot -Force | ForEach-Object {{
     $destination = [IO.Path]::GetFullPath((Join-Path $config.installRoot $_.Name))
     if (!$destination.StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe rollback target' }}
@@ -407,6 +418,19 @@ Get-ChildItem -LiteralPath $config.backupRoot -Force | ForEach-Object {{
 Remove-Item -LiteralPath $config.statePath -Force -ErrorAction SilentlyContinue
 Start-Process -FilePath $config.executable -WorkingDirectory $config.installRoot
 ");
+    }
+
+    private void ValidateRollbackState(SignedUpdateRollbackState state)
+    {
+        var expectedRoot = Path.GetFullPath(Path.Combine(_updatesRoot, "Rollback"));
+        var backup = Path.GetFullPath(state.BackupDirectory);
+        var install = Path.GetFullPath(state.InstallDirectory);
+        var executable = Path.GetFullPath(state.ExecutablePath);
+        if (!IsChildPath(expectedRoot, backup) || !Directory.Exists(backup) ||
+            !Directory.Exists(install) || !IsChildPath(install, executable) || !File.Exists(executable))
+            throw new InvalidDataException("مسارات النسخة السابقة غير صالحة أو لم تعد موجودة.");
+        if (state.InstalledFilePaths is { Count: > MaximumFiles })
+            throw new InvalidDataException("قائمة ملفات النسخة المثبتة أطول من الحد المسموح.");
     }
 
     private static async Task<string> CalculateSha256Async(ZipArchiveEntry entry, CancellationToken cancellationToken)
