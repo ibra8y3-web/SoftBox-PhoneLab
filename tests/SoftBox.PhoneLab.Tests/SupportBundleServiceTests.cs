@@ -63,6 +63,31 @@ public sealed class SupportBundleServiceTests
     }
 
     [Fact]
+    public async Task CreateBundleAcceptsStructuredJsonLinesDesktopCrashLog()
+    {
+        var root = CreateTempDirectory();
+        var log = Path.Combine(root, "desktop-events.jsonl");
+        var archivePath = Path.Combine(root, "support.zip");
+        await File.WriteAllTextAsync(log, "{\\"event\\":\\"desktop-started\\"}\\n{\\"event\\":\\"crash\\",\\"password\\":\\"do-not-share\\"}");
+        try
+        {
+            var service = new SupportBundleService();
+            var result = await service.CreateAsync(archivePath, [log]);
+            Assert.Equal(1, result.IncludedFileCount);
+            using var archive = ZipFile.OpenRead(archivePath);
+            var entry = Assert.Single(archive.Entries, item => item.FullName.StartsWith("user-logs/", StringComparison.Ordinal));
+            using var reader = new StreamReader(entry.Open());
+            var content = await reader.ReadToEndAsync();
+            Assert.Contains("desktop-started", content);
+            Assert.DoesNotContain("do-not-share", content);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task CreateBundleRejectsUnsupportedFileExtension()
     {
         var root = CreateTempDirectory();

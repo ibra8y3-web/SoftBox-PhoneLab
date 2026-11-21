@@ -42,6 +42,8 @@ public sealed class SupportBundleWindow : Window
         _removeButton = ButtonControl("إزالة المحدد", "#51333A", RemoveFile_Click);
         _createButton = ButtonControl("إنشاء حزمة الدعم محليًا", "#176044", CreateBundle_Click);
         Content = BuildContent();
+        if (File.Exists(SoftBoxDesktopTelemetry.LogPath))
+            _selectedLogs.Add(SoftBoxDesktopTelemetry.LogPath);
         Closed += (_, _) => _operation?.Cancel();
     }
 
@@ -66,7 +68,7 @@ public sealed class SupportBundleWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "اختر بنفسك ملفات TXT أو LOG أو JSON التي تريد تضمينها. ينقّح SoftBox الحقول الشائعة مثل Password وToken وAuthorization وSerial قبل إضافتها. لا يتم رفع الحزمة أو إرسالها تلقائيًا.",
+            Text = "اختر ملفات TXT أو LOG أو JSON أو JSONL التي تريد تضمينها. يُضاف سجل أعطال Windows الحالي تلقائيًا إن وُجد، ويمكنك إزالته قبل الإنشاء. ينقّح SoftBox الحقول الشائعة مثل Password وToken وAuthorization وSerial قبل الإضافة. لا يتم رفع الحزمة أو إرسالها تلقائيًا.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -166,7 +168,7 @@ public sealed class SupportBundleWindow : Window
         var dialog = new OpenFileDialog
         {
             Title = "اختيار سجلات محلية لإضافتها إلى حزمة الدعم",
-            Filter = "Text logs and JSON|*.txt;*.log;*.json|All files|*.*",
+            Filter = "Text logs and JSON|*.txt;*.log;*.json;*.jsonl|All files|*.*",
             CheckFileExists = true,
             Multiselect = true
         };

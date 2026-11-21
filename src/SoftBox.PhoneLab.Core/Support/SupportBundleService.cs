@@ -92,7 +92,7 @@ public sealed class SupportBundleService
                         throw new InvalidDataException($"ملف السجل يتجاوز 10 MiB: {info.Name}");
 
                     var extension = Path.GetExtension(source);
-                    if (!new[] { ".txt", ".log", ".json" }.Contains(extension, StringComparer.OrdinalIgnoreCase))
+                    if (!new[] { ".txt", ".log", ".json", ".jsonl" }.Contains(extension, StringComparer.OrdinalIgnoreCase))
                         throw new InvalidDataException("تقتصر ملفات الدعم على TXT وLOG وJSON.");
 
                     var content = await File.ReadAllTextAsync(source, Encoding.UTF8, cancellationToken);
