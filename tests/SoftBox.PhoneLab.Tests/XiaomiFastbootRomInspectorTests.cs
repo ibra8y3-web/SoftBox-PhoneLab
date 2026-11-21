@@ -33,7 +33,7 @@ public sealed class XiaomiFastbootRomInspectorTests
             Assert.False(report.UnlockAllowed);
             Assert.Contains(report.Findings, item => item.Contains("لم يتم استخراج", StringComparison.Ordinal));
             Assert.True(File.Exists(archivePath));
-            Assert.Empty(Directory.EnumerateFiles(root).Where(path => path != archivePath));
+            Assert.Equal(archivePath, Assert.Single(Directory.EnumerateFiles(root)));
         }
         finally { Directory.Delete(root, recursive: true); }
     }
