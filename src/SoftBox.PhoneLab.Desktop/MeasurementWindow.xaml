@@ -15,6 +15,7 @@
    <ComboBox x:Name="Ports" Width="150" Height="32" Background="#14263C" Foreground="#EAF3FF" Margin="0,0,8,0"/>
    <Button Content="تحديث المنافذ" Click="RefreshPorts_Click" Margin="0,0,8,0"/>
    <Button x:Name="ConnectButton" Content="اتصال" Click="Connect_Click" Background="#075F94" BorderBrush="#168BCB"/>
+   <Button Content="تحميل حدود القياس JSON" Click="LoadProfile_Click" Margin="8,0,0,0"/>
   </DockPanel>
   <Border Grid.Row="2" Background="#101E30" BorderBrush="#29415C" BorderThickness="1" CornerRadius="13" Padding="15">
    <StackPanel>
@@ -32,6 +33,7 @@
     <TextBlock Text="Power / Rail measurements" Foreground="#91A8C3" FontWeight="Bold" FontSize="11" Margin="0,12,0,8"/>
     <TextBlock x:Name="PowerValue" Text="USB Power: —" FontSize="11" Margin="0,0,0,7"/>
     <TextBlock x:Name="RailsValue" Text="لم تصل قراءات خطوط الطاقة بعد." FontSize="10" Foreground="#A8BCD1" TextWrapping="Wrap"/>
+    <TextBlock x:Name="ReferenceStatus" Text="لم يتم تحميل ملف حدود مرجعية." FontSize="10" Foreground="#F2C27C" TextWrapping="Wrap" Margin="0,8,0,0"/>
    </StackPanel>
   </Border>
   <Border Grid.Row="3" Background="#101E30" BorderBrush="#29415C" BorderThickness="1" CornerRadius="10" Padding="10" Margin="0,12,0,0">
@@ -43,6 +45,6 @@
     <ListBox x:Name="SampleLog" Background="#0B1725" Foreground="#D4E4F4" BorderBrush="#293E56" FontSize="9"/>
    </DockPanel>
   </Border>
-  <TextBlock Grid.Row="4" Text="مهم: لا توصل مجسات أو مصادر طاقة عشوائية بالهاتف. يلزم جهاز قياس معزول ومصمم للقياس، ويجب ألا يحقن البرنامج أي فولتية في الجهاز." Foreground="#F2C27C" FontSize="10" TextWrapping="Wrap" Margin="2,13,2,0"/>
+  <TextBlock Grid.Row="4" Text="حدود المقارنة تُحمّل من ملف فني موثق يختاره المستخدم ولا تمثل مواصفات مصنع تلقائية. لا توصل مجسات أو مصادر طاقة عشوائية بالهاتف؛ يلزم جهاز قياس معزول ولا يحقن البرنامج أي فولتية." Foreground="#F2C27C" FontSize="10" TextWrapping="Wrap" Margin="2,13,2,0"/>
  </Grid>
 </Window>

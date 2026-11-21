@@ -60,6 +60,15 @@ public sealed class VendorDiagnosticsWindow : Window
             {
                 AndroidVendorKind.Samsung => "Samsung Device Diagnostics",
                 AndroidVendorKind.Xiaomi => "Xiaomi / Redmi / POCO Diagnostics",
+                AndroidVendorKind.GooglePixel => "Google Pixel Diagnostics",
+                AndroidVendorKind.Motorola => "Motorola / Lenovo Diagnostics",
+                AndroidVendorKind.OnePlus => "OnePlus Diagnostics",
+                AndroidVendorKind.Oppo => "OPPO Diagnostics",
+                AndroidVendorKind.Vivo => "vivo Diagnostics",
+                AndroidVendorKind.Realme => "realme Diagnostics",
+                AndroidVendorKind.Huawei => "Huawei / HONOR Diagnostics",
+                AndroidVendorKind.Tecno => "TECNO Diagnostics",
+                AndroidVendorKind.Infinix => "Infinix Diagnostics",
                 _ => "Android Vendor Diagnostics"
             },
             FontSize = 23,

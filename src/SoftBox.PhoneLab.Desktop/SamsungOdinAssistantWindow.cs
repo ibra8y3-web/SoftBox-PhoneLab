@@ -210,7 +210,8 @@ public sealed class SamsungOdinAssistantWindow : Window
             var lines = new List<string>
             {
                 "SAMSUNG ODIN PACKAGE SELECTION",
-                "Inspection: filename / file existence / size / SHA-256",
+                "Inspection: slot policy / TAR structure / appended MD5 / SHA-256",
+                "No package is flashed or passed into Odin automatically.",
                 ""
             };
 
@@ -222,15 +223,28 @@ public sealed class SamsungOdinAssistantWindow : Window
                 if (info.Length <= 0 || info.Length > 16L * 1024 * 1024 * 1024)
                     throw new InvalidDataException("حجم ملف Firmware فارغ أو يتجاوز الحد 16 GiB: " + info.Name);
 
+                var tarInspection = await OdinTarMd5Inspector.InspectAsync(item.Path);
+                if (!tarInspection.IsValid)
+                    throw new InvalidDataException(
+                        $"فشل فحص حزمة {item.Slot}: {string.Join(" | ", tarInspection.Errors)}");
+
                 var hash = await CalculateSha256Async(item.Path);
                 _inspectedHashes[item.Slot] = hash;
                 lines.Add($"{item.Slot}: {info.Name}");
                 lines.Add($"  Size: {info.Length:N0} bytes");
                 lines.Add($"  SHA-256: {hash}");
+                lines.Add($"  TAR readable: {tarInspection.IsTarReadable}");
+                lines.Add($"  Appended MD5: {(tarInspection.HasAppendedMd5 ? (tarInspection.AppendedMd5Valid ? "VALID" : "INVALID") : "NOT PRESENT")}");
+                lines.Add($"  TAR entries: {tarInspection.EntryNames.Count}");
+                lines.Add($"  Partition payloads: {string.Join(", ", tarInspection.PartitionPayloads.Take(20))}");
+                foreach (var warning in tarInspection.Warnings)
+                    lines.Add("  WARNING: " + warning);
                 lines.Add("");
             }
 
-            lines.Add("No source authenticity or model/region/bootloader compatibility verdict is produced.");
+            lines.Add("TAR.MD5 verifies package integrity only; SHA-256 is recorded locally.");
+            lines.Add("No publisher authenticity or exact device/region/bootloader compatibility verdict is produced.");
+            lines.Add("SoftBox does not automate Odin controls or press Start.");
             _inspection.Text = string.Join(Environment.NewLine, lines);
             _packagesInspected = true;
             _launchButton.IsEnabled = true;
