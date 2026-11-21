@@ -25,6 +25,8 @@ public sealed class MultiScreenSessionsWindow : Window
     private readonly Button _stopAllButton;
     private readonly Dictionary<string, ActiveSession> _sessions = new(StringComparer.Ordinal);
     private CancellationTokenSource? _operation;
+    private readonly DispatcherTimer _healthTimer = new() { Interval = TimeSpan.FromSeconds(5) };
+    private bool _healthCheckRunning;
     private bool _closing;
 
     public MultiScreenSessionsWindow(AdbClient adb)
@@ -48,13 +50,23 @@ public sealed class MultiScreenSessionsWindow : Window
         _stopAllButton.IsEnabled = false;
 
         Content = BuildContent();
-        Loaded += async (_, _) => await RefreshDevicesAsync();
+        _healthTimer.Tick += async (_, _) => await CheckSessionHealthAsync();
+        Loaded += async (_, _) =>
+        {
+            await RefreshDevicesAsync();
+            _healthTimer.Start();
+        };
         Closing += (_, _) =>
         {
             _closing = true;
+            _healthTimer.Stop();
             _operation?.Cancel();
         };
-        Closed += (_, _) => StopAllSessions();
+        Closed += (_, _) =>
+        {
+            _healthTimer.Stop();
+            StopAllSessions();
+        };
     }
 
     private UIElement BuildContent()
@@ -78,7 +90,7 @@ public sealed class MultiScreenSessionsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "اختر حتى أربعة هواتف مصرحًا بها عبر ADB. لكل هاتف عملية scrcpy مستقلة ونافذة مدمجة يمكن إيقافها دون التأثير على بقية الجلسات. لا يتم تسجيل الشاشة تلقائيًا ولا نقل ملفات الجهاز.",
+            Text = "اختر حتى أربعة هواتف مصرحًا بها عبر ADB. لكل هاتف عملية scrcpy مستقلة. يراجع SoftBox تصريح ADB وعملية العرض والنافذة كل 5 ثوانٍ، ويغلق الجلسات المنقطعة أو المتوقفة بدل ترك نوافذ معلقة.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             FontSize = 11,
@@ -357,6 +369,51 @@ public sealed class MultiScreenSessionsWindow : Window
         {
             StopSession(device.Serial);
             throw;
+        }
+    }
+
+    private async Task CheckSessionHealthAsync()
+    {
+        if (_closing || _operation is not null || _healthCheckRunning || _sessions.Count == 0)
+            return;
+
+        _healthCheckRunning = true;
+        try
+        {
+            // Re-discover from ADB every cycle; stale selection is never treated as continuing authorization.
+            var current = await _discovery.DiscoverAsync(CancellationToken.None);
+            var authorizedSerials = current
+                .Where(device => device.IsAuthorized && AdbClient.IsSafeSerial(device.Serial))
+                .Select(device => device.Serial)
+                .ToHashSet(StringComparer.Ordinal);
+
+            var observations = _sessions.Values.Select(session => new MultiScreenSessionHealth(
+                session.Serial,
+                authorizedSerials.Contains(session.Serial),
+                session.Mirror.IsRunning,
+                session.Host.HasEmbeddedWindow)).ToArray();
+
+            var unhealthy = MultiScreenSessionsPolicy.FindUnhealthySessions(observations);
+            if (unhealthy.Count == 0)
+                return;
+
+            foreach (var serial in unhealthy)
+                StopSession(serial);
+
+            var masked = unhealthy.Select(serial =>
+                serial.Length > 4 ? "••••" + serial[^4..] : "••••");
+            _status.Text = "أوقف SoftBox تلقائيًا " + unhealthy.Count +
+                " جلسة بعد فقد تصريح ADB أو توقف عملية العرض أو انفصال النافذة: " +
+                string.Join("، ", masked) + ". أعد توصيل الهاتف ثم افتح جلسة جديدة يدويًا.";
+        }
+        catch (OperationCanceledException) when (_closing) { }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر فحص سلامة الجلسات حاليًا؛ لم يتم تشغيل جلسات جديدة: " + ex.Message;
+        }
+        finally
+        {
+            _healthCheckRunning = false;
         }
     }
 

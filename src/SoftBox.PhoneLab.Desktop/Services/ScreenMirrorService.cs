@@ -23,6 +23,15 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
     public string? ActiveSerial { get; private set; }
     public string? ActiveRecordingPath { get; private set; }
     public bool IsRecording => ActiveRecordingPath is not null;
+    public bool IsRunning
+    {
+        get
+        {
+            try { return _process is { HasExited: false }; }
+            catch (ObjectDisposedException) { return false; }
+            catch (InvalidOperationException) { return false; }
+        }
+    }
 
     public async Task<string> EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {

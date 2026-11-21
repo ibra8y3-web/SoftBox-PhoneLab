@@ -79,6 +79,19 @@ public sealed class RepairAdvisorWindow : Window
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 6, 0, 0)
         });
+        var knowledgeButton = new Button
+        {
+            Content = "فتح قاعدة المعرفة المحلية للموديلات والأعطال",
+            Padding = new Thickness(12, 7, 12, 7),
+            Margin = new Thickness(0, 8, 0, 0),
+            Background = Brush("#14517A"),
+            Foreground = Brushes.White,
+            BorderBrush = Brush("#3E7096"),
+            FontWeight = FontWeights.SemiBold,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        knowledgeButton.Click += (_, _) => new RepairKnowledgeWindow { Owner = this }.ShowDialog();
+        header.Children.Add(knowledgeButton);
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
 

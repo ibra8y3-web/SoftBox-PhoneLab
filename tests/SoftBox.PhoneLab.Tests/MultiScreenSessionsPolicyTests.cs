@@ -80,6 +80,33 @@ public sealed class MultiScreenSessionsPolicyTests
             SoftBoxUserRole.ReadOnly, "OpenMultiScreenSessions"));
     }
 
+    [Fact]
+    public void HealthPolicyFindsDisconnectedProcessesAndDetachedWindowsOnly()
+    {
+        var unhealthy = MultiScreenSessionsPolicy.FindUnhealthySessions(
+        [
+            new("ADB-OK", true, true, true),
+            new("ADB-OFFLINE", false, true, true),
+            new("ADB-EXITED", true, false, true),
+            new("ADB-DETACHED", true, true, false)
+        ]);
+
+        Assert.Equal(new[] { "ADB-OFFLINE", "ADB-EXITED", "ADB-DETACHED" }, unhealthy);
+    }
+
+    [Fact]
+    public void HealthPolicyIgnoresDuplicateHealthySerialsAndRejectsUnsafeIdentifiers()
+    {
+        var unhealthy = MultiScreenSessionsPolicy.FindUnhealthySessions(
+        [
+            new("ADB-OK", true, true, true),
+            new("ADB-OK", true, true, true),
+            new("--kill", false, true, true)
+        ]);
+
+        Assert.Equal(new[] { "--kill" }, unhealthy);
+    }
+
     private static DeviceListItem Device(string serial, string state)
         => new(serial, state, "Android", "Test device");
 }
