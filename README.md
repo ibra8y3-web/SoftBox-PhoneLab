@@ -215,3 +215,8 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - Read-only parser tests are included. Physical-device coverage across OEM models and Android releases remains unverified; no all-phone compatibility claim is made.
 
 See [Device Access Diagnostics and Official Recovery](docs/DEVICE-ACCESS-AND-RECOVERY.md).
+
+
+### Extended mobile network diagnostics — 21 November 2026
+
+The Device Access & Recovery screen also reads Android `dumpsys telephony.registry` and parses the reported voice/data registration state, voice/data radio technology, roaming, emergency-only, network-search and operator-label fields. Only allow-listed parsed values are displayed; the telephony dump itself is not persisted, and the report does not expose IMEI/IMSI/ICCID or phone-number fields. Registration and SIM state are not a carrier-unlock verdict. OEM output differences, multi-SIM behavior and physical-device coverage remain under validation.
