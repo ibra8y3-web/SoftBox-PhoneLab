@@ -122,6 +122,58 @@ public sealed class RepairKnowledgeStore
         finally { _gate.Release(); }
     }
 
+    public async Task<RepairKnowledgeEntry> UpdateAsync(
+        Guid id,
+        string manufacturer,
+        string model,
+        string symptom,
+        string diagnosis,
+        string evidence,
+        IEnumerable<string> safeSteps,
+        string source,
+        string author,
+        bool technicianMarkedVerified,
+        CancellationToken cancellationToken = default)
+    {
+        if (id == Guid.Empty)
+            throw new ArgumentException("معرف ملاحظة المعرفة غير صالح.", nameof(id));
+        var normalizedSteps = (safeSteps ?? throw new ArgumentNullException(nameof(safeSteps)))
+            .Select(step => NormalizeRequired(step, 1000, "خطوة الفحص"))
+            .Distinct(StringComparer.Ordinal)
+            .Take(30)
+            .ToArray();
+        if (normalizedSteps.Length == 0)
+            throw new ArgumentException("أدخل خطوة فحص آمنة واحدة على الأقل.", nameof(safeSteps));
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureLoadedLockedAsync(cancellationToken);
+            var index = _data!.Entries.FindIndex(item => item.Id == id);
+            if (index < 0)
+                throw new KeyNotFoundException("ملاحظة الإصلاح غير موجودة.");
+
+            var current = _data.Entries[index];
+            var updated = current with
+            {
+                Manufacturer = NormalizeRequired(manufacturer, 120, "الشركة"),
+                Model = NormalizeRequired(model, 160, "الموديل"),
+                Symptom = NormalizeRequired(symptom, MaximumFieldLength, "العَرَض"),
+                Diagnosis = NormalizeRequired(diagnosis, MaximumFieldLength, "التشخيص"),
+                Evidence = NormalizeOptional(evidence, MaximumFieldLength, "الدليل"),
+                SafeSteps = normalizedSteps,
+                Source = NormalizeOptional(source, 500, "المصدر"),
+                Author = NormalizeRequired(author, 120, "الفني"),
+                TechnicianMarkedVerified = technicianMarkedVerified,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            _data.Entries[index] = updated;
+            await SaveLockedAsync(cancellationToken);
+            return updated;
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await _gate.WaitAsync(cancellationToken);

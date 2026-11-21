@@ -51,6 +51,48 @@ public sealed class RepairKnowledgeStoreTests
     }
 
     [Fact]
+    public async Task UpdatesExistingKnowledgeAndPreservesItsIdentityAndCreationTime()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new RepairKnowledgeStore(root);
+            var created = await store.AddAsync(
+                "Samsung", "SM-A546E", "No charge", "Inspect charging path",
+                "USB meter observation", ["Inspect cable"], "Service guide", "Tech A", false);
+
+            var updated = await store.UpdateAsync(
+                created.Id, "Samsung", "SM-A546E", "Slow charge", "Compare USB input and battery current",
+                "Bench sample 2", ["Read battery status", "Compare reference limits"],
+                "OEM service guide page 12", "Tech B", true);
+
+            Assert.Equal(created.Id, updated.Id);
+            Assert.Equal(created.CreatedAtUtc, updated.CreatedAtUtc);
+            Assert.True(updated.UpdatedAtUtc >= created.UpdatedAtUtc);
+            Assert.Equal("Slow charge", updated.Symptom);
+            Assert.Equal("Tech B", updated.Author);
+            Assert.True(updated.TechnicianMarkedVerified);
+            var stored = Assert.Single(await store.SearchAsync("Slow charge"));
+            Assert.Equal(updated.Id, stored.Id);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task UpdateRejectsAnUnknownEntryId()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var store = new RepairKnowledgeStore(root);
+            await Assert.ThrowsAsync<KeyNotFoundException>(() => store.UpdateAsync(
+                Guid.NewGuid(), "Samsung", "SM-A546E", "Symptom", "Diagnosis", "Evidence",
+                ["Safe inspection"], "Manual", "Tech", false));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
     public async Task DoesNotStoreOrIndexDeviceSerialFields()
     {
         var root = CreateTempDirectory();
