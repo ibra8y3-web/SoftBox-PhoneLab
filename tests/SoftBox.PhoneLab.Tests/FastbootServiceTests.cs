@@ -175,13 +175,13 @@ public sealed class FastbootServiceTests
     }
 
     [Theory]
-    [InlineData("-w", new[] { "-s", "FASTBOOT-123", "-w" })]
-    [InlineData("erase", new[] { "-s", "FASTBOOT-123", "erase", "userdata" })]
-    [InlineData("format", new[] { "-s", "FASTBOOT-123", "format", "userdata" })]
+    [InlineData("-w", "-s FASTBOOT-123 -w")]
+    [InlineData("erase", "-s FASTBOOT-123 erase userdata")]
+    [InlineData("format", "-s FASTBOOT-123 format userdata")]
     public void UserDataOperationBuilderProducesOnlyExplicitSelectedSerialCommand(
-        string verb, string[] expected)
+        string verb, string expected)
     {
-        Assert.Equal(expected, FastbootService.BuildUserDataOperationArguments("FASTBOOT-123", verb));
+        Assert.Equal(expected.Split(' '), FastbootService.BuildUserDataOperationArguments("FASTBOOT-123", verb));
     }
 
     [Theory]
