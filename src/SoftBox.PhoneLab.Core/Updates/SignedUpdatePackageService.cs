@@ -258,8 +258,28 @@ public sealed class SignedUpdatePackageService
         if (!Directory.Exists(installRoot) || !File.Exists(executable) ||
             !IsChildPath(installRoot, executable) ||
             !IsChildPath(Path.Combine(_updatesRoot, "Staged"), stageRoot) ||
-            parentProcessId <= 0)
-            throw new InvalidOperationException("مسار التثبيت أو ملف التشغيل أو مجلد التحديث غير صالح.");
+            parentProcessId <= 0 ||
+            !VersionPattern.IsMatch(NormalizeVersion(stage.Version)) ||
+            stage.Files is null || stage.Files.Count is < 1 or > MaximumFiles ||
+            string.IsNullOrWhiteSpace(stage.MainExecutable) ||
+            !stage.MainExecutable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("مسار التثبيت أو ملف التشغيل أو مجلد التحديث أو Manifest المرحلة غير صالح.");
+
+        var filePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in stage.Files)
+        {
+            if (file is null)
+                throw new InvalidDataException("قائمة ملفات التحديث تحتوي عنصرًا فارغًا.");
+            ValidateRelativePath(file.Path);
+            if (!filePaths.Add(file.Path) || file.SizeBytes is < 0 or > 512L * 1024 * 1024 ||
+                file.Sha256 is null || file.Sha256.Length != 64 || !file.Sha256.All(Uri.IsHexDigit))
+                throw new InvalidDataException("ملف مرحلة التحديث يحتوي مسارًا أو حجمًا أو بصمة غير صالحة.");
+            var source = ResolveSafeChildPath(stageRoot, file.Path);
+            if (!File.Exists(source))
+                throw new FileNotFoundException("ملف مرحلة التحديث غير موجود.", source);
+        }
+        if (!filePaths.Contains(stage.MainExecutable))
+            throw new InvalidDataException("ملف التشغيل الرئيسي غير موجود ضمن الملفات الموقعة.");
 
         var rollbackRoot = Path.Combine(_updatesRoot, "Rollback",
             DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
@@ -279,29 +299,63 @@ public sealed class SignedUpdatePackageService
         return BuildEncodedPowerShell($@"
 $ErrorActionPreference = 'Stop'
 $config = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(configuration))}')) | ConvertFrom-Json
-Wait-Process -Id ([int]$config.parentProcessId) -Timeout 90 -ErrorAction SilentlyContinue
+
+$running = Get-Process -Id ([int]$config.parentProcessId) -ErrorAction SilentlyContinue
+if ($running) {{
+    Wait-Process -Id ([int]$config.parentProcessId) -Timeout 90
+    if (Get-Process -Id ([int]$config.parentProcessId) -ErrorAction SilentlyContinue) {{ throw 'SoftBox is still running; update was not started.' }}
+}}
+
+$stagePrefix = [IO.Path]::GetFullPath($config.stageRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+$installPrefix = [IO.Path]::GetFullPath($config.installRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+$backupReady = $false
+if (Get-ChildItem -LiteralPath $config.installRoot -Force -Recurse | Where-Object {{ $_.Attributes -band [IO.FileAttributes]::ReparsePoint }}) {{ throw 'Install folder contains a reparse point; update was blocked.' }}
+
+# Revalidate every staged file before changing any installed file.
+foreach ($file in $config.files) {{
+    $source = [IO.Path]::GetFullPath((Join-Path $config.stageRoot $file.Path))
+    if (!$source.StartsWith($stagePrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe staged update path' }}
+    if (!(Test-Path -LiteralPath $source -PathType Leaf)) {{ throw ('Staged file is missing: ' + $file.Path) }}
+    $actual = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actual -ne $file.Sha256.ToLowerInvariant()) {{ throw ('Staged file hash changed: ' + $file.Path) }}
+    if ((Get-Item -LiteralPath $source).Length -ne [long]$file.SizeBytes) {{ throw ('Staged file size changed: ' + $file.Path) }}
+    $target = [IO.Path]::GetFullPath((Join-Path $config.installRoot $file.Path))
+    if (!$target.StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe install target' }}
+}}
+
 New-Item -ItemType Directory -Force -Path $config.rollbackRoot | Out-Null
 try {{
-    Copy-Item -Path (Join-Path $config.installRoot '*') -Destination $config.rollbackRoot -Recurse -Force
-    $stagePrefix = [IO.Path]::GetFullPath($config.stageRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
-    $installPrefix = [IO.Path]::GetFullPath($config.installRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+    Get-ChildItem -LiteralPath $config.installRoot -Force | ForEach-Object {{
+        Copy-Item -LiteralPath $_.FullName -Destination $config.rollbackRoot -Recurse -Force
+    }}
+    $backupReady = $true
+
     foreach ($file in $config.files) {{
         $source = [IO.Path]::GetFullPath((Join-Path $config.stageRoot $file.Path))
-        if (!$source.StartsWith($stagePrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe staged update path' }}
-        $actual = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($actual -ne $file.Sha256.ToLowerInvariant()) {{ throw ('Staged file hash changed: ' + $file.Path) }}
-        if ((Get-Item -LiteralPath $source).Length -ne [long]$file.SizeBytes) {{ throw ('Staged file size changed: ' + $file.Path) }}
         $target = [IO.Path]::GetFullPath((Join-Path $config.installRoot $file.Path))
-        if (!$target.StartsWith($installPrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe install target' }}
         New-Item -ItemType Directory -Force -Path ([IO.Path]::GetDirectoryName($target)) | Out-Null
         Copy-Item -LiteralPath $source -Destination $target -Force
     }}
-    $state = @{{ InstallDirectory=$config.installRoot; ExecutablePath=$config.executable; BackupDirectory=$config.rollbackRoot; PreviousVersion=$config.previousVersion; InstalledVersion=$config.installedVersion; InstalledAtUtc=[DateTime]::UtcNow.ToString('o') }}
-    $state | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $config.statePath -Encoding UTF8
+
+    $state = @{{ InstallDirectory=$config.installRoot; ExecutablePath=$config.executable; BackupDirectory=$config.rollbackRoot; PreviousVersion=$config.previousVersion; InstalledVersion=$config.installedVersion; InstalledAtUtc=[DateTime]::UtcNow.ToString('o'); InstalledFilePaths=@($config.files | ForEach-Object {{ $_.Path }}) }}
+    $stateTemp = $config.statePath + '.tmp'
+    $state | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $stateTemp -Encoding UTF8
+    Move-Item -LiteralPath $stateTemp -Destination $config.statePath -Force
     Start-Process -FilePath $config.executable -WorkingDirectory $config.installRoot
 }}
 catch {{
-    if (Test-Path -LiteralPath $config.rollbackRoot) {{ Copy-Item -Path (Join-Path $config.rollbackRoot '*') -Destination $config.installRoot -Recurse -Force }}
+    if ($backupReady) {{
+        foreach ($file in $config.files) {{
+            $target = [IO.Path]::GetFullPath((Join-Path $config.installRoot $file.Path))
+            $backupFile = [IO.Path]::GetFullPath((Join-Path $config.rollbackRoot $file.Path))
+            if (!$backupFile.StartsWith(([IO.Path]::GetFullPath($config.rollbackRoot).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar), [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe rollback source' }}
+            if (!(Test-Path -LiteralPath $backupFile) -and (Test-Path -LiteralPath $target)) {{ Remove-Item -LiteralPath $target -Force }}
+        }}
+        Get-ChildItem -LiteralPath $config.rollbackRoot -Force | ForEach-Object {{
+            Copy-Item -LiteralPath $_.FullName -Destination $config.installRoot -Recurse -Force
+        }}
+        Start-Process -FilePath $config.executable -WorkingDirectory $config.installRoot
+    }}
     throw
 }}
 ");
