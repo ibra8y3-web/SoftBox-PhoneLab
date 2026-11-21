@@ -738,6 +738,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "InstallSamsungDriver":
                 InstallSamsungUsbDriver_Click(this, new RoutedEventArgs());
                 break;
+            case "OpenUsbDriverSignatureVerifier":
+                new UsbDriverSignatureVerifierWindow { Owner = this }.Show();
+                break;
             case "InspectFirmware":
                 FirmwareInspect_Click(this, new RoutedEventArgs());
                 break;
