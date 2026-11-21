@@ -24,6 +24,7 @@ public sealed record OneClickDiagnosticReport(
     AgentSnapshot? Agent,
     IReadOnlyList<ComponentDiagnostic> ComponentDiagnostics,
     IReadOnlyList<QuickDiagnosticStep> Steps,
+    DeviceDiagnosticEnginePlan EnginePlan,
     RepairAdviceReport Advice,
     IReadOnlyList<string> Limitations);
 
@@ -93,6 +94,9 @@ public sealed class DeviceQuickDiagnosticService(AndroidDeviceToolsService andro
             limitations.Add("لم يتم إرفاق نتائج Agent؛ لا توجد نتائج اختبارات عتاد تلقائية في هذا التقرير.");
 
         var safeDevice = device is null ? null : device with { Serial = "" };
+        var enginePlan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
+            device, null, AdbAuthorized: true, AgentConnected: agent is not null, FastbootDetected: false));
+        limitations.Add("محرك المعالج يختار خطة تشخيص حسب SoC المبلغ عنه أو ملف موثوق؛ لا يرسل بروتوكولات OEM خاصة ولا ينفذ تفليشًا.");
         return new OneClickDiagnosticReport(
             LocalActivityStore.CreateDeviceFingerprint(serial),
             LocalActivityStore.MaskSerial(serial),
@@ -102,6 +106,7 @@ public sealed class DeviceQuickDiagnosticService(AndroidDeviceToolsService andro
             agent,
             immutableComponents,
             results,
+            enginePlan,
             advice,
             limitations);
     }

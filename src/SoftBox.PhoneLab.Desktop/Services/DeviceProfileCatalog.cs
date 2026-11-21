@@ -45,7 +45,7 @@ public sealed class DeviceProfileCatalog
                 MergeOrAppend(merged, profile);
         }
 
-        var sources = curated.Sources.Concat(community?.Sources ?? []).ToList();
+        var sources = (curated.Sources ?? []).Concat(community?.Sources ?? []).ToList();
         var sourceText = curated.Source;
         if (community is not null)
             sourceText += " | " + community.Source;
@@ -57,7 +57,8 @@ public sealed class DeviceProfileCatalog
             SchemaVersion = 1,
             CatalogVersion = curated.CatalogVersion + (community is null ? "" : "+" + community.CatalogVersion),
             Source = sourceText,
-            UpdatedAtUtc = community?.UpdatedAtUtc > curated.UpdatedAtUtc ? community.UpdatedAtUtc : curated.UpdatedAtUtc,
+            UpdatedAtUtc = community is not null && community.UpdatedAtUtc > curated.UpdatedAtUtc
+                ? community.UpdatedAtUtc : curated.UpdatedAtUtc,
             GeneratedAtUtc = community?.GeneratedAtUtc ?? curated.GeneratedAtUtc,
             Sources = sources,
             Profiles = merged
@@ -209,7 +210,7 @@ public sealed class DeviceProfileCatalog
 
     private static void MergeOrAppend(List<DeviceProfile> profiles, DeviceProfile incoming)
     {
-        if (profiles.Any(existing => existing.Id.Equals(incoming.Id, StringComparison.OrdinalIgnoreCase) &&
+        if (profiles.Any(existing => string.Equals(existing.Id, incoming.Id, StringComparison.OrdinalIgnoreCase) &&
                                      !SharesIdentifier(existing, incoming)))
             return;
 
@@ -261,7 +262,7 @@ public sealed class DeviceProfileCatalog
             Peripherals = Union(preferred.Peripherals, extra.Peripherals),
             SupportedOsVersions = Union(preferred.SupportedOsVersions, extra.SupportedOsVersions),
             CurrentOsBranch = First(preferred.CurrentOsBranch, extra.CurrentOsBranch),
-            Sources = preferred.Sources.Concat(extra.Sources)
+            Sources = (preferred.Sources ?? []).Concat(extra.Sources ?? [])
                 .GroupBy(source => source.Id, StringComparer.OrdinalIgnoreCase)
                 .Select(group => group.First()).ToList()
         };
@@ -291,7 +292,8 @@ public sealed class DeviceProfileCatalog
     {
         using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
-        if (response.Content.Headers.ContentLength is > 0 and var length && length > maxCharacters)
+        var contentLength = response.Content.Headers.ContentLength;
+        if (contentLength.HasValue && contentLength.Value > maxCharacters)
             throw new InvalidDataException("The requested device catalog exceeds the permitted size.");
         var json = await response.Content.ReadAsStringAsync(cancellationToken);
         if (json.Length > maxCharacters)
