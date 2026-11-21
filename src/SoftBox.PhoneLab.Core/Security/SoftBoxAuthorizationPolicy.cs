@@ -36,6 +36,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenAndroidWorkflow"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenFastbootManager"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenDeviceCapabilityCenter"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenDeviceAccessRecoveryCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDoctor"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenQualcommUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenMediaTekUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,

@@ -799,6 +799,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenFastbootManager":
                 new FastbootManagerWindow { Owner = this }.Show();
                 break;
+            case "OpenDeviceAccessRecoveryCenter":
+            {
+                var accessDevice = SelectedDevice;
+                var hasAuthorizedAccessDevice = accessDevice is { IsAuthorized: true };
+                new DeviceAccessRecoveryWindow(
+                    hasAuthorizedAccessDevice ? _adb : null,
+                    hasAuthorizedAccessDevice ? accessDevice!.Serial : null,
+                    accessDevice?.Manufacturer,
+                    accessDevice?.Model ?? accessDevice?.DisplayName)
+                { Owner = this }.Show();
+                break;
+            }
             case "OpenSamsungOdinAssistant":
             {
                 var samsungDevice = SelectedDevice;
