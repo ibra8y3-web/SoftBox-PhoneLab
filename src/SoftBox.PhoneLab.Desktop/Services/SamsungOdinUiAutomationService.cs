@@ -30,10 +30,11 @@ public sealed class SamsungOdinUiAutomationService
         string selectedOdinExecutable,
         IReadOnlyList<string> expectedPackagePaths,
         bool operatorConfirmedCompatibility,
-        bool operatorConfirmedBackup)
+        bool operatorConfirmedBackup,
+        bool operatorConfirmedComPortMatchesSelectedDevice)
     {
         var capture = Capture(selectedOdinExecutable, expectedPackagePaths,
-            operatorConfirmedCompatibility, operatorConfirmedBackup);
+            operatorConfirmedCompatibility, operatorConfirmedBackup, operatorConfirmedComPortMatchesSelectedDevice);
         return capture.Report;
     }
 
@@ -41,10 +42,11 @@ public sealed class SamsungOdinUiAutomationService
         string selectedOdinExecutable,
         IReadOnlyList<string> expectedPackagePaths,
         bool operatorConfirmedCompatibility,
-        bool operatorConfirmedBackup)
+        bool operatorConfirmedBackup,
+        bool operatorConfirmedComPortMatchesSelectedDevice)
     {
         var capture = Capture(selectedOdinExecutable, expectedPackagePaths,
-            operatorConfirmedCompatibility, operatorConfirmedBackup);
+            operatorConfirmedCompatibility, operatorConfirmedBackup, operatorConfirmedComPortMatchesSelectedDevice);
         if (!capture.Report.Decision.CanInvokeStart)
             return capture.Report;
 
@@ -80,7 +82,8 @@ public sealed class SamsungOdinUiAutomationService
         string selectedOdinExecutable,
         IReadOnlyList<string> expectedPackagePaths,
         bool operatorConfirmedCompatibility,
-        bool operatorConfirmedBackup)
+        bool operatorConfirmedBackup,
+        bool operatorConfirmedComPortMatchesSelectedDevice)
     {
         var expectedPackages = (expectedPackagePaths ?? Array.Empty<string>())
             .Select(path => Path.GetFileName(path))
@@ -137,7 +140,10 @@ public sealed class SamsungOdinUiAutomationService
                 expectedPackages,
                 Array.Empty<string>(),
                 operatorConfirmedCompatibility,
-                operatorConfirmedBackup));
+                operatorConfirmedBackup)
+            {
+                OperatorConfirmedComPortMatchesSelectedDevice = operatorConfirmedComPortMatchesSelectedDevice
+            });
             blocked = blocked with
             {
                 Blockers = blocked.Blockers.Append(
@@ -207,7 +213,8 @@ public sealed class SamsungOdinUiAutomationService
             operatorConfirmedCompatibility,
             operatorConfirmedBackup)
         {
-            StartButtonSupportsInvokePattern = startSupportsInvoke
+            StartButtonSupportsInvokePattern = startSupportsInvoke,
+            OperatorConfirmedComPortMatchesSelectedDevice = operatorConfirmedComPortMatchesSelectedDevice
         };
         var decision = SamsungOdinAutomationPolicy.Evaluate(evidence);
         if (startButtons.Count == 1 && !startSupportsInvoke)
