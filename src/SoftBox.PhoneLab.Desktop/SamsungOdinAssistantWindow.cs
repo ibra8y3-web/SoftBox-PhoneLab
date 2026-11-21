@@ -229,6 +229,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             _odinExecutable.Text = Path.GetFullPath(dialog.FileName);
+            _inspectOdinUiButton.IsEnabled = _packagesInspected && _deviceSerial is not null;
+            _startOdinButton.IsEnabled = false;
             _status.Text = "تم اختيار ملف Odin. لم يتم تشغيله أو التحقق من ناشره.";
         }
     }
