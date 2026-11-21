@@ -1,6 +1,9 @@
 using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Desktop.Services;
+using Microsoft.Win32;
 using System.Collections.ObjectModel;
+using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -20,11 +23,15 @@ public sealed class ActivityCenterWindow : Window
     private readonly ListBox _historyList = new();
     private readonly ListBox _notificationList = new();
     private readonly TextBox _historyDetails = new();
+    private readonly TextBox _historySearch = new();
+    private readonly ComboBox _historyEventFilter = new();
     private readonly TextBox _notificationDetails = new();
     private readonly TextBlock _status = new();
+    private IReadOnlyList<DeviceHistoryEntry> _allHistory = [];
     private readonly Button _refreshButton;
     private readonly Button _markReadButton;
     private readonly Button _markAllReadButton;
+    private readonly Button _exportHistoryButton;
     private CancellationTokenSource? _operation;
 
     public ActivityCenterWindow(LocalActivityStore store, string? serial = null, int initialTab = 0)
@@ -47,6 +54,9 @@ public sealed class ActivityCenterWindow : Window
         _refreshButton = ButtonControl("تحديث السجل", "#14517A", Refresh_Click);
         _markReadButton = ButtonControl("تعليم الإشعار كمقروء", "#176044", MarkRead_Click);
         _markAllReadButton = ButtonControl("تعليم الكل كمقروء", "#243B56", MarkAllRead_Click);
+        _exportHistoryButton = ButtonControl("تصدير السجل المفلتر CSV", "#176044", ExportHistory_Click);
+        _historySearch.TextChanged += (_, _) => ApplyHistoryFilter();
+        _historyEventFilter.SelectionChanged += (_, _) => ApplyHistoryFilter();
 
         Content = BuildContent();
         Loaded += async (_, _) =>
@@ -119,7 +129,33 @@ public sealed class ActivityCenterWindow : Window
 
     private TabItem BuildHistoryTab()
     {
-        var grid = new Grid { Margin = new Thickness(8) };
+        var root = new DockPanel { Margin = new Thickness(8), LastChildFill = true };
+        var filters = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+
+        _historySearch.Width = 250;
+        _historySearch.Height = 34;
+        _historySearch.Margin = new Thickness(0, 0, 7, 5);
+        _historySearch.Padding = new Thickness(8, 5, 8, 5);
+        _historySearch.Background = Brush("#071625");
+        _historySearch.Foreground = Brush("#DCEBFA");
+        _historySearch.BorderBrush = Brush("#35516F");
+        _historySearch.ToolTip = "ابحث في الجهاز والموديل ونوع العملية والملخص والدليل";
+        filters.Children.Add(_historySearch);
+
+        _historyEventFilter.Width = 180;
+        _historyEventFilter.Height = 34;
+        _historyEventFilter.Margin = new Thickness(0, 0, 7, 5);
+        _historyEventFilter.Background = Brush("#071625");
+        _historyEventFilter.Foreground = Brush("#DCEBFA");
+        _historyEventFilter.BorderBrush = Brush("#35516F");
+        _historyEventFilter.Items.Add(new ComboBoxItem { Content = "كل أنواع العمليات", Tag = "" });
+        _historyEventFilter.SelectedIndex = 0;
+        filters.Children.Add(_historyEventFilter);
+        filters.Children.Add(_exportHistoryButton);
+        DockPanel.SetDock(filters, Dock.Top);
+        root.Children.Add(filters);
+
+        var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.25, GridUnitType.Star) });
 
@@ -136,7 +172,8 @@ public sealed class ActivityCenterWindow : Window
         details.Margin = new Thickness(8, 0, 0, 0);
         Grid.SetColumn(details, 1);
         grid.Children.Add(details);
-        return new TabItem { Header = "Repair History", Content = grid };
+        root.Children.Add(grid);
+        return new TabItem { Header = "Repair History", Content = root };
     }
 
     private TabItem BuildNotificationsTab()
@@ -188,12 +225,9 @@ public sealed class ActivityCenterWindow : Window
             var history = await _store.GetDeviceHistoryAsync(_serial, _operation.Token);
             var notifications = await _store.GetNotificationsAsync(false, _operation.Token);
 
-            _history.Clear();
-            foreach (var entry in history)
-                _history.Add(new ActivityDisplayItem(
-                    entry.Id,
-                    $"{entry.AtUtc.LocalDateTime:yyyy-MM-dd HH:mm:ss} | {entry.MaskedSerial} | {entry.Manufacturer} {entry.Model} | {entry.EventType}",
-                    entry));
+            _allHistory = history;
+            RebuildHistoryEventTypes();
+            ApplyHistoryFilter();
 
             _notifications.Clear();
             foreach (var notification in notifications)
@@ -203,7 +237,8 @@ public sealed class ActivityCenterWindow : Window
                     notification));
 
             var unread = notifications.Count(item => !item.IsRead);
-            _status.Text = $"التاريخ: {_history.Count:N0} سجل | الإشعارات: {_notifications.Count:N0} | غير مقروء: {unread:N0}";
+            _status.Text = $"السجل: {_history.Count:N0} معروض من {_allHistory.Count:N0} | الإشعارات: {_notifications.Count:N0} | غير مقروء: {unread:N0}";
+            _exportHistoryButton.IsEnabled = _history.Count > 0;
         }
         catch (Exception ex)
         {
@@ -218,6 +253,78 @@ public sealed class ActivityCenterWindow : Window
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshAsync();
+
+    private void RebuildHistoryEventTypes()
+    {
+        var selected = (_historyEventFilter.SelectedItem as ComboBoxItem)?.Tag as string ?? "";
+        _historyEventFilter.Items.Clear();
+        var allItem = new ComboBoxItem { Content = "كل أنواع العمليات", Tag = "" };
+        _historyEventFilter.Items.Add(allItem);
+
+        foreach (var eventType in _allHistory
+                     .Select(entry => entry.EventType)
+                     .Where(value => !string.IsNullOrWhiteSpace(value))
+                     .Distinct(StringComparer.OrdinalIgnoreCase)
+                     .OrderBy(value => value, StringComparer.OrdinalIgnoreCase))
+        {
+            _historyEventFilter.Items.Add(new ComboBoxItem { Content = eventType, Tag = eventType });
+        }
+
+        _historyEventFilter.SelectedItem = _historyEventFilter.Items
+            .OfType<ComboBoxItem>()
+            .FirstOrDefault(item => string.Equals(item.Tag as string, selected, StringComparison.OrdinalIgnoreCase))
+            ?? allItem;
+    }
+
+    private void ApplyHistoryFilter()
+    {
+        var eventType = (_historyEventFilter.SelectedItem as ComboBoxItem)?.Tag as string;
+        var filtered = RepairHistoryQuery.Filter(_allHistory, _historySearch.Text, eventType);
+        _history.Clear();
+
+        foreach (var entry in filtered)
+            _history.Add(new ActivityDisplayItem(
+                entry.Id,
+                $"{entry.AtUtc.LocalDateTime:yyyy-MM-dd HH:mm:ss} | {entry.MaskedSerial} | {entry.Manufacturer} {entry.Model} | {entry.EventType}",
+                entry));
+
+        _exportHistoryButton.IsEnabled = filtered.Count > 0;
+        if (_history.Count == 0)
+            _historyDetails.Text = "لا توجد سجلات تطابق البحث أو نوع العملية المحدد.";
+    }
+
+    private void ExportHistory_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var eventType = (_historyEventFilter.SelectedItem as ComboBoxItem)?.Tag as string;
+            var filtered = RepairHistoryQuery.Filter(_allHistory, _historySearch.Text, eventType);
+            if (filtered.Count == 0)
+            {
+                _status.Text = "لا توجد سجلات لتصديرها بعد تطبيق عوامل التصفية.";
+                return;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "تصدير سجل الصيانة",
+                Filter = "CSV files (*.csv)|*.csv",
+                DefaultExt = ".csv",
+                AddExtension = true,
+                OverwritePrompt = true,
+                FileName = "SoftBox-Repair-History-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".csv"
+            };
+            if (dialog.ShowDialog(this) != true)
+                return;
+
+            File.WriteAllText(dialog.FileName, RepairHistoryQuery.ToCsv(filtered), new UTF8Encoding(true));
+            _status.Text = $"تم تصدير {filtered.Count:N0} سجلًا. الملف يحتوي Serial مقنّعًا ولا يتضمن بصمة الجهاز.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تصدير سجل الصيانة: " + ex.Message;
+        }
+    }
 
     private async void MarkRead_Click(object sender, RoutedEventArgs e)
     {

@@ -162,3 +162,9 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - Generic iPhone diagnosis is not implemented.
 
 See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
+
+
+### Additional Network Diagnostics and Repair History tools
+
+- Network Diagnostics can inspect the selected authorized Android phone's reported DNS servers and send one bounded ICMP Ping request from the phone itself to a technician-selected hostname or IP. The result displays Android's raw output; a missing ICMP reply is not treated as proof of Internet failure.
+- Repair History supports text search across device, model, event, summary and evidence, filtering by event type, and exporting only matching entries to UTF-8 CSV. Exported serials remain masked and the device fingerprint is omitted.

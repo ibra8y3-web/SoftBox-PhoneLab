@@ -280,3 +280,39 @@ Section 30 is now In Development rather than Planned. The current implementation
 - Integrated the scheduler into the authenticated desktop session with independent 30-second device polling, including when visible auto-discovery is disabled. ReadOnly accounts do not execute scheduled device backups.
 - Added a dedicated Smart Backup workspace to create, list, pause/resume, delete and run schedules immediately. The UI refreshes when a job finishes.
 - Added policy, DPAPI store and service orchestration tests. The scheduler requires SoftBox to remain open and the Windows user to remain signed in; it does not create a Windows Task Scheduler job or wake a sleeping PC.
+
+
+## Current main audit and additive gap closure — 21 November 2026
+
+This checkpoint supersedes older catalog totals above. Historical sections are retained as implementation history; the current counts below are derived from the current catalog and tests.
+
+- **36/36 sections** remain in the specified order. Every section has an audited feature entry; no empty top-level section is hidden behind a placeholder.
+- **139 child features / 175 total catalog entries**, counting the 36 section rows.
+- Child feature status: **101 Implemented, 23 Tested, 4 In Development, 9 Planned, 2 Unsupported, 0 Verified**.
+- Planned and Unsupported entries have no executable Run action. Existing shared tools retain one canonical action and implementation; the additions in this wave add feature metadata under the existing section action rather than creating duplicate launch routes.
+- Section 16 now includes a real phone-origin network check: DNS property observations plus one bounded ICMP request from the selected Android device.
+- Section 22 now includes text search, operation-type filtering and filtered CSV export for per-device repair history. The export includes masked serial only; it excludes the device fingerprint and raw serial.
+- Existing Fastboot inspection, Android app lifecycle, runtime permissions, device service transitions, APK cryptographic verification, resumable Firmware download, and Workshop quote/payment documents are now labelled **Tested** because the corresponding automated test files cover their core operations. This is test-suite coverage, not physical handset, vendor hardware or real firmware verification.
+- No physical-device feature is marked Verified.
+
+### Remaining non-executable or incomplete capabilities
+
+| Section | Feature | Current state and reason no executable action is exposed |
+|---|---|---|
+| 03 Device Intelligence | Complete per-model capability matrix | In Development. The conservative engine exists and blocks unknown or unsupported operations; reviewed coverage across more models and evidence sources remains incomplete. |
+| 06 Samsung Tools | Low-level Download Mode/Odin automation | Planned. The Odin hand-off assistant exists, but undocumented UI automation or low-level flashing is not implemented. |
+| 07 Xiaomi Tools | Xiaomi-specific Fastboot service workflows | Planned. Generic Fastboot inspection exists; no model/region-verified Xiaomi service sequence is present. |
+| 08 Android Brands | Brand-specific service workflows | Planned. Generic Android properties exist; dedicated Pixel, Motorola, OPPO, vivo, realme, Huawei, TECNO and Infinix protocols are not verified. |
+| 09 Qualcomm Tools | Qualcomm EDL recovery | Planned. No signed, model-matched programmer or verified secure-boot/authorization workflow is available. |
+| 10 MediaTek Tools | BROM/Preloader recovery | Planned. No signed, model-matched Download Agent or verified authorization flow is available. |
+| 11 Firmware Center | Firmware-to-device compatibility gate | Planned. Archive hash/metadata inspection do not establish publisher trust, exact board/region compatibility or anti-rollback safety. |
+| 14 Phone Link Studio | Multi-session real-device reliability | In Development. Session UI and concurrency policy exist; codec, lifecycle and multi-device behavior still require target-device testing. |
+| 17 Smart Repair AI | Expanded model-specific offline repair knowledge | In Development. The existing advisor is deterministic and evidence-linked; a reviewed model-specific repair knowledge base is not complete. |
+| 26 Plugin Store | Publisher signature trust roots | Planned. ZIP/manifest inspection exists, but trusted publisher root management is not implemented. |
+| 26 Plugin Store | Plugin installation, dependency lifecycle and sandbox runtime | Planned. Deliberately disabled until permission grants, dependency lifecycle and process isolation are implemented and tested. |
+| 31 Update Center | Signed self-updater | Planned. Release metadata inspection exists, but there is no trusted application-signing root, staged installer or verified rollback mechanism. |
+| 31 Update Center | Release rollback policy | In Development. Stable/Beta metadata checks exist; installing a prior version and recovering safely are not implemented. |
+
+### Hardware and safety boundary
+
+Qualcomm EDL, MediaTek BROM/Preloader, undocumented Samsung Download/Odin control, OEM unlock/erase/flash, FRP or account-lock bypass, and private application-data extraction are not represented as working tools. They remain unavailable unless a lawful, vendor-documented, model-specific protocol with explicit authorization and reliable verification can be established. A successful Windows CI run or unit-test suite does not constitute physical-device verification.

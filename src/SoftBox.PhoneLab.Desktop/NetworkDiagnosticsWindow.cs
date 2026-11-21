@@ -23,6 +23,7 @@ public sealed class NetworkDiagnosticsWindow : Window
     private readonly ProgressBar _progress = new();
     private readonly Button _probeButton;
     private readonly Button _androidInspectButton;
+    private readonly Button _androidProbeButton;
     private readonly Button _cancelButton;
     private CancellationTokenSource? _operation;
 
@@ -49,6 +50,11 @@ public sealed class NetworkDiagnosticsWindow : Window
         _androidInspectButton.ToolTip = _androidService is null
             ? "اختر هاتف Android مصرحًا به عبر ADB من مركز الأجهزة أولًا."
             : "قراءة عناوين واجهات ومسارات الشبكة التي يعرضها Android عبر ADB.";
+        _androidProbeButton = ButtonControl("اختبار الاتصال من الهاتف", "#176044", ProbeAndroidHost_Click);
+        _androidProbeButton.IsEnabled = _androidService is not null;
+        _androidProbeButton.ToolTip = _androidService is null
+            ? "اختر هاتف Android مصرحًا به عبر ADB أولًا."
+            : "قراءة خوادم DNS وإرسال طلب Ping واحد من الهاتف المحدد إلى الهدف المدخل.";
         _cancelButton = ButtonControl("إلغاء", "#51333A", Cancel_Click);
         _cancelButton.IsEnabled = false;
         Content = BuildContent();
@@ -118,6 +124,7 @@ public sealed class NetworkDiagnosticsWindow : Window
         actions.Children.Add(_host);
         actions.Children.Add(_probeButton);
         actions.Children.Add(_androidInspectButton);
+        actions.Children.Add(_androidProbeButton);
         actions.Children.Add(_cancelButton);
         top.Children.Add(actions);
 
@@ -234,6 +241,7 @@ public sealed class NetworkDiagnosticsWindow : Window
         _operation = new CancellationTokenSource();
         _probeButton.IsEnabled = false;
         _androidInspectButton.IsEnabled = false;
+        _androidProbeButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ حل اسم النطاق عبر DNS ثم إرسال طلب ICMP واحد إلى أول عنوان مناسب...";
@@ -268,6 +276,7 @@ public sealed class NetworkDiagnosticsWindow : Window
             _operation = null;
             _probeButton.IsEnabled = true;
             _androidInspectButton.IsEnabled = _androidService is not null;
+            _androidProbeButton.IsEnabled = _androidService is not null;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }
@@ -286,6 +295,7 @@ public sealed class NetworkDiagnosticsWindow : Window
         _operation = new CancellationTokenSource();
         _probeButton.IsEnabled = false;
         _androidInspectButton.IsEnabled = false;
+        _androidProbeButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _progress.Visibility = Visibility.Visible;
         _status.Text = "جارٍ قراءة عناوين واجهات ومسارات الشبكة من هاتف Android المحدد عبر ADB...";
@@ -323,6 +333,72 @@ public sealed class NetworkDiagnosticsWindow : Window
             _operation = null;
             _probeButton.IsEnabled = true;
             _androidInspectButton.IsEnabled = _androidService is not null;
+            _androidProbeButton.IsEnabled = _androidService is not null;
+            _cancelButton.IsEnabled = false;
+            _progress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+
+    private async void ProbeAndroidHost_Click(object sender, RoutedEventArgs e)
+    {
+        if (_operation is not null)
+            return;
+        if (_androidService is null || string.IsNullOrWhiteSpace(_androidSerial))
+        {
+            _status.Text = "اختر هاتف Android مصرحًا به عبر ADB أولًا ثم افتح تشخيص الشبكات.";
+            return;
+        }
+        if (!NetworkDiagnosticsService.IsValidHost(_host.Text))
+        {
+            MessageBox.Show(this, "أدخل اسم نطاق صحيحًا مثل example.com أو عنوان IP دون https:// أو مسار.",
+                "Android Network Diagnostics", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        _operation = new CancellationTokenSource();
+        _probeButton.IsEnabled = false;
+        _androidInspectButton.IsEnabled = false;
+        _androidProbeButton.IsEnabled = false;
+        _cancelButton.IsEnabled = true;
+        _progress.Visibility = Visibility.Visible;
+        _status.Text = "جارٍ قراءة DNS وإرسال طلب Ping واحد من الهاتف المحدد...";
+        try
+        {
+            var snapshot = await _androidService.ProbeHostAsync(
+                _androidSerial, _host.Text, _operation.Token);
+            var output = new StringBuilder();
+            output.AppendLine("ANDROID DEVICE: " + LocalActivityStore.MaskSerial(snapshot.DeviceSerial));
+            output.AppendLine("TARGET: " + snapshot.Target);
+            output.AppendLine("CAPTURED UTC: " + snapshot.CapturedAtUtc.ToString("O"));
+            output.AppendLine();
+            output.AppendLine("ANDROID DNS SERVERS:");
+            output.AppendLine("Primary: " + (string.IsNullOrWhiteSpace(snapshot.PrimaryDnsServer) ? "غير متاح" : snapshot.PrimaryDnsServer));
+            output.AppendLine("Secondary: " + (string.IsNullOrWhiteSpace(snapshot.SecondaryDnsServer) ? "غير متاح" : snapshot.SecondaryDnsServer));
+            output.AppendLine();
+            output.AppendLine("PING OUTPUT (one packet):");
+            output.AppendLine(string.IsNullOrWhiteSpace(snapshot.PingOutput) ? "لا توجد مخرجات من Android." : snapshot.PingOutput);
+            output.AppendLine();
+            output.AppendLine("عدم وصول رد ICMP لا يثبت انقطاع الإنترنت؛ قد تمنع الشبكة أو الوجهة طلبات Ping.");
+            _results.Text = output.ToString();
+            _status.Text = "انتهى اختبار الشبكة من الهاتف. تمت قراءة خوادم DNS وإرسال طلب ICMP واحد؛ راجع المخرجات.";
+        }
+        catch (OperationCanceledException)
+        {
+            _status.Text = "تم إلغاء اختبار اتصال Android.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر اختبار اتصال Android: " + ex.Message;
+            _results.Text = ex.ToString();
+        }
+        finally
+        {
+            _operation.Dispose();
+            _operation = null;
+            _probeButton.IsEnabled = true;
+            _androidInspectButton.IsEnabled = _androidService is not null;
+            _androidProbeButton.IsEnabled = _androidService is not null;
             _cancelButton.IsEnabled = false;
             _progress.Visibility = Visibility.Collapsed;
         }
