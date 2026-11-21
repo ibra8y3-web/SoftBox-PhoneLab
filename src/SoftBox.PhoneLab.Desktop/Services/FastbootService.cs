@@ -83,6 +83,65 @@ public sealed class FastbootService
         return ExecuteAsync(arguments, cancellationToken, TimeSpan.FromMinutes(10));
     }
 
+    /// <summary>
+    /// Flashes one image from a pre-inspected Xiaomi ROM plan. The caller must revalidate the
+    /// selected device, product, lock state and image hash immediately before every operation.
+    /// </summary>
+    public Task<string> FlashRomImageAsync(
+        string serial,
+        string partition,
+        string imagePath,
+        CancellationToken cancellationToken = default)
+    {
+        var arguments = BuildFlashRomImageArguments(serial, partition, imagePath);
+        return ExecuteAsync(arguments, cancellationToken, TimeSpan.FromMinutes(30));
+    }
+
+    public static IReadOnlyList<string> BuildFlashRomImageArguments(
+        string serial, string partition, string imagePath)
+    {
+        ValidateSerial(serial);
+        if (!IsSafeRomPartition(partition))
+            throw new ArgumentException("اسم قسم ROM غير صالح.", nameof(partition));
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
+            throw new FileNotFoundException("صورة ROM غير موجودة.", imagePath);
+
+        var fullPath = Path.GetFullPath(imagePath);
+        var info = new FileInfo(fullPath);
+        if (info.Length is <= 0 or > 8L * 1024 * 1024 * 1024)
+            throw new InvalidDataException("صورة ROM فارغة أو تتجاوز 8 GiB.");
+        if ((info.Attributes & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("لا يسمح باستخدام رابط رمزي كصورة ROM.");
+
+        return ["-s", serial, "flash", partition, fullPath];
+    }
+
+    /// <summary>
+    /// Explicit, destructive fastboot -w operation. It must only be called after a separate,
+    /// clearly worded user confirmation; it is never inferred from a checked package option.
+    /// </summary>
+    public Task<string> WipeUserDataAsync(
+        string serial,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(BuildWipeUserDataArguments(serial), cancellationToken, TimeSpan.FromMinutes(5));
+    }
+
+    public static IReadOnlyList<string> BuildWipeUserDataArguments(string serial)
+    {
+        ValidateSerial(serial);
+        return ["-s", serial, "-w"];
+    }
+
+    private static bool IsSafeRomPartition(string? partition)
+    {
+        if (string.IsNullOrWhiteSpace(partition) || partition.Length > 64 ||
+            !char.IsAsciiLetterOrDigit(partition[0]))
+            return false;
+        return partition.All(character =>
+            char.IsAsciiLetterOrDigit(character) || character is '_' or '.' or '-');
+    }
+
     public static IReadOnlyList<string> BuildFlashPartitionArguments(string serial, string partition, string imagePath)
     {
         ValidateSerial(serial);
