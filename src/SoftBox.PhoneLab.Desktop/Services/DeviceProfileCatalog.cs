@@ -17,7 +17,7 @@ public sealed class DeviceProfileCatalog
     private const string LegacyCommunityCatalogUrl = "https://raw.githubusercontent.com/bsthen/device-models/main/devices.json";
     private const string CommunitySource = "Google Play supported-device identifiers via bsthen/device-models (Apache-2.0)";
     private const string CommunitySourceUrl = "https://github.com/bsthen/device-models";
-    private const int MaxCommunityCatalogCharacters = 30_000_000;
+    private const int MaxCommunityCatalogCharacters = 100_000_000;
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(45) };
     private readonly JsonSerializerOptions _json = new() { PropertyNameCaseInsensitive = true, MaxDepth = 32 };
 
@@ -30,20 +30,10 @@ public sealed class DeviceProfileCatalog
     public async Task<DeviceProfileCatalogDocument> LoadAsync()
     {
         var curated = await ReadCuratedCatalogAsync();
-        var merged = curated.Profiles.ToList();
         var community = await ReadCommunityCatalogAsync();
         var loadedCommunityDocument = community is not null;
-
-        if (community is not null)
-        {
-            foreach (var profile in community.Profiles)
-                MergeOrAppend(merged, profile);
-        }
-        else
-        {
-            foreach (var profile in await ReadLegacyGoogleModelCatalogAsync())
-                MergeOrAppend(merged, profile);
-        }
+        var incoming = community?.Profiles ?? await ReadLegacyGoogleModelCatalogAsync();
+        var merged = DeviceProfileCatalogMerger.Merge(curated.Profiles, incoming).ToList();
 
         var sources = (curated.Sources ?? []).Concat(community?.Sources ?? []).ToList();
         var sourceText = curated.Source;
@@ -207,85 +197,6 @@ public sealed class DeviceProfileCatalog
         }
         catch (Exception ex) when (ex is IOException or JsonException) { return []; }
     }
-
-    private static void MergeOrAppend(List<DeviceProfile> profiles, DeviceProfile incoming)
-    {
-        if (profiles.Any(existing => string.Equals(existing.Id, incoming.Id, StringComparison.OrdinalIgnoreCase) &&
-                                     !SharesIdentifier(existing, incoming)))
-            return;
-
-        var index = profiles.FindIndex(existing =>
-            existing.Manufacturer.Equals(incoming.Manufacturer, StringComparison.OrdinalIgnoreCase) &&
-            SharesIdentifier(existing, incoming));
-        if (index < 0)
-        {
-            profiles.Add(incoming);
-            return;
-        }
-
-        profiles[index] = Merge(profiles[index], incoming);
-    }
-
-    private static DeviceProfile Merge(DeviceProfile preferred, DeviceProfile extra)
-        => new()
-        {
-            Id = preferred.Id,
-            Manufacturer = preferred.Manufacturer,
-            MarketingName = First(preferred.MarketingName, extra.MarketingName),
-            ModelNumbers = Union(preferred.ModelNumbers, extra.ModelNumbers),
-            DeviceCodes = Union(preferred.DeviceCodes, extra.DeviceCodes),
-            ProductNames = Union(preferred.ProductNames, extra.ProductNames),
-            ModelAliases = Union(preferred.ModelAliases, extra.ModelAliases, [extra.MarketingName]),
-            BoardIds = Union(preferred.BoardIds, extra.BoardIds),
-            SocAliases = Union(preferred.SocAliases, extra.SocAliases),
-            HardwareFamily = First(preferred.HardwareFamily, extra.HardwareFamily),
-            DesignBatteryCapacityMah = preferred.DesignBatteryCapacityMah ?? extra.DesignBatteryCapacityMah,
-            BoardMapId = preferred.BoardMapId,
-            IdentitySource = First(preferred.IdentitySource, extra.IdentitySource),
-            IdentitySourceUrl = First(preferred.IdentitySourceUrl, extra.IdentitySourceUrl),
-            IdentitySourceLicense = JoinDistinct(preferred.IdentitySourceLicense, extra.IdentitySourceLicense),
-            IdentitySourceRevision = First(preferred.IdentitySourceRevision, extra.IdentitySourceRevision),
-            IdentityVerified = preferred.IdentityVerified,
-            DeviceType = First(preferred.DeviceType, extra.DeviceType),
-            ReleaseDate = First(preferred.ReleaseDate, extra.ReleaseDate),
-            Cpu = First(preferred.Cpu, extra.Cpu),
-            CpuCores = preferred.CpuCores ?? extra.CpuCores,
-            CpuFrequency = First(preferred.CpuFrequency, extra.CpuFrequency),
-            Gpu = First(preferred.Gpu, extra.Gpu),
-            Ram = First(preferred.Ram, extra.Ram),
-            Storage = First(preferred.Storage, extra.Storage),
-            Display = First(preferred.Display, extra.Display),
-            ScreenResolution = First(preferred.ScreenResolution, extra.ScreenResolution),
-            ScreenTechnology = First(preferred.ScreenTechnology, extra.ScreenTechnology),
-            Wifi = First(preferred.Wifi, extra.Wifi),
-            Bluetooth = First(preferred.Bluetooth, extra.Bluetooth),
-            Peripherals = Union(preferred.Peripherals, extra.Peripherals),
-            SupportedOsVersions = Union(preferred.SupportedOsVersions, extra.SupportedOsVersions),
-            CurrentOsBranch = First(preferred.CurrentOsBranch, extra.CurrentOsBranch),
-            Sources = (preferred.Sources ?? []).Concat(extra.Sources ?? [])
-                .GroupBy(source => source.Id, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.First()).ToList()
-        };
-
-    private static bool SharesIdentifier(DeviceProfile left, DeviceProfile right)
-        => left.ModelNumbers.Any(a => right.ModelNumbers.Any(b => NormalizeCode(a) == NormalizeCode(b))) ||
-           left.DeviceCodes.Any(a => right.DeviceCodes.Any(b => NormalizeCode(a) == NormalizeCode(b)));
-
-    private static string[] Union(params string[][] arrays)
-        => arrays.SelectMany(array => array ?? [])
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-    private static string First(params string[] values)
-        => values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "";
-
-    private static string JoinDistinct(params string[] values)
-        => string.Join(" + ", values.Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase));
-
-    private static string NormalizeCode(string value)
-        => new(value.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
 
     private static async Task<string> DownloadTextAsync(
         string url, int maxCharacters, CancellationToken cancellationToken)

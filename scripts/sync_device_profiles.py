@@ -311,8 +311,18 @@ def main() -> int:
             source["sha256"] = lineage_digest
             source["revision"] = lineage_commit
 
-    profiles = sorted(lineage_profiles + google_profiles,
-                      key=lambda item: (item["manufacturer"].casefold(), item["marketingName"].casefold(), item["id"]))
+    profiles = lineage_profiles + google_profiles
+    # The document-level source manifest carries full hashes/licenses; individual rows keep
+    # per-profile source URL/revision fields only. Omit empty optional values and pretty-print
+    # nothing in this machine-generated 40k+ record snapshot to keep downloads and RAM bounded.
+    for profile in profiles:
+        profile.pop("sources", None)
+    profiles = [
+        {key: value for key, value in profile.items()
+         if value is not None and value != "" and value != [] or key == "identityVerified"}
+        for profile in profiles
+    ]
+    profiles.sort(key=lambda item: (item["manufacturer"].casefold(), item["marketingName"].casefold(), item["id"]))
     if not profiles:
         raise ValueError("The combined device catalog is empty.")
 
@@ -354,7 +364,7 @@ def main() -> int:
     }
 
     with open(args.output, "w", encoding="utf-8", newline="\n") as handle:
-        json.dump(document, handle, ensure_ascii=False, indent=2)
+        json.dump(document, handle, ensure_ascii=False, separators=(",", ":"))
         handle.write("\n")
     print(f"Wrote {len(profiles)} device profiles from {len(google)} Google identifiers and {lineage_count} pinned LineageOS YAML files.")
     print(f"Upstream LineageOS revision: {lineage_commit}; metadata digest: {lineage_digest}")
