@@ -121,7 +121,7 @@ public sealed class DeviceAccessDiagnosticsParserTests
         Assert.Contains("com.example.legacy/.AdminReceiver", report.ManagementComponents);
         Assert.Equal(
             new[] { "no_add_user", "no_config_wifi", "no_debugging_features" },
-            report.ActiveUserRestrictions.OrderBy(value => value, StringComparer.Ordinal));
+            report.ObservedRestrictionTokens.OrderBy(value => value, StringComparer.Ordinal));
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class DeviceAccessDiagnosticsParserTests
 
         Assert.False(report.PolicyOutputReadable);
         Assert.Empty(report.ManagementComponents);
-        Assert.Empty(report.ActiveUserRestrictions);
+        Assert.Empty(report.ObservedRestrictionTokens);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public sealed class DeviceAccessDiagnosticsParserTests
             "");
 
         Assert.Equal(20, report.ManagementComponents.Count);
-        Assert.Equal(60, report.ActiveUserRestrictions.Count);
+        Assert.Equal(60, report.ObservedRestrictionTokens.Count);
     }
 
 }
