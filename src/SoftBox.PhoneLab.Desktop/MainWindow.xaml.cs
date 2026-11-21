@@ -23,6 +23,9 @@ namespace SoftBox.PhoneLab.Desktop;
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private readonly AdbClient _adb = new();
+    private readonly AndroidBackupSchedulerService _backupScheduler;
+    private readonly DispatcherTimer _backupSchedulerTimer;
+    private bool _processingBackupSchedules;
     private readonly PhoneDiscoveryService _discovery;
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
@@ -110,6 +113,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _agentBridge = new AgentBridgeClient(_adb);
         _agentInstaller = new PhoneLabAgentInstaller(_adb);
         _screenMirror = new ScreenMirrorService(_adb);
+        _backupScheduler = new AndroidBackupSchedulerService(_adb);
+        _backupSchedulerTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+        _backupSchedulerTimer.Tick += async (_, _) => await ProcessBackupSchedulesAsync();
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
         Loaded += async (_, _) =>
@@ -133,9 +139,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             await RefreshDevicesAsync();
             if (_settings.AutoDiscoverDevices)
                 _timer.Start();
+
+            if ((SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
+                 SoftBoxAccountPermission.DeviceOperations) != 0)
+            {
+                _backupSchedulerTimer.Start();
+                await ProcessBackupSchedulesAsync();
+            }
             _ = SyncDeviceCatalogQuietlyAsync();
         };
-        Closed += (_, _) => { _timer.Stop(); _screenMirror.Dispose(); };
+        Closed += (_, _) => { _timer.Stop(); _backupSchedulerTimer.Stop(); _screenMirror.Dispose(); };
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
         Notify(nameof(CurrentUserDisplay));
@@ -923,6 +936,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenPhoneBackup":
                 OpenAndroidBackupWindow();
                 break;
+            case "OpenAndroidBackupScheduler":
+                OpenAndroidBackupSchedulerWindow();
+                break;
             case "OpenWorkshopBackup":
                 OpenWorkshopAtTab(4);
                 break;
@@ -1063,6 +1079,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         new AndroidBackupWindow(_adb, selected.Serial) { Owner = this }.Show();
+    }
+
+    private void OpenAndroidBackupSchedulerWindow()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "جدولة النسخ الاحتياطي",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new BackupScheduleWindow(_backupScheduler, selected.Serial, selected.DisplayName)
+        {
+            Owner = this
+        }.Show();
+    }
+
+    private async Task ProcessBackupSchedulesAsync()
+    {
+        if (_processingBackupSchedules || !_adb.IsAvailable ||
+            (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
+             SoftBoxAccountPermission.DeviceOperations) == 0)
+            return;
+
+        _processingBackupSchedules = true;
+        try
+        {
+            // Independent of the visible device list so scheduled jobs continue when auto-discovery UI is disabled.
+            var devices = await _discovery.DiscoverAsync();
+            var authorizedSerials = devices
+                .Where(device => device.IsAuthorized)
+                .Select(device => device.Serial)
+                .ToArray();
+            await _backupScheduler.ProcessAsync(authorizedSerials);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning("SoftBox scheduled Android backup polling failed: {0}", ex.Message);
+        }
+        finally
+        {
+            _processingBackupSchedules = false;
+        }
     }
 
     private async Task RecordDeviceHistoryAsync(
