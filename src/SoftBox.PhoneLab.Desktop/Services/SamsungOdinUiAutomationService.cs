@@ -226,10 +226,10 @@ public sealed class SamsungOdinUiAutomationService
     public static SamsungOdinExecutionState ClassifyExecutionState(string? visibleText, double? progressPercent)
     {
         var text = visibleText ?? string.Empty;
-        if (Regex.IsMatch(text, @"\b(?:FAIL!?|FAILED|FAILURE|ERROR)\b",
+        if (Regex.IsMatch(text, @"\b(?:FAIL|FAILED|FAILURE|ERROR)(?:!|\b)",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             return SamsungOdinExecutionState.Failed;
-        if (Regex.IsMatch(text, @"\b(?:PASS!?|SUCCESS|SUCCESSFUL|COMPLETED)\b",
+        if (Regex.IsMatch(text, @"\b(?:PASS|SUCCESS|SUCCESSFUL|COMPLETED)(?:!|\b)",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             return SamsungOdinExecutionState.Succeeded;
         if (progressPercent is > 0d and < 100d ||
