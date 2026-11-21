@@ -317,7 +317,7 @@ public sealed class SamsungOdinAssistantWindow : Window
 
             lines.Add("TAR.MD5 verifies package integrity only; SHA-256 is recorded locally.");
             lines.Add("No publisher authenticity or exact device/region/bootloader compatibility verdict is produced.");
-            lines.Add("SoftBox does not automate Odin controls or press Start.");
+            lines.Add("Odin Start may be invoked only by the separate fail-closed Windows UI Automation workflow after fresh control, COM, package and technician-confirmation checks.");
             _inspection.Text = string.Join(Environment.NewLine, lines);
             _packagesInspected = true;
             _launchButton.IsEnabled = true;
