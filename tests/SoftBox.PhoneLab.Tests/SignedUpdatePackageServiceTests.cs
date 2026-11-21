@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
@@ -163,6 +164,92 @@ public sealed class SignedUpdatePackageServiceTests
             Assert.Contains("Remove-Item -LiteralPath $target", rollbackScript);
         }
         finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task InstallAndRollbackHelpersChangeAndRestoreFilesInAnIsolatedWindowsFolder()
+    {
+        var windowsPowerShell = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+        Assert.True(File.Exists(windowsPowerShell), "Windows PowerShell 5.1 is required for this Windows integration test.");
+
+        var root = CreateTempDirectory();
+        try
+        {
+            var install = Path.Combine(root, "install");
+            var stage = Path.Combine(root, "updates", "Staged", "1.2.3");
+            Directory.CreateDirectory(install);
+            Directory.CreateDirectory(stage);
+            var executable = Path.Combine(install, "SoftBox.exe");
+            await File.WriteAllTextAsync(executable, "previous-version");
+
+            var stagedExecutable = Path.Combine(stage, "SoftBox.exe");
+            var newDependency = Path.Combine(stage, "NewDependency.dll");
+            await File.WriteAllTextAsync(stagedExecutable, "new-version");
+            await File.WriteAllTextAsync(newDependency, "new-dependency");
+            var executableBytes = await File.ReadAllBytesAsync(stagedExecutable);
+            var dependencyBytes = await File.ReadAllBytesAsync(newDependency);
+            var service = new SignedUpdatePackageService(rootDirectory: Path.Combine(root, "updates"));
+            var stageInfo = new SignedUpdateStageInfo(
+                "1.2.3", stage, "SoftBox.exe", "SoftBox Release Publisher",
+                [
+                    new("SoftBox.exe", executableBytes.Length,
+                        Convert.ToHexString(SHA256.HashData(executableBytes)).ToLowerInvariant()),
+                    new("NewDependency.dll", dependencyBytes.Length,
+                        Convert.ToHexString(SHA256.HashData(dependencyBytes)).ToLowerInvariant())
+                ],
+                DateTimeOffset.UtcNow);
+
+            await ExecutePowerShellHelperAsync(windowsPowerShell,
+                service.BuildInstallScript(stageInfo, install, executable, 987654, "1.2.2"));
+
+            Assert.Equal("new-version", await File.ReadAllTextAsync(executable));
+            Assert.Equal("new-dependency", await File.ReadAllTextAsync(newDependency));
+            var state = await service.ReadRollbackStateAsync();
+            Assert.NotNull(state);
+            Assert.Contains("NewDependency.dll", state!.InstalledFilePaths!);
+
+            await ExecutePowerShellHelperAsync(windowsPowerShell,
+                service.BuildRollbackScript(state, 987654));
+
+            Assert.Equal("previous-version", await File.ReadAllTextAsync(executable));
+            Assert.False(File.Exists(newDependency));
+            Assert.Null(await service.ReadRollbackStateAsync());
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static async Task ExecutePowerShellHelperAsync(string powershellPath, string encodedScript)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = powershellPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        start.ArgumentList.Add("-NoLogo");
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-NonInteractive");
+        start.ArgumentList.Add("-ExecutionPolicy");
+        start.ArgumentList.Add("Bypass");
+        start.ArgumentList.Add("-Command");
+        start.ArgumentList.Add(
+            "function Start-Process { param([string]$FilePath,[string]$WorkingDirectory) return $null }" +
+            Environment.NewLine + DecodePowerShell(encodedScript));
+
+        using var process = Process.Start(start)
+            ?? throw new InvalidOperationException("تعذر تشغيل Windows PowerShell لاختبار مساعد التحديث.");
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        await process.WaitForExitAsync(timeout.Token);
+        var output = await standardOutput;
+        var error = await standardError;
+        Assert.True(process.ExitCode == 0,
+            $"PowerShell helper exited with {process.ExitCode}.{Environment.NewLine}{output}{Environment.NewLine}{error}");
     }
 
     private static async Task CreateSignedPackageAsync(string path, RSA rsa, string version)
