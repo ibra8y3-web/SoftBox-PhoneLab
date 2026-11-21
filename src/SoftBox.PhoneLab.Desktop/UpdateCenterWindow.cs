@@ -1,5 +1,7 @@
 using SoftBox.PhoneLab.Core.Updates;
+using SoftBox.PhoneLab.Core.Plugins;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Windows;
@@ -15,13 +17,22 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class UpdateCenterWindow : Window
 {
     private readonly ReleaseUpdateService _service = new();
+    private readonly PluginPublisherTrustStore _trustStore = new();
+    private readonly SignedUpdatePackageService _packageService;
     private readonly ComboBox _channel = new();
+    private readonly ComboBox _assets = new();
     private readonly Button _checkButton;
     private readonly Button _openButton;
+    private readonly Button _trustKeyButton;
+    private readonly Button _stageButton;
+    private readonly Button _installButton;
+    private readonly Button _rollbackButton;
     private readonly TextBox _details = new();
     private readonly TextBlock _status = new();
     private readonly ProgressBar _progress = new();
     private ReleaseUpdateResult? _lastResult;
+    private SignedUpdateStageInfo? _stagedUpdate;
+    private SignedUpdateRollbackState? _rollbackState;
     private CancellationTokenSource? _operation;
 
     private string CurrentVersion
@@ -45,10 +56,29 @@ public sealed class UpdateCenterWindow : Window
         Background = Brush("#081321");
         Foreground = Brush("#EAF3FF");
 
+        _packageService = new SignedUpdatePackageService(trustStore: _trustStore);
         _checkButton = ButtonControl("فحص الإصدارات", "#14517A", Check_Click);
         _openButton = ButtonControl("فتح صفحة الإصدار الرسمية", "#176044", OpenRelease_Click);
+        _trustKeyButton = ButtonControl("استيراد مفتاح توقيع SoftBox", "#704B20", TrustUpdatePublisherKey_Click);
+        _stageButton = ButtonControl("تحقق وتنزيل وتجهيز التحديث", "#176044", StageUpdate_Click);
+        _installButton = ButtonControl("تثبيت التحديث بعد الإغلاق", "#14517A", InstallUpdate_Click);
+        _rollbackButton = ButtonControl("الرجوع للنسخة السابقة", "#713B43", Rollback_Click);
         _openButton.IsEnabled = false;
+        _stageButton.IsEnabled = false;
+        _installButton.IsEnabled = false;
+        _rollbackButton.IsEnabled = false;
         Content = BuildContent();
+        Loaded += async (_, _) =>
+        {
+            try
+            {
+                _rollbackState = await _packageService.ReadRollbackStateAsync();
+                _rollbackButton.IsEnabled = _rollbackState is not null;
+                if (_rollbackState is not null)
+                    _status.Text = $"تتوفر نسخة رجوع: {_rollbackState.PreviousVersion} (المثبت حاليًا {_rollbackState.InstalledVersion}).";
+            }
+            catch (Exception ex) { _status.Text = "تعذر قراءة بيانات الرجوع: " + ex.Message; }
+        };
         Closed += (_, _) => _operation?.Cancel();
     }
 
@@ -90,7 +120,7 @@ public sealed class UpdateCenterWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             Child = new TextBlock
             {
-                Text = "هذه الخدمة تقرأ بيانات الإصدارات العامة من GitHub فقط. لا تتحقق من توقيع ملفات Windows ولا تنزّلها أو تثبّتها. لا تشغّل أي ملف من صفحة إصدار قبل التحقق من مصدره وتوقيعه يدويًا.",
+                Text = "لا يقبل SoftBox إلا حزمة Windows التي تحتوي Manifest موقّعًا بمفتاح RSA موثوق، وتطابق بصمة كل ملف. التثبيت يستلزم إغلاق البرنامج، وينشئ نسخة رجوع قبل استبدال الملفات. مفاتيح الناشرين تُستورد يدويًا من قناة موثوقة مستقلة.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -140,6 +170,22 @@ public sealed class UpdateCenterWindow : Window
 
         DockPanel.SetDock(filters, Dock.Top);
         root.Children.Add(filters);
+
+        var packageActions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+        packageActions.Children.Add(_trustKeyButton);
+        _assets.Width = 340;
+        _assets.Height = 36;
+        _assets.Margin = new Thickness(5);
+        _assets.Background = Brush("#0A1B2D");
+        _assets.Foreground = Brush("#EAF3FF");
+        _assets.BorderBrush = Brush("#35516F");
+        _assets.DisplayMemberPath = nameof(ReleaseAssetInfo.Name);
+        packageActions.Children.Add(_assets);
+        packageActions.Children.Add(_stageButton);
+        packageActions.Children.Add(_installButton);
+        packageActions.Children.Add(_rollbackButton);
+        DockPanel.SetDock(packageActions, Dock.Top);
+        root.Children.Add(packageActions);
 
         _details.IsReadOnly = true;
         _details.AcceptsReturn = true;
@@ -210,6 +256,14 @@ public sealed class UpdateCenterWindow : Window
         _status.Text = result.Message;
         _openButton.IsEnabled = result.LatestRelease is not null &&
                                 ReleaseUpdateService.IsOfficialReleaseUrl(result.LatestRelease.HtmlUrl);
+        _assets.ItemsSource = result.LatestRelease?.Assets
+            .Where(asset => asset.SizeBytes is > 0 and <= 1024L * 1024 * 1024)
+            .ToArray() ?? [];
+        _assets.SelectedItem = _assets.Items.OfType<ReleaseAssetInfo>()
+            .FirstOrDefault(asset => asset.Name.Contains("Windows", StringComparison.OrdinalIgnoreCase) &&
+                                     asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            ?? _assets.Items.OfType<ReleaseAssetInfo>().FirstOrDefault();
+        _stageButton.IsEnabled = result.UpdateAvailable && _assets.SelectedItem is ReleaseAssetInfo;
 
         if (result.LatestRelease is null)
         {
@@ -237,8 +291,176 @@ public sealed class UpdateCenterWindow : Window
             output.AppendLine("  " + asset.DownloadUrl);
         }
         output.AppendLine();
-        output.AppendLine("SECURITY: Publisher signature and binary authenticity have not been verified by this checker.");
+        output.AppendLine("SECURITY: Windows package download is enabled only after importing and trusting the independent SoftBox Release Publisher RSA public key.");
+        output.AppendLine("SIGNATURE: The downloaded archive, publisher identity and every file SHA-256 are verified before staging.");
+        output.AppendLine("INSTALL: Scheduled after app exit with a full previous-install snapshot and explicit rollback.");
         _details.Text = output.ToString();
+    }
+
+    private async void TrustUpdatePublisherKey_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "اختيار مفتاح SoftBox Release Publisher العام",
+            Filter = "RSA public key (*.pem;*.pub)|*.pem;*.pub|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            var pem = await File.ReadAllTextAsync(dialog.FileName);
+            if (pem.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("استورد المفتاح العام فقط؛ لا تختَر المفتاح الخاص.");
+            var trusted = await _trustStore.TrustPublicKeyAsync("SoftBox Release Publisher", pem);
+            _status.Text = "تم حفظ مفتاح إصدار SoftBox مشفرًا لهذا المستخدم. Key ID: " + trusted.KeyId;
+            _stageButton.IsEnabled = _lastResult?.UpdateAvailable == true && _assets.SelectedItem is ReleaseAssetInfo;
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر استيراد مفتاح التحديث: " + ex.Message;
+        }
+    }
+
+    private async void StageUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_lastResult?.UpdateAvailable != true || _lastResult.LatestRelease is null ||
+            _assets.SelectedItem is not ReleaseAssetInfo asset)
+        {
+            _status.Text = "افحص وجود إصدار أحدث واختر ملف Windows أولًا.";
+            return;
+        }
+        if (_operation is not null)
+            return;
+
+        _operation = new CancellationTokenSource();
+        SetBusy(true, "جارٍ تنزيل حزمة Windows الرسمية والتحقق من توقيعها وبصمات ملفاتها...");
+        _installButton.IsEnabled = false;
+        try
+        {
+            _stagedUpdate = await _packageService.DownloadAndStageAsync(
+                asset, _lastResult.LatestRelease.TagName, _operation.Token);
+            var output = new StringBuilder();
+            output.AppendLine("SIGNED WINDOWS UPDATE VERIFIED");
+            output.AppendLine("VERSION: " + _stagedUpdate.Version);
+            output.AppendLine("PUBLISHER: " + _stagedUpdate.Publisher);
+            output.AppendLine("STAGED DIRECTORY: " + _stagedUpdate.StageDirectory);
+            output.AppendLine("MAIN EXECUTABLE: " + _stagedUpdate.MainExecutable);
+            output.AppendLine();
+            foreach (var file in _stagedUpdate.Files)
+                output.AppendLine($"{file.Path} | {file.SizeBytes:N0} bytes | SHA256 {file.Sha256}");
+            output.AppendLine();
+            output.AppendLine("لم يتم استبدال ملفات البرنامج بعد. الخطوة التالية تحتاج موافقتك وإغلاق SoftBox.");
+            _details.Text = output.ToString();
+            _installButton.IsEnabled = true;
+            _status.Text = "نجح التحقق من الناشر ومحتويات الحزمة. التحديث جاهز للتثبيت بعد إغلاق التطبيق.";
+        }
+        catch (OperationCanceledException)
+        {
+            _status.Text = "تم إلغاء تنزيل وتجهيز التحديث.";
+        }
+        catch (Exception ex)
+        {
+            _stagedUpdate = null;
+            _status.Text = "رفض SoftBox حزمة التحديث أو تعذر تجهيزها: " + ex.Message;
+            _details.Text = ex.ToString();
+        }
+        finally
+        {
+            _operation.Dispose();
+            _operation = null;
+            _checkButton.IsEnabled = true;
+            _channel.IsEnabled = true;
+            _progress.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void InstallUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        if (_stagedUpdate is null || !Directory.Exists(_stagedUpdate.StageDirectory))
+        {
+            _status.Text = "لا توجد حزمة موقعة ومجهزة للتثبيت.";
+            return;
+        }
+
+        var executable = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(executable) ||
+            !executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+        {
+            _status.Text = "التثبيت الذاتي متاح فقط من نسخة Windows المنشورة كملف EXE مستقل، وليس من جلسة dotnet development.";
+            return;
+        }
+
+        try
+        {
+            var script = _packageService.BuildInstallScript(
+                _stagedUpdate,
+                AppContext.BaseDirectory,
+                executable,
+                Environment.ProcessId,
+                CurrentVersion);
+            var start = new ProcessStartInfo("powershell.exe")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            start.ArgumentList.Add("-NoProfile");
+            start.ArgumentList.Add("-NonInteractive");
+            start.ArgumentList.Add("-ExecutionPolicy");
+            start.ArgumentList.Add("Bypass");
+            start.ArgumentList.Add("-EncodedCommand");
+            start.ArgumentList.Add(script);
+            Process.Start(start) ?? throw new InvalidOperationException("تعذر بدء مساعد التحديث.");
+            _status.Text = "بدأ مساعد التحديث. سيتم إغلاق SoftBox، ثم حفظ النسخة السابقة والتحقق مجددًا قبل استبدال الملفات.";
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر جدولة تثبيت التحديث: " + ex.Message;
+        }
+    }
+
+    private async void Rollback_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _rollbackState = await _packageService.ReadRollbackStateAsync();
+            if (_rollbackState is null)
+            {
+                _status.Text = "لا توجد نسخة سابقة محفوظة للرجوع إليها.";
+                _rollbackButton.IsEnabled = false;
+                return;
+            }
+            if (MessageBox.Show(this,
+                    $"سيتم إغلاق SoftBox والرجوع من {_rollbackState.InstalledVersion} إلى {_rollbackState.PreviousVersion}. هل تتابع؟",
+                    "تأكيد الرجوع إلى النسخة السابقة",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            var script = _packageService.BuildRollbackScript(_rollbackState, Environment.ProcessId);
+            var start = new ProcessStartInfo("powershell.exe")
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden
+            };
+            start.ArgumentList.Add("-NoProfile");
+            start.ArgumentList.Add("-NonInteractive");
+            start.ArgumentList.Add("-ExecutionPolicy");
+            start.ArgumentList.Add("Bypass");
+            start.ArgumentList.Add("-EncodedCommand");
+            start.ArgumentList.Add(script);
+            Process.Start(start) ?? throw new InvalidOperationException("تعذر بدء مساعد الرجوع.");
+            _status.Text = "بدأ مساعد الرجوع. سيتم إغلاق SoftBox واستعادة نسخة الملفات السابقة.";
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تنفيذ الرجوع: " + ex.Message;
+        }
     }
 
     private void OpenRelease_Click(object sender, RoutedEventArgs e)
@@ -268,6 +490,10 @@ public sealed class UpdateCenterWindow : Window
         _checkButton.IsEnabled = !busy;
         _channel.IsEnabled = !busy;
         _openButton.IsEnabled = !busy && _lastResult?.LatestRelease is not null;
+        _trustKeyButton.IsEnabled = !busy;
+        _stageButton.IsEnabled = !busy && _lastResult?.UpdateAvailable == true && _assets.SelectedItem is ReleaseAssetInfo;
+        _assets.IsEnabled = !busy;
+        _rollbackButton.IsEnabled = !busy && _rollbackState is not null;
     }
 
     private static Button ButtonControl(string label, string color, RoutedEventHandler handler)
