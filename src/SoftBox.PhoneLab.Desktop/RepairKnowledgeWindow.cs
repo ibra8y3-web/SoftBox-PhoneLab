@@ -59,6 +59,8 @@ public sealed class RepairKnowledgeWindow : Window
         Loaded += async (_, _) =>
         {
             await RefreshAsync();
+            if (!string.IsNullOrWhiteSpace(_search.Text))
+                await FilterAsync();
             if (_entries.Count > 0 && _list.SelectedIndex < 0)
                 _list.SelectedIndex = 0;
         };
