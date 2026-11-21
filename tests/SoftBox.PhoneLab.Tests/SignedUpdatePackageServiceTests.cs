@@ -148,7 +148,7 @@ public sealed class SignedUpdatePackageServiceTests
 
             Assert.Contains("Wait-Process -Id", script);
             Assert.Contains("Get-Process -Id", script);
-            Assert.Contains("Get-FileHash", script);
+            Assert.Contains("Get-Sha256Hex", script);
             Assert.Contains("rollbackRoot", script);
             Assert.Contains("InstalledFilePaths", script);
             Assert.Contains("$backupReady", script);

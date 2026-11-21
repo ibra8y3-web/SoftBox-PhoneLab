@@ -300,6 +300,18 @@ public sealed class SignedUpdatePackageService
 $ErrorActionPreference = 'Stop'
 $config = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(configuration))}')) | ConvertFrom-Json
 
+function Get-Sha256Hex([string]$Path) {{
+    $stream = [IO.File]::OpenRead($Path)
+    try {{
+        $algorithm = [Security.Cryptography.SHA256]::Create()
+        try {{
+            return ([BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace('-', '').ToLowerInvariant()
+        }}
+        finally {{ $algorithm.Dispose() }}
+    }}
+    finally {{ $stream.Dispose() }}
+}}
+
 $running = Get-Process -Id ([int]$config.parentProcessId) -ErrorAction SilentlyContinue
 if ($running) {{
     Wait-Process -Id ([int]$config.parentProcessId) -Timeout 90
@@ -316,7 +328,7 @@ foreach ($file in $config.files) {{
     $source = [IO.Path]::GetFullPath((Join-Path $config.stageRoot $file.Path))
     if (!$source.StartsWith($stagePrefix, [StringComparison]::OrdinalIgnoreCase)) {{ throw 'Unsafe staged update path' }}
     if (!(Test-Path -LiteralPath $source -PathType Leaf)) {{ throw ('Staged file is missing: ' + $file.Path) }}
-    $actual = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actual = Get-Sha256Hex -Path $source
     if ($actual -ne $file.Sha256.ToLowerInvariant()) {{ throw ('Staged file hash changed: ' + $file.Path) }}
     if ((Get-Item -LiteralPath $source).Length -ne [long]$file.SizeBytes) {{ throw ('Staged file size changed: ' + $file.Path) }}
     $target = [IO.Path]::GetFullPath((Join-Path $config.installRoot $file.Path))
