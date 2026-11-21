@@ -15,6 +15,40 @@ public sealed class DeviceProfileCatalogValidatorTests
     }
 
     [Fact]
+    public void RejectsNullOrMissingSourceIdentifierAndDigestWithoutThrowing()
+    {
+        var document = ValidDocument();
+        var source = document.Sources[0];
+        var invalid = new DeviceProfileCatalogDocument
+        {
+            SchemaVersion = 1,
+            CatalogVersion = "1",
+            Source = "test",
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+            GeneratedAtUtc = DateTimeOffset.UtcNow,
+            Sources =
+            [
+                new DeviceProfileSource
+                {
+                    Id = null!,
+                    Name = source.Name,
+                    Url = source.Url,
+                    License = source.License,
+                    Sha256 = null!,
+                    Revision = source.Revision,
+                    RecordCount = source.RecordCount,
+                    RetrievedAtUtc = source.RetrievedAtUtc
+                }
+            ],
+            Profiles = document.Profiles
+        };
+
+        var result = DeviceProfileCatalogValidator.ValidateCommunityCatalog(invalid);
+        Assert.False(result.IsValid);
+        Assert.NotEmpty(result.Errors);
+    }
+
+    [Fact]
     public void RejectsCommunityRecordThatClaimsOemVerifiedIdentity()
     {
         var document = ValidDocument();

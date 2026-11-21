@@ -36,14 +36,14 @@ public static class DeviceProfileCatalogValidator
             foreach (var source in document.Sources)
             {
                 if (source is null ||
-                    !IdPattern.IsMatch(source.Id) ||
+                    (string.IsNullOrWhiteSpace(source.Id) || !IdPattern.IsMatch(source.Id)) ||
                     !sourceIds.Add(source.Id) ||
                     string.IsNullOrWhiteSpace(source.Name) ||
                     source.Name.Length > 180 ||
                     !IsHttps(source.Url) ||
                     string.IsNullOrWhiteSpace(source.License) ||
                     source.License.Length > 80 ||
-                    !Sha256Pattern.IsMatch(source.Sha256) ||
+                    (string.IsNullOrWhiteSpace(source.Sha256) || !Sha256Pattern.IsMatch(source.Sha256)) ||
                     (string.IsNullOrWhiteSpace(source.Revision) || source.Revision.Length > 160) ||
                     source.RecordCount < 1 ||
                     source.RecordCount > 250_000 ||
@@ -62,7 +62,7 @@ public static class DeviceProfileCatalogValidator
             foreach (var profile in document.Profiles)
             {
                 if (profile is null ||
-                    !IdPattern.IsMatch(profile.Id) ||
+                    (string.IsNullOrWhiteSpace(profile.Id) || !IdPattern.IsMatch(profile.Id)) ||
                     !profileIds.Add(profile.Id) ||
                     string.IsNullOrWhiteSpace(profile.Manufacturer) ||
                     profile.Manufacturer.Length > 160 ||

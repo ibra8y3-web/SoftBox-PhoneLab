@@ -1,3 +1,4 @@
+using System.IO;
 using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Core.Compatibility;
 using SoftBox.PhoneLab.Core.Diagnostics;

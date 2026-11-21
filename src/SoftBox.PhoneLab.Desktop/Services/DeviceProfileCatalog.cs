@@ -198,6 +198,9 @@ public sealed class DeviceProfileCatalog
         catch (Exception ex) when (ex is IOException or JsonException) { return []; }
     }
 
+    private static string NormalizeCode(string value)
+        => new(value.Where(char.IsLetterOrDigit).Select(char.ToUpperInvariant).ToArray());
+
     private static async Task<string> DownloadTextAsync(
         string url, int maxCharacters, CancellationToken cancellationToken)
     {

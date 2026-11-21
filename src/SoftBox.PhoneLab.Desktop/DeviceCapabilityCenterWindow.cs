@@ -351,11 +351,12 @@ public sealed class DeviceCapabilityCenterWindow : Window
         foreach (var procedure in enginePlan.Procedures)
         {
             text.AppendLine($"[{procedure.State}] {procedure.DisplayName}");
-            text.AppendLine("  CAN EXECUTE: " + procedure.CanExecute);
+            text.AppendLine("  PREREQUISITES SATISFIED: " + procedure.CanExecute);
             text.AppendLine("  TRANSPORT: " + procedure.Transport);
             text.AppendLine("  EVIDENCE: " + procedure.Evidence);
             text.AppendLine("  REQUIRED: " + procedure.RequiredAction);
         }
+        text.AppendLine("PLAN ONLY: This engine reports strategy and prerequisites; it does not itself execute the listed procedures.");
         text.AppendLine("Battery temperature values above are local review thresholds, not OEM-certified safety limits.");
         text.AppendLine();
         text.AppendLine("ENGINE SAFETY RULES");
