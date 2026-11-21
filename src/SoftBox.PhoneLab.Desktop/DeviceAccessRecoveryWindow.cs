@@ -231,7 +231,7 @@ public sealed class DeviceAccessRecoveryWindow : Window
             {
                 var restrictions = string.Join(", ", report.ObservedRestrictionTokens.Take(12));
                 var remaining = report.ObservedRestrictionTokens.Count - Math.Min(12, report.ObservedRestrictionTokens.Count);
-                _managementResult.Text += "\nرموز قيود ظهرت في التقرير: " + restrictions +
+                _managementResult.Text += "\nرموز قيود مذكورة بالمخرجات (وليست تأكيدًا على تطبيقها): " + restrictions +
                     (remaining > 0 ? $" (+{remaining} أخرى)" : string.Empty);
             }
 
