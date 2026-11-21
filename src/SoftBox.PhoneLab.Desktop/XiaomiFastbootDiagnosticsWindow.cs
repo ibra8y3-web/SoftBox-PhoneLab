@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Core.Fastboot;
 using SoftBox.PhoneLab.Core.Firmware;
 using System.IO;
@@ -11,8 +12,8 @@ using System.Windows.Media;
 namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
-/// Xiaomi/Redmi/POCO transition and read-only Fastboot inspection.
-/// The only state transition is a confirmed ADB reboot to Bootloader.
+/// Xiaomi/Redmi/POCO Fastboot diagnostics and a restricted single-image write workflow.
+/// Bootloader transitions are explicit; unlock, erase, format, relock and arbitrary commands are not exposed.
 /// </summary>
 public sealed class XiaomiFastbootDiagnosticsWindow : Window
 {
@@ -28,7 +29,17 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
     private readonly Button _refreshButton;
     private readonly Button _inspectRomButton;
     private readonly Button _cancelButton;
+    private readonly Button _flashImageButton;
+    private readonly Button _officialUnlockButton;
+    private readonly ComboBox _flashPartition = new();
+    private readonly CheckBox _confirmOfficialSource = new() { Content = "أؤكد أن IMG من مصدر Xiaomi الرسمي ومخصص لـ Product الحالي" };
+    private readonly CheckBox _confirmBackup = new() { Content = "أؤكد وجود نسخة احتياطية ووعيي بخطر فقد البيانات أو تعطل الإقلاع" };
+    private readonly TextBox _flashConfirmation = new();
+    private readonly ComboBox _romProducts = new();
+    private readonly HashSet<string> _romFlashPartitions = new(StringComparer.OrdinalIgnoreCase);
     private string? _lastFastbootProduct;
+    private FastbootStateReport? _lastFastbootState;
+    private string? _lastFastbootSerial;
     private CancellationTokenSource? _operation;
 
     public XiaomiFastbootDiagnosticsWindow(AdbClient adb, string serial, string manufacturer, string model)
@@ -58,6 +69,9 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         _refreshButton = ButtonControl("إعادة فحص Fastboot وقراءة المتغيرات", "#14517A", Refresh_Click);
         _inspectRomButton = ButtonControl("فحص حزمة Fastboot ROM (قراءة فقط)", "#176044", InspectFastbootRom_Click);
         _cancelButton = ButtonControl("إلغاء", "#713B43", Cancel_Click);
+        _flashImageButton = ButtonControl("تفليش قسم IMG محدد", "#713B43", FlashImage_Click);
+        _officialUnlockButton = ButtonControl("أداة Xiaomi Mi Unlock الرسمية", "#704B20", (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.Show());
+        _flashImageButton.IsEnabled = false;
         _refreshButton.IsEnabled = false;
         _cancelButton.IsEnabled = false;
         Content = BuildContent();
@@ -70,7 +84,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         header.Children.Add(new TextBlock
         {
-            Text = "Xiaomi / Redmi / POCO — Fastboot Read-only Diagnostics",
+            Text = "Xiaomi / Redmi / POCO — Fastboot Service and Diagnostics",
             FontSize = 22,
             FontWeight = FontWeights.Bold,
             Foreground = Brush("#7DD3FC")
@@ -83,7 +97,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "ينفذ انتقالًا اختياريًا إلى Bootloader بعد إعادة التحقق من ADB وخصائص الشركة، ثم يقرأ fastboot getvar all للجهاز المطابق فقط. لا يحتوي على أوامر Flash أو Unlock أو Erase أو Format أو Relock.",
+            Text = "يقرأ هوية Fastboot ويتيح تفليش IMG واحدة فقط بعد مطابقة Product من حزمة ROM التي فُحصت، ومطابقة Serial وحالة Bootloader Unlocked وتأكيد المصدر والنسخة الاحتياطية. فتح Bootloader يتم عبر أداة Xiaomi الرسمية فقط.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#F0C9A5"),
             Margin = new Thickness(0, 8, 0, 0)
@@ -95,7 +109,38 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         actions.Children.Add(_enterButton);
         actions.Children.Add(_refreshButton);
         actions.Children.Add(_inspectRomButton);
+        _flashPartition.ItemsSource = XiaomiFastbootFlashPolicy.SupportedPartitions;
+        _flashPartition.SelectedIndex = 0;
+        _flashPartition.Width = 150;
+        _flashPartition.Margin = new Thickness(4);
+        _flashPartition.Background = Brush("#0A1B2D");
+        _flashPartition.Foreground = Brush("#EAF3FF");
+        _romProducts.Width = 160;
+        _romProducts.Margin = new Thickness(4);
+        _romProducts.Background = Brush("#0A1B2D");
+        _romProducts.Foreground = Brush("#EAF3FF");
+        _romProducts.BorderBrush = Brush("#35516F");
+        _romProducts.ToolTip = "Product من android-info.txt داخل حزمة ROM المفحوصة";
+        actions.Children.Add(new TextBlock { Text = "ROM Product", Foreground = Brush("#B7C9DE"), VerticalAlignment = VerticalAlignment.Center });
+        actions.Children.Add(_romProducts);
+        actions.Children.Add(_flashPartition);
+        actions.Children.Add(_flashImageButton);
+        actions.Children.Add(_officialUnlockButton);
         actions.Children.Add(_cancelButton);
+        _confirmOfficialSource.Foreground = Brush("#F0C9A5");
+        _confirmBackup.Foreground = Brush("#F0C9A5");
+        _confirmOfficialSource.Margin = new Thickness(4);
+        _confirmBackup.Margin = new Thickness(4);
+        actions.Children.Add(_confirmOfficialSource);
+        actions.Children.Add(_confirmBackup);
+        _flashConfirmation.Width = 220;
+        _flashConfirmation.Margin = new Thickness(4);
+        _flashConfirmation.ToolTip = "اكتب FLASH ثم مسافة ثم آخر أربعة أحرف من Serial";
+        _flashConfirmation.Background = Brush("#071625");
+        _flashConfirmation.Foreground = Brush("#DCEBFA");
+        _flashConfirmation.BorderBrush = Brush("#263D58");
+        _flashConfirmation.Padding = new Thickness(6);
+        actions.Children.Add(_flashConfirmation);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
 
@@ -160,6 +205,9 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
                 manufacturer + " " + brand, _serial, device.Serial, device.Details, parsed);
             _details.Text = FormatReport(report, raw);
             _lastFastbootProduct = report.Product;
+            _lastFastbootState = parsed;
+            _lastFastbootSerial = device.Serial;
+            _flashImageButton.IsEnabled = parsed.LockState == BootloaderLockState.Unlocked && !string.IsNullOrWhiteSpace(parsed.Product);
             _refreshButton.IsEnabled = true;
             return "ظهر الجهاز في Fastboot وتمت قراءة متغيراته. لم يتم تغيير أي قسم أو إعداد.";
         });
@@ -180,16 +228,95 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
                 return "لم يتم العثور على نفس الهاتف في Fastboot.";
             }
             var raw = await _fastboot.ReadAllVariablesAsync(device.Serial, token);
+            var parsed = FastbootVariableParser.Parse(raw);
             var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
-                _manufacturer, _serial, device.Serial, device.Details, FastbootVariableParser.Parse(raw));
+                _manufacturer, _serial, device.Serial, device.Details, parsed);
             _details.Text = FormatReport(report, raw);
             _lastFastbootProduct = report.Product;
+            _lastFastbootState = parsed;
+            _lastFastbootSerial = device.Serial;
+            _flashImageButton.IsEnabled = parsed.LockState == BootloaderLockState.Unlocked && !string.IsNullOrWhiteSpace(parsed.Product);
             return "اكتملت قراءة متغيرات Fastboot للجهاز المحدد.";
         });
     }
 
-    private async void InspectFastbootRom_Click(object sender, RoutedEventArgs e)
+    private async void FlashImage_Click(object sender, RoutedEventArgs e)
     {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "اختيار صورة Xiaomi IMG للقسم المحدد",
+            Filter = "Android image (*.img)|*.img",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+        var imagePath = Path.GetFullPath(dialog.FileName);
+        var partition = _flashPartition.SelectedItem as string ?? "";
+        var suffix = _serial.Length > 4 ? _serial[^4..] : _serial;
+        if (!string.Equals(_flashConfirmation.Text.Trim(), "FLASH " + suffix, StringComparison.Ordinal))
+        {
+            _status.Text = "اكتب FLASH ثم مسافة وآخر أربعة أحرف من Serial لتأكيد الاستمرار.";
+            return;
+        }
+        if (!_confirmOfficialSource.IsChecked.GetValueOrDefault() || !_confirmBackup.IsChecked.GetValueOrDefault())
+        {
+            _status.Text = "يلزم تأكيد مصدر OEM والنسخة الاحتياطية قبل أي كتابة.";
+            return;
+        }
+
+        var packageProduct = _romProducts.SelectedItem as string;
+        if (string.IsNullOrWhiteSpace(packageProduct))
+        {
+            _status.Text = "افحص حزمة Fastboot ROM واختر Product من android-info.txt أولًا.";
+            return;
+        }
+        if (!_romFlashPartitions.Contains(partition))
+        {
+            _status.Text = "القسم المحدد غير موجود في أوامر flash للحزمة التي تم فحصها؛ تم منع الكتابة.";
+            return;
+        }
+        if (!string.Equals(Path.GetFileName(imagePath), partition + ".img", StringComparison.OrdinalIgnoreCase))
+        {
+            _status.Text = "اسم IMG لا يطابق القسم المحدد. اختر " + partition + ".img.";
+            return;
+        }
+
+        await RunOperationAsync("جارٍ إعادة فحص هوية Xiaomi وحالة Bootloader قبل التفليش...", async token =>
+        {
+            var liveDevices = await _fastboot.DiscoverAsync(token);
+            var liveDevice = liveDevices.FirstOrDefault(item => item.Serial.Equals(_serial, StringComparison.Ordinal));
+            if (liveDevice is null)
+                throw new UnauthorizedAccessException("لم يظهر نفس Serial في Fastboot. تم منع الكتابة.");
+            var liveRaw = await _fastboot.ReadAllVariablesAsync(_serial, token);
+            var liveState = FastbootVariableParser.Parse(liveRaw);
+            var decision = XiaomiFastbootFlashPolicy.Evaluate(
+                _manufacturer, _serial, liveDevice.Serial, liveState.Product, packageProduct,
+                liveState.LockState, partition, imagePath,
+                _confirmOfficialSource.IsChecked == true, _confirmBackup.IsChecked == true);
+            if (!decision.CanFlash)
+                throw new UnauthorizedAccessException("تم منع التفليش:\n" + string.Join("\n", decision.Blockers));
+            // Keep a read-only handle open through the fastboot process to prevent replacement on Windows.
+            await using var input = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var hash = Convert.ToHexString(await System.Security.Cryptography.SHA256.HashDataAsync(input, token)).ToLowerInvariant();
+            var info = new FileInfo(imagePath);
+            var confirmation = MessageBox.Show(this,
+                $"سيتم كتابة IMG واحدة إلى القسم {partition} على {Mask(_serial)}.\nProduct: {liveState.Product}\nImage: {info.Name}\nSize: {info.Length:N0}\nSHA-256: {hash}\n\nلا توجد عملية Unlock تلقائية. هل تريد الاستمرار؟",
+                "تأكيد Xiaomi Fastboot Flash", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+                return "ألغى المستخدم الكتابة.";
+            var result = await _fastboot.FlashPartitionAsync(_serial, partition, imagePath, token);
+            _details.Text = "XIAOMI FASTBOOT SINGLE-PARTITION FLASH\n" +
+                "SERIAL: " + Mask(_serial) + "\nPRODUCT: " + liveState.Product +
+                "\nPARTITION: " + partition + "\nIMAGE: " + info.Name +
+                "\nSIZE: " + info.Length + "\nSHA-256: " + hash +
+                "\n\nFASTBOOT OUTPUT:\n" + result +
+                "\n\nلم يتم تنفيذ Unlock أو Erase أو Relock أو Flash لأي قسم آخر.";
+            return "انتهى أمر Fastboot للقسم المحدد. أعد قراءة المتغيرات ثم تحقق من إقلاع الجهاز.";
+        });
+    }
+
+    private async void InspectFastbootRom_Click(object sender, RoutedEventArgs e)    {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Title = "اختيار حزمة Xiaomi Fastboot ROM للفحص المحلي",
@@ -203,6 +330,11 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         await RunOperationAsync("جارٍ فحص أرشيف Xiaomi Fastboot ROM دون استخراج أو تشغيل سكربتات...", async token =>
         {
             var report = await XiaomiFastbootRomInspector.InspectAsync(dialog.FileName, _lastFastbootProduct, token);
+            _romProducts.ItemsSource = report.RequiredProducts;
+            _romProducts.SelectedIndex = report.RequiredProducts.Count == 1 ? 0 : -1;
+            _romFlashPartitions.Clear();
+            foreach (var item in report.FlashPartitions)
+                _romFlashPartitions.Add(item);
             _details.Text = FormatRomReport(report);
             return report.ProductMatch switch
             {
@@ -299,6 +431,8 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         _enterButton.IsEnabled = false;
         _refreshButton.IsEnabled = false;
         _inspectRomButton.IsEnabled = false;
+        _flashImageButton.IsEnabled = false;
+        _officialUnlockButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _status.Text = message;
         try
@@ -321,6 +455,8 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             _enterButton.IsEnabled = true;
             _refreshButton.IsEnabled = true;
             _inspectRomButton.IsEnabled = true;
+            _flashImageButton.IsEnabled = _lastFastbootState?.LockState == BootloaderLockState.Unlocked && _lastFastbootSerial == _serial;
+            _officialUnlockButton.IsEnabled = true;
             _cancelButton.IsEnabled = false;
         }
     }

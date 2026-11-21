@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -10,8 +13,8 @@ public sealed record FastbootDevice(string Serial, string Details)
 }
 
 /// <summary>
-/// Runs a deliberately restricted set of Fastboot operations. No flashing, unlocking,
-/// erase, format, boot, or arbitrary command API is exposed by this service.
+/// Runs a restricted set of Fastboot operations. The only write path is a single, allow-listed
+/// IMG partition flash to an exact serial; unlocking, erase, format, boot and arbitrary commands remain unavailable.
 /// </summary>
 public sealed class FastbootService
 {
@@ -68,6 +71,35 @@ public sealed class FastbootService
     {
         ValidateSerial(serial);
         return ExecuteAsync(["-s", serial, "reboot"], cancellationToken, TimeSpan.FromSeconds(20));
+    }
+
+    public Task<string> FlashPartitionAsync(
+        string serial,
+        string partition,
+        string imagePath,
+        CancellationToken cancellationToken = default)
+    {
+        var arguments = BuildFlashPartitionArguments(serial, partition, imagePath);
+        return ExecuteAsync(arguments, cancellationToken, TimeSpan.FromMinutes(10));
+    }
+
+    public static IReadOnlyList<string> BuildFlashPartitionArguments(string serial, string partition, string imagePath)
+    {
+        ValidateSerial(serial);
+        var allowed = new HashSet<string>(StringComparer.Ordinal)
+        { "boot", "init_boot", "vendor_boot", "dtbo", "recovery" };
+        var normalizedPartition = (partition ?? "").Trim().ToLowerInvariant();
+        if (!allowed.Contains(normalizedPartition))
+            throw new ArgumentException("Fastboot partition is not in the restricted SoftBox allow-list.", nameof(partition));
+        if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
+            throw new FileNotFoundException("Fastboot image does not exist.", imagePath);
+        var fullPath = Path.GetFullPath(imagePath);
+        if (!Path.GetExtension(fullPath).Equals(".img", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Only a local .img file is accepted by the restricted flash method.", nameof(imagePath));
+        var info = new FileInfo(fullPath);
+        if (info.Length is <= 0 or > 2L * 1024 * 1024 * 1024)
+            throw new InvalidDataException("Fastboot image is empty or exceeds 2 GiB.");
+        return ["-s", serial, "flash", normalizedPartition, fullPath];
     }
 
     public Task<string> RebootRecoveryAsync(string serial, CancellationToken cancellationToken = default)

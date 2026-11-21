@@ -802,9 +802,99 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenSamsungOdinAssistant":
                 new SamsungOdinAssistantWindow { Owner = this }.Show();
                 break;
+            case "OpenSamsungOfficialTools":
+                new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show();
+                break;
             case "OpenSamsungServiceOperations":
                 OpenSamsungServiceOperations();
                 break;
+            case "OpenXiaomiFastbootService":
+            {
+                var xiaomiDevice = SelectedDevice;
+                if (xiaomiDevice is null || !xiaomiDevice.IsAuthorized ||
+                    AndroidDeviceToolsService.NormalizeVendor(xiaomiDevice.Manufacturer) != AndroidVendorKind.Xiaomi)
+                {
+                    MessageBox.Show(this, "اختر هاتف Xiaomi/Redmi/POCO حاصلًا على تصريح ADB أولًا.", "Xiaomi Fastboot Service",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    break;
+                }
+                var manufacturer = _snapshot is not null && _snapshot.Serial.Equals(xiaomiDevice.Serial, StringComparison.Ordinal)
+                    ? _snapshot.Manufacturer : xiaomiDevice.Manufacturer;
+                var model = _snapshot is not null && _snapshot.Serial.Equals(xiaomiDevice.Serial, StringComparison.Ordinal)
+                    ? _snapshot.Model : xiaomiDevice.DisplayName;
+                new XiaomiFastbootDiagnosticsWindow(_adb, xiaomiDevice.Serial, manufacturer, model) { Owner = this }.Show();
+                break;
+            }
+            case "OpenXiaomiOfficialTools":
+                new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.Show();
+                break;
+            case "OpenBrandOfficialTools":
+            {
+                var selectedVendor = SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer ?? "";
+                var vendor = selectedVendor.Contains("samsung", StringComparison.OrdinalIgnoreCase)
+                    ? OemServiceVendor.Samsung
+                    : selectedVendor.Contains("xiaomi", StringComparison.OrdinalIgnoreCase) ||
+                      selectedVendor.Contains("redmi", StringComparison.OrdinalIgnoreCase) ||
+                      selectedVendor.Contains("poco", StringComparison.OrdinalIgnoreCase)
+                        ? OemServiceVendor.Xiaomi
+                        : selectedVendor.Contains("google", StringComparison.OrdinalIgnoreCase) ||
+                          selectedVendor.Contains("pixel", StringComparison.OrdinalIgnoreCase)
+                            ? OemServiceVendor.GooglePixel
+                            : selectedVendor.Contains("motorola", StringComparison.OrdinalIgnoreCase) ||
+                              selectedVendor.Contains("lenovo", StringComparison.OrdinalIgnoreCase)
+                                ? OemServiceVendor.MotorolaLenovo
+                                : selectedVendor.Contains("qualcomm", StringComparison.OrdinalIgnoreCase)
+                                    ? OemServiceVendor.Qualcomm
+                                    : selectedVendor.Contains("mediatek", StringComparison.OrdinalIgnoreCase)
+                                        ? OemServiceVendor.MediaTek
+                                        : OemServiceVendor.OtherAndroid;
+                new OemOfficialToolsWindow(vendor) { Owner = this }.Show();
+                break;
+            }
+            case "OpenQualcommRecovery":
+            {
+                var recoveryDevice = SelectedDevice;
+                if (recoveryDevice is null || !recoveryDevice.IsAuthorized || _snapshot is null ||
+                    !_snapshot.Serial.Equals(recoveryDevice.Serial, StringComparison.Ordinal))
+                {
+                    MessageBox.Show(this, "اختر هاتف Qualcomm متصلًا ومصرحًا عبر ADB، ثم حدّث قراءة خصائصه قبل الانتقال إلى EDL.", "Qualcomm Recovery",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    break;
+                }
+                var qcomIdentity = _snapshot.Soc + " " + _snapshot.CpuDescription;
+                if (!qcomIdentity.Contains("Qualcomm", StringComparison.OrdinalIgnoreCase) &&
+                    !qcomIdentity.Contains("Snapdragon", StringComparison.OrdinalIgnoreCase) &&
+                    !System.Text.RegularExpressions.Regex.IsMatch(qcomIdentity, @"\b(SM\d{4,5}|MSM\d{3,4}|QCM\d{4,5})\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    MessageBox.Show(this, "بيانات SoC الحالية لا تقدم دليلًا كافيًا على Qualcomm. لم يتم فتح EDL.", "Qualcomm Recovery",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    break;
+                }
+                new QualcommRecoveryWindow(_snapshot) { Owner = this }.Show();
+                break;
+            }
+            case "OpenMediaTekRecovery":
+            {
+                var recoveryDevice = SelectedDevice;
+                if (recoveryDevice is null || !recoveryDevice.IsAuthorized || _snapshot is null ||
+                    !_snapshot.Serial.Equals(recoveryDevice.Serial, StringComparison.Ordinal))
+                {
+                    MessageBox.Show(this, "اختر هاتف MediaTek متصلًا ومصرحًا عبر ADB، ثم حدّث قراءة خصائصه قبل الانتقال إلى Preloader/BROM.", "MediaTek Recovery",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    break;
+                }
+                var mtkIdentity = _snapshot.Soc + " " + _snapshot.CpuDescription;
+                if (!mtkIdentity.Contains("MediaTek", StringComparison.OrdinalIgnoreCase) &&
+                    !mtkIdentity.Contains("MTK", StringComparison.OrdinalIgnoreCase) &&
+                    !System.Text.RegularExpressions.Regex.IsMatch(mtkIdentity, @"\bMT\d{3,5}\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                {
+                    MessageBox.Show(this, "بيانات SoC الحالية لا تقدم دليلًا كافيًا على MediaTek. لم يتم فتح BROM/Preloader.", "MediaTek Recovery",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    break;
+                }
+                new MediaTekRecoveryWindow(_snapshot.ModelNumber, _snapshot.HardwareSku) { Owner = this }.Show();
+                break;
+            }
             case "OpenAndroidLogAnalyzer":
                 if (SelectedDevice is { IsAuthorized: true } logAnalyzerDevice)
                     new AndroidLogAnalyzerWindow(_adb, logAnalyzerDevice.Serial) { Owner = this }.Show();

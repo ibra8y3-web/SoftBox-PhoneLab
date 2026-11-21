@@ -79,4 +79,39 @@ public sealed class FastbootServiceTests
 
         Assert.Empty(devices);
     }
+
+    [Fact]
+    public void SingleImageFlashBuilderUsesExactSerialAndRestrictedPartition()
+    {
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "softbox-fastboot-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(root);
+        var image = System.IO.Path.Combine(root, "boot.img");
+        System.IO.File.WriteAllBytes(image, [1, 2, 3, 4]);
+        try
+        {
+            var arguments = FastbootService.BuildFlashPartitionArguments("FASTBOOT-123", "boot", image);
+            Assert.Equal(new[] { "-s", "FASTBOOT-123", "flash", "boot", image }, arguments);
+        }
+        finally { System.IO.Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData("system")]
+    [InlineData("userdata")]
+    [InlineData("super")]
+    [InlineData("boot_a")]
+    public void SingleImageFlashBuilderRejectsPartitionsOutsideTheAllowList(string partition)
+    {
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "softbox-fastboot-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(root);
+        var image = System.IO.Path.Combine(root, "boot.img");
+        System.IO.File.WriteAllBytes(image, [1]);
+        try
+        {
+            Assert.Throws<ArgumentException>(() =>
+                FastbootService.BuildFlashPartitionArguments("FASTBOOT-123", partition, image));
+        }
+        finally { System.IO.Directory.Delete(root, recursive: true); }
+    }
 }
+
