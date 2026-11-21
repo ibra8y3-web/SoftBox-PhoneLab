@@ -82,7 +82,7 @@ public sealed class DeviceQuickDiagnosticService(
                 var output = await android.RunReadOnlyPresetAsync(serial, id, cancellationToken, commandTimeout);
                 if (output.Length > remainingOutputCharacters)
                 {
-                    const string truncationNote = Environment.NewLine +
+                    var truncationNote = Environment.NewLine +
                         "[Combined ADB output budget reached; remaining command output omitted.]";
                     var noteLength = Math.Min(truncationNote.Length, remainingOutputCharacters);
                     var contentBudget = remainingOutputCharacters - noteLength;
