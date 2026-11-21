@@ -324,6 +324,7 @@ public sealed class WorkshopStore
                 ReceivedAtUtc = DateTimeOffset.UtcNow,
                 BalanceAfterPaymentEgp = remaining - amountEgp
             };
+            order.Payments ??= [];
             order.Payments.Add(payment);
             order.UpdatedAtUtc = payment.ReceivedAtUtc;
             order.Timeline.Add(new RepairOrderNote

@@ -16,6 +16,9 @@ public static class MultiScreenSessionsPolicy
 {
     public const int MaximumConcurrentSessions = 4;
 
+    public static bool IsAuthorizedAdbState(string? state)
+        => string.Equals(state?.Trim(), "device", StringComparison.OrdinalIgnoreCase);
+
     public static IReadOnlyList<string> FindUnhealthySessions(IEnumerable<MultiScreenSessionHealth> sessions)
     {
         ArgumentNullException.ThrowIfNull(sessions);

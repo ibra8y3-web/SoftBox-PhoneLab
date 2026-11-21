@@ -355,3 +355,25 @@ This section supersedes the older additive snapshot above and is derived from th
 | 26/27 | Native DLL plugin runtime and process isolation | Planned | Only signed data-only read-only workflow plugins are supported; arbitrary code execution remains disabled pending hardened Windows isolation/IPC and security testing |
 | 31 | Production signed release adoption | In Development | Pipeline code and helper logic are tested, but the public release-signing key must be confirmed independently and a signed production asset must be published/tested |
 
+
+
+## Additive completion follow-up — 21 November 2026
+
+- **36 master sections / 151 child features / 187 total catalogue entries** after this follow-up.
+- Child-feature states: **99 Implemented, 41 Tested, 3 In Development, 6 Planned, 2 Unsupported, 0 Verified**. A Tested software policy is not the same as physical handset validation.
+- Device Intelligence exports a coverage matrix from the loaded profile catalogue: model numbers, device codes, Product IDs, SoC aliases, Board IDs, BoardMapId references and missing evidence. Missing board information stays missing; a reference alone does not prove an actual verified PCB map.
+- Multi-screen start repeats `adb -s <serial> get-state` after scrcpy setup and immediately before launching the process. The manager continues checking device authorization, process lifetime and embedded-window health. Physical multi-phone, codec and hotplug validation remains outstanding.
+- Xiaomi Tools inspects `.tgz`, `.tar.gz` and `.tar` Fastboot ROMs without extraction or script execution, reading `android-info.txt`, image names, flash partitions and erase/unlock commands, and matching package Product against the last value read from the selected Fastboot device. It does not flash or unlock.
+- Generic vendor property-profile coverage is classified as Tested for automated policy/parser tests only. No OEM proprietary service protocol is implied.
+- Update Center Stable/Beta sorting, signed-package generation and rollback helpers have automated test coverage. The release signer builds a manifest from the published binary files and signs the archive with RSA-PSS; tag publishing stops when the private-key secret is absent.
+- Production release signing is **not yet externally validated**: a maintainer must configure `SOFTBOX_RELEASE_PRIVATE_KEY_PEM`, independently publish the matching public-key fingerprint and import the public key in Update Center. The private key is not committed.
+
+### Remaining vendor / physical-device boundaries
+
+- Samsung Odin Start automation and low-level Download Mode operations remain unavailable; the existing tools validate TAR/TAR.MD5 packages and hand off to the official Odin executable supplied by the operator.
+- Xiaomi unlock/flash/relock remains unavailable; ROM inspection is read-only and product mismatch is reported.
+- Qualcomm EDL programming still requires an OEM-authorized signed model-matched Firehose programmer; current tools detect Windows PnP readiness only.
+- MediaTek BROM/Preloader programming still requires an OEM-authorized signed Download Agent; current tools do not start a BROM programming session.
+- Native DLL plugins remain disabled pending a hardened isolated process host and security review.
+- Board-level electrical probing requires real model-specific schematics, fixture and probes; the generic external measurement reader is not a board-level test instrument.
+- Official model-specific recovery/flash execution stays blocked until package trust, exact board/region/rollback evidence and an authorized protocol are available.

@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Fastboot;
+using SoftBox.PhoneLab.Core.Firmware;
 using System.IO;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
@@ -25,7 +26,9 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
     private readonly TextBlock _status = new();
     private readonly Button _enterButton;
     private readonly Button _refreshButton;
+    private readonly Button _inspectRomButton;
     private readonly Button _cancelButton;
+    private string? _lastFastbootProduct;
     private CancellationTokenSource? _operation;
 
     public XiaomiFastbootDiagnosticsWindow(AdbClient adb, string serial, string manufacturer, string model)
@@ -53,6 +56,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
 
         _enterButton = ButtonControl("إعادة تشغيل الهاتف إلى Fastboot", "#704B20", EnterFastboot_Click);
         _refreshButton = ButtonControl("إعادة فحص Fastboot وقراءة المتغيرات", "#14517A", Refresh_Click);
+        _inspectRomButton = ButtonControl("فحص حزمة Fastboot ROM (قراءة فقط)", "#176044", InspectFastbootRom_Click);
         _cancelButton = ButtonControl("إلغاء", "#713B43", Cancel_Click);
         _refreshButton.IsEnabled = false;
         _cancelButton.IsEnabled = false;
@@ -90,6 +94,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         actions.Children.Add(_enterButton);
         actions.Children.Add(_refreshButton);
+        actions.Children.Add(_inspectRomButton);
         actions.Children.Add(_cancelButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -154,6 +159,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
                 manufacturer + " " + brand, _serial, device.Serial, device.Details, parsed);
             _details.Text = FormatReport(report, raw);
+            _lastFastbootProduct = report.Product;
             _refreshButton.IsEnabled = true;
             return "ظهر الجهاز في Fastboot وتمت قراءة متغيراته. لم يتم تغيير أي قسم أو إعداد.";
         });
@@ -177,12 +183,65 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
                 _manufacturer, _serial, device.Serial, device.Details, FastbootVariableParser.Parse(raw));
             _details.Text = FormatReport(report, raw);
+            _lastFastbootProduct = report.Product;
             return "اكتملت قراءة متغيرات Fastboot للجهاز المحدد.";
         });
     }
 
-    private async Task<FastbootDevice> WaitForSelectedFastbootDeviceAsync(CancellationToken cancellationToken)
+    private async void InspectFastbootRom_Click(object sender, RoutedEventArgs e)
     {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "اختيار حزمة Xiaomi Fastboot ROM للفحص المحلي",
+            Filter = "Xiaomi Fastboot ROM (*.tgz;*.tar.gz;*.tar)|*.tgz;*.tar.gz;*.tar|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        await RunOperationAsync("جارٍ فحص أرشيف Xiaomi Fastboot ROM دون استخراج أو تشغيل سكربتات...", async token =>
+        {
+            var report = await XiaomiFastbootRomInspector.InspectAsync(dialog.FileName, _lastFastbootProduct, token);
+            _details.Text = FormatRomReport(report);
+            return report.ProductMatch switch
+            {
+                XiaomiRomProductMatchState.Match => "تطابق Product النصي؛ لا يعني ذلك توثيق المصدر أو السماح بالتفليش.",
+                XiaomiRomProductMatchState.Mismatch => "Product غير مطابق؛ لا تستخدم الحزمة على الجهاز المحدد.",
+                _ => "اكتمل فحص الأرشيف، لكن Product غير معروف أو لم تتم قراءته من Fastboot."
+            };
+        });
+    }
+
+    private static string FormatRomReport(XiaomiFastbootRomInspectionResult report)
+    {
+        var lines = new List<string>
+        {
+            "XIAOMI FASTBOOT ROM ARCHIVE INSPECTION — READ ONLY",
+            "ARCHIVE: " + report.FileName,
+            "SIZE BYTES: " + report.ArchiveBytes,
+            "SHA-256: " + report.ArchiveSha256,
+            "SELECTED DEVICE PRODUCT: " + (report.SelectedDeviceProduct ?? "Unknown"),
+            "PRODUCT MATCH: " + report.ProductMatch,
+            "FLASH ALLOWED: " + report.FlashAllowed,
+            "UNLOCK ALLOWED: " + report.UnlockAllowed,
+            "REQUIRED PRODUCTS: " + (report.RequiredProducts.Count == 0 ? "Unknown" : string.Join(", ", report.RequiredProducts)),
+            "IMAGE FILES: " + report.ImageFiles.Count,
+            "FLASH SCRIPT FILES: " + (report.ScriptFiles.Count == 0 ? "None found" : string.Join(", ", report.ScriptFiles)),
+            "FLASH PARTITIONS REFERENCED IN SCRIPTS: " + (report.FlashPartitions.Count == 0 ? "None found" : string.Join(", ", report.FlashPartitions)),
+            "ERASE / WIPE COMMANDS FOUND: " + report.ContainsEraseOrWipeCommands,
+            "UNLOCK / LOCK COMMANDS FOUND: " + report.ContainsUnlockCommands,
+            "",
+            "FINDINGS:"
+        };
+        lines.AddRange(report.Findings.Select(item => "- " + item));
+        lines.Add("");
+        lines.Add("IMAGE PATHS (FIRST 100):");
+        lines.AddRange(report.ImageFiles.Take(100).Select(item => "- " + item));
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private async Task<FastbootDevice> WaitForSelectedFastbootDeviceAsync(CancellationToken cancellationToken)    {
         if (!_fastboot.IsAvailable)
             throw new FileNotFoundException("لم يتم العثور على fastboot.exe في أدوات SoftBox أو PATH.");
         for (var attempt = 0; attempt < 60; attempt++)
@@ -239,6 +298,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         _operation = new CancellationTokenSource();
         _enterButton.IsEnabled = false;
         _refreshButton.IsEnabled = false;
+        _inspectRomButton.IsEnabled = false;
         _cancelButton.IsEnabled = true;
         _status.Text = message;
         try
@@ -260,6 +320,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             _operation = null;
             _enterButton.IsEnabled = true;
             _refreshButton.IsEnabled = true;
+            _inspectRomButton.IsEnabled = true;
             _cancelButton.IsEnabled = false;
         }
     }

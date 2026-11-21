@@ -8,6 +8,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PhoneLab.Desktop", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PhoneLab.Tests", "tests\SoftBox.PhoneLab.Tests\SoftBox.PhoneLab.Tests.csproj", "{5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.ReleaseSigner", "tools\SoftBox.ReleaseSigner\SoftBox.ReleaseSigner.csproj", "{8CCAAE22-7C39-4EB8-AD79-F37BDE4DD2D9}"
+EndProject
 Global
   GlobalSection(SolutionConfigurationPlatforms) = preSolution
     Debug|Any CPU = Debug|Any CPU
@@ -26,5 +28,9 @@ Global
     {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Debug|Any CPU.Build.0 = Debug|Any CPU
     {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Release|Any CPU.ActiveCfg = Release|Any CPU
     {5C7B58D8-DC20-4D4C-B3D8-AEA2D29FC654}.Release|Any CPU.Build.0 = Release|Any CPU
+    {8CCAAE22-7C39-4EB8-AD79-F37BDE4DD2D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+    {8CCAAE22-7C39-4EB8-AD79-F37BDE4DD2D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+    {8CCAAE22-7C39-4EB8-AD79-F37BDE4DD2D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+    {8CCAAE22-7C39-4EB8-AD79-F37BDE4DD2D9}.Release|Any CPU.Build.0 = Release|Any CPU
   EndGlobalSection
 EndGlobal

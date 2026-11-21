@@ -7,6 +7,16 @@ namespace SoftBox.PhoneLab.Tests;
 
 public sealed class MultiScreenSessionsPolicyTests
 {
+    [Theory]
+    [InlineData("device", true)]
+    [InlineData(" device ", true)]
+    [InlineData("unauthorized", false)]
+    [InlineData("offline", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void ScrcpyStartRequiresFreshAuthorizedAdbGetState(string? state, bool expected)
+        => Assert.Equal(expected, MultiScreenSessionsPolicy.IsAuthorizedAdbState(state));
+
     [Fact]
     public void ReturnsOnlyRequestedDevicesStillAuthorizedInFreshDiscovery()
     {

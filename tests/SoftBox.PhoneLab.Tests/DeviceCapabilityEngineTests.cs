@@ -229,7 +229,7 @@ public sealed class DeviceCapabilityEngineTests
     private static DeviceCapabilityDecision Get(
         DeviceCapabilityReport report,
         DeviceCapabilityOperation operation)
-        => Assert.Single(report.Decisions.Where(item => item.Operation == operation));
+        => Assert.Single(report.Decisions, item => item.Operation == operation);
 
     private static DeviceSnapshot Device(
         string serial = "R58N12345",

@@ -1,6 +1,8 @@
 using SoftBox.PhoneLab.Core.Compatibility;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Desktop.Services;
+using Microsoft.Win32;
+using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -25,6 +27,8 @@ public sealed class DeviceCapabilityCenterWindow : Window
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
     private readonly Button _refreshButton;
+    private readonly Button _exportMatrixButton;
+    private DeviceCapabilityMatrixReport? _lastMatrix;
     private bool _busy;
 
     public DeviceCapabilityCenterWindow(
@@ -52,6 +56,8 @@ public sealed class DeviceCapabilityCenterWindow : Window
         Foreground = Brush("#EAF3FF");
 
         _refreshButton = ButtonControl("إعادة فحص القدرات", "#14517A", async (_, _) => await RefreshAsync());
+        _exportMatrixButton = ButtonControl("تصدير مصفوفة تغطية الموديلات CSV", "#176044", ExportMatrix_Click);
+        _exportMatrixButton.IsEnabled = false;
         Content = BuildContent();
         Loaded += async (_, _) => await RefreshAsync();
     }
@@ -96,6 +102,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
 
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         toolbar.Children.Add(_refreshButton);
+        toolbar.Children.Add(_exportMatrixButton);
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
 
@@ -161,6 +168,9 @@ public sealed class DeviceCapabilityCenterWindow : Window
             }
 
             var catalog = await _profiles.LoadAsync();
+            var matrix = DeviceCapabilityMatrixBuilder.Build(catalog);
+            _lastMatrix = matrix;
+            _exportMatrixButton.IsEnabled = true;
             var identity = DeviceCapabilityEngine.ResolveIdentity(_device, catalog.Profiles);
 
             var verifiedBoardMap = false;
@@ -183,7 +193,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
                     VerifiedBoardMapAvailable: verifiedBoardMap),
                 catalog.Profiles);
 
-            _report.Text = FormatReport(report, catalog);
+            _report.Text = FormatReport(report, catalog, matrix);
             _status.Text =
                 $"اكتمل التقييم: هوية الجهاز «{IdentityLabel(report.Identity.State)}»، " +
                 $"العمليات المسموح بها {report.Decisions.Count(item => item.CanExecute)} من أصل {report.Decisions.Count}. " +
@@ -199,16 +209,58 @@ public sealed class DeviceCapabilityCenterWindow : Window
         {
             _busy = false;
             _refreshButton.IsEnabled = true;
+            _exportMatrixButton.IsEnabled = _lastMatrix is not null;
         }
     }
 
-    private static string FormatReport(DeviceCapabilityReport report, DeviceProfileCatalogDocument catalog)
+    private void ExportMatrix_Click(object sender, RoutedEventArgs e)
+    {
+        if (_lastMatrix is null)
+        {
+            _status.Text = "لم تكتمل قراءة كتالوج الموديلات بعد؛ لم يتم إنشاء ملف التصدير.";
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "تصدير مصفوفة تغطية موديلات وأدلة اللوحات",
+            Filter = "CSV file (*.csv)|*.csv",
+            FileName = "SoftBox-Device-Capability-Matrix.csv",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            File.WriteAllText(dialog.FileName, DeviceCapabilityMatrixBuilder.ToCsv(_lastMatrix), new UTF8Encoding(true));
+            _status.Text = $"تم تصدير {_lastMatrix.TotalProfiles} ملف تعريف فعلي. الملفات التي تحتوي أدلة Board ID: {_lastMatrix.ProfilesWithBoardIds}، ومراجع Board Map: {_lastMatrix.ProfilesWithBoardMapReferences}. لا يتم استنتاج اللوحات المفقودة.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تصدير مصفوفة الموديلات: " + ex.Message;
+        }
+    }
+
+    private static string FormatReport(DeviceCapabilityReport report, DeviceProfileCatalogDocument catalog, DeviceCapabilityMatrixReport matrix)
     {
         var text = new StringBuilder();
         text.AppendLine("SOFTBOX DEVICE CAPABILITY ENGINE");
         text.AppendLine("EVALUATED UTC: " + report.EvaluatedAtUtc.ToString("O"));
         text.AppendLine("PROFILE CATALOG: " + catalog.CatalogVersion);
         text.AppendLine("PROFILE COUNT: " + catalog.Profiles.Count);
+        text.AppendLine();
+        text.AppendLine("MODEL AND BOARD COVERAGE MATRIX");
+        text.AppendLine("TOTAL PROFILE ROWS: " + matrix.TotalProfiles);
+        text.AppendLine("MODEL NUMBER COVERAGE: " + matrix.ProfilesWithModelNumbers);
+        text.AppendLine("DEVICE CODE COVERAGE: " + matrix.ProfilesWithDeviceCodes);
+        text.AppendLine("BOARD ID / REVISION EVIDENCE: " + matrix.ProfilesWithBoardIds);
+        text.AppendLine("BOARD MAP REFERENCES (NOT VERIFIED MAPS): " + matrix.ProfilesWithBoardMapReferences);
+        text.AppendLine("SOC ALIASES: " + matrix.ProfilesWithSocAliases);
+        text.AppendLine("HTTPS IDENTITY SOURCES: " + matrix.ProfilesWithHttpsIdentitySources);
+        text.AppendLine("PROFILES WITHOUT COMPLETE BOARD EVIDENCE: " + matrix.ProfilesMissingBoardEvidence);
+        text.AppendLine("A catalogue identity flag or BoardMapId reference does not prove physical-board compatibility.");
         text.AppendLine();
 
         text.AppendLine("DEVICE IDENTITY");
