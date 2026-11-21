@@ -247,11 +247,11 @@ public sealed class WorkshopBackupSchedulerService
 
         var source = PowerShellLiteral(Path.GetFullPath(workshopDatabasePath));
         var destination = PowerShellLiteral(Path.GetFullPath(destinationDirectory));
-        return $"""
+        var script = """
             $ErrorActionPreference = 'Stop'
-            $source = '{{source}}'
-            $destinationDirectory = '{{destination}}'
-            $retentionDays = {{retentionDays}}
+            $source = '__SOFTBOX_SOURCE__'
+            $destinationDirectory = '__SOFTBOX_DESTINATION__'
+            $retentionDays = __SOFTBOX_RETENTION__
             if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw 'Workshop database is missing.' }
             if (-not (Test-Path -LiteralPath $destinationDirectory -PathType Container)) {
                 [void][IO.Directory]::CreateDirectory($destinationDirectory)
@@ -277,13 +277,19 @@ public sealed class WorkshopBackupSchedulerService
                 $sourceBytes = $null
             }
             $cutoffUtc = [DateTime]::UtcNow.AddDays(-$retentionDays)
-            foreach ($candidate in [IO.Directory]::EnumerateFiles($destinationDirectory, '{{BackupFilePattern}}', [IO.SearchOption]::TopDirectoryOnly)) {
+            foreach ($candidate in [IO.Directory]::EnumerateFiles($destinationDirectory, '__SOFTBOX_BACKUP_PATTERN__', [IO.SearchOption]::TopDirectoryOnly)) {
                 $candidateInfo = [IO.FileInfo]::new($candidate)
                 if (($candidateInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0 -and $candidateInfo.LastWriteTimeUtc -lt $cutoffUtc) {
                     [IO.File]::Delete($candidate)
                 }
             }
             """;
+
+        return script
+            .Replace("__SOFTBOX_SOURCE__", source, StringComparison.Ordinal)
+            .Replace("__SOFTBOX_DESTINATION__", destination, StringComparison.Ordinal)
+            .Replace("__SOFTBOX_RETENTION__", retentionDays.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("__SOFTBOX_BACKUP_PATTERN__", BackupFilePattern, StringComparison.Ordinal);
     }
 
     private static string PowerShellLiteral(string value)
