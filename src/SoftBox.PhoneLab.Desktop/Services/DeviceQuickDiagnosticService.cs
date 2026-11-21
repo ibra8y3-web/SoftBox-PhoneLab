@@ -33,8 +33,13 @@ public sealed record OneClickDiagnosticReport(
 /// Runs a bounded sequence of read-only ADB presets and assembles the results with current device/Agent evidence.
 /// It never installs, removes, flashes, resets, or changes device settings.
 /// </summary>
-public sealed class DeviceQuickDiagnosticService(AndroidDeviceToolsService android)
+public sealed class DeviceQuickDiagnosticService(
+    AndroidDeviceToolsService android,
+    DeviceDiagnosticEngineSettingsStore? settingsStore = null)
 {
+    private readonly DeviceDiagnosticEngineSettingsStore _settingsStore =
+        settingsStore ?? new DeviceDiagnosticEngineSettingsStore();
+    private readonly DeviceProfileCatalog _profileCatalog = new();
     private static readonly (string Id, string Label)[] Steps =
     [
         ("properties", "خصائص النظام ومعلومات البناء"),
@@ -95,10 +100,26 @@ public sealed class DeviceQuickDiagnosticService(AndroidDeviceToolsService andro
             limitations.Add("لم يتم إرفاق نتائج Agent؛ لا توجد نتائج اختبارات عتاد تلقائية في هذا التقرير.");
 
         var safeDevice = device is null ? null : device with { Serial = "" };
+        var settingsLoad = await _settingsStore.LoadAsync(cancellationToken);
+        limitations.AddRange(settingsLoad.Warnings);
+        DeviceProfile? matchedProfile = null;
+        if (device is not null)
+        {
+            try
+            {
+                var catalog = await _profileCatalog.LoadAsync();
+                matchedProfile = DeviceCapabilityEngine.ResolveIdentity(device, catalog.Profiles).Profile;
+            }
+            catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or InvalidDataException)
+            {
+                limitations.Add("تعذر تحميل ملف تعريف الموديل لمحرك التشخيص؛ استخدم المحرك المسار العام. " + ex.Message);
+            }
+        }
         var enginePlan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
-            device, null, AdbAuthorized: true, AgentConnected: agent is not null,
-            FastbootDetected: false, AuthorizedSerial: serial));
+            device, matchedProfile, AdbAuthorized: true, AgentConnected: agent is not null,
+            FastbootDetected: false, Settings: settingsLoad.Settings, AuthorizedSerial: serial));
         limitations.Add("محرك المعالج يختار خطة تشخيص حسب SoC المبلغ عنه أو ملف موثوق؛ لا يرسل بروتوكولات OEM خاصة ولا ينفذ تفليشًا.");
+        limitations.Add("حدود حرارة البطارية في هذا المحرك هي تنبيهات مراجعة محلية قابلة للتعديل وليست حدود أمان OEM.");
         return new OneClickDiagnosticReport(
             LocalActivityStore.CreateDeviceFingerprint(serial),
             LocalActivityStore.MaskSerial(serial),

@@ -23,6 +23,8 @@ public sealed class OneClickDiagnosticWindow : Window
     private readonly ProgressBar _progress = new();
     private readonly Button _runButton;
     private readonly Button _saveButton;
+    private readonly Button _settingsButton;
+    private readonly DeviceDiagnosticEngineSettingsStore _settingsStore = new();
     private readonly Button _cancelButton;
     private CancellationTokenSource? _operation;
     private OneClickDiagnosticReport? _report;
@@ -40,7 +42,7 @@ public sealed class OneClickDiagnosticWindow : Window
         _device = device;
         _agent = agent;
         _components = components ?? [];
-        _service = new DeviceQuickDiagnosticService(new AndroidDeviceToolsService(adb));
+        _service = new DeviceQuickDiagnosticService(new AndroidDeviceToolsService(adb), _settingsStore);
 
         Title = $"SoftBox | الفحص الشامل — {LocalMask(serial)}";
         Width = 1050;
@@ -55,6 +57,7 @@ public sealed class OneClickDiagnosticWindow : Window
         _runButton = ButtonControl("بدء الفحص الشامل", "#14517A", Run_Click);
         _saveButton = ButtonControl("حفظ تقرير JSON", "#176044", Save_Click);
         _cancelButton = ButtonControl("إلغاء", "#51333A", Cancel_Click);
+        _settingsButton = ButtonControl("إعدادات المحرك", "#28435D", Settings_Click);
         _saveButton.IsEnabled = false;
         _cancelButton.IsEnabled = false;
 
@@ -96,6 +99,7 @@ public sealed class OneClickDiagnosticWindow : Window
         buttons.Children.Add(_runButton);
         buttons.Children.Add(_saveButton);
         buttons.Children.Add(_cancelButton);
+        buttons.Children.Add(_settingsButton);
         DockPanel.SetDock(buttons, Dock.Top);
         root.Children.Add(buttons);
 
@@ -203,6 +207,12 @@ public sealed class OneClickDiagnosticWindow : Window
         _progress.Visibility = busy ? Visibility.Visible : Visibility.Collapsed;
         _runButton.IsEnabled = !busy;
         _cancelButton.IsEnabled = busy;
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new DeviceDiagnosticEngineSettingsWindow(_settingsStore) { Owner = this };
+        window.ShowDialog();
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => _operation?.Cancel();
