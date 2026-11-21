@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -250,7 +251,7 @@ public sealed class WindowsDriverSignatureVerificationService
                     })
                     .ToArray();
             }
-            catch (UnauthorizedAccessException)
+            catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
                 continue;
             }
