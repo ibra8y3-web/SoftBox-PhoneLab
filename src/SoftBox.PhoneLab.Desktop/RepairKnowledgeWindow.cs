@@ -28,10 +28,20 @@ public sealed class RepairKnowledgeWindow : Window
     private readonly CheckBox _verified = new();
     private readonly TextBox _details = new();
     private readonly TextBlock _status = new();
+    private readonly Button _addButton;
+    private readonly Button _updateButton;
+    private readonly Button _deleteButton;
+    private Guid? _selectedEntryId;
     private IReadOnlyList<RepairKnowledgeEntry> _all = [];
 
-    public RepairKnowledgeWindow()
+    public RepairKnowledgeWindow(string? manufacturer = null, string? model = null)
     {
+        _addButton = ButtonControl("إضافة ملاحظة جديدة", "#176044", Add_Click);
+        _updateButton = ButtonControl("حفظ تعديلات الملاحظة", "#14517A", Update_Click);
+        _deleteButton = ButtonControl("حذف الملاحظة", "#713B43", Delete_Click);
+        _updateButton.IsEnabled = false;
+        _deleteButton.IsEnabled = false;
+
         Title = "SoftBox | قاعدة المعرفة المحلية للإصلاح";
         Width = 1240;
         Height = 860;
@@ -42,8 +52,16 @@ public sealed class RepairKnowledgeWindow : Window
         Background = Brush("#081321");
         Foreground = Brush("#EAF3FF");
         Content = BuildContent();
+        _manufacturer.Text = manufacturer ?? "";
+        _model.Text = model ?? "";
+        _search.Text = !string.IsNullOrWhiteSpace(model) ? model : manufacturer ?? "";
         _list.SelectionChanged += (_, _) => ShowSelected();
-        Loaded += async (_, _) => await RefreshAsync();
+        Loaded += async (_, _) =>
+        {
+            await RefreshAsync();
+            if (_entries.Count > 0 && _list.SelectedIndex < 0)
+                _list.SelectedIndex = 0;
+        };
         _search.TextChanged += async (_, _) => await FilterAsync();
     }
 
@@ -95,10 +113,13 @@ public sealed class RepairKnowledgeWindow : Window
         Grid.SetRow(_verified, 4);
         Grid.SetColumn(_verified, 0);
         form.Children.Add(_verified);
-        var add = ButtonControl("إضافة إلى قاعدة المعرفة المشفرة", "#176044", Add_Click);
-        Grid.SetRow(add, 4);
-        Grid.SetColumn(add, 1);
-        form.Children.Add(add);
+        var actions = new WrapPanel { Margin = new Thickness(4) };
+        actions.Children.Add(_addButton);
+        actions.Children.Add(_updateButton);
+        actions.Children.Add(_deleteButton);
+        Grid.SetRow(actions, 4);
+        Grid.SetColumn(actions, 1);
+        form.Children.Add(actions);
         DockPanel.SetDock(form, Dock.Top);
         root.Children.Add(new ScrollViewer { Content = form, MaxHeight = 290, VerticalScrollBarVisibility = ScrollBarVisibility.Auto });
 
@@ -200,21 +221,14 @@ public sealed class RepairKnowledgeWindow : Window
     {
         try
         {
-            var steps = _steps.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var entry = await _store.AddAsync(
                 _manufacturer.Text, _model.Text, _symptom.Text, _diagnosis.Text,
-                _evidence.Text, steps, _source.Text, _author.Text, _verified.IsChecked == true);
-            _manufacturer.Clear();
-            _model.Clear();
-            _symptom.Clear();
-            _diagnosis.Clear();
-            _evidence.Clear();
-            _steps.Clear();
-            _source.Clear();
-            _verified.IsChecked = false;
+                _evidence.Text, ReadSafeSteps(), _source.Text, _author.Text, _verified.IsChecked == true);
+            _selectedEntryId = entry.Id;
             _search.Text = entry.Model;
             await RefreshAsync();
             _list.SelectedItem = _entries.FirstOrDefault(item => item.Entry.Id == entry.Id);
+            LoadEntry(entry);
             _status.Text = "تم حفظ الملاحظة داخل قاعدة المعرفة المشفرة لهذا المستخدم.";
         }
         catch (Exception ex)
@@ -224,11 +238,105 @@ public sealed class RepairKnowledgeWindow : Window
         }
     }
 
-    private async void ShowSelected()
+    private async void Update_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedEntryId is not Guid id)
+        {
+            _status.Text = "اختر ملاحظة محفوظة من القائمة أولًا.";
+            return;
+        }
+
+        try
+        {
+            var updatedEntry = await _store.UpdateAsync(
+                id, _manufacturer.Text, _model.Text, _symptom.Text, _diagnosis.Text,
+                _evidence.Text, ReadSafeSteps(), _source.Text, _author.Text, _verified.IsChecked == true);
+            await RefreshAsync();
+            _list.SelectedItem = _entries.FirstOrDefault(item => item.Entry.Id == updatedEntry.Id);
+            LoadEntry(updatedEntry);
+            _status.Text = "تم تحديث الملاحظة وحفظ التعديلات في قاعدة المعرفة المشفرة.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تحديث الملاحظة: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "قاعدة المعرفة", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private async void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selectedEntryId is not Guid id)
+        {
+            _status.Text = "اختر ملاحظة محفوظة من القائمة أولًا.";
+            return;
+        }
+        if (MessageBox.Show(this, "سيتم حذف الملاحظة المحددة نهائيًا من قاعدة المعرفة المحلية. متابعة؟",
+                "حذف ملاحظة الإصلاح", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            await _store.DeleteAsync(id);
+            ClearEditor();
+            _details.Clear();
+            await RefreshAsync();
+            _status.Text = "تم حذف الملاحظة المحددة من قاعدة المعرفة المشفرة.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر حذف الملاحظة: " + ex.Message;
+        }
+    }
+
+    private void New_Click(object sender, RoutedEventArgs e)
+    {
+        ClearEditor();
+        _list.SelectedItem = null;
+        _details.Text = "ملاحظة جديدة. املأ الشركة والموديل والعَرَض والدليل والخطوات الآمنة ثم اضغط إضافة.";
+        _status.Text = "جاهز لإضافة ملاحظة فنية جديدة.";
+    }
+
+    private string[] ReadSafeSteps()
+        => _steps.Text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private void ClearEditor()
+    {
+        _selectedEntryId = null;
+        _manufacturer.Clear();
+        _model.Clear();
+        _symptom.Clear();
+        _diagnosis.Clear();
+        _evidence.Clear();
+        _steps.Clear();
+        _source.Clear();
+        _author.Clear();
+        _verified.IsChecked = false;
+        _updateButton.IsEnabled = false;
+        _deleteButton.IsEnabled = false;
+    }
+
+    private void LoadEntry(RepairKnowledgeEntry entry)
+    {
+        _selectedEntryId = entry.Id;
+        _manufacturer.Text = entry.Manufacturer;
+        _model.Text = entry.Model;
+        _symptom.Text = entry.Symptom;
+        _diagnosis.Text = entry.Diagnosis;
+        _evidence.Text = entry.Evidence;
+        _steps.Text = string.Join(Environment.NewLine, entry.SafeSteps);
+        _source.Text = entry.Source;
+        _author.Text = entry.Author;
+        _verified.IsChecked = entry.TechnicianMarkedVerified;
+        _updateButton.IsEnabled = true;
+        _deleteButton.IsEnabled = true;
+    }
+
+    private void ShowSelected()
     {
         if (_list.SelectedItem is not KnowledgeListItem item)
             return;
         var entry = item.Entry;
+        LoadEntry(entry);
         _details.Text = string.Join(Environment.NewLine,
         [
             "MANUFACTURER: " + entry.Manufacturer,
@@ -245,7 +353,6 @@ public sealed class RepairKnowledgeWindow : Window
             "SAFE STEPS:",
             string.Join(Environment.NewLine, entry.SafeSteps.Select(step => "- " + step))
         ]);
-        await Task.CompletedTask;
     }
 
     private static Button ButtonControl(string label, string background, RoutedEventHandler handler)

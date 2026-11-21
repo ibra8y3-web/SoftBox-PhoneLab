@@ -14,6 +14,8 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class RepairAdvisorWindow : Window
 {
     private readonly RepairAdviceReport _report;
+    private readonly string _knowledgeManufacturer;
+    private readonly string _knowledgeModel;
     private readonly ObservableCollection<AdviceListItem> _items = [];
     private readonly ListBox _list = new();
     private readonly TextBox _details = new();
@@ -25,6 +27,10 @@ public sealed class RepairAdvisorWindow : Window
         bool adbAuthorized)
     {
         _report = DeviceRepairAdvisor.Analyze(device, agent, components, adbAuthorized);
+        _knowledgeManufacturer = device?.Manufacturer ?? "";
+        _knowledgeModel = !string.IsNullOrWhiteSpace(device?.ModelNumber) && device.ModelNumber != "غير متاح"
+            ? device.ModelNumber
+            : device?.Product ?? device?.Model ?? "";
         Title = "SoftBox | مساعد الإصلاح المبني على الأدلة";
         Width = 1040;
         Height = 760;
@@ -90,7 +96,7 @@ public sealed class RepairAdvisorWindow : Window
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Right
         };
-        knowledgeButton.Click += (_, _) => new RepairKnowledgeWindow { Owner = this }.ShowDialog();
+        knowledgeButton.Click += (_, _) => new RepairKnowledgeWindow(_knowledgeManufacturer, _knowledgeModel) { Owner = this }.ShowDialog();
         header.Children.Add(knowledgeButton);
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
