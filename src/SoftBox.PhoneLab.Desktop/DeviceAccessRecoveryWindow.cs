@@ -219,6 +219,22 @@ public sealed class DeviceAccessRecoveryWindow : Window
                         ? "عُثر على مؤشر Active Admin، لكن لم يظهر Device Owner/Profile Owner واضح. هذا لا ينفي وجود MDM أو سياسة أخرى."
                         : "لم تظهر مؤشرات Device Owner/Profile Owner/Active Admin المعروفة في المخرجات المقروءة. هذا ليس إثباتًا لغياب MDM.";
 
+            if (report.ManagementComponents.Count > 0)
+            {
+                var components = string.Join(", ", report.ManagementComponents.Take(8));
+                var remaining = report.ManagementComponents.Count - Math.Min(8, report.ManagementComponents.Count);
+                _managementResult.Text += "\nمكونات الإدارة / DPC: " + components +
+                    (remaining > 0 ? $" (+{remaining} أخرى)" : string.Empty);
+            }
+
+            if (report.ObservedRestrictionTokens.Count > 0)
+            {
+                var restrictions = string.Join(", ", report.ObservedRestrictionTokens.Take(12));
+                var remaining = report.ObservedRestrictionTokens.Count - Math.Min(12, report.ObservedRestrictionTokens.Count);
+                _managementResult.Text += "\nرموز قيود مذكورة بالمخرجات (وليست تأكيدًا على تطبيقها): " + restrictions +
+                    (remaining > 0 ? $" (+{remaining} أخرى)" : string.Empty);
+            }
+
             _simResult.Text =
                 "SIM state: " + (string.IsNullOrWhiteSpace(report.SimStateProperty) ? "غير متاح" : report.SimStateProperty) +
                 " • Network operator: " + (string.IsNullOrWhiteSpace(report.NetworkOperatorProperty)

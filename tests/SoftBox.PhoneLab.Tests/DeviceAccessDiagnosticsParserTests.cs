@@ -101,4 +101,62 @@ public sealed class DeviceAccessDiagnosticsParserTests
         Assert.True(report.SimStateProperty.Length <= 80);
         Assert.Equal("CarrierName", report.NetworkOperatorProperty);
     }
+
+    [Fact]
+    public void ExtractsManagementComponentNamesAndAndroidUserRestrictionTokens()
+    {
+        const string policy =
+            "Device Owner:\n" +
+            "  admin=ComponentInfo{com.example.enterprise/.DeviceAdminReceiver}\n" +
+            "Profile Owner (User 10):\n" +
+            "  admin=ComponentInfo{com.example.work/.AdminReceiver}\n" +
+            "Active admin: ComponentInfo{com.example.legacy/.AdminReceiver}\n" +
+            "User restrictions: no_add_user, no_config_wifi, no_debugging_features\n";
+
+        var report = DeviceAccessDiagnosticsParser.Parse(policy, "", "", "");
+
+        Assert.Equal(3, report.ManagementComponents.Count);
+        Assert.True(report.HasDeviceOwner);
+        Assert.True(report.HasProfileOwner);
+        Assert.True(report.HasActiveAdmin);
+        Assert.Contains("com.example.enterprise/.DeviceAdminReceiver", report.ManagementComponents);
+        Assert.Contains("com.example.work/.AdminReceiver", report.ManagementComponents);
+        Assert.Contains("com.example.legacy/.AdminReceiver", report.ManagementComponents);
+        Assert.Equal(
+            new[] { "no_add_user", "no_config_wifi", "no_debugging_features" },
+            report.ObservedRestrictionTokens.OrderBy(value => value, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void DoesNotReturnComponentsOrRestrictionsWhenPolicyDumpIsUnavailable()
+    {
+        var report = DeviceAccessDiagnosticsParser.Parse(
+            "Permission Denial: can't dump device_policy",
+            "",
+            "",
+            "");
+
+        Assert.False(report.PolicyOutputReadable);
+        Assert.Empty(report.ManagementComponents);
+        Assert.Empty(report.ObservedRestrictionTokens);
+    }
+
+    [Fact]
+    public void BoundsManagementEvidenceCollections()
+    {
+        var components = string.Join("\n", Enumerable.Range(0, 30)
+            .Select(index => $"ComponentInfo{{com.example.app{index}/.AdminReceiver}}"));
+        var restrictions = string.Join(", ", Enumerable.Range(0, 80)
+            .Select(index => $"no_policy_{index}"));
+
+        var report = DeviceAccessDiagnosticsParser.Parse(
+            "Device Policy Manager state\n" + components + "\n" + restrictions,
+            "",
+            "",
+            "");
+
+        Assert.Equal(20, report.ManagementComponents.Count);
+        Assert.Equal(60, report.ObservedRestrictionTokens.Count);
+    }
+
 }
