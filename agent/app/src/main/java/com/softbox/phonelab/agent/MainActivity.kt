@@ -159,18 +159,11 @@ class MainActivity : Activity() {
         volumeUpSeen = false
         volumeDownSeen = false
         buttonTestActive = true
-        AlertDialog.Builder(this)
-            .setTitle("اختبار الأزرار الفعلية")
-            .setMessage("اضغط زر رفع الصوت ثم زر خفض الصوت. لا تضغط زر الطاقة أثناء الاختبار. أزرار Power/Home محمية من Android ولا يستطيع التطبيق مراقبتها مباشرة.")
-            .setNegativeButton("إلغاء") { _, _ ->
-                buttonTestActive = false
-                saveTest("physical_buttons", "not_tested", "ألغى المستخدم اختبار الأزرار.")
-            }
-            .setOnCancelListener {
-                buttonTestActive = false
-                saveTest("physical_buttons", "not_tested", "أغلق المستخدم اختبار الأزرار قبل التقاط الضغطات.")
-            }
-            .show()
+        Toast.makeText(
+            this,
+            "اختبار الأزرار: اضغط رفع الصوت ثم خفض الصوت خلال 20 ثانية. لا تضغط زر الطاقة.",
+            Toast.LENGTH_LONG
+        ).show()
         handler.postDelayed({
             if (buttonTestActive) {
                 buttonTestActive = false
@@ -609,7 +602,7 @@ class MainActivity : Activity() {
         val testObject = JSONObject()
         tests.forEach { (key, value) -> testObject.put(key, value) }
         return JSONObject()
-            .put("agentVersion", "0.5.0")
+            .put("agentVersion", "0.6.0")
             .put("manufacturer", Build.MANUFACTURER)
             .put("brand", Build.BRAND)
             .put("model", Build.MODEL)

@@ -553,6 +553,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("Battery remaining energy", agent.BatteryEnergyCounterNWh is null ? "غير متاح" : $"{agent.BatteryEnergyCounterNWh / 1_000_000d:0.0} mWh");
         Add("Battery cycle count", agent.BatteryCycleCount is null ? "غير مدعوم / غير مكشوف" : agent.BatteryCycleCount.ToString()!);
         Add("تقدير السعة من التفريغ", agent.BatteryCapacityEstimateMah is null ? "لم يتم قياسه" : $"{agent.BatteryCapacityEstimateMah:0} mAh — تقدير Fuel Gauge يحتاج مراجعة");
+        if (agent.ScheduledBatteryLatest is { } scheduledBattery)
+        {
+            Add("آخر عينة بطارية مجدولة من Agent",
+                $"{scheduledBattery.BatteryPercent}% • {scheduledBattery.TimestampUtc.ToLocalTime():g}");
+            Add("جهد البطارية المجدول",
+                scheduledBattery.VoltageMillivolts is int voltage ? $"{voltage} mV" : "غير متاح");
+            Add("حرارة البطارية المجدولة",
+                scheduledBattery.TemperatureCelsius is double temperature ? $"{temperature:0.0} °C" : "غير متاح");
+            Add("عداد دورات البطارية المجدول",
+                scheduledBattery.CycleCount is int cycles ? cycles.ToString() : "غير مكشوف من الجهاز");
+            Add("حالة الشحن المجدولة", scheduledBattery.Plugged ? "متصل بالشاحن" : "غير متصل بالشاحن");
+            Add("عدد عينات البطارية المحفوظة", agent.ScheduledBatterySamples.ToString());
+        }
+        else
+        {
+            Add("قراءة البطارية المجدولة من Agent", "لم تصل عينة بعد؛ ينتظر WorkManager موعد أخذ العينة.");
+        }
+
+        if (agent.AgentTelemetrySummary is { } telemetry)
+        {
+            Add("سجلات Agent المحلية", $"{telemetry.EventCountSampled} حدثًا حديثًا • {telemetry.CrashCountSampled} تقرير تعطل محفوظ");
+            if (!string.IsNullOrWhiteSpace(telemetry.LastCrashType))
+                Add("آخر نوع تعطل في Agent", telemetry.LastCrashType + " • " + (telemetry.LastCrashAtUtc?.ToLocalTime().ToString("g") ?? "وقت غير متاح"));
+        }
         if (agent.BatteryCapacityEstimateMah is double estimated && _profileMatch.Profile?.DesignBatteryCapacityMah is int design && design > 0)
             Add("مقارنة السعة الاسمية", $"{estimated / design * 100:0}% من السعة الاسمية المسجلة للموديل (مقارنة تقريبية)");
         foreach (var camera in agent.Cameras)

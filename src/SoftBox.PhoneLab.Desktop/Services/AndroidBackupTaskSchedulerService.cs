@@ -11,7 +11,7 @@ namespace SoftBox.PhoneLab.Desktop.Services;
 /// </summary>
 public sealed class AndroidBackupTaskSchedulerService
 {
-    public const string ScheduledTaskName = @"\\SoftBoxPhoneLabAndroidBackupWorker";
+    public const string ScheduledTaskName = @"\SoftBoxPhoneLabAndroidBackupWorker";
     private const string WorkerArgument = "--run-android-backups";
     private readonly ITaskSchedulerCommandRunner _runner;
 

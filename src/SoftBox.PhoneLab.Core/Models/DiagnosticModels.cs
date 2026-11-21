@@ -33,6 +33,28 @@ public sealed record AgentCameraInfo
     public bool IsPhysicalOnly { get; init; }
 }
 
+public sealed record AgentScheduledBatterySnapshot
+{
+    public DateTimeOffset TimestampUtc { get; init; }
+    public int BatteryPercent { get; init; }
+    public int? VoltageMillivolts { get; init; }
+    public double? TemperatureCelsius { get; init; }
+    public int? ChargeCounterMicroAh { get; init; }
+    public int? CurrentNowMicroA { get; init; }
+    public bool Plugged { get; init; }
+    public int? CycleCount { get; init; }
+}
+
+public sealed record AgentTelemetrySummary
+{
+    public int EventCountSampled { get; init; }
+    public int CrashCountSampled { get; init; }
+    public string? LastEvent { get; init; }
+    public DateTimeOffset? LastEventAtUtc { get; init; }
+    public string? LastCrashType { get; init; }
+    public DateTimeOffset? LastCrashAtUtc { get; init; }
+}
+
 public sealed record AgentSnapshot
 {
     public string AgentVersion { get; init; } = "";
@@ -54,6 +76,9 @@ public sealed record AgentSnapshot
     public int? BatteryVoltageMillivolts { get; init; }
     public double? BatteryTemperatureCelsius { get; init; }
     public double? BatteryCapacityEstimateMah { get; init; }
+    public AgentScheduledBatterySnapshot? ScheduledBatteryLatest { get; init; }
+    public int ScheduledBatterySamples { get; init; }
+    public AgentTelemetrySummary? AgentTelemetrySummary { get; init; }
     public List<AgentCameraInfo> Cameras { get; init; } = [];
     public Dictionary<string, AgentTestResult> Tests { get; init; } = new(StringComparer.OrdinalIgnoreCase);
     public List<string> Sensors { get; init; } = [];

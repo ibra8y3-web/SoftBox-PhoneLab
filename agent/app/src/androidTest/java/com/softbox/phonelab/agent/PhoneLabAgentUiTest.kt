@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
@@ -20,6 +21,7 @@ class PhoneLabAgentUiTest {
     @Before
     fun launch() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        onView(withText("السماح لهذا الاتصال")).perform(click())
     }
 
     @After
@@ -39,7 +41,8 @@ class PhoneLabAgentUiTest {
 
     @Test
     fun inventoryTestCanBeStartedFromTheAgentUi() {
-        onView(withId(R.id.testSensors)).perform(androidx.test.espresso.action.ViewActions.click())
+        onView(withId(R.id.testSensors)).perform(click())
+        Thread.sleep(3200L)
         onView(withId(R.id.results)).check(matches(withText(containsString("sensors"))))
     }
 }
