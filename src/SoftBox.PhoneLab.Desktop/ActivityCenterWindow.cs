@@ -55,6 +55,7 @@ public sealed class ActivityCenterWindow : Window
         _markReadButton = ButtonControl("تعليم الإشعار كمقروء", "#176044", MarkRead_Click);
         _markAllReadButton = ButtonControl("تعليم الكل كمقروء", "#243B56", MarkAllRead_Click);
         _exportHistoryButton = ButtonControl("تصدير السجل المفلتر CSV", "#176044", ExportHistory_Click);
+        _exportHistoryButton.IsEnabled = false;
         _historySearch.TextChanged += (_, _) => ApplyHistoryFilter();
         _historyEventFilter.SelectionChanged += (_, _) => ApplyHistoryFilter();
 

@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Core.Network;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
