@@ -72,7 +72,7 @@ public sealed class SamsungOdinAutomationPolicyTests
             });
 
         Assert.False(decision.CanInvokeStart);
-        Assert.Contains(decision.Blockers, item => item.Contains("توافق"));
+        Assert.Contains(decision.Blockers, item => item.Contains("مطابقة"));
         Assert.Contains(decision.Blockers, item => item.Contains("نسخة احتياطية"));
     }
 
