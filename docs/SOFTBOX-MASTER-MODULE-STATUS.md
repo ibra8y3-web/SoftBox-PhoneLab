@@ -390,3 +390,13 @@ See [OEM service and recovery workflows](OEM-RECOVERY-WORKFLOWS.md) for implemen
 - **Samsung:** Odin package validation and external Odin hand-off remain. No public supported Samsung Odin automation API is claimed.
 - **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
 - The catalogue contains **36 master sections / 156 child features / 192 total entries**. Child statuses: **99 Implemented, 46 Tested, 6 In Development, 3 Planned, 2 Unsupported, 0 Verified**. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
+
+
+## Device access and official recovery follow-up — 21 November 2026
+
+- Added `DeviceAccessDiagnosticsParser` for conservative parsing of Android Keyguard visibility, Device Owner/Profile Owner/Active Admin indicators and SIM/operator properties.
+- Added the Device Access & Official Recovery window. It pins read-only ADB commands to the selected authorized serial and provides official Google, Samsung, Xiaomi and Android Enterprise recovery links.
+- The module does not infer FRP, Mi Activation Lock, Samsung account state, PIN/Pattern configuration or SIM/network unlock status from generic ADB output. Missing fields remain unknown; absence of MDM markers is not proof that the phone is unmanaged.
+- Google FRP bypass, Xiaomi Mi Account bypass, Samsung FRP bypass, PIN/Pattern bypass, MDM bypass and SIM/network-lock bypass are explicitly catalogued as Unsupported and have no executable ActionId.
+- Carrier unlock is an official carrier hand-off only. No account databases, modem/NV partitions, device policy or lock state are modified.
+- Automated parser tests cover positive, negative, missing and conflicting output. No physical handset verification or universal model coverage is claimed.
