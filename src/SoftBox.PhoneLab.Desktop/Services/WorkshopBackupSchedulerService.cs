@@ -249,40 +249,40 @@ public sealed class WorkshopBackupSchedulerService
         var destination = PowerShellLiteral(Path.GetFullPath(destinationDirectory));
         return $"""
             $ErrorActionPreference = 'Stop'
-            $source = '{source}'
-            $destinationDirectory = '{destination}'
-            $retentionDays = {retentionDays}
-            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {{ throw 'Workshop database is missing.' }}
-            if (-not (Test-Path -LiteralPath $destinationDirectory -PathType Container)) {{
+            $source = '{{source}}'
+            $destinationDirectory = '{{destination}}'
+            $retentionDays = {{retentionDays}}
+            if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw 'Workshop database is missing.' }
+            if (-not (Test-Path -LiteralPath $destinationDirectory -PathType Container)) {
                 [void][IO.Directory]::CreateDirectory($destinationDirectory)
-            }}
+            }
             $directoryInfo = [IO.DirectoryInfo]::new($destinationDirectory)
-            if (($directoryInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {{
+            if (($directoryInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
                 throw 'Backup destination cannot be a reparse point.'
-            }}
+            }
             $sourceBytes = [IO.File]::ReadAllBytes($source)
-            if ($sourceBytes.Length -le 9 -or [Text.Encoding]::ASCII.GetString($sourceBytes, 0, 9) -ne 'SBXDPAPI1') {{
+            if ($sourceBytes.Length -le 9 -or [Text.Encoding]::ASCII.GetString($sourceBytes, 0, 9) -ne 'SBXDPAPI1') {
                 throw 'Workshop database is not a DPAPI-protected SoftBox file.'
-            }}
+            }
             $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
             $fileName = 'SoftBox-Workshop-Backup-' + $timestamp + '.sbxbackup'
             $target = Join-Path $destinationDirectory $fileName
             $temporary = $target + '.tmp'
-            try {{
+            try {
                 [IO.File]::WriteAllBytes($temporary, $sourceBytes)
                 [IO.File]::Move($temporary, $target)
-            }}
-            finally {{
-                if (Test-Path -LiteralPath $temporary) {{ Remove-Item -LiteralPath $temporary -Force }}
+            }
+            finally {
+                if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force }
                 $sourceBytes = $null
-            }}
+            }
             $cutoffUtc = [DateTime]::UtcNow.AddDays(-$retentionDays)
-            foreach ($candidate in [IO.Directory]::EnumerateFiles($destinationDirectory, '{BackupFilePattern}', [IO.SearchOption]::TopDirectoryOnly)) {{
+            foreach ($candidate in [IO.Directory]::EnumerateFiles($destinationDirectory, '{{BackupFilePattern}}', [IO.SearchOption]::TopDirectoryOnly)) {
                 $candidateInfo = [IO.FileInfo]::new($candidate)
-                if (($candidateInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0 -and $candidateInfo.LastWriteTimeUtc -lt $cutoffUtc) {{
+                if (($candidateInfo.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0 -and $candidateInfo.LastWriteTimeUtc -lt $cutoffUtc) {
                     [IO.File]::Delete($candidate)
-                }}
-            }}
+                }
+            }
             """;
     }
 
