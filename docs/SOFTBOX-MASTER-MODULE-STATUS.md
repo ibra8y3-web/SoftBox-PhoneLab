@@ -324,11 +324,12 @@ Qualcomm EDL, MediaTek BROM/Preloader, undocumented Samsung Download/Odin contro
 
 This section supersedes the older additive snapshot above and is derived from the current catalog plus automated test files.
 
-- **36 master sections, 145 child features, 181 total catalog entries.**
-- Child feature status: **100 Implemented, 34 Tested, 3 In Development, 6 Planned, 2 Unsupported, 0 Verified**.
+- **36 master sections, 146 child features, 182 total catalog entries.**
+- Child feature status: **100 Implemented, 35 Tested, 3 In Development, 6 Planned, 2 Unsupported, 0 Verified**.
 - Every section has at least one real catalog feature. Existing actions keep one canonical ActionId; new subfeatures that share an existing window are metadata-only, not cloned navigation routes.
 - **Samsung:** the Odin assistant now reads TAR entry names without extraction, verifies an appended TAR.MD5 checksum and records partition hints/SHA-256. This still does not authenticate the firmware publisher or establish model/CSC/bootloader compatibility, and it never automates Odin Start.
 - **Firmware:** the compatibility gate checks available manufacturer/model/product/board/region/Anti-Rollback and local integrity facts. Unknown evidence blocks progression; publisher signature remains Unknown until an independent trusted publisher key and verified source signature exist.
+- **Xiaomi Fastboot:** the Xiaomi window can confirm ADB device state and brand, request a user-confirmed reboot to Bootloader, wait for the exact same serial in Fastboot and report getvar/lock/Verified Boot/Anti-Rollback values. No unlock, flash, erase or relock operation is exposed.
 - **Qualcomm/MediaTek:** Windows PnP transport readiness reports driver status and missing authorization/programmer/DA prerequisites. No EDL/BROM transport session or low-level write operation exists.
 - **Measurements:** real serial-fixture readings can be compared with technician-supplied, source-cited JSON limits. Missing values remain NotMeasured; no factory tolerances are invented.
 - **Repair knowledge:** DPAPI-protected local technician records support add, edit, delete and search, with source, evidence, author and explicit safe steps. Repair Advisor opens the knowledge store prefiltered using the selected device model; it contains no preloaded OEM repair database.
@@ -343,7 +344,7 @@ This section supersedes the older additive snapshot above and is derived from th
 |---|---|---|---|
 | 03 | Full model-by-model capability coverage | In Development | Current identity/capability engine is fail-closed, but the curated evidence base needs more reviewed models and board revisions |
 | 06 | Automated Odin/Download Mode flashing | Planned | No supported documented Odin API/transport is available here; the current workflow is a real package inspector and manual external-tool hand-off |
-| 07 | Xiaomi-specific Fastboot service sequences | Planned | No per-model official verified service protocol/authorization matrix |
+| 07 | Xiaomi-specific Fastboot flash/unlock service sequences | Planned | Read-only Fastboot inspection is implemented; per-model OEM authorization and a verified service protocol for Unlock/Flash/Relock remain unavailable |
 | 08 | Dedicated service protocols for other vendors | Planned | Vendor property reads exist; private/undocumented protocols are not fabricated |
 | 09 | Qualcomm EDL programmer and recovery execution | Planned | Requires the correct signed model-specific programmer, OEM authorization and secure-boot evidence |
 | 10 | MediaTek BROM/Preloader DA recovery | Planned | Requires a signed matching Download Agent and OEM authorization |

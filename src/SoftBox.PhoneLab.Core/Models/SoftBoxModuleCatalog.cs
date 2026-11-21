@@ -110,7 +110,8 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("xiaomi-identity", "قراءة موديل الجهاز واسم البناء والمنطقة ونسخة MIUI/HyperOS", "Xiaomi vendor property diagnostics", "يجمع getprop من قائمة مفاتيح ثابتة ويعرض القيم التي يوفرها ROM فقط؛ لا يخمن المنطقة أو موديل اللوحة.", ModuleImplementationStatus.Implemented, "OpenXiaomiDiagnostics"),
-                new("xiaomi-fastboot", "عمليات Xiaomi Fastboot الرسمية المتوافقة", "Supported Xiaomi Fastboot", "لم يتم تنفيذ إجراءات الشركة الخاصة؛ يجب التحقق من سياسة Xiaomi وفتح Bootloader رسميًا لكل موديل قبل أي عملية.", ModuleImplementationStatus.Planned)
+                new("xiaomi-fastboot", "تشخيص Xiaomi Fastboot وقراءة متغيرات Bootloader", "Xiaomi Fastboot read-only diagnostics", "من نافذة Xiaomi Diagnostics: يعيد التحقق من هوية الهاتف عبر ADB، يطلب تأكيد الانتقال إلى Bootloader، ينتظر ظهور نفس Serial في Fastboot ثم يقرأ getvar all ويعرض Product والقفل وVerified Boot وAnti-Rollback. لا ينفذ Unlock أو Flash أو Erase.", ModuleImplementationStatus.Tested),
+                new("xiaomi-fastboot-service", "عمليات Xiaomi Fastboot الخاصة بالتفليش أو فتح Bootloader", "Xiaomi proprietary Fastboot service operations", "لا توجد هنا قاعدة OEM موثقة أو تفويض لكل موديل لتنفيذ عمليات Unlock/Flash/Relock؛ تبقى هذه العمليات غير متاحة ولا يتم توليد أوامر خطرة.", ModuleImplementationStatus.Planned)
             ]),
         new("android-brands", 8, "الشركات والمعالجات", "شركات Android الأخرى", "Android Brands",
             "ملفات خصائص قراءة فقط مخصصة لـGoogle Pixel وMotorola/Lenovo وOnePlus وOPPO وvivo وrealme وHuawei/HONOR وTECNO وInfinix، مع ملف عام للشركات الأخرى؛ لا تنفذ بروتوكولات صيانة خاصة.",
