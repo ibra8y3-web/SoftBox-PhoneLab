@@ -6,6 +6,12 @@ namespace SoftBox.PhoneLab.Desktop;
 
 public partial class App : Application
 {
+    public App()
+    {
+        InitializeComponent();
+        SoftBoxDesktopTelemetry.Initialize(this);
+    }
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
