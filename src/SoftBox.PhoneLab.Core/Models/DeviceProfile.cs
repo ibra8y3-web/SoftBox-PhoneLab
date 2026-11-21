@@ -19,6 +19,7 @@ public sealed class DeviceProfileSource
     public string Url { get; init; } = "";
     public string License { get; init; } = "";
     public string Sha256 { get; init; } = "";
+    public string Revision { get; init; } = "";
     public int RecordCount { get; init; }
     public DateTimeOffset RetrievedAtUtc { get; init; }
 }

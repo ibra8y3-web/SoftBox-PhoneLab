@@ -225,6 +225,13 @@ public static class DeviceDiagnosticEngine
             warnings.Add("More than one SoC family pattern matched. Vendor-specific selection was disabled.");
         if (context.Profile is { IdentityVerified: false })
             warnings.Add("The selected community model profile is an identity hint only; it is not an OEM-verified specification.");
+        if (device?.BatteryTemperatureCelsius is double batteryTemperature)
+        {
+            if (batteryTemperature >= settings.BatteryCriticalTemperatureCelsius)
+                warnings.Add($"CRITICAL BATTERY TEMPERATURE REVIEW: reported {batteryTemperature:0.0} °C is at/above the configured {settings.BatteryCriticalTemperatureCelsius:0.0} °C threshold. Stop stress testing and inspect safely; this is a telemetry alert, not a calibrated temperature certification.");
+            else if (batteryTemperature >= settings.BatteryReviewTemperatureCelsius)
+                warnings.Add($"BATTERY TEMPERATURE REVIEW: reported {batteryTemperature:0.0} °C is at/above the configured {settings.BatteryReviewTemperatureCelsius:0.0} °C review threshold.");
+        }
         if (context.VerifiedBoardMapAvailable && context.Profile is not { IdentityVerified: true })
             warnings.Add("A BoardMap reference is not promoted to model-specific service capability without exact verified identity.");
 

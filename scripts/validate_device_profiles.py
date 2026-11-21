@@ -32,7 +32,8 @@ for source in sources if isinstance(sources, list) else []:
     if not id_pattern.fullmatch(source_id) or source_id in source_ids:
         errors.append(f"invalid/duplicate source id: {source_id}")
     source_ids.add(source_id)
-    if not https(source.get("url")) or not source.get("license") or not sha_pattern.fullmatch(source.get("sha256", "")):
+    if (not https(source.get("url")) or not source.get("license") or
+            not sha_pattern.fullmatch(source.get("sha256", "")) or not source.get("revision")):
         errors.append(f"source provenance is incomplete: {source_id}")
     if not isinstance(source.get("recordCount"), int) or source["recordCount"] < 1:
         errors.append(f"invalid source recordCount: {source_id}")

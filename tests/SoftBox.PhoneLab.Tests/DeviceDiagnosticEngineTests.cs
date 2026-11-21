@@ -109,6 +109,17 @@ public sealed class DeviceDiagnosticEngineTests
     }
 
     [Fact]
+    public void AppliesConfiguredBatteryThermalReviewThresholdsToReportedTelemetry()
+    {
+        var device = Device("SM8650") with { BatteryTemperatureCelsius = 56.2 };
+        var plan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
+            device, null, true, false, false));
+
+        Assert.Contains(plan.Warnings, warning => warning.Contains("CRITICAL BATTERY TEMPERATURE REVIEW", StringComparison.Ordinal));
+        Assert.Contains("55.0", plan.Warnings.Single(warning => warning.Contains("CRITICAL", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public void RejectsUnsafeOrUnboundedEngineSettings()
     {
         var settings = new DiagnosticEngineSettings
