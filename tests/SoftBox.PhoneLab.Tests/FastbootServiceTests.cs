@@ -174,5 +174,26 @@ public sealed class FastbootServiceTests
         Assert.Throws<ArgumentException>(() => FastbootService.BuildWipeUserDataArguments("bad/serial"));
     }
 
+    [Theory]
+    [InlineData("-w", new[] { "-s", "FASTBOOT-123", "-w" })]
+    [InlineData("erase", new[] { "-s", "FASTBOOT-123", "erase", "userdata" })]
+    [InlineData("format", new[] { "-s", "FASTBOOT-123", "format", "userdata" })]
+    public void UserDataOperationBuilderProducesOnlyExplicitSelectedSerialCommand(
+        string verb, string[] expected)
+    {
+        Assert.Equal(expected, FastbootService.BuildUserDataOperationArguments("FASTBOOT-123", verb));
+    }
+
+    [Theory]
+    [InlineData("unlock")]
+    [InlineData("flashing")]
+    [InlineData("oem")]
+    [InlineData("erase system")]
+    public void UserDataOperationBuilderRejectsArbitraryCommands(string verb)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            FastbootService.BuildUserDataOperationArguments("FASTBOOT-123", verb));
+    }
+
 }
 
