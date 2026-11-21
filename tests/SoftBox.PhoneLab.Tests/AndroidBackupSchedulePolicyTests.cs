@@ -96,6 +96,24 @@ public sealed class AndroidBackupSchedulePolicyTests
             AndroidBackupSchedule.Validate(valid with { BackupPassword = "short" }));
     }
 
+
+    [Fact]
+    public void OnConnectScheduleRetriesAfterFailedAttemptButNotAfterSuccessfulAttempt()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var failed = CreateSchedule() with
+        {
+            Kind = AndroidBackupScheduleKind.OnConnect,
+            WasConnected = true,
+            LastSuccessfulRunUtc = now.AddDays(-1),
+            LastAttemptUtc = now.AddMinutes(-10)
+        };
+        Assert.True(AndroidBackupSchedulePolicy.IsDue(failed, deviceConnected: true, now));
+
+        var successful = failed with { LastSuccessfulRunUtc = now.AddMinutes(-9) };
+        Assert.False(AndroidBackupSchedulePolicy.IsDue(successful, deviceConnected: true, now));
+    }
+
     private static AndroidBackupSchedule CreateSchedule()
         => new()
         {

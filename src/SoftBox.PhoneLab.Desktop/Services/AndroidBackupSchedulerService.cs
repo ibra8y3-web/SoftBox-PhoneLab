@@ -82,6 +82,8 @@ public sealed class AndroidBackupSchedulerService
 
     public async Task RunNowAsync(Guid scheduleId, CancellationToken cancellationToken = default)
     {
+        using var crossProcessLock = TryAcquireCrossProcessLock()
+            ?? throw new InvalidOperationException("يوجد عامل نسخ احتياطي آخر يعمل حاليًا. حاول مرة أخرى بعد اكتماله.");
         AndroidBackupSchedule schedule;
         await _stateGate.WaitAsync(cancellationToken);
         try

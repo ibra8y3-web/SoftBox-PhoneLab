@@ -1259,7 +1259,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 .Where(device => device.IsAuthorized)
                 .Select(device => device.Serial)
                 .ToArray();
-            await _backupScheduler.ProcessAsync(authorizedSerials);
+            await _backupScheduler.ProcessAsync(authorizedSerials, waitForCompletion: true);
         }
         catch (Exception ex)
         {

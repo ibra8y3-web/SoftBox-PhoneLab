@@ -96,7 +96,9 @@ public static class AndroidBackupSchedulePolicy
         {
             case AndroidBackupScheduleKind.OnConnect:
                 return !schedule.WasConnected ||
-                       (schedule.LastSuccessfulRunUtc is null && schedule.LastAttemptUtc is null);
+                       schedule.LastSuccessfulRunUtc is null ||
+                       schedule.LastAttemptUtc is null ||
+                       schedule.LastAttemptUtc > schedule.LastSuccessfulRunUtc;
 
             case AndroidBackupScheduleKind.Daily:
             {
