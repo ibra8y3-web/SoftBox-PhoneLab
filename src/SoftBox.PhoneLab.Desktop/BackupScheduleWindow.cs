@@ -32,6 +32,8 @@ public sealed class BackupScheduleWindow : Window
     private readonly Button _enableButton;
     private readonly Button _deleteButton;
     private readonly Button _runNowButton;
+    private readonly Button _backgroundTaskButton;
+    private readonly AndroidBackupTaskSchedulerService _backgroundTaskScheduler = new();
     private bool _busy;
 
     public BackupScheduleWindow(
@@ -60,12 +62,17 @@ public sealed class BackupScheduleWindow : Window
         _enableButton = ButtonControl("إيقاف / تفعيل", "#704B20", async (_, _) => await ToggleSelectedAsync());
         _deleteButton = ButtonControl("حذف الجدولة", "#713B43", async (_, _) => await DeleteSelectedAsync());
         _runNowButton = ButtonControl("نسخ احتياطي الآن", "#145F85", async (_, _) => await RunSelectedNowAsync());
+        _backgroundTaskButton = ButtonControl("تفعيل العمل بعد إغلاق SoftBox", "#176044", async (_, _) => await ToggleBackgroundTaskAsync());
 
         Content = BuildContent();
         _list.SelectionChanged += (_, _) => UpdateButtons();
         _scheduler.ScheduleStatusChanged += Scheduler_StatusChanged;
         Closed += (_, _) => _scheduler.ScheduleStatusChanged -= Scheduler_StatusChanged;
-        Loaded += async (_, _) => await RefreshAsync();
+        Loaded += async (_, _) =>
+        {
+            await RefreshAsync();
+            await RefreshBackgroundTaskButtonAsync();
+        };
     }
 
     private UIElement BuildContent()
@@ -96,7 +103,7 @@ public sealed class BackupScheduleWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "التشغيل التلقائي يتم أثناء بقاء SoftBox مفتوحًا وتسجيل دخول المستخدم. احفظ كلمة مرور قوية؛ يخزن SoftBox إعدادات الجدولة وكلمة المرور داخل ملف DPAPI مرتبط بحساب Windows الحالي، ويُنشئ نسخ SBX مشفرة. لا تشمل النسخة بيانات التطبيقات الخاصة أو أقسام النظام.",
+            Text = "يمكن تشغيل الجداول أثناء بقاء SoftBox مفتوحًا، أو تفعيل مهمة Windows Task Scheduler لتشغيل فحص النسخ كل 5 دقائق حتى بعد إغلاق واجهة البرنامج. المهمة تعمل فقط أثناء تسجيل دخول حساب Windows نفسه، مع اتصال الهاتف وتصريح ADB. الجداول وكلمات المرور محمية بـDPAPI وملفات SBX مشفرة. لا تشمل النسخ بيانات التطبيقات الخاصة أو أقسام النظام.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#F0C9A5"),
             Background = Brush("#211D2A"),
@@ -190,6 +197,7 @@ public sealed class BackupScheduleWindow : Window
         var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
         actions.Children.Add(_addButton);
         actions.Children.Add(_refreshButton);
+        actions.Children.Add(_backgroundTaskButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
 
@@ -216,6 +224,38 @@ public sealed class BackupScheduleWindow : Window
         root.Children.Add(_status);
 
         return root;
+    }
+
+    private async Task ToggleBackgroundTaskAsync()
+    {
+        await RunAsync("جارٍ تحديث إعدادات Windows Task Scheduler...", async () =>
+        {
+            if (await _backgroundTaskScheduler.IsInstalledAsync())
+            {
+                await _backgroundTaskScheduler.RemoveAsync();
+                _backgroundTaskButton.Content = "تفعيل العمل بعد إغلاق SoftBox";
+                return "تم إيقاف مهمة النسخ الخلفية. ستظل الجداول تعمل أثناء فتح SoftBox فقط.";
+            }
+
+            await _backgroundTaskScheduler.InstallAsync();
+            _backgroundTaskButton.Content = "إيقاف مهمة Windows الخلفية";
+            return "تم تفعيل مهمة Windows Task Scheduler. ستفحص الجداول كل 5 دقائق حتى بعد إغلاق SoftBox، بشرط بقاء حساب Windows مسجلًا والهاتف موصولًا ومصرحًا عبر ADB.";
+        });
+    }
+
+    private async Task RefreshBackgroundTaskButtonAsync()
+    {
+        try
+        {
+            var installed = await _backgroundTaskScheduler.IsInstalledAsync();
+            _backgroundTaskButton.Content = installed
+                ? "إيقاف مهمة Windows الخلفية"
+                : "تفعيل العمل بعد إغلاق SoftBox";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر قراءة حالة مهمة Windows: " + ex.Message;
+        }
     }
 
     private async Task AddScheduleAsync()
@@ -382,6 +422,7 @@ public sealed class BackupScheduleWindow : Window
     {
         _addButton.IsEnabled = !_busy;
         _refreshButton.IsEnabled = !_busy;
+        _backgroundTaskButton.IsEnabled = !_busy;
         UpdateButtons();
     }
 

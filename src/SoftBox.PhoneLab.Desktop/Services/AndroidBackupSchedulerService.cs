@@ -168,7 +168,8 @@ public sealed class AndroidBackupSchedulerService
     public async Task ProcessAsync(
         IEnumerable<string> connectedAuthorizedSerials,
         DateTimeOffset? nowUtc = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool waitForCompletion = false)
     {
         ArgumentNullException.ThrowIfNull(connectedAuthorizedSerials);
         var serials = connectedAuthorizedSerials
@@ -176,6 +177,9 @@ public sealed class AndroidBackupSchedulerService
             .ToHashSet(StringComparer.Ordinal);
         var now = nowUtc ?? DateTimeOffset.UtcNow;
         var due = new List<AndroidBackupSchedule>();
+        using var crossProcessLock = TryAcquireCrossProcessLock();
+        if (crossProcessLock is null)
+            return;
 
         var reservedIds = new List<Guid>();
         await _stateGate.WaitAsync(cancellationToken);
@@ -225,8 +229,31 @@ public sealed class AndroidBackupSchedulerService
             _stateGate.Release();
         }
 
+        if (waitForCompletion)
+        {
+            await Task.WhenAll(due.Select(ExecuteScheduleAsync));
+            return;
+        }
+
         foreach (var schedule in due)
             _ = ExecuteScheduleAsync(schedule);
+    }
+
+    private static FileStream? TryAcquireCrossProcessLock()
+    {
+        var path = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoftBox", "PhoneLab", "android-backup-scheduler.lock");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        try
+        {
+            return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        }
+        catch (IOException)
+        {
+            // Another SoftBox instance or the Windows scheduled worker is currently reserving due schedules.
+            return null;
+        }
     }
 
     private async Task ExecuteScheduleAsync(AndroidBackupSchedule schedule)

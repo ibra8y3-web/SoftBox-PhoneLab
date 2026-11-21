@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Security;
+using SoftBox.PhoneLab.Desktop.Services;
 using System.Windows;
 
 namespace SoftBox.PhoneLab.Desktop;
@@ -8,6 +9,13 @@ public partial class App : Application
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (e.Args.Any(argument => argument.Equals("--run-android-backups", StringComparison.OrdinalIgnoreCase)))
+        {
+            var workerExitCode = await AndroidBackupBackgroundWorker.RunAsync();
+            Shutdown(workerExitCode);
+            return;
+        }
+
         try
         {
             var accounts = new SoftBoxAccountService();
