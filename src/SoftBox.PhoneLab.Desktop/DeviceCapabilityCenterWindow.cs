@@ -23,6 +23,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
     private readonly PhoneDiscoveryService _discovery;
     private readonly FastbootService _fastboot = new();
     private readonly DeviceProfileCatalog _profiles = new();
+    private readonly DeviceDiagnosticEngineSettingsStore _engineSettings = new();
     private readonly BoardMapCatalog _maps = new();
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
@@ -177,6 +178,15 @@ public sealed class DeviceCapabilityCenterWindow : Window
             _lastMatrix = matrix;
             _exportMatrixButton.IsEnabled = true;
             var identity = DeviceCapabilityEngine.ResolveIdentity(_device, catalog.Profiles);
+            var loadedSettings = await _engineSettings.LoadAsync();
+            var enginePlan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
+                _device,
+                identity.Profile,
+                AdbAuthorized: adbAuthorized,
+                AgentConnected: _agentWasConnected && adbAuthorized,
+                FastbootDetected: fastbootDetected,
+                Settings: loadedSettings.Settings,
+                AuthorizedSerial: _device.Serial));
 
             var verifiedBoardMap = false;
             try
@@ -198,7 +208,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
                     VerifiedBoardMapAvailable: verifiedBoardMap),
                 catalog.Profiles);
 
-            _report.Text = FormatReport(report, catalog, matrix);
+            _report.Text = FormatReport(report, catalog, matrix, enginePlan, loadedSettings.Warnings);
             _status.Text =
                 $"اكتمل التقييم: هوية الجهاز «{IdentityLabel(report.Identity.State)}»، " +
                 $"العمليات المسموح بها {report.Decisions.Count(item => item.CanExecute)} من أصل {report.Decisions.Count}. " +
@@ -291,7 +301,12 @@ public sealed class DeviceCapabilityCenterWindow : Window
         }
     }
 
-    private static string FormatReport(DeviceCapabilityReport report, DeviceProfileCatalogDocument catalog, DeviceCapabilityMatrixReport matrix)
+    private static string FormatReport(
+        DeviceCapabilityReport report,
+        DeviceProfileCatalogDocument catalog,
+        DeviceCapabilityMatrixReport matrix,
+        DeviceDiagnosticEnginePlan enginePlan,
+        IReadOnlyList<string> settingsWarnings)
     {
         var text = new StringBuilder();
         text.AppendLine("SOFTBOX DEVICE CAPABILITY ENGINE");
@@ -318,6 +333,35 @@ public sealed class DeviceCapabilityCenterWindow : Window
         text.AppendLine("HTTPS IDENTITY SOURCES: " + matrix.ProfilesWithHttpsIdentitySources);
         text.AppendLine("PROFILES WITHOUT COMPLETE BOARD EVIDENCE: " + matrix.ProfilesMissingBoardEvidence);
         text.AppendLine("A catalogue identity flag or BoardMapId reference does not prove physical-board compatibility.");
+        text.AppendLine();
+        text.AppendLine("DEVICE DIAGNOSTIC ENGINE");
+        text.AppendLine("ENGINE ID: " + enginePlan.EngineId);
+        text.AppendLine("ENGINE NAME: " + enginePlan.EngineName);
+        text.AppendLine("ENGINE VERSION: " + enginePlan.EngineVersion);
+        text.AppendLine("HARDWARE FAMILY: " + enginePlan.HardwareFamily);
+        text.AppendLine("IDENTITY CONFIDENCE: " + enginePlan.IdentityConfidence);
+        text.AppendLine("ADB TIMEOUT SECONDS: " + enginePlan.Settings.AdbCommandTimeoutSeconds);
+        text.AppendLine("AGENT TIMEOUT SECONDS: " + enginePlan.Settings.AgentTestTimeoutSeconds);
+        text.AppendLine("MAX OUTPUT BYTES: " + enginePlan.Settings.MaximumOutputBytes);
+        text.AppendLine("BATTERY REVIEW / CRITICAL ALERT C: " +
+            enginePlan.Settings.BatteryReviewTemperatureCelsius.ToString("0.0") + " / " +
+            enginePlan.Settings.BatteryCriticalTemperatureCelsius.ToString("0.0"));
+        foreach (var warning in settingsWarnings.Concat(enginePlan.Warnings))
+            text.AppendLine("ENGINE WARNING: " + warning);
+        foreach (var procedure in enginePlan.Procedures)
+        {
+            text.AppendLine($"[{procedure.State}] {procedure.DisplayName}");
+            text.AppendLine("  CAN EXECUTE: " + procedure.CanExecute);
+            text.AppendLine("  TRANSPORT: " + procedure.Transport);
+            text.AppendLine("  EVIDENCE: " + procedure.Evidence);
+            text.AppendLine("  REQUIRED: " + procedure.RequiredAction);
+        }
+        text.AppendLine("Battery temperature values above are local review thresholds, not OEM-certified safety limits.");
+        text.AppendLine();
+        text.AppendLine("ENGINE SAFETY RULES");
+        foreach (var rule in enginePlan.SafetyRules)
+            text.AppendLine("ENGINE RULE: " + rule);
+        
         text.AppendLine();
 
         text.AppendLine("DEVICE IDENTITY");
