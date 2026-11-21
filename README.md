@@ -184,3 +184,16 @@ See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DE
 - **Device coverage matrix:** Device Intelligence exports the loaded device-profile catalogue to CSV, including model identifiers, SoC aliases, Board IDs, map references and missing evidence. A model name or BoardMapId is not treated as a verified PCB map.
 - **Xiaomi Fastboot ROM inspection:** Xiaomi Tools reads TAR/TGZ package metadata, product requirements, image names and flash/erase/unlock commands without extracting files or executing package scripts. It compares the package product with the last Product read from the selected phone's Fastboot state; it never flashes or unlocks.
 
+
+
+
+## OEM recovery follow-up — 21 November 2026
+
+See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for implementation boundaries and external prerequisites.
+
+- **Xiaomi Fastboot:** a restricted single-image flash path uses the Product selected from the inspected ROM's `android-info.txt`, matches it to the live Product and same Fastboot Serial, requires an explicitly Unlocked bootloader and a partition referenced by the ROM flash script, and asks for source/backup confirmation. It excludes vbmeta, unlock, erase, format, relock and arbitrary commands. The technician still confirms that the selected extracted IMG came from the inspected official archive; SoftBox does not cryptographically prove archive-to-image provenance.
+- **Qualcomm QDL:** the public QDL CLI integration supports device list, chipinfo, explicit storage type, package inspection, dry-run and guarded flash. No Firehose programmer is bundled. Exact model/board/SoC, OEM package provenance, storage type, programmer authorization and physical verification remain required.
+- **MediaTek:** scatter/image validation and DA/Auth hashing are implemented, with a recheck before launching the technician-supplied SP Flash Tool. BROM programming, DA signature verification, SLA/DAA authorization and automatic Download are not implemented without a model-specific signed OEM package.
+- **Samsung:** Odin package validation and external Odin hand-off remain. No public supported Samsung Odin automation API is claimed.
+- **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
+- The catalogue contains **36 master sections / 156 child features / 192 total entries**. Child statuses: **99 Implemented, 46 Tested, 6 In Development, 3 Planned, 2 Unsupported, 0 Verified**. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.

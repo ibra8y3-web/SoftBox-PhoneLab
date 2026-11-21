@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Diagnostics;
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Firmware;
 using System.Diagnostics;
@@ -67,6 +68,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         buttons.Children.Add(_inspectButton);
         buttons.Children.Add(_launchButton);
+        buttons.Children.Add(ButtonControl("مصادر Samsung الرسمية", "#243B56",
+            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show()));
         footer.Children.Add(buttons);
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
