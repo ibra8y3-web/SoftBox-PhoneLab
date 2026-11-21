@@ -64,6 +64,12 @@ public sealed class AndroidNetworkDiagnosticsService(IAdbCommandRunner adb)
         if (!NetworkDiagnosticsService.IsValidHost(host))
             throw new ArgumentException("أدخل اسم نطاق أو عنوان IP صحيحًا فقط.", nameof(host));
 
+        // Revalidate the ADB transport at execution time; an earlier window selection
+        // is not treated as continuing authorization.
+        var state = await RunForDeviceAsync(serial, ["get-state"], cancellationToken);
+        if (!string.Equals(state.Trim(), "device", StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("الجهاز لم يعد في حالة ADB device مصرح بها؛ لم يتم إرسال اختبار الشبكة.");
+
         var target = host.Trim();
         var primaryDns = await RunForDeviceAsync(
             serial, ["shell", "getprop", "net.dns1"], cancellationToken);

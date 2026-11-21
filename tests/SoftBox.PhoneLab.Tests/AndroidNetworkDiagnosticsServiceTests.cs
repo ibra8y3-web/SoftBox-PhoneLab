@@ -84,6 +84,7 @@ public sealed class AndroidNetworkDiagnosticsServiceTests
     public async Task ProbesDnsPropertiesAndSendsOnePingFromTheSelectedAndroidDevice()
     {
         var adb = new FakeAdbCommandRunner(
+            "device",
             "192.168.1.1",
             "8.8.8.8",
             "PING example.com (93.184.216.34): 56 data bytes");
@@ -97,9 +98,23 @@ public sealed class AndroidNetworkDiagnosticsServiceTests
         Assert.Equal("8.8.8.8", result.SecondaryDnsServer);
         Assert.Contains("93.184.216.34", result.PingOutput);
         Assert.Collection(adb.Calls,
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "get-state" }, call),
             call => Assert.Equal(new[] { "-s", "R58M123456A", "shell", "getprop", "net.dns1" }, call),
             call => Assert.Equal(new[] { "-s", "R58M123456A", "shell", "getprop", "net.dns2" }, call),
             call => Assert.Equal(new[] { "-s", "R58M123456A", "shell", "ping", "-c", "1", "-W", "3", "example.com" }, call));
+    }
+
+    [Fact]
+    public async Task RefusesNetworkProbeWhenDeviceIsNoLongerAuthorized()
+    {
+        var adb = new FakeAdbCommandRunner("unauthorized");
+        var service = new AndroidNetworkDiagnosticsService(adb);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.ProbeHostAsync("R58M123456A", "example.com"));
+
+        Assert.Collection(adb.Calls,
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "get-state" }, call));
     }
 
     [Theory]
