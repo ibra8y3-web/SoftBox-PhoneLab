@@ -61,6 +61,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenPhoneBackup"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenAndroidBackupScheduler"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenWorkshopBackup"] = SoftBoxAccountPermission.WorkshopOperations,
+            ["OpenWorkshopBackupScheduler"] = SoftBoxAccountPermission.WorkshopOperations,
             ["OpenGlobalWorkshopHistory"] = SoftBoxAccountPermission.WorkshopOperations,
             ["OpenGlobalWorkshopReports"] = SoftBoxAccountPermission.WorkshopOperations,
             ["OpenGlobalWorkshopSettings"] = SoftBoxAccountPermission.ManageSettings,
