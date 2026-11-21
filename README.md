@@ -168,3 +168,16 @@ See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DE
 
 - Network Diagnostics can inspect the selected authorized Android phone's reported DNS servers and send one bounded ICMP Ping request from the phone itself to a technician-selected hostname or IP. The result displays Android's raw output; a missing ICMP reply is not treated as proof of Internet failure.
 - Repair History supports text search across device, model, event, summary and evidence, filtering by event type, and exporting only matching entries to UTF-8 CSV. Exported serials remain masked and the device fingerprint is omitted.
+
+
+## Additional real gap-closure tools — November 2026
+
+- **Samsung Odin package inspection:** SoftBox reads TAR entries without extracting them, verifies appended MD5 in TAR.MD5 files, reports common partition payloads and records SHA-256 before opening the user-supplied external Odin. This is package-integrity checking, not firmware-source authentication or a flash operation.
+- **Firmware compatibility gate:** compares known manufacturer/model/product/board/region/rollback evidence and local integrity; any missing publisher signature, board or rollback evidence remains Unknown and blocks the gate.
+- **Qualcomm / MediaTek transport readiness:** Windows PnP observations for common 9008 and Preloader/BROM USB IDs now produce driver/problem and missing-requirements reports. The tools do not open EDL/BROM or load programmers/Download Agents.
+- **External measurement profiles:** technicians can import sourced JSON thresholds and compare real serial-fixture samples. No factory voltages or board limits are invented.
+- **Repair knowledge:** local DPAPI-protected technician notes now support add/edit/delete/search and are prefiltered by the selected phone from Repair Advisor. Entries require source/evidence from the technician and are not represented as OEM facts.
+- **Vendor properties:** read-only fixed Android property profiles cover Samsung, Xiaomi, Google Pixel, Motorola/Lenovo, OnePlus, OPPO, vivo, realme, Huawei/HONOR, TECNO and Infinix. These are data collection profiles, not proprietary service protocols.
+- **Signed plugin workflows:** RSA-signed packages, user-reviewed publisher fingerprints, DPAPI-protected public-key trust, package-library management and permission-gated JSON workflows using the fixed read-only ADB preset allow-list are implemented. External DLL execution remains disabled.
+- **Signed update pipeline:** the updater validates official release URLs, RSA publisher signature, per-file SHA-256, minimum supported version, stages the package, waits for SoftBox to exit, takes an install snapshot and creates an explicit rollback helper. A real release still requires the publisher's public key fingerprint from an independent trusted channel and a signed release asset.
+

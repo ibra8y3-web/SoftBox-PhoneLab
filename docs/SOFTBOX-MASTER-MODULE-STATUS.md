@@ -318,3 +318,39 @@ This checkpoint supersedes older catalog totals above. Historical sections are r
 ### Hardware and safety boundary
 
 Qualcomm EDL, MediaTek BROM/Preloader, undocumented Samsung Download/Odin control, OEM unlock/erase/flash, FRP or account-lock bypass, and private application-data extraction are not represented as working tools. They remain unavailable unless a lawful, vendor-documented, model-specific protocol with explicit authorization and reliable verification can be established. A successful Windows CI run or unit-test suite does not constitute physical-device verification.
+
+
+## PR #21 additive implementation wave — current branch audit
+
+This section supersedes the older additive snapshot above and is derived from the current catalog plus automated test files.
+
+- **36 master sections, 145 child features, 181 total catalog entries.**
+- Child feature status: **100 Implemented, 34 Tested, 3 In Development, 6 Planned, 2 Unsupported, 0 Verified**.
+- Every section has at least one real catalog feature. Existing actions keep one canonical ActionId; new subfeatures that share an existing window are metadata-only, not cloned navigation routes.
+- **Samsung:** the Odin assistant now reads TAR entry names without extraction, verifies an appended TAR.MD5 checksum and records partition hints/SHA-256. This still does not authenticate the firmware publisher or establish model/CSC/bootloader compatibility, and it never automates Odin Start.
+- **Firmware:** the compatibility gate checks available manufacturer/model/product/board/region/Anti-Rollback and local integrity facts. Unknown evidence blocks progression; publisher signature remains Unknown until an independent trusted publisher key and verified source signature exist.
+- **Qualcomm/MediaTek:** Windows PnP transport readiness reports driver status and missing authorization/programmer/DA prerequisites. No EDL/BROM transport session or low-level write operation exists.
+- **Measurements:** real serial-fixture readings can be compared with technician-supplied, source-cited JSON limits. Missing values remain NotMeasured; no factory tolerances are invented.
+- **Repair knowledge:** DPAPI-protected local technician records support add, edit, delete and search, with source, evidence, author and explicit safe steps. Repair Advisor opens the knowledge store prefiltered using the selected device model; it contains no preloaded OEM repair database.
+- **Vendor diagnostics:** fixed, read-only property profiles cover major Android vendors; they do not imply proprietary download, flash or recovery protocols.
+- **Plugins:** RSA-PSS signed ZIP packages can be checked against public keys that the user imports after independently confirming their fingerprint. Signed JSON workflows execute only fixed read-only Android presets after a per-session permission confirmation and fresh ADB authorization. Native DLL loading/execution remains planned and disabled.
+- **Updates:** signed Windows update assets are validated and staged; install/rollback helper scripts have path/hash/reparse-point safeguards and preserve the prior install snapshot. Automated tests validate staging and generated helper logic; no physical production updater run is claimed. A trusted public key must be imported out-of-band, and the repository does not contain a private release-signing key.
+- No physical device feature is marked Verified. A green CI run is not proof of EDL/BROM, Odin flashing, a board measurement fixture or an actual production update installation.
+
+### Remaining blocked or incomplete work
+
+| Section | Item | State | Reason |
+|---|---|---|---|
+| 03 | Full model-by-model capability coverage | In Development | Current identity/capability engine is fail-closed, but the curated evidence base needs more reviewed models and board revisions |
+| 06 | Automated Odin/Download Mode flashing | Planned | No supported documented Odin API/transport is available here; the current workflow is a real package inspector and manual external-tool hand-off |
+| 07 | Xiaomi-specific Fastboot service sequences | Planned | No per-model official verified service protocol/authorization matrix |
+| 08 | Dedicated service protocols for other vendors | Planned | Vendor property reads exist; private/undocumented protocols are not fabricated |
+| 09 | Qualcomm EDL programmer and recovery execution | Planned | Requires the correct signed model-specific programmer, OEM authorization and secure-boot evidence |
+| 10 | MediaTek BROM/Preloader DA recovery | Planned | Requires a signed matching Download Agent and OEM authorization |
+| 14 | Physical multi-device session reliability | In Development | Up to four scrcpy processes/windows are managed and monitored; handset/codec/hotplug validation remains to be performed on target devices |
+| 15 | Direct board-level component measurements | Unsupported | A real compatible fixture and model-specific schematics/probes are required; only externally measured values plus technician-provided reference thresholds are supported |
+| 17 | Curated model-specific OEM repair dataset / AI model | In Development | Encrypted technician knowledge CRUD and evidence-based deterministic advisor exist; there is no embedded licensed OEM database or trained AI model |
+| 19 | Official model-specific recovery/flash execution | Unsupported | Compatibility preflight is informative and fail-closed; no verified signed recovery package/protocol is available |
+| 26/27 | Native DLL plugin runtime and process isolation | Planned | Only signed data-only read-only workflow plugins are supported; arbitrary code execution remains disabled pending hardened Windows isolation/IPC and security testing |
+| 31 | Production signed release adoption | In Development | Pipeline code and helper logic are tested, but the public release-signing key must be confirmed independently and a signed production asset must be published/tested |
+

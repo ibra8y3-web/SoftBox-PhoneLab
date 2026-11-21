@@ -95,56 +95,59 @@ public static class SoftBoxModuleCatalog
                 new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات والملفات", "APK version and permission comparison", "يقارن اسم الحزمة وبيانات الإصدار وSHA-256 والصلاحيات وأسماء مدخلات الأرشيف بين ملفين محليين؛ لا يقارن محتوى كل ملف ولا يثبت صحة التوقيع.", ModuleImplementationStatus.Tested)
             ]),
         new("samsung-tools", 6, "الشركات والمعالجات", "أدوات Samsung", "Samsung Tools",
-            "قراءة خصائص Samsung والدخول إلى Download Mode على الأجهزة التي تسمح بأمر ADB، مع مساعد Odin لتجهيز حزم BL/AP/CP/CSC وفتح نسخة Odin يحددها المستخدم. لا يتم تضمين Odin أو أتمتة التفليش داخله.",
+            "قراءة خصائص Samsung والدخول إلى Download Mode عبر ADB بعد إعادة فحص الهوية، مع فحص حقيقي لبنية حزم TAR/TAR.MD5 وبصمة MD5 الملحقة وملفات الأقسام وSHA-256 قبل فتح نسخة Odin الخارجية. لا يتم تضمين Odin أو أتمتة زر Start.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("samsung-driver", "مثبت تعريف Samsung USB الرسمي الاختياري", "Samsung USB driver installer", "مضمن في حزمة Windows مع تحقق مثبت التعريف؛ مكان تشغيله الأساسي قسم طبيب USB.", ModuleImplementationStatus.Implemented),
                 new("samsung-adb", "قراءة خصائص One UI وCSC وPDA وBootloader", "Samsung vendor property diagnostics", "يقرأ مجموعة getprop ثابتة على الجهاز المصرح به ويعرض الخصائص المتاحة والفارغة مع حفظ تقرير JSON.", ModuleImplementationStatus.Implemented, "OpenSamsungDiagnostics"),
                 new("samsung-download-mode", "الدخول إلى Samsung Download Mode", "Samsung Download Mode entry", "يفتح مركز عمليات Samsung على الجهاز المختار، ويتحقق من هوية Samsung مجددًا قبل إرسال adb reboot download. لا يبدأ التفليش ولا يضمن توفر الأمر على كل إصدار أو موديل.", ModuleImplementationStatus.Implemented, "OpenSamsungServiceOperations"),
-                new("samsung-odin-assistant", "مساعد Odin وتجهيز حزم Firmware", "Samsung Odin handoff assistant", "يفحص وجود حزم BL/AP/CP/CSC أو HOME_CSC وبصمات SHA-256، ويفتح ملف Odin التنفيذي الذي يحدده المستخدم. تحميل الحزم داخل Odin وبدء التفليش يظلان يدويين من واجهة Odin؛ لا يدّعي SoftBox التحقق من المصدر أو التوافق.", ModuleImplementationStatus.Implemented, "OpenSamsungOdinAssistant"),
+                new("samsung-odin-assistant", "مساعد Odin وتجهيز حزم Firmware", "Samsung Odin handoff assistant", "يفحص وجود حزم BL/AP/CP/CSC أو HOME_CSC، يقرأ عناصر TAR دون استخراج، ويتحقق من MD5 الملحقة في TAR.MD5 وSHA-256 وملفات الأقسام المعروفة، ثم يفتح ملف Odin التنفيذي الذي يحدده المستخدم. التحقق من MD5 يثبت سلامة النقل فقط؛ لا يثبت ناشر الملف أو توافق الموديل/CSC/Anti-Rollback. لا يبدأ التفليش.", ModuleImplementationStatus.Tested, "OpenSamsungOdinAssistant"),
+                new("samsung-archive-inspection", "فحص بنية حزمة Odin والتحقق من TAR.MD5", "Read-only Odin TAR and appended MD5 inspection", "اختبارات حقيقية لحزم TAR/TAR.MD5، تطابق MD5، رفض البصمة المعدلة ومسارات TAR غير الآمنة؛ لا يتم استخراج الملفات أو تفليش الهاتف.", ModuleImplementationStatus.Tested),
                 new("samsung-service", "عمليات Download Mode وOdin المتقدمة", "Samsung service workflow", "لا توجد أتمتة لواجهة Odin ولا بروتوكول Download Mode منخفض المستوى؛ لا يتم تجاوز الحماية أو FRP.", ModuleImplementationStatus.Planned)
             ]),
         new("xiaomi-tools", 7, "الشركات والمعالجات", "أدوات Xiaomi وRedmi وPOCO", "Xiaomi Tools",
-            "يدعم قراءة خصائص Xiaomi/Redmi/POCO وMIUI/HyperOS والمنطقة ونسخة البناء من الجهاز المصرح به؛ لا يدعم عمليات Fastboot خاصة بالشركة.",
+            "يجمع خصائص Xiaomi/Redmi/POCO وMIUI/HyperOS والمنطقة ونسخة البناء وVerified Boot من مفاتيح getprop ثابتة على الهاتف المصرح به. عمليات Xiaomi Fastboot الخاصة بالموديل ما زالت غير مفعّلة.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("xiaomi-identity", "قراءة موديل الجهاز واسم البناء والمنطقة ونسخة MIUI/HyperOS", "Xiaomi vendor property diagnostics", "يجمع getprop من قائمة مفاتيح ثابتة ويعرض القيم التي يوفرها ROM فقط؛ لا يخمن المنطقة أو موديل اللوحة.", ModuleImplementationStatus.Implemented, "OpenXiaomiDiagnostics"),
                 new("xiaomi-fastboot", "عمليات Xiaomi Fastboot الرسمية المتوافقة", "Supported Xiaomi Fastboot", "لم يتم تنفيذ إجراءات الشركة الخاصة؛ يجب التحقق من سياسة Xiaomi وفتح Bootloader رسميًا لكل موديل قبل أي عملية.", ModuleImplementationStatus.Planned)
             ]),
         new("android-brands", 8, "الشركات والمعالجات", "شركات Android الأخرى", "Android Brands",
-            "قاعدة التعريف العامة قد تتعرف على شركات متعددة؛ وحدات الصيانة الخاصة بكل شركة لم تُبنَ بعد.",
+            "ملفات خصائص قراءة فقط مخصصة لـGoogle Pixel وMotorola/Lenovo وOnePlus وOPPO وvivo وrealme وHuawei/HONOR وTECNO وInfinix، مع ملف عام للشركات الأخرى؛ لا تنفذ بروتوكولات صيانة خاصة.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("brand-recognition", "قراءة الشركة والموديل من خصائص Android", "Generic brand recognition", "تُقرأ بيانات الشركة والموديل المتاحة من الجهاز عبر محرك ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("brand-catalog", "مطابقة ملفات تعريف المجتمع", "Community device identities", "مصدر مجتمعي يساعد في التعرف ولا يثبت إصدار اللوحة أو التوافق؛ تحديث الكتالوج موجود في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
-                new("brand-generic-properties", "قراءة خصائص الشركة والموديل والبناء والتحقق من Verified Boot", "Generic vendor property diagnostics", "يقرأ مفاتيح Android العامة من الهاتف المصرح به، ويعرض القيم المتاحة دون ادعاء توافق موديل أو دعم بروتوكول شركة.", ModuleImplementationStatus.Implemented, "OpenBrandDiagnostics"),
+                new("brand-generic-properties", "قراءة خصائص الشركات وملفات التعريف الثابتة", "Read-only vendor property profiles", "يختار مجموعة مفاتيح getprop ثابتة حسب الشركة: Pixel وMotorola وOnePlus وOPPO وvivo وrealme وHuawei/HONOR وTECNO وInfinix، ويعرض القيم التي وفرها النظام فقط. لا ينفذ عمليات خدمة أو تفليش خاصة بالشركة.", ModuleImplementationStatus.Implemented, "OpenBrandDiagnostics"),
                 new("brand-specific", "وحدات صيانة خاصة بكل شركة", "Brand-specific service modules", "Pixel وMotorola وOPPO وvivo وغيرها لا تملك بعد عمليات صيانة خاصة مكتملة؛ المتاح حاليًا قراءة خصائص Android العامة.", ModuleImplementationStatus.Planned)
             ]),
         new("qualcomm-tools", 9, "الشركات والمعالجات", "أدوات Qualcomm", "Qualcomm Tools",
-            "قراءة تلميح SoC من Android ورصد مؤشر USB الشائع EDL/9008 عبر جرد Windows PnP؛ لا يوجد بعد بروتوكول EDL أو استعادة منخفضة المستوى.",
+            "قراءة تلميح SoC ورصد Qualcomm 05C6:9008 من Windows PnP مع تقرير جاهزية النقل وحالة تعريف Windows والمتطلبات الناقصة؛ لا يتم فتح بروتوكول EDL أو تفليش.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("qualcomm-soc", "قراءة تلميح المعالج من النظام", "SoC identification hint", "قراءة تعريفية فقط من بيانات Android، ولا تكفي لتحديد منصة EDL أو اختيار programmer؛ محرك الهوية في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("qualcomm-edl", "رصد مؤشر USB Qualcomm EDL / 9008", "Qualcomm EDL USB mode hint", "يرصد VID/PID الشائع 05C6:9008 في Windows PnP ويفتح عرض Qualcomm المفلتر؛ لا يفتح قناة EDL ولا يتحقق من programmer أو توافق الجهاز.", ModuleImplementationStatus.Implemented, "OpenQualcommUsbDiagnostics"),
+                new("qualcomm-transport-readiness", "تقرير جاهزية تعريف واتصال Qualcomm EDL", "Qualcomm EDL transport readiness report", "يصنف ملاحظة PnP ورمز مشكلة التعريف ويعرض ما ينقص من هوية الموديل وProgrammer موقع وتفويض OEM؛ يمنع الفلاش دائمًا حتى تتوفر متطلبات رسمية.", ModuleImplementationStatus.Tested),
                 new("qualcomm-recovery", "استعادة Qualcomm الرسمية المتوافقة", "Supported Qualcomm recovery", "غير منفذة؛ يلزم مصدر رسمي وملف مطابق للموديل وسلسلة ثقة موثقة.", ModuleImplementationStatus.Planned)
             ]),
         new("mediatek-tools", 10, "الشركات والمعالجات", "أدوات MediaTek", "MediaTek Tools",
-            "قراءة تلميح SoC من Android ورصد مؤشر USB الشائع MediaTek Preloader/BROM عبر Windows PnP؛ لا توجد أدوات DA أو استعادة.",
+            "قراءة تلميح SoC ورصد MediaTek 0E8D:0003 من Windows PnP مع تقرير جاهزية النقل وحالة التعريف والمتطلبات الناقصة؛ لا يتم فتح BROM أو تحميل DA.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("mediatek-soc", "قراءة تلميح المعالج من Android", "SoC identification hint", "قد يظهر تعريف المعالج ضمن خصائص الجهاز؛ لا يثبت وضع Preloader. الفحص العام من قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("mediatek-preloader", "رصد مؤشر USB MediaTek Preloader/BROM", "MediaTek Preloader/BROM USB hint", "يرصد VID/PID الشائع 0E8D:0003 في Windows PnP ويفتح عرض MediaTek المفلتر؛ لا يقرأ بروتوكول BROM ولا يختار DA ولا ينفذ تفليشًا.", ModuleImplementationStatus.Implemented, "OpenMediaTekUsbDiagnostics"),
+                new("mediatek-transport-readiness", "تقرير جاهزية تعريف واتصال MediaTek Preloader/BROM", "MediaTek transport readiness report", "يصنف ملاحظة PnP ورمز مشكلة التعريف ويعرض ما ينقص من هوية الموديل وDownload Agent موقع وتفويض OEM؛ لا يفتح BROM ولا ينفذ تفليشًا.", ModuleImplementationStatus.Tested),
                 new("mediatek-recovery", "الاستعادة الرسمية المتوافقة", "Supported MediaTek recovery", "غير منفذة؛ يلزم ملف DA موثوق ومتوافق ومصدر رسمي للجهاز المحدد.", ModuleImplementationStatus.Planned)
             ]),
         new("firmware-center", 11, "Firmware والاستعادة", "مركز Firmware", "Firmware Center",
-            "فحص أرشيفات محلية وإدارة مكتبة Offline مصنفة حسب الشركة والموديل والمنطقة والإصدار مع إعادة التحقق من SHA-256.",
+            "مكتبة Firmware محلية وتنزيل HTTPS قابل للاستكمال، وفحص بنية الأرشيف وبوابة توافق fail-closed تقارن الشركة والموديل والمنتج واللوحة والمنطقة وAnti-Rollback وسلامة الملف وثقة الناشر.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("firmware-inspection", "فحص أرشيف محلي وحساب SHA-256", "Local archive inspection and SHA-256", "يقرأ بنية ZIP وعناصر OTA الشائعة فقط؛ لا يثبت المصدر أو التوافق أو سلامة التوقيع.", ModuleImplementationStatus.Implemented, "InspectFirmware"),
                 new("firmware-library", "استيراد وتنظيم مكتبة Firmware محلية", "Offline firmware library", "ينسخ ملفًا يختاره المستخدم إلى مكتبة منظمة حسب الشركة والموديل والمنطقة والإصدار ويحفظ بياناته محليًا.", ModuleImplementationStatus.Implemented, "OpenFirmwareCenter"),
                 new("firmware-hash-verify", "إعادة حساب SHA-256 والتحقق من سلامة الملف المحلي", "Firmware hash revalidation", "يقارن SHA-256 والحجم الحاليين بسجل الاستيراد ويكشف التغيير أو الفقد؛ هذا لا يثبت مصدر الناشر أو التوافق.", ModuleImplementationStatus.Implemented),
                 new("firmware-download", "تنزيل واستكمال ملفات Firmware من مصادر الشركة", "Resumable firmware download manager", "مدير تنزيل داخل Firmware Center يقبل رابط HTTPS مباشرًا يحدده المستخدم وبصمة SHA-256 منشورة من المصدر؛ يدعم HTTP Range resume بعد الانقطاع، وETag/If-Range، والإلغاء والتقدم، ويرفض التحويلات ومصادر HTTP وIP المباشر وبصمة غير مطابقة، ثم يستورد الملف المتحقق محليًا. لا يثبت الناشر أو توافق الجهاز ولا ينفذ تفليشًا.", ModuleImplementationStatus.Tested),
-                new("firmware-compatibility", "محرك توافق موثق قبل الاستخدام", "Firmware compatibility engine", "لم يتم تنفيذ محرك يفحص الموديل والمنطقة وقيود الرجوع ومصدر الملف قبل أي استخدام.", ModuleImplementationStatus.Planned)
+                new("firmware-compatibility", "محرك توافق Firmware قبل الاستخدام", "Fail-closed firmware compatibility gate", "يقارن الشركة والموديل وProduct وBoard/Hardware SKU والمنطقة وAnti-Rollback وسلامة الملف وتوقيع الناشر؛ القيم الناقصة Unknown وتمنع السماح. هذه بوابة معلوماتية ولا تبدأ Flash أو تمنح تفويضًا.", ModuleImplementationStatus.Tested)
             ]),
         new("usb-doctor", 12, "الاتصال والتشخيص", "طبيب USB", "USB Doctor",
             "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز؛ لا يثبت أو يزيل تعريفات.",
@@ -185,6 +188,7 @@ public static class SoftBoxModuleCatalog
                 new("camera-tests", "جرد Camera2 والتقاط صور وفحص AF", "Camera2 route tests", "المسارات التي يكشفها مصنع الجهاز فقط؛ لا يقيس جودة العدسة بصريًا. تُدار اختبارات Agent من نفس شاشة تشخيص العتاد.", ModuleImplementationStatus.Implemented),
                 new("screen-photo", "تحليل صورة فعلية للشاشة", "Physical screen photo analysis", "يعرض مرشحات بكسلات وتفاوت إضاءة، وليس إثباتًا نهائيًا لعيب الشاشة.", ModuleImplementationStatus.Implemented, "AnalyzeScreen"),
                 new("bench-measurements", "قراءات جهاز قياس خارجي متوافق", "External bench measurements", "بروتوكول Serial JSON-Lines للقراءات فقط؛ لا يصدر أوامر طاقة.", ModuleImplementationStatus.Implemented, "MeasurementRig"),
+                new("reference-measurement-profile", "مقارنة القياسات بحدود مرجعية فنية", "Technician-supplied measurement limit profiles", "يحمّل ملف JSON موثق المصدر بحدود دنيا/عليا، ويقارن القراءات الفعلية من جهاز القياس ويصنف Passed/OutOfRange/NotMeasured دون اختراع حدود مصنع.", ModuleImplementationStatus.Tested),
                 new("board-level", "قياسات اللوحة والمكونات الكهربائية", "Board-level electrical tests", "تتطلب Fixture ومخططات ومجسات آمنة مناسبة للموديل.", ModuleImplementationStatus.Unsupported)
             ]),
         new("network-diagnostics", 16, "الاتصال والتشخيص", "تشخيص الشبكات", "Network Diagnostics",
@@ -202,7 +206,7 @@ public static class SoftBoxModuleCatalog
             [
                 new("repair-guides", "البحث عن أدلة إصلاح خارجية", "External repair guide search", "يفتح مصادر iFixit الأصلية؛ هذه ليست ميزة ذكاء اصطناعي.", ModuleImplementationStatus.Implemented, "RepairGuides"),
                 new("evidence-reasoning", "تحليل قراءات البطارية والتخزين ونتائج الاختبارات", "Evidence-based repair reasoning", "يرتب توصيات غير مدمرة ويربط كل توصية بدليل ودرجة ثقة وحدود واضحة؛ لا يستنتج أعطالًا من بيانات مفقودة.", ModuleImplementationStatus.Implemented, "OpenRepairAdvisor"),
-                new("offline-knowledge", "قاعدة معرفة محلية قابلة للبحث", "Searchable offline repair knowledge", "مقالات الإصلاح العامة متاحة في Help Center؛ قاعدة تشخيص تفصيلية موسعة للأعطال والموديلات ما زالت قيد التطوير.", ModuleImplementationStatus.InDevelopment)
+                new("offline-knowledge", "قاعدة معرفة محلية مشفرة قابلة للبحث والإدارة", "Encrypted technician-authored repair knowledge", "قاعدة DPAPI محلية للفني تشمل إضافة وتعديل وحذف وبحث ملاحظات حسب الشركة والموديل والعَرَض والتشخيص والدليل والخطوات الآمنة؛ تبدأ من مساعد الإصلاح مع تهيئة موديل الجهاز. لا تُعرض كبيانات OEM أو عيوب مصنع دون مصدر يضيفه الفني.", ModuleImplementationStatus.Tested)
             ]),
         new("one-click-diagnostic", 18, "الذكاء والمعرفة", "الفحص الشامل بزر واحد", "One-Click Diagnostic",
             "يجمع قراءات ADB غير المدمرة في جلسة واحدة ويصدر تقريرًا مفصلًا مع نتائج جزئية وحدود واضحة.",
@@ -272,19 +276,21 @@ public static class SoftBoxModuleCatalog
                 new("analytics", "تحليلات الأعطال والإيرادات وأداء الفنيين", "Service analytics", "يعرض مؤشرات فعلية محسوبة من أوامر الصيانة والمخزون المحفوظة: حالات الأوامر، الإيراد المسجل للأوامر المسلمة، قيمة التقديرات المفتوحة، أوصاف الأعطال المتكررة، الموديلات، أداء الفنيين، الإيراد الشهري والمخزون؛ لا يحسب الربح أو الضرائب.", ModuleImplementationStatus.Tested)
             ]),
         new("plugin-store", 26, "التوسعة والمكونات", "متجر الإضافات", "Plugin Store",
-            "يتضمن فحص حزم ZIP وManifest والصلاحيات وبصمة SHA-256 محليًا؛ لا يوجد تثبيت أو تشغيل لأن توقيع الناشر وجذر الثقة غير مفعّلين.",
+            "يدعم فحص الحزم وتوقيع RSA والتحقق من مفتاح الناشر المخزن بـDPAPI وتثبيت الحزم الموقعة في مكتبة محلية؛ التشغيل المتاح Workflow JSON قراءة فقط من خلال قوائم ADB ثابتة، ولا يتم تحميل DLL خارجي.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("plugin-package-inspection", "فحص Manifest وبنية الحزمة والصلاحيات والبصمة", "Local package inspection", "يفحص ZIP ويدعم منع Zip Slip والروابط الرمزية والحزم الضخمة والصلاحيات غير المعروفة؛ لا يثبت أو يشغّل DLL.", ModuleImplementationStatus.Implemented, "OpenPluginStore"),
-                new("plugin-signing", "التحقق من توقيع الناشر وجذر الثقة", "Plugin publisher signature verification", "غير منفذ؛ يظل PublisherSignatureVerified=false ولا يسمح بتحميل أو تشغيل الحزمة.", ModuleImplementationStatus.Planned),
-                new("plugin-install", "تثبيت الإضافات وإدارة الاعتماديات والصلاحيات", "Plugin installation and permission grants", "غير منفذ حتى إنشاء منظومة توقيع وموافقة وعزل موثوقة.", ModuleImplementationStatus.Planned)
+                new("plugin-signing", "توقيع الحزمة والتحقق من مفتاح الناشر وجذر الثقة", "RSA publisher signatures and trusted public-key roots", "يوقّع حزمة ZIP بمفتاح خاص يختاره الناشر، ويتحقق من RSA-PSS/SHA-256 مقابل مفتاح عام استورده المستخدم بعد مقارنة بصمته عبر قناة مستقلة؛ تُحمى المفاتيح العامة محليًا عبر DPAPI.", ModuleImplementationStatus.Tested),
+                new("plugin-install", "إدارة الحزم الموقعة وتشغيل Workflow قراءة فقط", "Signed package library and read-only workflow execution", "يحفظ ويزيل الحزم الموقعة من المكتبة المحلية، ويطلب موافقات صلاحيات لكل جلسة ويعيد التحقق من توقيع الحزمة والهاتف قبل تنفيذ workflow.json عبر أوامر Android المسموحة فقط؛ لا ينفذ DLL.", ModuleImplementationStatus.Tested),
+                new("plugin-native-runtime", "تشغيل إضافات DLL خارجية داخل عزل منخفض الصلاحيات", "Isolated native plugin runtime", "غير متاح في هذا الإصدار؛ لا يتم تحميل DLL خارجي أو تشغيل كود Plugin أصلي. يلزم عزل Windows/IPC وصلاحيات موارد واختبارات اختراق قبل السماح بذلك.", ModuleImplementationStatus.Planned)
             ]),
         new("plugin-sdk", 27, "التوسعة والمكونات", "حزمة تطوير الإضافات", "Plugin SDK",
             "أصبح هناك نموذج Manifest بإصدار 1 وقائمة صلاحيات محددة ومدقق توافق fail-closed؛ لا يوجد Host لتشغيل الإضافات.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("plugin-contracts", "عقود Plugin Manifest وإصدارات API والصلاحيات", "Plugin manifest and permission contracts", "عقود Core تفرض semantic versioning ومعرفات مستقرة وترفض الصلاحيات المجهولة أو الخطرة.", ModuleImplementationStatus.Implemented),
-                new("plugin-sample", "فاحص حزم ZIP ونموذج توثيق للمطور", "Package inspection and developer starter", "فاحص الحزم محليًا لا يحمّل أو يشغّل كود الإضافة؛ توقيع الناشر والتحقق من جذر الثقة لا يزالان مطلوبين.", ModuleImplementationStatus.Implemented)
+                new("plugin-sample", "فاحص حزم ZIP ونموذج توثيق للمطور", "Package inspection and developer starter", "فاحص الحزم محليًا وملفات بداية SDK لا تحمل DLL ولا تشغل Shell.", ModuleImplementationStatus.Implemented),
+                new("plugin-workflow-host", "مضيف Workflow بيانات موقّع للقراءة فقط", "Signed data-only plugin workflow host", "ينفذ workflow.json بعد التحقق من التوقيع ومنح صلاحيات القراءة/التشخيص وإعادة التحقق من ADB؛ يمرر فقط preset IDs المسموحة ويتوقف عند أول فشل. لا يعد محرك CLR لإضافات DLL.", ModuleImplementationStatus.Tested)
             ]),
         new("offline-center", 28, "النظام والحماية", "مركز العمل دون إنترنت", "Offline Center",
             "لوحة قراءة فقط تفحص حزمة SoftBox المحلية وتعرض الأدوات المرفقة والملفات الناقصة وإصداراتها وأحجامها وبصمات SHA-256 وقواعد البيانات المحلية.",
@@ -312,12 +318,12 @@ public static class SoftBoxModuleCatalog
                 new("audit-user", "قفل الجلسة وسجل عمليات حسب هوية المستخدم", "Session locking and per-user audit", "قفل الجلسة يتطلب إعادة المصادقة، ويُسجل الدخول والفشل وتغيير كلمة المرور ومنع الصلاحيات وبدء تشغيل الأدوات حسب هوية المستخدم في سجل محلي محدود الحجم.", ModuleImplementationStatus.Tested)
             ]),
         new("update-center", 31, "النظام والحماية", "مركز التحديثات", "Update Center",
-            "يفحص إصدارات Stable/Beta من GitHub Releases ويعرض رقم الإصدار والملاحظات والملفات المنشورة دون تنزيل أو تثبيت تلقائي.",
+            "يفحص GitHub Stable/Beta، ويتيح استيراد مفتاح ناشر مستقل، وتنزيل حزمة Windows موقعة والتحقق من Manifest وبصمات كل الملفات ثم تجهيزها للتثبيت بعد إغلاق التطبيق مع Snapshot للرجوع.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("catalog-update", "تحديث كتالوج الموديلات", "Device catalog refresh", "يحدّث بيانات الموديلات ويخزن نسخة محلية؛ مدخل التحديث في قسم ذكاء الأجهزة.", ModuleImplementationStatus.Implemented),
                 new("release-check", "فحص إصدارات SoftBox الرسمية Stable/Beta", "Official release channel check", "يقرأ metadata من GitHub API، يقارن SemVer، ويقبل صفحة الإصدار وروابط الأصول من مستودع SoftBox الرسمي فقط؛ لا ينزّل أو ينفذ ملفات.", ModuleImplementationStatus.Implemented, "OpenUpdateCenter"),
-                new("application-updater", "تنزيل وتحقق توقيع وتثبيت تحديث SoftBox", "Signed application updater", "لم يتم تنفيذ الثقة بجذر توقيع أو تحديث ذاتي؛ يلزم توقيع ملفات الإصدار قبل تفعيل التثبيت.", ModuleImplementationStatus.Planned),
+                new("application-updater", "تنزيل وتحقق توقيع وتثبيت تحديث SoftBox", "Signed application updater and rollback helper", "ينزّل فقط أصلًا من GitHub Releases الرسمي، ويتحقق من مفتاح RSA موثوق وManifest وبصمات الملفات والحد الأدنى للإصدار قبل المرحلة؛ ينشئ مساعد تثبيت بعد إغلاق العملية وSnapshot للرجوع. يحتاج مفتاح إصدار عام استورده الفني بعد التحقق المستقل، ولا توجد مفاتيح توقيع خاصة داخل المستودع.", ModuleImplementationStatus.Tested),
                 new("release-channels", "قنوات Stable/Beta وسياسة الرجوع الآمن", "Release channels and rollback", "اختيار قناة الفحص Stable/Beta متاح؛ تثبيت إصدار سابق أو rollback لم يبدأ.", ModuleImplementationStatus.InDevelopment)
             ]),
         new("notification-center", 32, "النظام والحماية", "مركز الإشعارات", "Notification Center",
