@@ -1,7 +1,7 @@
 package com.softbox.phonelab.agent
 
 import android.Manifest
-import android.app.Activity
+import androidx.fragment.app.FragmentActivity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothManager
 import android.content.Context
@@ -29,7 +29,7 @@ import androidx.core.content.ContextCompat
  * Bluetooth addresses, NFC tag UIDs or raw GPS coordinates into the report.
  */
 class AgentHardwareDiagnostics(
-    private val activity: Activity,
+    private val activity: FragmentActivity,
     private val saveTest: (String, String, String) -> Unit
 ) {
     private val mainHandler = android.os.Handler(Looper.getMainLooper())

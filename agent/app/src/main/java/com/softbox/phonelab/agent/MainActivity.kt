@@ -1,7 +1,7 @@
 package com.softbox.phonelab.agent
 
 import android.Manifest
-import android.app.Activity
+import androidx.fragment.app.FragmentActivity
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Context
@@ -40,7 +40,7 @@ import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 
-class MainActivity : Activity() {
+class MainActivity : FragmentActivity() {
     private val tests = ConcurrentHashMap<String, JSONObject>()
     private val sensorNames = CopyOnWriteArrayList<String>()
     private val hardwareFeatures = CopyOnWriteArrayList<String>()
