@@ -46,6 +46,8 @@ public sealed class SamsungOdinAssistantWindow : Window
     private readonly string? _deviceManufacturer;
     private readonly string? _deviceModel;
     private bool _packagesInspected;
+    private int? _inspectedOdinProcessId;
+    private string? _inspectedComPort;
 
     public SamsungOdinAssistantWindow(
         AdbClient? adb = null,
@@ -236,6 +238,9 @@ public sealed class SamsungOdinAssistantWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             _odinExecutable.Text = Path.GetFullPath(dialog.FileName);
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
+            _startOdinButton.IsEnabled = false;
             _inspectOdinUiButton.IsEnabled = _packagesInspected && _deviceSerial is not null;
             _startOdinButton.IsEnabled = false;
             _status.Text = "تم اختيار ملف Odin. لم يتم تشغيله أو التحقق من ناشره.";
@@ -255,6 +260,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         {
             _slotPaths[slot].Text = Path.GetFullPath(dialog.FileName);
             _packagesInspected = false;
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
             _inspectedHashes.Clear();
             _launchButton.IsEnabled = false;
             _inspectOdinUiButton.IsEnabled = false;
@@ -440,6 +447,8 @@ public sealed class SamsungOdinAssistantWindow : Window
                 _confirmBackup.IsChecked == true,
                 _confirmComPort.IsChecked == true);
             _startOdinButton.IsEnabled = report.Decision.CanInvokeStart;
+            _inspectedOdinProcessId = report.Decision.CanInvokeStart ? report.ProcessId : null;
+            _inspectedComPort = report.Decision.CanInvokeStart ? report.ComPort : null;
             _inspection.AppendText(Environment.NewLine + Environment.NewLine +
                 "SAMSUNG ODIN UI AUTOMATION INSPECTION" + Environment.NewLine +
                 "Window: " + (report.WindowTitle ?? "Not detected") + Environment.NewLine +
@@ -457,6 +466,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         catch (Exception ex)
         {
             _startOdinButton.IsEnabled = false;
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
             _status.Text = "تعذر فحص واجهة Odin: " + ex.Message;
         }
     }
@@ -499,6 +510,10 @@ public sealed class SamsungOdinAssistantWindow : Window
                 throw new InvalidOperationException("لم تعد أدلة Odin صالحة؛ تم منع Start:\n" +
                     string.Join("\n", report.Decision.Blockers));
             }
+            if (_inspectedOdinProcessId is null || _inspectedComPort is null ||
+                report.ProcessId != _inspectedOdinProcessId ||
+                !string.Equals(report.ComPort, _inspectedComPort, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("تغيرت عملية Odin أو منفذ COM بعد آخر فحص. أعد الفحص وتأكد من نفس الهاتف.");
 
             var confirmation = MessageBox.Show(this,
                 $"سيتم إرسال Invoke واحد إلى زر Start في Odin عبر Windows UI Automation.\n\nالجهاز: {_deviceManufacturer} {_deviceModel}\nSerial: {_deviceSerial}\nCOM: {report.ComPort}\nالحزم:\n{string.Join("\n", paths.Select(Path.GetFileName))}\n\nتأكد أن معلومات الجهاز وCSC وBinary وAnti-Rollback صحيحة. هذا الإجراء يبدأ التفليش ولا يمكن التراجع عنه بأمان. هل تريد الاستمرار؟",
@@ -511,7 +526,9 @@ public sealed class SamsungOdinAssistantWindow : Window
                 _odinExecutable.Text, paths,
                 _confirmCompatibility.IsChecked == true,
                 _confirmBackup.IsChecked == true,
-                _confirmComPort.IsChecked == true);
+                _confirmComPort.IsChecked == true,
+                report.ProcessId!.Value,
+                report.ComPort!);
             _inspection.AppendText(Environment.NewLine + Environment.NewLine +
                 "ODIN START RESULT: " + (started.StartInvoked ? "INVOKE SENT" : "BLOCKED") +
                 Environment.NewLine + string.Join(Environment.NewLine, started.Decision.Blockers));
