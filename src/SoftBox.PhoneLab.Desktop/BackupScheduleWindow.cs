@@ -62,6 +62,8 @@ public sealed class BackupScheduleWindow : Window
 
         Content = BuildContent();
         _list.SelectionChanged += (_, _) => UpdateButtons();
+        _scheduler.ScheduleStatusChanged += Scheduler_StatusChanged;
+        Closed += (_, _) => _scheduler.ScheduleStatusChanged -= Scheduler_StatusChanged;
         Loaded += async (_, _) => await RefreshAsync();
     }
 
@@ -153,7 +155,7 @@ public sealed class BackupScheduleWindow : Window
             "SoftBox Backups",
             Mask(_serial));
         Grid.SetRow(_destination, 7);
-        Grid.SetColumn(form, 0);
+        Grid.SetColumn(_destination, 0);
         Grid.SetColumnSpan(_destination, 2);
         form.Children.Add(_destination);
 
@@ -179,6 +181,8 @@ public sealed class BackupScheduleWindow : Window
             Margin = new Thickness(0, 0, 10, 0)
         };
         addPanel.Children.Add(note);
+        DockPanel.SetDock(addPanel, Dock.Top);
+        root.Children.Add(addPanel);
         DockPanel.SetDock(form, Dock.Top);
         root.Children.Add(form);
 
@@ -307,6 +311,13 @@ public sealed class BackupScheduleWindow : Window
             await LoadListAsync();
             return "بدأ تنفيذ النسخة الاحتياطية في الخلفية. ستظهر النتيجة في حالة الجدولة.";
         });
+    }
+
+    private void Scheduler_StatusChanged(Guid scheduleId, string status)
+    {
+        if (!_schedules.Any(schedule => schedule.Id == scheduleId))
+            return;
+        _ = Dispatcher.BeginInvoke(new Action(() => _ = RefreshAsync()));
     }
 
     private async Task RefreshAsync()
