@@ -246,7 +246,8 @@ public static class SoftBoxModuleCatalog
                 new("customers", "إدارة العملاء", "Customer management", "إضافة وتعديل بيانات العملاء مع تخزين محلي.", ModuleImplementationStatus.Implemented),
                 new("repair-orders", "إنشاء أوامر الصيانة ومتابعة الحالات", "Repair orders", "أرقام Ticket وحالة الجهاز ونتائج ما قبل/بعد الإصلاح.", ModuleImplementationStatus.Implemented, "OpenWorkshop"),
                 new("warranty", "الإعدادات الدولية والضمان وسجل الفني", "International profile and warranty", "العملة واللغة والمنطقة الزمنية ومدة الضمان وسجل المتابعة وتقارير HTML.", ModuleImplementationStatus.Implemented),
-                new("quotes-invoices", "إيصالات الاستلام وعروض الأسعار والفواتير", "Receipts, quotes and invoices", "مستندات HTML قابلة للطباعة لإيصال الاستلام والعرض والفاتورة؛ سجل موافقة أو رفض العميل مع تاريخ القرار وطريقة التواصل والفني؛ سجل دفعات متعددة مع منع التجاوز وحساب الرصيد وإيصال منفصل لكل دفعة. هذه سجلات محلية يدوية وليست توقيعًا إلكترونيًا أو تحققًا مصرفيًا؛ لا توجد معالجة/رد مدفوعات أو حساب ضرائب أو فاتورة إلكترونية معتمدة.", ModuleImplementationStatus.InDevelopment)
+                new("quotes-invoices", "إيصالات الاستلام وعروض الأسعار والفواتير", "Receipts, quotes and invoices", "مستندات HTML قابلة للطباعة لإيصال الاستلام والعرض والفاتورة؛ سجل موافقة أو رفض العميل مع تاريخ القرار وطريقة التواصل والفني؛ سجل دفعات متعددة مع منع التجاوز وحساب الرصيد وإيصال منفصل لكل دفعة. هذه سجلات محلية يدوية وليست توقيعًا إلكترونيًا أو تحققًا مصرفيًا؛ لا توجد معالجة/رد مدفوعات أو حساب ضرائب أو فاتورة إلكترونية معتمدة.", ModuleImplementationStatus.InDevelopment),
+                new("workshop-backup-scheduler", "جدولة النسخ اليومي المشفر لقاعدة الورشة", "Scheduled encrypted workshop database backup", "ينشئ مهمة Windows Task Scheduler يومية لحساب المستخدم الحالي، تنسخ ملف قاعدة الورشة المحمي بـDPAPI كما هو دون فك تشفير بيانات العملاء، مع تحديد وقت النسخ ومجلد الحفظ ومدة الاحتفاظ وفحص الحالة وحذف المهمة. تعمل مع جلسة Windows مسجلة الدخول؛ لا تعمل بعد تسجيل الخروج.", ModuleImplementationStatus.Implemented, "OpenWorkshopBackupScheduler")
             ]),
         new("parts-inventory", 24, "إدارة مركز الصيانة", "مخزون قطع الغيار", "Parts Inventory",
             "إضافة الأصناف وتعديلها وحركات الصرف والإضافة والتنبيه بانخفاض المخزون متاحة.",
@@ -363,7 +364,7 @@ public static class SoftBoxModuleCatalog
         "OpenWorkshop", "MirrorScreen", "OpenMultiScreenSessions", "AnalyzeScreen", "MeasurementRig",
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenAndroidServiceOperations", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenDashboardAnalytics", "OpenSupportBundle", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenSamsungOdinAssistant", "OpenSamsungServiceOperations", "OpenAndroidLogAnalyzer", "OpenAndroidBackupScheduler", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenDeviceCapabilityCenter", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
-        "OpenWorkshopBackup", "OpenGlobalWorkshopHistory",
+        "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement"
     };
 

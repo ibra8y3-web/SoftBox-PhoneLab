@@ -239,6 +239,11 @@ public sealed class WorkshopCenterWindow : Window
         var actions = new WrapPanel();
         actions.Children.Add(Button("إنشاء نسخة احتياطية", async (_, _) => await BackupAsync()));
         actions.Children.Add(Button("استعادة نسخة احتياطية", async (_, _) => await RestoreAsync()));
+        actions.Children.Add(Button("جدولة النسخ اليومي المشفر", (_, _) =>
+        {
+            var window = new WorkshopBackupSchedulerWindow { Owner = this };
+            window.Show();
+        }));
         actions.Children.Add(Button("فتح مجلد قاعدة البيانات", (_, _) =>
         {
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", Path.GetDirectoryName(_store.DatabasePath)!) { UseShellExecute = true }); }
