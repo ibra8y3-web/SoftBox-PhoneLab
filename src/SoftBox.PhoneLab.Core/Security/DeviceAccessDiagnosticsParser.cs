@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 namespace SoftBox.PhoneLab.Core.Security;
@@ -24,6 +25,12 @@ public sealed record DeviceAccessDiagnosticsReport(
     string NetworkOperatorProperty)
 {
     public bool HasManagementOwner => HasDeviceOwner || HasProfileOwner;
+
+    /// <summary>Only component names found in the public Device Policy Manager dump.</summary>
+    public IReadOnlyList<string> ManagementComponents { get; init; } = Array.Empty<string>();
+
+    /// <summary>Only restriction tokens matching Android's public no_* naming convention.</summary>
+    public IReadOnlyList<string> ActiveUserRestrictions { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
@@ -49,6 +56,14 @@ public static class DeviceAccessDiagnosticsParser
         @"(?im)^.*\bActive\s+admin\b.*(?:ComponentInfo|admin\s*=).*",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex ComponentInfoPattern = new(
+        @"ComponentInfo\{(?<component>[A-Za-z0-9_.$]+/[A-Za-z0-9_.$]+)\}",
+        RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex UserRestrictionPattern = new(
+        @"\bno_[a-z0-9_]+\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     public static DeviceAccessDiagnosticsReport Parse(
         string? devicePolicyOutput,
         string? windowOutput,
@@ -71,7 +86,7 @@ public static class DeviceAccessDiagnosticsParser
             ? KeyguardVisibility.Unknown
             : visibilityValues[0] ? KeyguardVisibility.Visible : KeyguardVisibility.NotVisible;
 
-        return new DeviceAccessDiagnosticsReport(
+        var report = new DeviceAccessDiagnosticsReport(
             policyReadable,
             policyReadable && DeviceOwnerPattern.IsMatch(policy),
             policyReadable && ProfileOwnerPattern.IsMatch(policy),
@@ -79,6 +94,22 @@ public static class DeviceAccessDiagnosticsParser
             visibility,
             NormalizeProperty(simStateProperty),
             NormalizeProperty(networkOperatorProperty));
+
+        return !policyReadable
+            ? report
+            : report with
+            {
+                ManagementComponents = ComponentInfoPattern.Matches(policy)
+                    .Select(match => match.Groups["component"].Value)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(20)
+                    .ToArray(),
+                ActiveUserRestrictions = UserRestrictionPattern.Matches(policy)
+                    .Select(match => match.Value.ToLowerInvariant())
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(60)
+                    .ToArray()
+            };
     }
 
     private static string NormalizeProperty(string? value)
