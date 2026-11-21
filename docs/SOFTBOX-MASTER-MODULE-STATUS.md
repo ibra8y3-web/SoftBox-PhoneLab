@@ -400,3 +400,11 @@ See [OEM service and recovery workflows](OEM-RECOVERY-WORKFLOWS.md) for implemen
 - Google FRP bypass, Xiaomi Mi Account bypass, Samsung FRP bypass, PIN/Pattern bypass, MDM bypass and SIM/network-lock bypass are explicitly catalogued as Unsupported and have no executable ActionId.
 - Carrier unlock is an official carrier hand-off only. No account databases, modem/NV partitions, device policy or lock state are modified.
 - Automated parser tests cover positive, negative, missing and conflicting output. No physical handset verification or universal model coverage is claimed.
+
+
+## Expanded Device Policy Manager evidence — 21 November 2026
+
+- Device Access & Recovery now extracts up to 20 Android `ComponentInfo{package/class}` components and up to 60 observed `no_*` restriction tokens from readable `dumpsys device_policy` output.
+- The UI calls these observed strings, not verified effective restrictions. No MDM enrollment, admin role, policy or account is changed or removed.
+- The parser returns empty evidence collections on unavailable/permission-denied dumps. Automated tests cover owner/profile/active-admin components, observed token parsing and collection bounds.
+- Android OEM output and user-specific enforcement still require physical validation.
