@@ -43,12 +43,19 @@ public sealed class SamsungOdinUiAutomationService
         IReadOnlyList<string> expectedPackagePaths,
         bool operatorConfirmedCompatibility,
         bool operatorConfirmedBackup,
-        bool operatorConfirmedComPortMatchesSelectedDevice)
+        bool operatorConfirmedComPortMatchesSelectedDevice,
+        int expectedProcessId,
+        string expectedComPort)
     {
         var capture = Capture(selectedOdinExecutable, expectedPackagePaths,
             operatorConfirmedCompatibility, operatorConfirmedBackup, operatorConfirmedComPortMatchesSelectedDevice);
         if (!capture.Report.Decision.CanInvokeStart)
             return capture.Report;
+
+        if (capture.Report.ProcessId != expectedProcessId ||
+            !string.Equals(capture.Report.ComPort, expectedComPort, StringComparison.OrdinalIgnoreCase))
+            return Failed(capture.Report,
+                "تغيرت عملية Odin أو منفذ COM بعد المعاينة. أوقف Start وأعد فحص الواجهة وربط الجهاز.");
 
         if (capture.StartButton is null)
             return Failed(capture.Report, "تعذر الاحتفاظ بمرجع زر Start الذي تم فحصه.");
