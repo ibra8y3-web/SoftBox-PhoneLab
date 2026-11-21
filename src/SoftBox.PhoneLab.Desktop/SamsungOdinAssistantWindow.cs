@@ -26,6 +26,7 @@ public sealed class SamsungOdinAssistantWindow : Window
     private readonly Button _launchButton;
     private readonly Button _inspectOdinUiButton;
     private readonly Button _startOdinButton;
+    private readonly Button _monitorOdinButton;
     private readonly Button _downloadModeButton;
     private readonly CheckBox _confirmCompatibility = new()
     {
@@ -77,10 +78,12 @@ public sealed class SamsungOdinAssistantWindow : Window
         _launchButton = ButtonControl("فتح Odin المحدد", "#176044", LaunchOdin_Click);
         _inspectOdinUiButton = ButtonControl("فحص واجهة Odin ومنفذ COM", "#14517A", InspectOdinUi_Click);
         _startOdinButton = ButtonControl("تنفيذ Start بعد التحقق", "#713B43", StartOdin_Click);
+        _monitorOdinButton = ButtonControl("قراءة نتيجة Odin والتقدم (قراءة فقط)", "#14517A", MonitorOdin_Click);
         _downloadModeButton = ButtonControl("إعادة تشغيل Samsung إلى Download Mode", "#704B20", DownloadMode_Click);
         _launchButton.IsEnabled = false;
         _inspectOdinUiButton.IsEnabled = false;
         _startOdinButton.IsEnabled = false;
+        _monitorOdinButton.IsEnabled = false;
         _downloadModeButton.IsEnabled = _adb is not null && _deviceSerial is not null;
         Content = BuildContent();
     }
@@ -113,6 +116,7 @@ public sealed class SamsungOdinAssistantWindow : Window
         buttons.Children.Add(_downloadModeButton);
         buttons.Children.Add(_inspectOdinUiButton);
         buttons.Children.Add(_startOdinButton);
+        buttons.Children.Add(_monitorOdinButton);
         buttons.Children.Add(ButtonControl("مصادر Samsung الرسمية", "#243B56",
             (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show()));
         footer.Children.Add(buttons);
@@ -472,6 +476,44 @@ public sealed class SamsungOdinAssistantWindow : Window
         }
     }
 
+    private void MonitorOdin_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_inspectedOdinProcessId is null || string.IsNullOrWhiteSpace(_inspectedComPort))
+                throw new InvalidOperationException("أعد فحص نافذة Odin ومنفذ COM أولًا، ثم ابدأ عملية التفليش من نفس الجلسة.");
+
+            var report = _odinAutomation.ReadExecutionProgress(
+                _odinExecutable.Text,
+                _inspectedOdinProcessId.Value,
+                _inspectedComPort);
+
+            var progressText = report.ProgressPercent is double percent
+                ? percent.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "%"
+                : "غير معروض";
+            _inspection.AppendText(Environment.NewLine + Environment.NewLine +
+                "ODIN READ-ONLY PROGRESS" + Environment.NewLine +
+                "State: " + report.State + Environment.NewLine +
+                "Process ID: " + report.ProcessId + Environment.NewLine +
+                "COM: " + (report.ComPort ?? "غير معروض") + Environment.NewLine +
+                "Progress: " + progressText + Environment.NewLine +
+                report.Explanation + Environment.NewLine +
+                "Visible UI evidence:" + Environment.NewLine + report.VisibleResultText);
+            _status.Text = report.Explanation;
+            _status.Foreground = Brush(report.State switch
+            {
+                SamsungOdinExecutionState.Succeeded => "#7DDBAA",
+                SamsungOdinExecutionState.Failed or SamsungOdinExecutionState.DevicePortChanged => "#FFB4A6",
+                _ => "#9FC7E8"
+            });
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذرت قراءة حالة Odin: " + ex.Message;
+            _status.Foreground = Brush("#FFB4A6");
+        }
+    }
+
     private async void StartOdin_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -532,8 +574,9 @@ public sealed class SamsungOdinAssistantWindow : Window
             _inspection.AppendText(Environment.NewLine + Environment.NewLine +
                 "ODIN START RESULT: " + (started.StartInvoked ? "INVOKE SENT" : "BLOCKED") +
                 Environment.NewLine + string.Join(Environment.NewLine, started.Decision.Blockers));
+            _monitorOdinButton.IsEnabled = started.StartInvoked;
             _status.Text = started.StartInvoked
-                ? "تم إرسال Invoke إلى Start في Odin. تابع Progress/ID:COM/Result داخل Odin؛ لم يؤكد SoftBox نجاح التفليش."
+                ? "تم إرسال Invoke إلى Start في Odin. يمكنك قراءة PASS/FAIL ونسبة التقدم من الواجهة عبر زر المراقبة دون أي أوامر إضافية."
                 : "لم يتم تنفيذ Start: " + string.Join(" | ", started.Decision.Blockers);
         }
         catch (Exception ex)
