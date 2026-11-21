@@ -52,3 +52,23 @@ A link is a hand-off to the service owner, not an API integration or approval. S
 The diagnostics are generic ADB observations and can run on Android devices that authorize ADB and expose the requested shell services/properties. OEM builds may hide, rename or restrict these outputs; the result can be partial or unknown. No claim is made for every handset, Android release, iOS device, region, mobile carrier or MDM provider.
 
 Automated parser tests cover known, missing and conflicting diagnostic strings. They do not replace physical-device validation across OEM builds. The module must remain **In Development** until the relevant Samsung, Xiaomi, Pixel, Motorola and other supported test devices are physically checked and evidence is recorded.
+
+
+## Extended mobile network diagnostics — 21 November 2026
+
+The same read-only window now also requests:
+
+- `adb -s SERIAL shell dumpsys telephony.registry`
+
+A separate parser extracts only these allow-listed fields where the OEM Android build exposes them:
+
+- Voice and data registration states: in service, out of service, emergency only, radio powered off or unknown.
+- Voice and data radio technologies: for example LTE, LTE_CA, NR, UMTS, GSM or an unknown/unmapped value.
+- Roaming, emergency-only and network-search indicators.
+- Public operator display label.
+
+The parser never stores the raw telephony dump in its report model and has no output properties for IMEI, IMSI, ICCID, phone number, subscriber ID or SIM serial. Those unrelated fields may occur in vendor dumps, so the window only displays the parser's selected values. The complete diagnostic output is not exported or persisted by this feature.
+
+Registration state is not an unlock result. A device can be registered on a carrier while still being subject to SIM/network restrictions in another context, and an out-of-service state can have many causes unrelated to a network lock. The carrier remains the authority for IMEI eligibility and network unlock approval.
+
+Automated tests cover standard Android registration codes, LTE/NR technology labels, missing and conflicting fields, denied output, and the absence of subscriber identifiers from the parsed result. OEM variations and dual-SIM behavior require further physical validation.
