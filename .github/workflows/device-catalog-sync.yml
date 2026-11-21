@@ -1,6 +1,13 @@
 name: Refresh community device catalog
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/sync_device_profiles.py"
+      - "scripts/validate_device_profiles.py"
+      - ".github/workflows/device-catalog-sync.yml"
+      - "data/device-profiles/catalog.json"
   schedule:
     - cron: "25 3 * * 1"
   workflow_dispatch:
