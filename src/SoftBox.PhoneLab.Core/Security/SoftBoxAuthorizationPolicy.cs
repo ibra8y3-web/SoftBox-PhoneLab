@@ -59,6 +59,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenRepairAdvisor"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenOneClickDiagnostic"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenPhoneBackup"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenAndroidBackupScheduler"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenWorkshopBackup"] = SoftBoxAccountPermission.WorkshopOperations,
             ["OpenGlobalWorkshopHistory"] = SoftBoxAccountPermission.WorkshopOperations,
             ["OpenGlobalWorkshopReports"] = SoftBoxAccountPermission.WorkshopOperations,
