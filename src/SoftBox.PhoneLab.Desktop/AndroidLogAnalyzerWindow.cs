@@ -1,6 +1,7 @@
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Desktop.Services;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows;
