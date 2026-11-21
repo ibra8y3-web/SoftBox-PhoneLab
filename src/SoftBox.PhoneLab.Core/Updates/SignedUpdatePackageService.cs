@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.Globalization;
 using SoftBox.PhoneLab.Core.Plugins;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -29,7 +30,8 @@ public sealed record SignedUpdateRollbackState(
     string BackupDirectory,
     string PreviousVersion,
     string InstalledVersion,
-    DateTimeOffset InstalledAtUtc);
+    DateTimeOffset InstalledAtUtc,
+    IReadOnlyList<string>? InstalledFilePaths = null);
 
 /// <summary>
 /// Downloads only official SoftBox release assets, validates a detached RSA publisher signature
@@ -64,9 +66,16 @@ public sealed class SignedUpdatePackageService
     public string UpdatesRoot => _updatesRoot;
     public string RollbackStatePath => Path.Combine(_updatesRoot, "last-update.json");
 
+    public Task<SignedUpdateStageInfo> DownloadAndStageAsync(
+        ReleaseAssetInfo asset,
+        string expectedVersion,
+        CancellationToken cancellationToken = default)
+        => DownloadAndStageAsync(asset, expectedVersion, currentVersion: null, cancellationToken);
+
     public async Task<SignedUpdateStageInfo> DownloadAndStageAsync(
         ReleaseAssetInfo asset,
         string expectedVersion,
+        string? currentVersion,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(asset);
@@ -109,7 +118,7 @@ public sealed class SignedUpdatePackageService
                     throw new InvalidDataException("الحجم الفعلي للتنزيل لا يطابق حجم الأصل المنشور.");
             }
 
-            return await VerifyAndStageAsync(tempArchive, NormalizeVersion(expectedVersion), cancellationToken);
+            return await VerifyAndStageAsync(tempArchive, NormalizeVersion(expectedVersion), currentVersion, cancellationToken);
         }
         finally
         {
@@ -117,9 +126,16 @@ public sealed class SignedUpdatePackageService
         }
     }
 
+    public Task<SignedUpdateStageInfo> VerifyAndStageAsync(
+        string archivePath,
+        string expectedVersion,
+        CancellationToken cancellationToken = default)
+        => VerifyAndStageAsync(archivePath, expectedVersion, currentVersion: null, cancellationToken);
+
     public async Task<SignedUpdateStageInfo> VerifyAndStageAsync(
         string archivePath,
         string expectedVersion,
+        string? currentVersion,
         CancellationToken cancellationToken = default)
     {
         if (!File.Exists(archivePath))
@@ -141,7 +157,7 @@ public sealed class SignedUpdatePackageService
                     ?? throw new InvalidDataException("Manifest تحديث SoftBox فارغ.");
             }
 
-            ValidateManifest(manifest, expectedVersion);
+            ValidateManifest(manifest, expectedVersion, currentVersion);
 
             PluginPackageSignature signature;
             await using (var stream = signatureEntry.Open())
@@ -155,6 +171,8 @@ public sealed class SignedUpdatePackageService
             var trusted = await _trustStore.FindAsync(signature.KeyId, cancellationToken);
             if (trusted is null || !trusted.PublisherName.Equals(TrustedPublisherName, StringComparison.Ordinal))
                 throw new UnauthorizedAccessException("مفتاح ناشر تحديث SoftBox غير موجود في قائمة الثقة.");
+            if (!string.Equals(manifest.Publisher, TrustedPublisherName, StringComparison.Ordinal))
+                throw new UnauthorizedAccessException("اسم الناشر في Manifest لا يطابق ناشر مفتاح الثقة المعتمد.");
 
             var payload = await PluginSignaturePayload.ComputeAsync(archive.Entries, cancellationToken);
             byte[] signatureBytes;
@@ -167,7 +185,7 @@ public sealed class SignedUpdatePackageService
                 .Where(entry => !entry.FullName.EndsWith("/", StringComparison.Ordinal))
                 .Where(entry => entry.FullName != ManifestEntryName && entry.FullName != SignatureEntryName)
                 .ToDictionary(entry => entry.FullName, StringComparer.Ordinal);
-            var manifestFiles = manifest.Files.ToDictionary(file => file.Path, StringComparer.Ordinal);
+            var manifestFiles = manifest.Files.ToDictionary(file => file.Path, StringComparer.OrdinalIgnoreCase);
             if (contentEntries.Count != manifestFiles.Count ||
                 contentEntries.Keys.Any(path => !manifestFiles.ContainsKey(path)))
                 throw new InvalidDataException("قائمة الملفات داخل Manifest لا تطابق محتويات أرشيف التحديث.");
@@ -380,21 +398,32 @@ Start-Process -FilePath $config.executable -WorkingDirectory $config.installRoot
         }
     }
 
-    private static void ValidateManifest(SignedUpdateManifest manifest, string expectedVersion)
+    private static void ValidateManifest(SignedUpdateManifest manifest, string expectedVersion, string? currentVersion)
     {
         if (manifest.SchemaVersion != 1 ||
             !VersionPattern.IsMatch(NormalizeVersion(manifest.Version)) ||
             !VersionPattern.IsMatch(NormalizeVersion(manifest.MinimumSupportedVersion)) ||
-            !NormalizeVersion(manifest.Version).Equals(expectedVersion, StringComparison.OrdinalIgnoreCase) ||
+            !NormalizeVersion(manifest.Version).Equals(NormalizeVersion(expectedVersion), StringComparison.OrdinalIgnoreCase) ||
             string.IsNullOrWhiteSpace(manifest.Publisher) || manifest.Publisher.Length > 160 ||
             manifest.Files is null || manifest.Files.Count is < 1 or > MaximumFiles ||
             string.IsNullOrWhiteSpace(manifest.MainExecutable) ||
-            string.IsNullOrWhiteSpace(manifest.ReleaseNotes) && manifest.ReleaseNotes is null)
+            manifest.ReleaseNotes is null || manifest.ReleaseNotes.Length > 100_000)
             throw new InvalidDataException("Manifest تحديث SoftBox غير صالح أو لا يطابق الإصدار المطلوب.");
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        if (!string.IsNullOrWhiteSpace(currentVersion))
+        {
+            if (!VersionPattern.IsMatch(NormalizeVersion(currentVersion)))
+                throw new ArgumentException("إصدار SoftBox الحالي غير صالح للمقارنة.", nameof(currentVersion));
+            if (CompareSemanticVersions(currentVersion, manifest.MinimumSupportedVersion) < 0)
+                throw new InvalidDataException(
+                    $"الإصدار الحالي {NormalizeVersion(currentVersion)} أقدم من الحد الأدنى المقبول لهذا التحديث {NormalizeVersion(manifest.MinimumSupportedVersion)}.");
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in manifest.Files)
         {
+            if (file is null)
+                throw new InvalidDataException("قائمة ملفات التحديث تحتوي عنصرًا فارغًا.");
             ValidateRelativePath(file.Path);
             if (!seen.Add(file.Path) || file.SizeBytes is < 0 or > 512L * 1024 * 1024 ||
                 file.Sha256 is null || file.Sha256.Length != 64 || !file.Sha256.All(Uri.IsHexDigit))
@@ -402,6 +431,43 @@ Start-Process -FilePath $config.executable -WorkingDirectory $config.installRoot
         }
         if (!seen.Contains(manifest.MainExecutable))
             throw new InvalidDataException("ملف التشغيل الرئيسي غير موجود في قائمة Manifest.");
+    }
+
+    private static int CompareSemanticVersions(string left, string right)
+    {
+        static (int Major, int Minor, int Patch, string[] Pre) Parse(string value)
+        {
+            var parts = NormalizeVersion(value).Split('-', 2);
+            var numbers = parts[0].Split('.');
+            if (numbers.Length != 3 ||
+                !int.TryParse(numbers[0], NumberStyles.None, CultureInfo.InvariantCulture, out var major) ||
+                !int.TryParse(numbers[1], NumberStyles.None, CultureInfo.InvariantCulture, out var minor) ||
+                !int.TryParse(numbers[2], NumberStyles.None, CultureInfo.InvariantCulture, out var patch))
+                throw new InvalidDataException("رقم إصدار Semantic Version غير صالح.");
+            return (major, minor, patch, parts.Length == 2 ? parts[1].Split('.') : []);
+        }
+
+        var a = Parse(left);
+        var b = Parse(right);
+        var comparison = a.Major.CompareTo(b.Major);
+        if (comparison != 0) return comparison;
+        comparison = a.Minor.CompareTo(b.Minor);
+        if (comparison != 0) return comparison;
+        comparison = a.Patch.CompareTo(b.Patch);
+        if (comparison != 0) return comparison;
+        if (a.Pre.Length == 0 || b.Pre.Length == 0)
+            return a.Pre.Length == b.Pre.Length ? 0 : a.Pre.Length == 0 ? 1 : -1;
+
+        for (var index = 0; index < Math.Min(a.Pre.Length, b.Pre.Length); index++)
+        {
+            var leftNumeric = long.TryParse(a.Pre[index], NumberStyles.None, CultureInfo.InvariantCulture, out var leftNumber);
+            var rightNumeric = long.TryParse(b.Pre[index], NumberStyles.None, CultureInfo.InvariantCulture, out var rightNumber);
+            comparison = leftNumeric && rightNumeric ? leftNumber.CompareTo(rightNumber) :
+                leftNumeric != rightNumeric ? (leftNumeric ? -1 : 1) :
+                string.Compare(a.Pre[index], b.Pre[index], StringComparison.Ordinal);
+            if (comparison != 0) return comparison;
+        }
+        return a.Pre.Length.CompareTo(b.Pre.Length);
     }
 
     private static void ValidateRelativePath(string path)
