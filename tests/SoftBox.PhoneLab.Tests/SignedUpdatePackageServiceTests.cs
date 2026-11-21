@@ -137,7 +137,6 @@ public sealed class SignedUpdatePackageServiceTests
             Assert.Contains("installedFilePaths", rollbackScript);
             Assert.Contains("Remove-Item -LiteralPath $target", rollbackScript);
         }
-        }
         finally { Directory.Delete(root, recursive: true); }
     }
 
