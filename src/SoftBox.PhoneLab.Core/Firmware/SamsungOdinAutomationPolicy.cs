@@ -69,7 +69,8 @@ public static class SamsungOdinAutomationPolicy
 
         var expectedPackages = evidence.ExpectedPackageNames
             .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(Path.GetFileName)
+            .Select(name => Path.GetFileName(name) ?? string.Empty)
+            .Where(name => name.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (expectedPackages.Length == 0)
