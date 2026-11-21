@@ -11,7 +11,8 @@ import kotlin.concurrent.thread
 /** Local-only HTTP bridge. The server binds to loopback; Windows reaches it only through ADB forward. */
 class LocalAgentServer(
     private val snapshotProvider: () -> JSONObject,
-    private val commandHandler: (String) -> Boolean
+    private val commandHandler: (String) -> Boolean,
+    private val telemetryProvider: () -> JSONObject = { JSONObject() }
 ) {
     @Volatile private var running = false
     @Volatile private var server: ServerSocket? = null
@@ -78,6 +79,10 @@ class LocalAgentServer(
                     method == "GET" && endpoint == "/snapshot" -> {
                         statusCode = 200; statusText = "OK"
                         response = snapshotProvider()
+                    }
+                    method == "GET" && endpoint == "/telemetry" -> {
+                        statusCode = 200; statusText = "OK"
+                        response = telemetryProvider()
                     }
                     method == "POST" && endpoint == "/command" -> {
                         val command = runCatching { JSONObject(body).optString("command") }.getOrDefault("")

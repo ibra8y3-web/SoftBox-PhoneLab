@@ -32,6 +32,14 @@
         <Button android:id="@+id/testSensors" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="فحص المستشعرات"/>
         <Button android:id="@+id/startBatteryCapacity" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="بدء رصد سعة البطارية"/>
         <Button android:id="@+id/finishBatteryCapacity" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="إنهاء الرصد وحساب تقدير السعة"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبارات الاتصال والأمان والعتاد" android:textColor="#70D7FF" android:textStyle="bold" android:layout_marginTop="16dp"/>
+        <Button android:id="@+id/testBluetooth" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار Bluetooth والاقتران اليدوي"/>
+        <Button android:id="@+id/testWifi" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار Wi-Fi والاتصال"/>
+        <Button android:id="@+id/testNfc" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار قراءة NFC بوسم فعلي"/>
+        <Button android:id="@+id/testGps" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار استقبال GPS فعلي"/>
+        <Button android:id="@+id/testFingerprint" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار مصادقة مستشعر البصمة"/>
+        <Button android:id="@+id/testButtons" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="اختبار أزرار رفع وخفض الصوت"/>
+        <Button android:id="@+id/testSim" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="قراءة حالة SIM بشكل آمن"/>
         <TextView android:id="@+id/results" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:text="نتائج الاختبارات ستظهر هنا."
             android:textColor="#D9E7F6" android:textSize="12sp"

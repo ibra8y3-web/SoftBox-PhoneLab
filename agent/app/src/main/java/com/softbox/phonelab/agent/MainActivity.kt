@@ -52,6 +52,10 @@ class MainActivity : Activity() {
     private var connectionAllowed = false
     private var consentDialog: AlertDialog? = null
     private lateinit var bridgeStateView: TextView
+    private lateinit var hardwareDiagnostics: AgentHardwareDiagnostics
+    private var buttonTestActive = false
+    private var volumeUpSeen = false
+    private var volumeDownSeen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,7 +65,10 @@ class MainActivity : Activity() {
         resultView = findViewById(R.id.results)
         deviceInfo.text = "${Build.MANUFACTURER} ${Build.MODEL}\nAndroid ${Build.VERSION.RELEASE} • API ${Build.VERSION.SDK_INT}"
         hardwareFeatures.addAll(packageManager.systemAvailableFeatures.mapNotNull { it.name }.filter { it.isNotBlank() }.distinct().sorted())
-        server = LocalAgentServer({ createSnapshot() }, { command -> dispatchRemoteCommand(command) })
+        AgentTelemetry.install(applicationContext)
+        BatterySnapshotWorker.schedule(applicationContext)
+        hardwareDiagnostics = AgentHardwareDiagnostics(this, ::saveTest)
+        server = LocalAgentServer({ createSnapshot() }, { command -> dispatchRemoteCommand(command) }, { AgentTelemetry.exportReport(this) })
         bridgeStateView = findViewById(R.id.bridgeState)
         bridgeStateView.text = "في انتظار موافقتك على اتصال USB من SoftBox PhoneLab."
 
@@ -74,6 +81,13 @@ class MainActivity : Activity() {
         findViewById<android.widget.Button>(R.id.testSensors).setOnClickListener { runSensorInventory() }
         findViewById<android.widget.Button>(R.id.startBatteryCapacity).setOnClickListener { startBatteryCapacityObservation() }
         findViewById<android.widget.Button>(R.id.finishBatteryCapacity).setOnClickListener { finishBatteryCapacityObservation() }
+        findViewById<android.widget.Button>(R.id.testBluetooth).setOnClickListener { hardwareDiagnostics.runBluetooth() }
+        findViewById<android.widget.Button>(R.id.testWifi).setOnClickListener { hardwareDiagnostics.runWifi() }
+        findViewById<android.widget.Button>(R.id.testNfc).setOnClickListener { hardwareDiagnostics.runNfc() }
+        findViewById<android.widget.Button>(R.id.testGps).setOnClickListener { hardwareDiagnostics.runGps() }
+        findViewById<android.widget.Button>(R.id.testFingerprint).setOnClickListener { hardwareDiagnostics.runFingerprint() }
+        findViewById<android.widget.Button>(R.id.testButtons).setOnClickListener { runPhysicalButtonTest() }
+        findViewById<android.widget.Button>(R.id.testSim).setOnClickListener { hardwareDiagnostics.runSim() }
         renderResults()
         requestConnectionConsent()
     }
@@ -123,10 +137,50 @@ class MainActivity : Activity() {
             .create()
             .also { it.show() }
     }
-    override fun onDestroy() { stopRecorder(); server.stop(); super.onDestroy() }
+    override fun onDestroy() { hardwareDiagnostics.stop(); stopRecorder(); server.stop(); super.onDestroy() }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        if (buttonTestActive && event.action == android.view.KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            when (event.keyCode) {
+                android.view.KeyEvent.KEYCODE_VOLUME_UP -> volumeUpSeen = true
+                android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> volumeDownSeen = true
+                else -> return super.dispatchKeyEvent(event)
+            }
+            if (volumeUpSeen && volumeDownSeen) {
+                buttonTestActive = false
+                saveTest("physical_buttons", "passed", "التقط Android ضغط زري رفع وخفض الصوت. أزرار الطاقة والمنزل لا تكشفها واجهات التطبيقات العادية.")
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    private fun runPhysicalButtonTest() {
+        volumeUpSeen = false
+        volumeDownSeen = false
+        buttonTestActive = true
+        AlertDialog.Builder(this)
+            .setTitle("اختبار الأزرار الفعلية")
+            .setMessage("اضغط زر رفع الصوت ثم زر خفض الصوت. لا تضغط زر الطاقة أثناء الاختبار. أزرار Power/Home محمية من Android ولا يستطيع التطبيق مراقبتها مباشرة.")
+            .setNegativeButton("إلغاء") { _, _ ->
+                buttonTestActive = false
+                saveTest("physical_buttons", "not_tested", "ألغى المستخدم اختبار الأزرار.")
+            }
+            .setOnCancelListener {
+                buttonTestActive = false
+                saveTest("physical_buttons", "not_tested", "أغلق المستخدم اختبار الأزرار قبل التقاط الضغطات.")
+            }
+            .show()
+        handler.postDelayed({
+            if (buttonTestActive) {
+                buttonTestActive = false
+                saveTest("physical_buttons", "review", "تم التقاط رفع الصوت=$volumeUpSeen وخفض الصوت=$volumeDownSeen. أعد الاختبار إذا لم يتم التقاط الزرين.")
+            }
+        }, 20_000L)
+    }
 
     private fun dispatchRemoteCommand(command: String): Boolean {
-        val allowed = setOf("display", "touch", "speaker", "earpiece", "microphone", "flashlight", "vibration", "camera", "sensors", "hardware", "battery_capacity_start", "battery_capacity_finish")
+        val allowed = setOf("display", "touch", "speaker", "earpiece", "microphone", "flashlight", "vibration", "camera", "sensors", "hardware", "battery_capacity_start", "battery_capacity_finish", "bluetooth", "wifi", "nfc", "gps", "fingerprint", "physical_buttons", "sim")
         if (command !in allowed) return false
         handler.post {
             when (command) {
@@ -142,6 +196,13 @@ class MainActivity : Activity() {
                 "hardware" -> runHardwareInventory()
                 "battery_capacity_start" -> startBatteryCapacityObservation()
                 "battery_capacity_finish" -> finishBatteryCapacityObservation()
+                "bluetooth" -> hardwareDiagnostics.runBluetooth()
+                "wifi" -> hardwareDiagnostics.runWifi()
+                "nfc" -> hardwareDiagnostics.runNfc()
+                "gps" -> hardwareDiagnostics.runGps()
+                "fingerprint" -> hardwareDiagnostics.runFingerprint()
+                "physical_buttons" -> runPhysicalButtonTest()
+                "sim" -> hardwareDiagnostics.runSim()
             }
         }
         return true
@@ -151,6 +212,7 @@ class MainActivity : Activity() {
             .put("status", status)
             .put("evidence", evidence)
             .put("completedAtUtc", Instant.now().toString())
+        AgentTelemetry.record(this, "hardware_test_result", JSONObject().put("testId", id).put("status", status))
         renderResults()
     }
 
@@ -291,6 +353,8 @@ class MainActivity : Activity() {
         } else if (requestCode == REQUEST_FLASH_PERMISSION) {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) runFlashlightTest()
             else saveTest("flashlight", "not_tested", "لم يمنح المستخدم صلاحية الكاميرا لتشغيل الفلاش.")
+        } else {
+            hardwareDiagnostics.handlePermissionResult(requestCode, grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED)
         }
     }
 
@@ -566,6 +630,9 @@ class MainActivity : Activity() {
             .put("batteryCurrentNowMicroA", if (currentNow != Int.MIN_VALUE) currentNow else JSONObject.NULL)
             .put("batteryCurrentAverageMicroA", if (currentAverage != Int.MIN_VALUE) currentAverage else JSONObject.NULL)
             .put("batteryEnergyCounterNWh", if (energyCounter >= 0L && energyCounter != Long.MIN_VALUE) energyCounter else JSONObject.NULL)
+            .put("scheduledBatteryLatest", BatterySnapshotWorker.latest(this) ?: JSONObject.NULL)
+            .put("scheduledBatterySamples", BatterySnapshotWorker.history(this, 24).size)
+            .put("agentTelemetrySummary", AgentTelemetry.summary(this))
             .put("batteryCapacityEstimateMah", run {
                 val tenths = getSharedPreferences("phonelab_battery_capacity", Context.MODE_PRIVATE)
                     .getLong("capacity_estimate_tenth_mah", 0L)
