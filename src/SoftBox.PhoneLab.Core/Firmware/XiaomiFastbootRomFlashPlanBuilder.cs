@@ -55,9 +55,9 @@ public sealed record XiaomiFastbootRomFlashPlan(
 /// <summary>
 /// Builds a guarded Fastboot operation plan from an already-extracted Xiaomi Fastboot ROM.
 /// The Windows batch file is parsed as data and is never executed. Only direct, serial-pinned
-/// flash commands, an explicitly acknowledged fastboot -w, and fastboot reboot fastboot are
-/// accepted. Unlock, relock, erase, format, arbitrary commands, shell chaining and path escapes
-/// are rejected. This is not a cryptographic proof of OEM provenance.
+/// flash commands, explicitly acknowledged userdata write/erase/format/wipe steps, and fastboot
+/// reboot fastboot are accepted. Unlock/relock, non-userdata erase/format, arbitrary commands,
+/// shell chaining and path escapes are rejected. This is not a cryptographic proof of OEM provenance.
 /// </summary>
 public static class XiaomiFastbootRomFlashPlanBuilder
 {
@@ -241,6 +241,8 @@ public static class XiaomiFastbootRomFlashPlanBuilder
                 if (!PartitionPattern.IsMatch(partition))
                     throw new InvalidDataException("اسم قسم Fastboot غير صالح: " + partition);
                 var isUserDataImage = partition.Equals("userdata", StringComparison.OrdinalIgnoreCase);
+                if (isUserDataImage && ++wipeCount > 1)
+                    throw new InvalidDataException("السكربت يحتوي أكثر من عملية كتابة/مسح لبيانات المستخدم؛ تم رفضه.");
                 if (IsProtectedPartition(partition) && !isUserDataImage)
                     throw new InvalidDataException("تم منع التفليش المباشر لقسم حساس أو خاص ببيانات المستخدم: " + partition);
                 if (isUserDataImage && !scriptName.Equals("flash_all.bat", StringComparison.OrdinalIgnoreCase))
