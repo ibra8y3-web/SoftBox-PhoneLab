@@ -178,7 +178,7 @@ public sealed class WorkshopBackupSchedulerWindow : Window
                 retention,
                 token);
             return "تم تسجيل مهمة النسخ الاحتياطي اليومية داخل Windows Task Scheduler. " +
-                   $"الوقت المحلي: {localTime:HH\\:mm}. مدة الاحتفاظ: {retention} يومًا. " +
+                   $"الوقت المحلي: {localTime.ToString("HH:mm", CultureInfo.InvariantCulture)}. مدة الاحتفاظ: {retention} يومًا. " +
                    "سيتم نسخ ملف DPAPI المشفر كما هو؛ لن يتم فك تشفير بيانات العملاء.";
         });
     }
