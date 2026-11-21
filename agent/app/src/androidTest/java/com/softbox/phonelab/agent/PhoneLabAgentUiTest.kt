@@ -5,6 +5,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
@@ -36,7 +37,7 @@ class PhoneLabAgentUiTest {
             R.id.testBluetooth, R.id.testWifi, R.id.testNfc, R.id.testGps,
             R.id.testFingerprint, R.id.testButtons, R.id.testSim,
             R.id.startBatteryCapacity, R.id.finishBatteryCapacity
-        ).forEach { id -> onView(withId(id)).check(matches(isDisplayed())) }
+        ).forEach { id -> onView(withId(id)).perform(scrollTo()).check(matches(isDisplayed())) }
     }
 
     @Test
