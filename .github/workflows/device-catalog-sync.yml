@@ -43,7 +43,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- data/device-profiles/community-catalog.json; then
+          if git ls-files --error-unmatch data/device-profiles/community-catalog.json >/dev/null 2>&1 \
+             && git diff --quiet -- data/device-profiles/community-catalog.json; then
             echo "Community device catalog is unchanged."
             exit 0
           fi
