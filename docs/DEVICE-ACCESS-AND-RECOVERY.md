@@ -34,6 +34,12 @@ The window is available under **Security & Privacy → فحص حالة شاشة 
 
 The catalog displays these six entries as Unsupported with no Run action. Separate entries describe the official recovery hand-offs and are not presented as bypass functions.
 
+## Official recovery case builder
+
+The Device Access & Official Recovery window includes an executable case builder for all six tracks listed above. It validates the operator's ownership/repair-authorisation declaration; MDM cases additionally require an organisation-administrator declaration, and carrier-unlock cases require the carrier-account-holder/delegate declaration. Manufacturer and model are required. A successful run writes a local Markdown checklist through the Windows Save dialog, with the official steps and source links for that case. The user submits the case to the OEM, organisation administrator or carrier themselves; SoftBox does not submit requests or claim approval.
+
+The builder deliberately has no IMEI, serial-number, account-password, PIN, recovery-code or OTP input. Carrier identifiers must be entered directly into the carrier's secure official channel. It does not erase data or change device, account, MDM, modem or network state. This is a real case-file/export workflow, not a lock-bypass engine.
+
 ## Official recovery entry points
 
 - Google account recovery: https://accounts.google.com/signin/recovery

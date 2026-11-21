@@ -21,6 +21,8 @@ public sealed class DeviceAccessRecoveryWindow : Window
     private readonly AdbClient? _adb;
     private readonly string? _serial;
     private readonly string _deviceLabel;
+    private readonly string _manufacturer;
+    private readonly string _model;
     private readonly Button _scanButton;
     private readonly TextBlock _scanStatus = MakeText("الفحص لم يبدأ.", "#9FC7E8");
     private readonly TextBlock _keyguardResult = MakeText("غير مفحوص", "#DCEBFA");
@@ -66,7 +68,9 @@ public sealed class DeviceAccessRecoveryWindow : Window
     {
         _adb = adb;
         _serial = AdbClient.IsSafeSerial(serial ?? string.Empty) ? serial : null;
-        _deviceLabel = string.Join(" ", new[] { manufacturer, model }.Where(value => !string.IsNullOrWhiteSpace(value)));
+        _manufacturer = manufacturer?.Trim() ?? string.Empty;
+        _model = model?.Trim() ?? string.Empty;
+        _deviceLabel = string.Join(" ", new[] { _manufacturer, _model }.Where(value => !string.IsNullOrWhiteSpace(value)));
         _scanButton = new Button
         {
             Content = "فحص مؤشرات الجهاز (قراءة فقط)",
@@ -162,6 +166,24 @@ public sealed class DeviceAccessRecoveryWindow : Window
         });
         foreach (var resource in RecoveryResources)
             resources.Children.Add(CreateResourceCard(resource.Title, resource.Description, resource.Url));
+
+        var caseBuilderButton = new Button
+        {
+            Content = "إعداد ملف طلب الاسترداد الرسمي للحالات الست",
+            Padding = new Thickness(12, 8, 12, 8),
+            Margin = new Thickness(0, 8, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Background = Brush("#14517A"),
+            Foreground = Brushes.White,
+            BorderBrush = Brush("#3E7096"),
+            FontWeight = FontWeights.SemiBold
+        };
+        caseBuilderButton.Click += (_, _) =>
+        {
+            var builder = new OfficialRecoveryCaseWindow(_manufacturer, _model) { Owner = this };
+            builder.ShowDialog();
+        };
+        resources.Children.Add(caseBuilderButton);
         content.Children.Add(resources);
 
         var scroll = new ScrollViewer
