@@ -26,6 +26,7 @@ public sealed class DeviceAccessRecoveryWindow : Window
     private readonly TextBlock _keyguardResult = MakeText("غير مفحوص", "#DCEBFA");
     private readonly TextBlock _managementResult = MakeText("غير مفحوص", "#DCEBFA");
     private readonly TextBlock _simResult = MakeText("غير مفحوص", "#DCEBFA");
+    private readonly TextBlock _telephonyResult = MakeText("لم تتم قراءة حالة تسجيل الشبكة بعد.", "#DCEBFA");
     private readonly TextBlock _networkResult = MakeText(
         "حالة فتح الشبكة لا يمكن استنتاجها من حالة SIM أو اسم المشغل. اطلب نتيجة IMEI من شركة الاتصالات الأصلية.",
         "#F0C9A5");
@@ -146,6 +147,7 @@ public sealed class DeviceAccessRecoveryWindow : Window
         content.Children.Add(CreateResultCard("حالة شاشة القفل لحظة الفحص", _keyguardResult));
         content.Children.Add(CreateResultCard("مؤشرات Device Owner / Profile Owner / MDM", _managementResult));
         content.Children.Add(CreateResultCard("حالة SIM التي يعرضها Android", _simResult));
+        content.Children.Add(CreateResultCard("تسجيل الشبكة والصوت والبيانات ونوع الراديو", _telephonyResult));
         content.Children.Add(CreateResultCard("قفل SIM / Network", _networkResult));
         content.Children.Add(CreateResultCard("Google FRP / Samsung Account / Xiaomi Activation Lock", _accountResult));
 
@@ -181,7 +183,7 @@ public sealed class DeviceAccessRecoveryWindow : Window
         }
 
         _scanButton.IsEnabled = false;
-        _scanStatus.Text = "جارٍ تنفيذ قراءات محددة فقط: dumpsys device_policy وdumpsys window وخصائص SIM...";
+        _scanStatus.Text = "جارٍ قراءة مؤشرات القفل والإدارة وحالة SIM وتسجيل الشبكة عبر أوامر Android محددة للقراءة فقط...";
         var warnings = new List<string>();
 
         try
@@ -195,8 +197,11 @@ public sealed class DeviceAccessRecoveryWindow : Window
             var window = await ReadOptionalAsync(["shell", "dumpsys", "window"], warnings);
             var simState = await ReadOptionalAsync(["shell", "getprop", "gsm.sim.state"], warnings);
             var operatorName = await ReadOptionalAsync(["shell", "getprop", "gsm.operator.alpha"], warnings);
+            var telephonyRegistry = await ReadOptionalAsync(["shell", "dumpsys", "telephony.registry"], warnings);
+
 
             var report = DeviceAccessDiagnosticsParser.Parse(policy, window, simState, operatorName);
+            var telephonyReport = AndroidTelephonyDiagnosticsParser.Parse(telephonyRegistry);
             _keyguardResult.Text = report.KeyguardVisibility switch
             {
                 KeyguardVisibility.Visible =>
@@ -219,6 +224,18 @@ public sealed class DeviceAccessRecoveryWindow : Window
                 " • Network operator: " + (string.IsNullOrWhiteSpace(report.NetworkOperatorProperty)
                     ? "غير متاح" : report.NetworkOperatorProperty) +
                 ". هذه خصائص معلوماتية فقط وليست حكمًا على قفل الشبكة.";
+
+            _telephonyResult.Text = !telephonyReport.OutputReadable
+                ? "تعذر قراءة telephony.registry أو أن النظام منع الوصول إلى هذه البيانات."
+                : "Voice: " + RegistrationLabel(telephonyReport.VoiceRegistration) +
+                  " • Data: " + RegistrationLabel(telephonyReport.DataRegistration) +
+                  " • Voice radio: " + telephonyReport.VoiceRadioTechnology +
+                  " • Data radio: " + telephonyReport.DataRadioTechnology +
+                  " • Roaming: " + NullableBooleanLabel(telephonyReport.IsRoaming) +
+                  " • Emergency only: " + NullableBooleanLabel(telephonyReport.IsEmergencyOnly) +
+                  " • Searching: " + NullableBooleanLabel(telephonyReport.IsSearching) +
+                  (string.IsNullOrWhiteSpace(telephonyReport.OperatorName) ? string.Empty : " • Operator: " + telephonyReport.OperatorName) +
+                  ". هذه حالة تسجيل الراديو التي أبلغ بها Android، وليست اختبارًا لفتح SIM أو أهلية IMEI.";
 
             _networkResult.Text =
                 "حالة فتح الشبكة: غير محددة. لا يستنتجها SoftBox من وجود SIM أو ظهور اسم المشغل. يلزم استعلام IMEI لدى شركة الاتصالات الأصلية والتحقق من أهلية الجهاز.";
@@ -254,6 +271,22 @@ public sealed class DeviceAccessRecoveryWindow : Window
             return null;
         }
     }
+
+    private static string RegistrationLabel(AndroidNetworkRegistrationState state) => state switch
+    {
+        AndroidNetworkRegistrationState.InService => "In service",
+        AndroidNetworkRegistrationState.OutOfService => "Out of service",
+        AndroidNetworkRegistrationState.EmergencyOnly => "Emergency only",
+        AndroidNetworkRegistrationState.PowerOff => "Radio powered off",
+        _ => "Unknown"
+    };
+
+    private static string NullableBooleanLabel(bool? value) => value switch
+    {
+        true => "Yes",
+        false => "No",
+        _ => "Unknown"
+    };
 
     private static Border CreateResultCard(string title, TextBlock value)
     {
