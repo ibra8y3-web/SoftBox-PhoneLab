@@ -200,7 +200,7 @@ public sealed class SamsungOdinUiAutomationService
                         progressValues.Count == 0 ? null : progressValues.Max(), Limit(text),
                         "تغير منفذ COM الظاهر في نافذة Odin. أوقف الاعتماد على هذه الجلسة وراجع اتصال الجهاز.");
 
-                var progress = progressValues.Count == 0 ? null : progressValues.Max();
+                double? progress = progressValues.Count == 0 ? null : progressValues.Max();
                 var state = ClassifyExecutionState(text, progress);
                 var explanation = state switch
                 {
