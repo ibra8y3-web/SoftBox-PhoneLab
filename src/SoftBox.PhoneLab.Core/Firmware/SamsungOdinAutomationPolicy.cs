@@ -18,6 +18,7 @@ public sealed record SamsungOdinAutomationEvidence(
     bool OperatorConfirmedBackup)
 {
     public bool StartButtonSupportsInvokePattern { get; init; }
+    public bool OperatorConfirmedComPortMatchesSelectedDevice { get; init; }
 }
 
 public sealed record SamsungOdinAutomationDecision(
@@ -92,6 +93,11 @@ public static class SamsungOdinAutomationPolicy
             blockers.Add("لم يؤكد الفني وجود نسخة احتياطية صالحة.");
         else
             verified.Add("الفني أكد وجود نسخة احتياطية.");
+
+        if (!evidence.OperatorConfirmedComPortMatchesSelectedDevice)
+            blockers.Add("لم يؤكد الفني أن منفذ COM الظاهر يخص نفس الهاتف المحدد في SoftBox.");
+        else
+            verified.Add("الفني أكد تطابق الهاتف المتصل على COM مع الهاتف المحدد في SoftBox.");
 
         return new SamsungOdinAutomationDecision(blockers.Count == 0, blockers, verified);
     }
