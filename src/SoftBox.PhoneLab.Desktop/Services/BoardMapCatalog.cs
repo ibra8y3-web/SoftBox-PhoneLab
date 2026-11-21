@@ -186,6 +186,8 @@ public sealed class BoardMapCatalog
             return false;
         if (map.SchemaVersion >= 2 && !map.ManualRevisionMatchConfirmed)
             return false;
+        if (map.SchemaVersion >= 2 && !map.ManualRevisionMatchConfirmed)
+            return false;
 
         if (map.Parts.Count is 0 or > 20_000) return false;
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -202,7 +204,11 @@ public sealed class BoardMapCatalog
                     part.Y - part.Height / 2 < 0 ||
                     part.X + part.Width / 2 > map.BoardWidthMm ||
                     part.Y + part.Height / 2 > map.BoardHeightMm ||
-                    part.NetNames is null || part.NetNames.Length > 256)) ||
+                    part.NetNames is null || part.NetNames.Length > 256 ||
+                    part.NetNames.Any(net => string.IsNullOrWhiteSpace(net) || net.Length > 80) ||
+                    part.Layer is null || part.Layer.Length > 80 ||
+                    part.Footprint is null || part.Footprint.Length > 160 ||
+                    part.Value is null || part.Value.Length > 120)) ||
                 !double.IsFinite(part.X) || !double.IsFinite(part.Y) || !double.IsFinite(part.Z) ||
                 !double.IsFinite(part.Width) || !double.IsFinite(part.Height) || !double.IsFinite(part.Depth) ||
                 part.Width <= 0 || part.Height <= 0 || part.Depth <= 0 ||
