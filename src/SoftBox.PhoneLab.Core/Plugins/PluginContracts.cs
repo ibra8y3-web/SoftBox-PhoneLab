@@ -78,9 +78,11 @@ public static class PluginManifestValidator
             errors.Add("Minimum SoftBox version must use semantic versioning.");
         if (manifest.ExecutionMode == "native-assembly")
         {
-            if (!IsSafeRelativeAssemblyPath(manifest.EntryAssembly))
-                errors.Add("Native entry assembly must be a relative .dll path without traversal segments.");
-            warnings.Add("Native plugin assemblies are not loaded or executed by the current SoftBox runtime.");
+            if (!IsSafeRelativeAssemblyPath(manifest.EntryAssembly) || manifest.EntryAssembly.Contains('/'))
+                errors.Add("Native entry assembly must be a root-level .dll file without path segments.");
+            if (manifest.RequestedPermissions is { Count: > 0 })
+                errors.Add("Native AppContainer plugins must request an empty SoftBox permission list.");
+            warnings.Add("Native plugins run only in a temporary no-capability AppContainer.");
         }
         else if (manifest.ExecutionMode == "read-only-workflow")
         {
