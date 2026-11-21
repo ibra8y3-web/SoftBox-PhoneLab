@@ -27,7 +27,7 @@ public sealed class DeviceDiagnosticEngineSettingsStoreTests
         var settings = new DiagnosticEngineSettings
         {
             AdbCommandTimeoutSeconds = 35,
-            AgentTestTimeoutSeconds = 120,
+            AgentCommandTimeoutSeconds = 120,
             MaximumOutputBytes = 524_288,
             BatteryReviewTemperatureCelsius = 43.5,
             BatteryCriticalTemperatureCelsius = 58.5

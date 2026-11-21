@@ -64,6 +64,9 @@ public sealed class DeviceQuickDiagnosticService(
             throw new ArgumentException("معرف ADB غير صالح.", nameof(serial));
 
         var started = DateTimeOffset.UtcNow;
+        var settingsLoad = await _settingsStore.LoadAsync(cancellationToken);
+        var commandTimeout = TimeSpan.FromSeconds(settingsLoad.Settings.AdbCommandTimeoutSeconds);
+        var maximumOutputBytes = settingsLoad.Settings.MaximumOutputBytes;
         var results = new List<QuickDiagnosticStep>();
         for (var index = 0; index < Steps.Length; index++)
         {
@@ -74,9 +77,10 @@ public sealed class DeviceQuickDiagnosticService(
 
             try
             {
-                var output = await android.RunReadOnlyPresetAsync(serial, id, cancellationToken);
-                if (output.Length > 256 * 1024)
-                    output = output[..(256 * 1024)] + Environment.NewLine + "[Output truncated at 256 KiB.]";
+                var output = await android.RunReadOnlyPresetAsync(serial, id, cancellationToken, commandTimeout);
+                if (output.Length > maximumOutputBytes)
+                    output = output[..maximumOutputBytes] + Environment.NewLine +
+                        $"[Output truncated at configured limit of {maximumOutputBytes} bytes.]";
                 results.Add(new QuickDiagnosticStep(
                     index + 1, id, label, true, stepStarted, DateTimeOffset.UtcNow, output, null));
             }
@@ -101,7 +105,6 @@ public sealed class DeviceQuickDiagnosticService(
             limitations.Add("لم يتم إرفاق نتائج Agent؛ لا توجد نتائج اختبارات عتاد تلقائية في هذا التقرير.");
 
         var safeDevice = device is null ? null : device with { Serial = "" };
-        var settingsLoad = await _settingsStore.LoadAsync(cancellationToken);
         limitations.AddRange(settingsLoad.Warnings);
         DeviceProfile? matchedProfile = null;
         if (device is not null)

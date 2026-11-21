@@ -639,13 +639,14 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
     public async Task<string> RunReadOnlyPresetAsync(
         string serial,
         string presetId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeSpan? commandTimeout = null)
     {
         ValidateAuthorizedSerial(serial);
         if (!ReadOnlyPresets.TryGetValue(presetId, out var args))
             throw new ArgumentException("الأمر غير موجود في قائمة الأوامر المسموح بها.", nameof(presetId));
 
-        return await RunDeviceAsync(serial, args, cancellationToken);
+        return await RunDeviceAsync(serial, args, cancellationToken, commandTimeout);
     }
 
     public async Task<IReadOnlyList<AndroidBatchResult>> RunBatchReadOnlyPresetAsync(

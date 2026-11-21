@@ -22,7 +22,7 @@ public enum DiagnosticProcedureState
 public sealed record DiagnosticEngineSettings
 {
     public int AdbCommandTimeoutSeconds { get; init; } = 20;
-    public int AgentTestTimeoutSeconds { get; init; } = 90;
+    public int AgentCommandTimeoutSeconds { get; init; } = 90;
     public int MaximumOutputBytes { get; init; } = 262_144;
     public double BatteryReviewTemperatureCelsius { get; init; } = 45.0;
     public double BatteryCriticalTemperatureCelsius { get; init; } = 55.0;
@@ -32,8 +32,8 @@ public sealed record DiagnosticEngineSettings
         var errors = new List<string>();
         if (AdbCommandTimeoutSeconds is < 5 or > 90)
             errors.Add("ADB command timeout must be between 5 and 90 seconds.");
-        if (AgentTestTimeoutSeconds is < 10 or > 180)
-            errors.Add("Agent test timeout must be between 10 and 180 seconds.");
+        if (AgentCommandTimeoutSeconds is < 10 or > 180)
+            errors.Add("Agent command request timeout must be between 10 and 180 seconds.");
         if (MaximumOutputBytes is < 16_384 or > 1_048_576)
             errors.Add("Diagnostic output limit must be between 16 KiB and 1 MiB.");
         if (!double.IsFinite(BatteryReviewTemperatureCelsius) ||

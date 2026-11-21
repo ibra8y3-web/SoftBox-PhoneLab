@@ -7,9 +7,14 @@ using SoftBox.PhoneLab.Core.Models;
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 /// <summary>Controls the authorized Android Agent only through an ADB-forwarded loopback socket.</summary>
-public sealed class AgentBridgeClient(AdbClient adb)
+public sealed class AgentBridgeClient(
+    AdbClient adb,
+    DeviceDiagnosticEngineSettingsStore? settingsStore = null)
 {
+    private readonly DeviceDiagnosticEngineSettingsStore _settingsStore =
+        settingsStore ?? new DeviceDiagnosticEngineSettingsStore();
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(5) };
+    private static readonly HttpClient CommandHttp = new() { Timeout = Timeout.InfiniteTimeSpan };
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     public async Task<AgentSnapshot?> ReadSnapshotAsync(string serial, CancellationToken cancellationToken = default)
@@ -41,9 +46,12 @@ public sealed class AgentBridgeClient(AdbClient adb)
         };
         if (!allowed.Contains(command)) throw new ArgumentException("Unsupported PhoneLab Agent command.", nameof(command));
 
+        var settings = await _settingsStore.LoadAsync(cancellationToken);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(settings.Settings.AgentCommandTimeoutSeconds));
         await adb.ForwardAgentPortAsync(serial);
-        using var response = await Http.PostAsJsonAsync(
-            "http://127.0.0.1:27831/command", new { command }, cancellationToken);
+        using var response = await CommandHttp.PostAsJsonAsync(
+            "http://127.0.0.1:27831/command", new { command }, timeout.Token);
         response.EnsureSuccessStatusCode();
     }
 }
