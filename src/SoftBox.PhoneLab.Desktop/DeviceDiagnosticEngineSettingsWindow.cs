@@ -67,7 +67,7 @@ public sealed class DeviceDiagnosticEngineSettingsWindow : Window
 
         AddField(fields, 0, "مهلة أمر ADB (ثانية) — من 5 إلى 90", _adbTimeout);
         AddField(fields, 1, "مهلة طلب أمر Agent (ثانية) — من 10 إلى 180", _agentTimeout);
-        AddField(fields, 2, "أقصى حجم للمخرجات (بايت) — من 16 KiB إلى 1 MiB", _maxOutput);
+        AddField(fields, 2, "الحد الأقصى لأحرف المخرجات المحفوظة — من 16,384 إلى 1,048,576", _maxOutput);
         AddField(fields, 3, "حد تنبيه مراجعة حرارة البطارية (°C)", _reviewTemperature);
         AddField(fields, 4, "حد التنبيه الحراري المرتفع (°C)", _criticalTemperature);
         root.Children.Add(fields);
@@ -128,7 +128,7 @@ public sealed class DeviceDiagnosticEngineSettingsWindow : Window
         {
             AdbCommandTimeoutSeconds = adb,
             AgentCommandTimeoutSeconds = agent,
-            MaximumOutputBytes = maxOutput,
+            MaximumReportOutputCharacters = maxOutput,
             BatteryReviewTemperatureCelsius = review,
             BatteryCriticalTemperatureCelsius = critical
         };
@@ -165,7 +165,7 @@ public sealed class DeviceDiagnosticEngineSettingsWindow : Window
     {
         _adbTimeout.Text = settings.AdbCommandTimeoutSeconds.ToString(CultureInfo.InvariantCulture);
         _agentTimeout.Text = settings.AgentCommandTimeoutSeconds.ToString(CultureInfo.InvariantCulture);
-        _maxOutput.Text = settings.MaximumOutputBytes.ToString(CultureInfo.InvariantCulture);
+        _maxOutput.Text = settings.MaximumReportOutputCharacters.ToString(CultureInfo.InvariantCulture);
         _reviewTemperature.Text = settings.BatteryReviewTemperatureCelsius.ToString("0.0", CultureInfo.InvariantCulture);
         _criticalTemperature.Text = settings.BatteryCriticalTemperatureCelsius.ToString("0.0", CultureInfo.InvariantCulture);
     }

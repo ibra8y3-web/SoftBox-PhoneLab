@@ -28,7 +28,7 @@ public sealed class DeviceDiagnosticEngineSettingsStoreTests
         {
             AdbCommandTimeoutSeconds = 35,
             AgentCommandTimeoutSeconds = 120,
-            MaximumOutputBytes = 524_288,
+            MaximumReportOutputCharacters = 524_288,
             BatteryReviewTemperatureCelsius = 43.5,
             BatteryCriticalTemperatureCelsius = 58.5
         };
@@ -53,7 +53,7 @@ public sealed class DeviceDiagnosticEngineSettingsStoreTests
         {
             adbCommandTimeoutSeconds = 999,
             agentTestTimeoutSeconds = 90,
-            maximumOutputBytes = 262144,
+            maximumReportOutputCharacters = 262144,
             batteryReviewTemperatureCelsius = 45.0,
             batteryCriticalTemperatureCelsius = 55.0
         }));

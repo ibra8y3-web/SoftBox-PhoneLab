@@ -341,8 +341,8 @@ public sealed class DeviceCapabilityCenterWindow : Window
         text.AppendLine("HARDWARE FAMILY: " + enginePlan.HardwareFamily);
         text.AppendLine("IDENTITY CONFIDENCE: " + enginePlan.IdentityConfidence);
         text.AppendLine("ADB TIMEOUT SECONDS: " + enginePlan.Settings.AdbCommandTimeoutSeconds);
-        text.AppendLine("AGENT COMMAND REQUEST TIMEOUT SECONDS: " + enginePlan.Settings.AgentTestTimeoutSeconds);
-        text.AppendLine("MAX OUTPUT BYTES: " + enginePlan.Settings.MaximumOutputBytes);
+        text.AppendLine("AGENT COMMAND REQUEST TIMEOUT SECONDS: " + enginePlan.Settings.AgentCommandTimeoutSeconds);
+        text.AppendLine("MAX REPORT OUTPUT CHARACTERS: " + enginePlan.Settings.MaximumReportOutputCharacters);
         text.AppendLine("BATTERY REVIEW / CRITICAL ALERT C: " +
             enginePlan.Settings.BatteryReviewTemperatureCelsius.ToString("0.0") + " / " +
             enginePlan.Settings.BatteryCriticalTemperatureCelsius.ToString("0.0"));

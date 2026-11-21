@@ -125,7 +125,7 @@ public sealed class DeviceDiagnosticEngineTests
         var settings = new DiagnosticEngineSettings
         {
             AdbCommandTimeoutSeconds = 600,
-            MaximumOutputBytes = 10_000_000,
+            MaximumReportOutputCharacters = 10_000_000,
             BatteryReviewTemperatureCelsius = double.NaN,
             BatteryCriticalTemperatureCelsius = 46
         };

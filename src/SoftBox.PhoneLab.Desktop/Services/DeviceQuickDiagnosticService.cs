@@ -66,7 +66,7 @@ public sealed class DeviceQuickDiagnosticService(
         var started = DateTimeOffset.UtcNow;
         var settingsLoad = await _settingsStore.LoadAsync(cancellationToken);
         var commandTimeout = TimeSpan.FromSeconds(settingsLoad.Settings.AdbCommandTimeoutSeconds);
-        var maximumOutputBytes = settingsLoad.Settings.MaximumOutputBytes;
+        var maximumReportOutputCharacters = settingsLoad.Settings.MaximumReportOutputCharacters;
         var results = new List<QuickDiagnosticStep>();
         for (var index = 0; index < Steps.Length; index++)
         {
@@ -78,9 +78,9 @@ public sealed class DeviceQuickDiagnosticService(
             try
             {
                 var output = await android.RunReadOnlyPresetAsync(serial, id, cancellationToken, commandTimeout);
-                if (output.Length > maximumOutputBytes)
-                    output = output[..maximumOutputBytes] + Environment.NewLine +
-                        $"[Output truncated at configured limit of {maximumOutputBytes} bytes.]";
+                if (output.Length > maximumReportOutputCharacters)
+                    output = output[..maximumReportOutputCharacters] + Environment.NewLine +
+                        $"[Output truncated at configured limit of {maximumReportOutputCharacters} characters.]";
                 results.Add(new QuickDiagnosticStep(
                     index + 1, id, label, true, stepStarted, DateTimeOffset.UtcNow, output, null));
             }

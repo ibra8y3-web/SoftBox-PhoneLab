@@ -23,7 +23,7 @@ public sealed record DiagnosticEngineSettings
 {
     public int AdbCommandTimeoutSeconds { get; init; } = 20;
     public int AgentCommandTimeoutSeconds { get; init; } = 90;
-    public int MaximumOutputBytes { get; init; } = 262_144;
+    public int MaximumReportOutputCharacters { get; init; } = 262_144;
     public double BatteryReviewTemperatureCelsius { get; init; } = 45.0;
     public double BatteryCriticalTemperatureCelsius { get; init; } = 55.0;
 
@@ -34,8 +34,8 @@ public sealed record DiagnosticEngineSettings
             errors.Add("ADB command timeout must be between 5 and 90 seconds.");
         if (AgentCommandTimeoutSeconds is < 10 or > 180)
             errors.Add("Agent command request timeout must be between 10 and 180 seconds.");
-        if (MaximumOutputBytes is < 16_384 or > 1_048_576)
-            errors.Add("Diagnostic output limit must be between 16 KiB and 1 MiB.");
+        if (MaximumReportOutputCharacters is < 16_384 or > 1_048_576)
+            errors.Add("Saved diagnostic report output must be between 16,384 and 1,048,576 characters.");
         if (!double.IsFinite(BatteryReviewTemperatureCelsius) ||
             BatteryReviewTemperatureCelsius is < 35 or > 50)
             errors.Add("Battery review temperature must be between 35 and 50 °C.");
