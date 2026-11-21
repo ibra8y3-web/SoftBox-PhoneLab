@@ -13,15 +13,22 @@ public sealed record PluginPackageInspection(
     IReadOnlyList<string> PackageErrors,
     IReadOnlyList<string> Warnings,
     bool PublisherSignatureVerified,
-    bool CodeLoadedOrExecuted);
+    bool CodeLoadedOrExecuted,
+    bool SignaturePresent = false,
+    string? PublisherKeyId = null,
+    string? TrustedPublisher = null);
 
 /// <summary>
-/// Inspects a plugin ZIP package without loading or executing its assembly.
-/// Publisher signature verification is intentionally false until a trusted signing-root service exists.
+/// Inspects plugin ZIP packages and verifies RSA signatures against the current-user publisher trust store.
+/// It never loads native plugin assemblies.
 /// </summary>
 public sealed class PluginPackageInspector
 {
     public const string ManifestEntryName = "softbox-plugin.json";
+    private readonly PluginPublisherTrustStore _trustStore;
+
+    public PluginPackageInspector(PluginPublisherTrustStore? trustStore = null)
+        => _trustStore = trustStore ?? new PluginPublisherTrustStore();
     private const long MaximumPackageBytes = 100L * 1024 * 1024;
     private const long MaximumExpandedBytes = 100L * 1024 * 1024;
     private const long MaximumEntryBytes = 50L * 1024 * 1024;
@@ -62,6 +69,10 @@ public sealed class PluginPackageInspector
         };
         PluginManifest? manifest = null;
         PluginManifestValidation validation = new(false, ["Plugin manifest was not read."], []);
+        var signaturePresent = false;
+        var publisherSignatureVerified = false;
+        string? publisherKeyId = null;
+        string? trustedPublisher = null;
         try
         {
             using var archive = ZipFile.OpenRead(fullPath);
@@ -87,6 +98,13 @@ public sealed class PluginPackageInspector
                     packageErrors.Add("Suspicious compression ratio: " + entry.FullName);
             }
 
+            var signatureEntries = archive.Entries
+                .Where(entry => entry.FullName.Equals(PluginSignaturePayload.SignatureEntryName, StringComparison.Ordinal))
+                .ToArray();
+            signaturePresent = signatureEntries.Length > 0;
+            if (signatureEntries.Length > 1)
+                packageErrors.Add("Package must not contain duplicate detached signature files.");
+
             var manifests = archive.Entries
                 .Where(entry => entry.FullName.Equals(ManifestEntryName, StringComparison.Ordinal))
                 .ToArray();
@@ -103,9 +121,72 @@ public sealed class PluginPackageInspector
                 await using var stream = manifests[0].Open();
                 manifest = await JsonSerializer.DeserializeAsync<PluginManifest>(stream, JsonOptions, cancellationToken);
                 validation = PluginManifestValidator.Validate(manifest);
-                if (manifest is not null && PluginManifestValidator.IsSafeRelativeAssemblyPath(manifest.EntryAssembly) &&
-                    !names.Contains(manifest.EntryAssembly))
-                    packageErrors.Add("Entry assembly does not exist in the package: " + manifest.EntryAssembly);
+                if (manifest is not null)
+                {
+                    var entryExists = manifest.ExecutionMode switch
+                    {
+                        "native-assembly" => PluginManifestValidator.IsSafeRelativeAssemblyPath(manifest.EntryAssembly) && names.Contains(manifest.EntryAssembly),
+                        "read-only-workflow" => string.Equals(manifest.EntryAssembly, "workflow.json", StringComparison.Ordinal) && names.Contains("workflow.json"),
+                        _ => false
+                    };
+                    if (!entryExists)
+                        packageErrors.Add("Plugin entry point does not exist or does not match the execution mode: " + manifest.EntryAssembly);
+                }
+            }
+
+            if (signatureEntries.Length == 1 && signatureEntries[0].Length is > 0 and <= 16 * 1024 && packageErrors.Count == 0)
+            {
+                PluginPackageSignature? signature;
+                await using (var signatureStream = signatureEntries[0].Open())
+                    signature = await JsonSerializer.DeserializeAsync<PluginPackageSignature>(signatureStream, JsonOptions, cancellationToken);
+
+                if (signature is null ||
+                    signature.KeyId is null || signature.KeyId.Length != 64 ||
+                    !signature.KeyId.All(Uri.IsHexDigit) ||
+                    !string.Equals(signature.Algorithm, PluginSignaturePayload.AlgorithmName, StringComparison.Ordinal) ||
+                    string.IsNullOrWhiteSpace(signature.SignatureBase64) || signature.SignatureBase64.Length > 16 * 1024)
+                {
+                    packageErrors.Add("Detached plugin signature metadata is invalid.");
+                }
+                else
+                {
+                    publisherKeyId = signature.KeyId.ToLowerInvariant();
+                    var trusted = await _trustStore.FindAsync(publisherKeyId, cancellationToken);
+                    if (trusted is null)
+                    {
+                        warnings.Add("Plugin signature key is not trusted on this Windows profile: " + publisherKeyId);
+                    }
+                    else if (manifest is null ||
+                             !trusted.PublisherName.Equals(manifest.Publisher, StringComparison.OrdinalIgnoreCase))
+                    {
+                        packageErrors.Add("Plugin manifest publisher does not match the trusted key owner.");
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var signatureBytes = Convert.FromBase64String(signature.SignatureBase64);
+                            var payload = await PluginSignaturePayload.ComputeAsync(archive.Entries, cancellationToken);
+                            publisherSignatureVerified = PluginSignaturePayload.Verify(payload, signatureBytes, trusted.PublicKeyPem);
+                            if (!publisherSignatureVerified)
+                                packageErrors.Add("Plugin RSA signature does not match the package content.");
+                            else
+                                trustedPublisher = trusted.PublisherName;
+                        }
+                        catch (FormatException)
+                        {
+                            packageErrors.Add("Plugin signature is not valid Base64.");
+                        }
+                    }
+                }
+            }
+            else if (signatureEntries.Length == 1)
+            {
+                packageErrors.Add("Detached plugin signature is empty or exceeds 16 KiB.");
+            }
+            else if (!signaturePresent)
+            {
+                warnings.Add("Plugin package is unsigned; its publisher identity is not authenticated.");
             }
         }
         catch (InvalidDataException ex)
@@ -125,8 +206,11 @@ public sealed class PluginPackageInspector
             validation,
             packageErrors,
             warnings.Concat(validation.Warnings).Distinct(StringComparer.Ordinal).ToArray(),
-            PublisherSignatureVerified: false,
-            CodeLoadedOrExecuted: false);
+            PublisherSignatureVerified: publisherSignatureVerified,
+            CodeLoadedOrExecuted: false,
+            SignaturePresent: signaturePresent,
+            PublisherKeyId: publisherKeyId,
+            TrustedPublisher: trustedPublisher);
     }
 
     private static void ValidateArchiveEntry(ZipArchiveEntry entry)

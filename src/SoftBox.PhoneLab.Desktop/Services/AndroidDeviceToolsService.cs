@@ -15,7 +15,10 @@ public sealed record AndroidSplitApkInstallPlan(
     long VersionCode,
     IReadOnlyList<AndroidSplitApkFile> Files);
 public sealed record AndroidBatchResult(string DeviceSerial, bool Success, string Output, string? Error);
-public enum AndroidVendorKind { Generic, Samsung, Xiaomi }
+public enum AndroidVendorKind
+{
+    Generic, Samsung, Xiaomi, GooglePixel, Motorola, OnePlus, Oppo, Vivo, Realme, Huawei, Tecno, Infinix
+}
 public sealed record AndroidVendorDiagnostics(
     AndroidVendorKind Vendor,
     DateTimeOffset CollectedAtUtc,
@@ -527,11 +530,63 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
                 "ro.miui.ui.version.name", "ro.miui.region",
                 "ro.boot.hwc", "ro.boot.hwcountry", "ro.boot.verifiedbootstate"
             },
+            AndroidVendorKind.GooglePixel => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.product.name", "ro.boot.hardware.sku", "ro.bootloader", "ro.build.id",
+                "ro.build.version.release", "ro.build.version.sdk", "ro.build.version.security_patch",
+                "ro.boot.flash.locked", "ro.boot.vbmeta.device_state", "ro.boot.verifiedbootstate",
+                "ro.boot.slot_suffix"
+            },
+            AndroidVendorKind.Motorola => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.boot.hardware.sku", "ro.boot.hardware", "ro.bootloader", "ro.carrier",
+                "ro.build.version.release", "ro.build.version.sdk", "ro.build.version.security_patch",
+                "ro.boot.flash.locked", "ro.boot.verifiedbootstate"
+            },
+            AndroidVendorKind.OnePlus => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.build.version.ota", "ro.build.version.incremental", "ro.rom.version",
+                "ro.build.version.release", "ro.build.version.sdk", "ro.build.version.security_patch",
+                "ro.boot.verifiedbootstate"
+            },
+            AndroidVendorKind.Oppo or AndroidVendorKind.Realme => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.build.version.opporom", "ro.build.version.realmeui", "ro.oppo.regionmark",
+                "ro.oplus.regionmark", "ro.build.version.release", "ro.build.version.sdk",
+                "ro.build.version.security_patch", "ro.boot.verifiedbootstate"
+            },
+            AndroidVendorKind.Vivo => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.vivo.os.version", "ro.vivo.product.version", "ro.vivo.market.name",
+                "ro.vivo.region", "ro.build.version.release", "ro.build.version.sdk",
+                "ro.build.version.security_patch", "ro.boot.verifiedbootstate"
+            },
+            AndroidVendorKind.Huawei => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.build.version.emui", "ro.build.version.magic", "ro.hwcountry", "ro.hw.oemname",
+                "ro.build.version.release", "ro.build.version.sdk", "ro.build.version.security_patch",
+                "ro.boot.verifiedbootstate"
+            },
+            AndroidVendorKind.Tecno or AndroidVendorKind.Infinix => new[]
+            {
+                "ro.product.manufacturer", "ro.product.brand", "ro.product.model", "ro.product.device",
+                "ro.product.name", "ro.transsion.brand", "ro.transsion.region",
+                "ro.mediatek.platform", "ro.board.platform", "ro.bootloader",
+                "ro.build.version.release", "ro.build.version.sdk", "ro.build.version.security_patch",
+                "ro.boot.verifiedbootstate"
+            },
             _ => new[]
             {
                 "ro.product.manufacturer", "ro.product.brand", "ro.product.model",
-                "ro.product.device", "ro.product.name", "ro.build.version.release",
-                "ro.build.version.sdk", "ro.build.fingerprint", "ro.boot.verifiedbootstate"
+                "ro.product.device", "ro.product.name", "ro.board.platform", "ro.soc.manufacturer",
+                "ro.bootloader", "ro.build.version.release", "ro.build.version.sdk",
+                "ro.build.version.security_patch", "ro.build.fingerprint", "ro.boot.verifiedbootstate"
             }
         };
 
@@ -560,6 +615,24 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             value.Equals("redmi", StringComparison.Ordinal) ||
             value.Equals("poco", StringComparison.Ordinal))
             return AndroidVendorKind.Xiaomi;
+        if (value.Contains("google", StringComparison.Ordinal) || value.Contains("pixel", StringComparison.Ordinal))
+            return AndroidVendorKind.GooglePixel;
+        if (value.Contains("motorola", StringComparison.Ordinal) || value.Contains("lenovo", StringComparison.Ordinal))
+            return AndroidVendorKind.Motorola;
+        if (value.Contains("oneplus", StringComparison.Ordinal))
+            return AndroidVendorKind.OnePlus;
+        if (value.Contains("oppo", StringComparison.Ordinal))
+            return AndroidVendorKind.Oppo;
+        if (value.Contains("vivo", StringComparison.Ordinal))
+            return AndroidVendorKind.Vivo;
+        if (value.Contains("realme", StringComparison.Ordinal))
+            return AndroidVendorKind.Realme;
+        if (value.Contains("huawei", StringComparison.Ordinal) || value.Equals("honor", StringComparison.Ordinal))
+            return AndroidVendorKind.Huawei;
+        if (value.Contains("tecno", StringComparison.Ordinal))
+            return AndroidVendorKind.Tecno;
+        if (value.Contains("infinix", StringComparison.Ordinal))
+            return AndroidVendorKind.Infinix;
         return AndroidVendorKind.Generic;
     }
 

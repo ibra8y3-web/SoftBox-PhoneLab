@@ -1,0 +1,327 @@
+using System.Diagnostics;
+using System.IO.Compression;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using SoftBox.PhoneLab.Core.Plugins;
+using SoftBox.PhoneLab.Core.Updates;
+using Xunit;
+
+namespace SoftBox.PhoneLab.Tests;
+
+public sealed class SignedUpdatePackageServiceTests
+{
+    [Fact]
+    public async Task VerifiesOfficialSignedUpdateAndStagesOnlyListedFiles()
+    {
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "update.zip");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            await CreateSignedPackageAsync(package, rsa, "1.2.3");
+            var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
+            await trust.TrustPublicKeyAsync("SoftBox Release Publisher", rsa.ExportSubjectPublicKeyInfoPem());
+            var bytes = await File.ReadAllBytesAsync(package);
+            using var client = new HttpClient(new BytesHandler(bytes,
+                "https://release-assets.githubusercontent.com/github-production-release-asset/test"));
+            var service = new SignedUpdatePackageService(client, trust, Path.Combine(root, "updates"));
+            var asset = new ReleaseAssetInfo("SoftBox-Windows-x64.zip", bytes.Length,
+                "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
+
+            var staged = await service.DownloadAndStageAsync(asset, "v1.2.3", "1.0.0");
+
+            Assert.Equal("1.2.3", staged.Version);
+            Assert.True(File.Exists(Path.Combine(staged.StageDirectory, "SoftBox.PhoneLab.Desktop.exe")));
+            Assert.Equal("signed-update-payload", await File.ReadAllTextAsync(Path.Combine(staged.StageDirectory, "SoftBox.PhoneLab.Desktop.exe")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task RejectsUnsignedOrUntrustedUpdateBeforeExtractingAnything()
+    {
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "update.zip");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            await CreateSignedPackageAsync(package, rsa, "1.2.3");
+            var bytes = await File.ReadAllBytesAsync(package);
+            using var client = new HttpClient(new BytesHandler(bytes));
+            var service = new SignedUpdatePackageService(client, new PluginPublisherTrustStore(Path.Combine(root, "trust")),
+                Path.Combine(root, "updates"));
+            var asset = new ReleaseAssetInfo("SoftBox-Windows-x64.zip", bytes.Length,
+                "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DownloadAndStageAsync(asset, "1.2.3"));
+            Assert.False(Directory.Exists(Path.Combine(root, "updates", "Staged")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task RejectsUpdateRedirectedToUntrustedHost()
+    {
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "update.zip");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            await CreateSignedPackageAsync(package, rsa, "1.2.3");
+            var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
+            await trust.TrustPublicKeyAsync("SoftBox Release Publisher", rsa.ExportSubjectPublicKeyInfoPem());
+            var bytes = await File.ReadAllBytesAsync(package);
+            using var client = new HttpClient(new BytesHandler(bytes, "https://evil.example/payload.zip"));
+            var service = new SignedUpdatePackageService(client, trust, Path.Combine(root, "updates"));
+            var asset = new ReleaseAssetInfo("SoftBox-Windows-x64.zip", bytes.Length,
+                "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+                service.DownloadAndStageAsync(asset, "1.2.3", "1.0.0"));
+            Assert.False(Directory.Exists(Path.Combine(root, "updates", "Staged")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task RejectsUpdateWhenCurrentVersionIsBelowManifestMinimum()
+    {
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "update.zip");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            await CreateSignedPackageAsync(package, rsa, "1.2.3");
+            var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
+            await trust.TrustPublicKeyAsync("SoftBox Release Publisher", rsa.ExportSubjectPublicKeyInfoPem());
+            var service = new SignedUpdatePackageService(trustStore: trust, rootDirectory: Path.Combine(root, "updates"));
+
+            await Assert.ThrowsAsync<InvalidDataException>(() =>
+                service.VerifyAndStageAsync(package, "1.2.3", "0.9.0"));
+
+            Assert.False(Directory.Exists(Path.Combine(root, "updates", "Staged")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task RejectsUntrustedAssetUrlAndInvalidPackagePaths()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var service = new SignedUpdatePackageService(rootDirectory: Path.Combine(root, "updates"));
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DownloadAndStageAsync(
+                new ReleaseAssetInfo("update.zip", 100, "https://evil.example/update.zip"), "1.0.0"));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void InstallAndRollbackScriptsWaitForAppExitAndPreserveRollbackSnapshot()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var install = Path.Combine(root, "install");
+            var stage = Path.Combine(root, "updates", "Staged", "1.2.3");
+            Directory.CreateDirectory(install);
+            Directory.CreateDirectory(stage);
+            var exe = Path.Combine(install, "SoftBox.exe");
+            File.WriteAllText(exe, "old");
+            var stagedExe = Path.Combine(stage, "SoftBox.exe");
+            File.WriteAllText(stagedExe, "new");
+            var stagedHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("new"))).ToLowerInvariant();
+            var service = new SignedUpdatePackageService(rootDirectory: Path.Combine(root, "updates"));
+            var info = new SignedUpdateStageInfo("1.2.3", stage, "SoftBox.exe", "SoftBox Release Publisher",
+                [new("SoftBox.exe", 3, stagedHash), new("NewDependency.dll", 0, new string('b', 64))], DateTimeOffset.UtcNow);
+
+            // The additional file is part of the signed manifest and is physically present in the staged package.
+            File.WriteAllBytes(Path.Combine(stage, "NewDependency.dll"), []);
+            info = info with { Files = [new("SoftBox.exe", 3, stagedHash), new("NewDependency.dll", 0, new string('b', 64))] };
+
+            var encodedScript = service.BuildInstallScript(info, install, exe, 1234, "1.2.2");
+            var script = DecodePowerShell(encodedScript);
+
+            Assert.Contains("Wait-Process -Id", script);
+            Assert.Contains("Get-Process -Id", script);
+            Assert.Contains("Get-Sha256Hex", script);
+            Assert.Contains("rollbackRoot", script);
+            Assert.Contains("InstalledFilePaths", script);
+            Assert.Contains("$backupReady", script);
+            Assert.Contains("Start-Process", script);
+
+            var rollback = Path.Combine(root, "updates", "Rollback", "previous");
+            Directory.CreateDirectory(rollback);
+            File.WriteAllText(Path.Combine(rollback, "SoftBox.exe"), "old");
+            var state = new SignedUpdateRollbackState(install, exe, rollback, "1.2.2", "1.2.3",
+                DateTimeOffset.UtcNow, ["SoftBox.exe", "NewDependency.dll"]);
+            var rollbackScript = DecodePowerShell(service.BuildRollbackScript(state, 1234));
+            Assert.Contains("installedFilePaths", rollbackScript);
+            Assert.Contains("Remove-Item -LiteralPath $target", rollbackScript);
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task InstallAndRollbackHelpersChangeAndRestoreFilesInAnIsolatedWindowsFolder()
+    {
+        var windowsPowerShell = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+        Assert.True(File.Exists(windowsPowerShell), "Windows PowerShell 5.1 is required for this Windows integration test.");
+
+        var root = CreateTempDirectory();
+        try
+        {
+            var install = Path.Combine(root, "install");
+            var stage = Path.Combine(root, "updates", "Staged", "1.2.3");
+            Directory.CreateDirectory(install);
+            Directory.CreateDirectory(stage);
+            var executable = Path.Combine(install, "SoftBox.exe");
+            await File.WriteAllTextAsync(executable, "previous-version");
+
+            var stagedExecutable = Path.Combine(stage, "SoftBox.exe");
+            var stagedDependency = Path.Combine(stage, "NewDependency.dll");
+            var installedDependency = Path.Combine(install, "NewDependency.dll");
+            await File.WriteAllTextAsync(stagedExecutable, "new-version");
+            await File.WriteAllTextAsync(stagedDependency, "new-dependency");
+            var executableBytes = await File.ReadAllBytesAsync(stagedExecutable);
+            var dependencyBytes = await File.ReadAllBytesAsync(stagedDependency);
+            var service = new SignedUpdatePackageService(rootDirectory: Path.Combine(root, "updates"));
+            var stageInfo = new SignedUpdateStageInfo(
+                "1.2.3", stage, "SoftBox.exe", "SoftBox Release Publisher",
+                [
+                    new("SoftBox.exe", executableBytes.Length,
+                        Convert.ToHexString(SHA256.HashData(executableBytes)).ToLowerInvariant()),
+                    new("NewDependency.dll", dependencyBytes.Length,
+                        Convert.ToHexString(SHA256.HashData(dependencyBytes)).ToLowerInvariant())
+                ],
+                DateTimeOffset.UtcNow);
+
+            await ExecutePowerShellHelperAsync(windowsPowerShell,
+                service.BuildInstallScript(stageInfo, install, executable, 987654, "1.2.2"));
+
+            Assert.Equal("new-version", await File.ReadAllTextAsync(executable));
+            Assert.Equal("new-dependency", await File.ReadAllTextAsync(installedDependency));
+            var state = await service.ReadRollbackStateAsync();
+            Assert.NotNull(state);
+            Assert.Contains("NewDependency.dll", state!.InstalledFilePaths!);
+            Assert.False(File.Exists(Path.Combine(state.BackupDirectory, "NewDependency.dll")));
+
+            await ExecutePowerShellHelperAsync(windowsPowerShell,
+                service.BuildRollbackScript(state, 987654));
+
+            Assert.Equal("previous-version", await File.ReadAllTextAsync(executable));
+            Assert.False(File.Exists(installedDependency));
+            Assert.True(File.Exists(stagedDependency), "Rollback must preserve the source package in the staging directory.");
+            Assert.Null(await service.ReadRollbackStateAsync());
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    private static async Task ExecutePowerShellHelperAsync(string powershellPath, string encodedScript)
+    {
+        var start = new ProcessStartInfo
+        {
+            FileName = powershellPath,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        start.ArgumentList.Add("-NoLogo");
+        start.ArgumentList.Add("-NoProfile");
+        start.ArgumentList.Add("-NonInteractive");
+        start.ArgumentList.Add("-ExecutionPolicy");
+        start.ArgumentList.Add("Bypass");
+        start.ArgumentList.Add("-Command");
+        start.ArgumentList.Add(
+            "function Start-Process { param([string]$FilePath,[string]$WorkingDirectory) return $null }" +
+            Environment.NewLine + DecodePowerShell(encodedScript));
+
+        using var process = Process.Start(start)
+            ?? throw new InvalidOperationException("تعذر تشغيل Windows PowerShell لاختبار مساعد التحديث.");
+        var standardOutput = process.StandardOutput.ReadToEndAsync();
+        var standardError = process.StandardError.ReadToEndAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+        await process.WaitForExitAsync(timeout.Token);
+        var output = await standardOutput;
+        var error = await standardError;
+        Assert.True(process.ExitCode == 0,
+            $"PowerShell helper exited with {process.ExitCode}.{Environment.NewLine}{output}{Environment.NewLine}{error}");
+    }
+
+    private static async Task CreateSignedPackageAsync(string path, RSA rsa, string version)
+    {
+        var exeBytes = Encoding.UTF8.GetBytes("signed-update-payload");
+        var manifest = new SignedUpdateManifest(1, version, "1.0.0", "SoftBox Release Publisher",
+            "SoftBox.PhoneLab.Desktop.exe",
+            [new("SoftBox.PhoneLab.Desktop.exe", exeBytes.Length,
+                Convert.ToHexString(SHA256.HashData(exeBytes)).ToLowerInvariant())],
+            "Signed update test");
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
+        {
+            var manifestEntry = archive.CreateEntry(SignedUpdatePackageService.ManifestEntryName);
+            await using (var stream = manifestEntry.Open())
+                await JsonSerializer.SerializeAsync(stream, manifest);
+            var exe = archive.CreateEntry("SoftBox.PhoneLab.Desktop.exe");
+            await using var output = exe.Open();
+            await output.WriteAsync(exeBytes);
+        }
+
+        // The detached package signature uses the same deterministic archive payload and publisher RSA PSS algorithm.
+        byte[] payload;
+        using (var source = ZipFile.OpenRead(path))
+            payload = await PluginSignaturePayload.ComputeAsync(source.Entries);
+        var keyId = PluginPublisherTrustStore.GetKeyId(rsa.ExportSubjectPublicKeyInfoPem());
+        var signature = new PluginPackageSignature(keyId,
+            Convert.ToBase64String(rsa.SignData(payload, HashAlgorithmName.SHA256, RSASignaturePadding.Pss)),
+            PluginSignaturePayload.AlgorithmName);
+        var temp = path + ".signed";
+        using (var input = ZipFile.OpenRead(path))
+        using (var signed = ZipFile.Open(temp, ZipArchiveMode.Create))
+        {
+            foreach (var item in input.Entries)
+            {
+                var copy = signed.CreateEntry(item.FullName);
+                await using var src = item.Open();
+                await using var dest = copy.Open();
+                await src.CopyToAsync(dest);
+            }
+            var signatureEntry = signed.CreateEntry(SignedUpdatePackageService.SignatureEntryName);
+            await using var signatureStream = signatureEntry.Open();
+            await JsonSerializer.SerializeAsync(signatureStream, signature);
+        }
+        File.Move(temp, path, overwrite: true);
+    }
+
+    private static string DecodePowerShell(string encoded)
+        => Encoding.Unicode.GetString(Convert.FromBase64String(encoded));
+
+    private static string CreateTempDirectory()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "softbox-signed-update-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        return root;
+    }
+
+    private sealed class BytesHandler(
+        byte[] bytes,
+        string finalUrl = "https://release-assets.githubusercontent.com/github-production-release-asset/test")
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var finalRequest = new HttpRequestMessage(request.Method, finalUrl);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                RequestMessage = finalRequest,
+                Content = new ByteArrayContent(bytes)
+            });
+        }
+    }
+}

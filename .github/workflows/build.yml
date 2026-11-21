@@ -3,6 +3,7 @@ name: PhoneLab CI
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -27,15 +28,20 @@ jobs:
       - name: Unit tests
         run: dotnet test SoftBox.PhoneLab.sln --no-restore --configuration Release
       - name: Publish self-contained Windows x64
-        run: >
-          dotnet publish src/SoftBox.PhoneLab.Desktop/SoftBox.PhoneLab.Desktop.csproj
-          --configuration Release
-          --runtime win-x64
-          --self-contained true
-          --output artifacts/PhoneLab-win-x64
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:IncludeAllContentForSelfExtract=true
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = "0.1.0"
+          if ($env:GITHUB_REF -match '^refs/tags/v(.+)$') { $version = $Matches[1] }
+          dotnet publish src/SoftBox.PhoneLab.Desktop/SoftBox.PhoneLab.Desktop.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output artifacts/PhoneLab-win-x64 `
+            -p:Version=$version `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:IncludeAllContentForSelfExtract=true
       - name: Download Android Agent into Windows package
         uses: actions/download-artifact@v4
         with:
@@ -121,3 +127,60 @@ jobs:
           path: agent/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+  signed-release:
+    name: Sign and publish Windows release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: windows
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Download Windows publish output
+        uses: actions/download-artifact@v4
+        with:
+          name: SoftBox-PhoneLab-Windows-x64
+          path: artifacts/PhoneLab-win-x64
+      - name: Create RSA-signed update package
+        shell: pwsh
+        env:
+          SOFTBOX_RELEASE_PRIVATE_KEY_PEM: ${{ secrets.SOFTBOX_RELEASE_PRIVATE_KEY_PEM }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:SOFTBOX_RELEASE_PRIVATE_KEY_PEM)) {
+            throw "Missing GitHub Actions secret SOFTBOX_RELEASE_PRIVATE_KEY_PEM. No unsigned release will be published."
+          }
+          $keyPath = Join-Path $env:RUNNER_TEMP "softbox-release-private.pem"
+          $notesPath = Join-Path $env:RUNNER_TEMP "softbox-release-notes.md"
+          $archivePath = Join-Path $PWD "SoftBox-Windows-x64.zip"
+          try {
+            [IO.File]::WriteAllText($keyPath, $env:SOFTBOX_RELEASE_PRIVATE_KEY_PEM, [Text.UTF8Encoding]::new($false))
+            [IO.File]::WriteAllText($notesPath, "SoftBox $env:GITHUB_REF_NAME`n`nSigned Windows x64 package.", [Text.UTF8Encoding]::new($false))
+            $version = $env:GITHUB_REF_NAME -replace '^[vV]', ''
+            dotnet run --project tools/SoftBox.ReleaseSigner/SoftBox.ReleaseSigner.csproj --configuration Release -- `
+              "$PWD/artifacts/PhoneLab-win-x64" "$version" "0.1.0" "SoftBox-PhoneLab.exe" "$keyPath" "$archivePath" "$notesPath"
+            if (!(Test-Path $archivePath) -or (Get-Item $archivePath).Length -le 0) {
+              throw "Signed Windows update package was not created."
+            }
+          }
+          finally {
+            Remove-Item $keyPath -Force -ErrorAction SilentlyContinue
+          }
+      - name: Publish signed GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          gh release view "$env:GITHUB_REF_NAME" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            throw "A release already exists for this tag. Refusing to overwrite existing release assets."
+          }
+          gh release create "$env:GITHUB_REF_NAME" "SoftBox-Windows-x64.zip" `
+            --title "SoftBox $env:GITHUB_REF_NAME" --generate-notes

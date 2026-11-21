@@ -34,7 +34,8 @@ public sealed record PluginManifest(
     string EntryAssembly,
     string Publisher,
     string Description,
-    IReadOnlyList<string> RequestedPermissions);
+    IReadOnlyList<string> RequestedPermissions,
+    string ExecutionMode = "native-assembly");
 
 public sealed record PluginManifestValidation(
     bool IsValid,
@@ -75,8 +76,25 @@ public static class PluginManifestValidator
             errors.Add("Plugin API version must use semantic versioning.");
         if (!IsSemVer(manifest.MinimumSoftBoxVersion))
             errors.Add("Minimum SoftBox version must use semantic versioning.");
-        if (!IsSafeRelativeAssemblyPath(manifest.EntryAssembly))
-            errors.Add("Entry assembly must be a relative .dll path without traversal segments.");
+        if (manifest.ExecutionMode == "native-assembly")
+        {
+            if (!IsSafeRelativeAssemblyPath(manifest.EntryAssembly))
+                errors.Add("Native entry assembly must be a relative .dll path without traversal segments.");
+            warnings.Add("Native plugin assemblies are not loaded or executed by the current SoftBox runtime.");
+        }
+        else if (manifest.ExecutionMode == "read-only-workflow")
+        {
+            if (!string.Equals(manifest.EntryAssembly, "workflow.json", StringComparison.Ordinal))
+                errors.Add("Read-only workflow plugins must use workflow.json as their entry point.");
+            if (manifest.RequestedPermissions is null ||
+                manifest.RequestedPermissions.Any(permission =>
+                    permission is not (PluginPermissionIds.DeviceRead or PluginPermissionIds.DeviceDiagnostics)))
+                errors.Add("Read-only workflow plugins may request diagnostics/read-only permissions only.");
+        }
+        else
+        {
+            errors.Add("Unsupported plugin execution mode: " + manifest.ExecutionMode);
+        }
         if (string.IsNullOrWhiteSpace(manifest.Publisher) || manifest.Publisher.Length > 160 ||
             manifest.Publisher.Any(char.IsControl))
             errors.Add("Publisher is required and must be at most 160 characters.");

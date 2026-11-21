@@ -15,12 +15,15 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class VendorDiagnosticsWindow : Window
 {
     private readonly AndroidDeviceToolsService _service;
+    private readonly AdbClient _adb;
     private readonly string _serial;
     private readonly string _manufacturer;
+    private readonly string _model;
     private readonly TextBox _output = new();
     private readonly TextBlock _status = new();
     private readonly Button _scanButton;
     private readonly Button _saveButton;
+    private readonly Button? _xiaomiFastbootButton;
     private CancellationTokenSource? _operation;
     private AndroidVendorDiagnostics? _diagnostics;
 
@@ -28,9 +31,11 @@ public sealed class VendorDiagnosticsWindow : Window
     {
         if (!AdbClient.IsSafeSerial(serial))
             throw new ArgumentException("معرف ADB غير صالح.", nameof(serial));
+        _adb = adb;
         _service = new AndroidDeviceToolsService(adb);
         _serial = serial;
         _manufacturer = manufacturer ?? "";
+        _model = model ?? "";
 
         var vendor = AndroidDeviceToolsService.NormalizeVendor(manufacturer);
         Title = $"SoftBox | {vendor} Vendor Diagnostics";
@@ -45,8 +50,11 @@ public sealed class VendorDiagnosticsWindow : Window
 
         _scanButton = ButtonControl("قراءة خصائص الشركة", "#14517A", Scan_Click);
         _saveButton = ButtonControl("حفظ تقرير JSON", "#176044", Save_Click);
+        _xiaomiFastbootButton = vendor == AndroidVendorKind.Xiaomi
+            ? ButtonControl("تشخيص Xiaomi Fastboot", "#704B20", XiaomiFastboot_Click)
+            : null;
         _saveButton.IsEnabled = false;
-        Content = BuildContent(vendor, model);
+        Content = BuildContent(vendor, _model);
         Closed += (_, _) => _operation?.Cancel();
     }
 
@@ -60,6 +68,15 @@ public sealed class VendorDiagnosticsWindow : Window
             {
                 AndroidVendorKind.Samsung => "Samsung Device Diagnostics",
                 AndroidVendorKind.Xiaomi => "Xiaomi / Redmi / POCO Diagnostics",
+                AndroidVendorKind.GooglePixel => "Google Pixel Diagnostics",
+                AndroidVendorKind.Motorola => "Motorola / Lenovo Diagnostics",
+                AndroidVendorKind.OnePlus => "OnePlus Diagnostics",
+                AndroidVendorKind.Oppo => "OPPO Diagnostics",
+                AndroidVendorKind.Vivo => "vivo Diagnostics",
+                AndroidVendorKind.Realme => "realme Diagnostics",
+                AndroidVendorKind.Huawei => "Huawei / HONOR Diagnostics",
+                AndroidVendorKind.Tecno => "TECNO Diagnostics",
+                AndroidVendorKind.Infinix => "Infinix Diagnostics",
                 _ => "Android Vendor Diagnostics"
             },
             FontSize = 23,
@@ -98,6 +115,8 @@ public sealed class VendorDiagnosticsWindow : Window
         var buttons = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         buttons.Children.Add(_scanButton);
         buttons.Children.Add(_saveButton);
+        if (_xiaomiFastbootButton is not null)
+            buttons.Children.Add(_xiaomiFastbootButton);
         DockPanel.SetDock(buttons, Dock.Top);
         root.Children.Add(buttons);
 
@@ -123,6 +142,19 @@ public sealed class VendorDiagnosticsWindow : Window
         return root;
 
         string manufacturerText() => string.IsNullOrWhiteSpace(_manufacturer) ? "غير محدد" : _manufacturer;
+    }
+
+    private void XiaomiFastboot_Click(object sender, RoutedEventArgs e)
+    {
+        if (AndroidDeviceToolsService.NormalizeVendor(_manufacturer) != AndroidVendorKind.Xiaomi)
+        {
+            _status.Text = "تم منع فتح أدوات Xiaomi لأن هوية الشركة الحالية لا تطابق Xiaomi.";
+            return;
+        }
+        new XiaomiFastbootDiagnosticsWindow(_adb, _serial, _manufacturer, _model)
+        {
+            Owner = this
+        }.ShowDialog();
     }
 
     private async void Scan_Click(object sender, RoutedEventArgs e)

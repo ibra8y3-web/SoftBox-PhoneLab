@@ -6,6 +6,7 @@ using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Threading;
 using SoftBox.PhoneLab.Core.Models;
+using SoftBox.PhoneLab.Core.Diagnostics;
 using SoftBox.PhoneLab.Desktop.Services;
 
 namespace SoftBox.PhoneLab.Desktop;
@@ -15,6 +16,7 @@ public partial class MeasurementWindow : Window
     private readonly ExternalMeasurementClient _client = new();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(600) };
     private readonly List<ExternalMeasurementSample> _history = [];
+    private MeasurementReferenceProfile? _referenceProfile;
     private bool _reading;
     public event Action<ExternalMeasurementSample>? SampleReceived;
 
@@ -28,6 +30,32 @@ public partial class MeasurementWindow : Window
     }
 
     public ObservableCollection<string> SampleLines { get; } = [];
+
+    private void LoadProfile_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "تحميل حدود قياس موثقة لهذا الموديل",
+            Filter = "JSON reference profile (*.json)|*.json",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            _referenceProfile = MeasurementReferenceProfilePolicy.Parse(File.ReadAllText(dialog.FileName));
+            ReferenceStatus.Text = $"ملف الحدود: {_referenceProfile.ProfileName} | النطاق: {_referenceProfile.DeviceScope} | المصدر: {_referenceProfile.SourceReference}";
+            ReferenceStatus.Foreground = System.Windows.Media.Brushes.LightGreen;
+        }
+        catch (Exception ex)
+        {
+            _referenceProfile = null;
+            ReferenceStatus.Text = "رُفض ملف حدود القياس: " + ex.Message;
+            ReferenceStatus.Foreground = System.Windows.Media.Brushes.Orange;
+        }
+    }
 
     private void RefreshPorts_Click(object sender, RoutedEventArgs e) => RefreshPorts();
     private void RefreshPorts()
@@ -83,6 +111,16 @@ public partial class MeasurementWindow : Window
             RailsValue.Text = sample.Rails is { Count: > 0 }
                 ? string.Join("   •   ", sample.Rails.Select(x => $"{x.Key}: {x.Value:0.000} V"))
                 : "لم تصل قراءات خطوط الطاقة بعد.";
+
+            if (_referenceProfile is not null)
+            {
+                var comparisons = MeasurementReferenceProfilePolicy.Evaluate(_referenceProfile, sample);
+                ReferenceStatus.Text = string.Join(Environment.NewLine, comparisons.Select(result =>
+                    $"{result.State}: {result.Name} = {(result.Actual?.ToString("0.###", CultureInfo.InvariantCulture) ?? "غير مقاس")} {result.Unit} | {result.Minimum:0.###}–{result.Maximum:0.###} | {result.Explanation}"));
+                ReferenceStatus.Foreground = comparisons.Any(result => result.State == MeasurementLimitState.OutOfRange)
+                    ? System.Windows.Media.Brushes.OrangeRed
+                    : System.Windows.Media.Brushes.LightGreen;
+            }
             SampleLines.Insert(0, $"{sample.CapturedAtUtc.LocalDateTime:T} | USB {Format(sample.UsbVoltageV, "V")} | BAT {Format(sample.BatteryVoltageV, "V")} | I {Format(sample.BatteryCurrentA, "A")}");
             while (SampleLines.Count > 100) SampleLines.RemoveAt(SampleLines.Count - 1);
             StatusText.Text = $"آخر عينة: {sample.CapturedAtUtc.LocalDateTime:T} • {_client.PortName} • {_history.Count} عينة";

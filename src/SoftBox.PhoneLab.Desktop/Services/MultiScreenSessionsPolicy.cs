@@ -6,9 +6,31 @@ namespace SoftBox.PhoneLab.Desktop.Services;
 /// Builds a fresh, fail-closed multi-screen start list from the current ADB discovery.
 /// Only selected serials still present as authorized devices are returned.
 /// </summary>
+public sealed record MultiScreenSessionHealth(
+    string Serial,
+    bool IsCurrentlyAuthorized,
+    bool IsProcessAlive,
+    bool HasEmbeddedWindow);
+
 public static class MultiScreenSessionsPolicy
 {
     public const int MaximumConcurrentSessions = 4;
+
+    public static bool IsAuthorizedAdbState(string? state)
+        => string.Equals(state?.Trim(), "device", StringComparison.OrdinalIgnoreCase);
+
+    public static IReadOnlyList<string> FindUnhealthySessions(IEnumerable<MultiScreenSessionHealth> sessions)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+        return sessions
+            .Where(session => !AdbClient.IsSafeSerial(session.Serial) ||
+                              !session.IsCurrentlyAuthorized ||
+                              !session.IsProcessAlive ||
+                              !session.HasEmbeddedWindow)
+            .Select(session => session.Serial)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
 
     public static IReadOnlyList<DeviceListItem> SelectAuthorizedDevices(
         IEnumerable<string> requestedSerials,

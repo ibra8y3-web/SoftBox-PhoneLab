@@ -7,6 +7,16 @@ namespace SoftBox.PhoneLab.Tests;
 
 public sealed class MultiScreenSessionsPolicyTests
 {
+    [Theory]
+    [InlineData("device", true)]
+    [InlineData(" device ", true)]
+    [InlineData("unauthorized", false)]
+    [InlineData("offline", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void ScrcpyStartRequiresFreshAuthorizedAdbGetState(string? state, bool expected)
+        => Assert.Equal(expected, MultiScreenSessionsPolicy.IsAuthorizedAdbState(state));
+
     [Fact]
     public void ReturnsOnlyRequestedDevicesStillAuthorizedInFreshDiscovery()
     {
@@ -78,6 +88,33 @@ public sealed class MultiScreenSessionsPolicyTests
             SoftBoxUserRole.Technician, "OpenMultiScreenSessions"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(
             SoftBoxUserRole.ReadOnly, "OpenMultiScreenSessions"));
+    }
+
+    [Fact]
+    public void HealthPolicyFindsDisconnectedProcessesAndDetachedWindowsOnly()
+    {
+        var unhealthy = MultiScreenSessionsPolicy.FindUnhealthySessions(
+        [
+            new("ADB-OK", true, true, true),
+            new("ADB-OFFLINE", false, true, true),
+            new("ADB-EXITED", true, false, true),
+            new("ADB-DETACHED", true, true, false)
+        ]);
+
+        Assert.Equal(new[] { "ADB-OFFLINE", "ADB-EXITED", "ADB-DETACHED" }, unhealthy);
+    }
+
+    [Fact]
+    public void HealthPolicyIgnoresDuplicateHealthySerialsAndRejectsUnsafeIdentifiers()
+    {
+        var unhealthy = MultiScreenSessionsPolicy.FindUnhealthySessions(
+        [
+            new("ADB-OK", true, true, true),
+            new("ADB-OK", true, true, true),
+            new("--kill", false, true, true)
+        ]);
+
+        Assert.Equal(new[] { "--kill" }, unhealthy);
     }
 
     private static DeviceListItem Device(string serial, string state)

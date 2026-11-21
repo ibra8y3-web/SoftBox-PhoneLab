@@ -446,6 +446,22 @@ public sealed class FirmwareCenterWindow : Window
                 integrity,
                 profileCatalog.Profiles);
 
+            var compatibility = FirmwareCompatibilityPolicy.Evaluate(
+                _deviceSnapshot?.Manufacturer,
+                _deviceSnapshot?.ModelNumber,
+                _deviceSnapshot?.Product,
+                _deviceSnapshot?.Board,
+                null,
+                null,
+                item.Manufacturer,
+                item.Model,
+                null,
+                null,
+                item.Region,
+                null,
+                integrity.FileExists && integrity.SizeMatches && integrity.Sha256Matches,
+                false);
+
             var lines = new List<string>
             {
                 "SOFTBOX SAFE RECOVERY — PREFLIGHT ONLY",
@@ -473,17 +489,36 @@ public sealed class FirmwareCenterWindow : Window
                 lines.Add("");
             }
 
+            lines.Add("");
+            lines.Add("EXACT FIRMWARE COMPATIBILITY GATE");
+            lines.Add("CAN PROCEED: " + compatibility.CanProceed);
+            foreach (var check in compatibility.Checks)
+            {
+                var state = check.State switch
+                {
+                    FirmwareCompatibilityState.Passed => "PASS",
+                    FirmwareCompatibilityState.Failed => "FAIL",
+                    _ => "UNKNOWN"
+                };
+                lines.Add($"[{state}] {check.Name}: {check.Evidence}");
+                lines.Add("Required action: " + check.RequiredAction);
+            }
+
+            lines.Add("");
             lines.Add("LIMITATIONS:");
             lines.AddRange(report.Limitations.Select(limit => "- " + limit));
+            lines.AddRange(compatibility.Limitations.Select(limit => "- " + limit));
             lines.Add("");
             lines.Add("No firmware was flashed, no bootloader state was changed and no device data was modified.");
             _details.Text = string.Join(Environment.NewLine, lines);
 
             var blocked = report.Checks.Count(check =>
                 check.State is RecoveryCheckState.Blocked or RecoveryCheckState.Failed or RecoveryCheckState.Unknown);
-            return report.CanProceed
-                ? "انتهى الفحص المسبق؛ لا توجد عملية Flash متاحة من هذه الشاشة."
-                : $"الاستعادة ممنوعة حاليًا. توجد {blocked} شروط فاشلة أو غير معروفة أو محجوبة. لم يتم تنفيذ أي تغيير على الهاتف.";
+            var compatibilityBlocked = compatibility.Checks.Count(check =>
+                check.State is FirmwareCompatibilityState.Failed or FirmwareCompatibilityState.Unknown);
+            return report.CanProceed && compatibility.CanProceed
+                ? "انتهى الفحص المسبق والتوافق؛ لا توجد عملية Flash متاحة من هذه الشاشة."
+                : $"الاستعادة ممنوعة حاليًا. شروط الفحص المسبق غير المجتازة: {blocked}، وشروط توافق Firmware غير المجتازة: {compatibilityBlocked}. لم يتم تنفيذ أي تغيير على الهاتف.";
         });
     }
 

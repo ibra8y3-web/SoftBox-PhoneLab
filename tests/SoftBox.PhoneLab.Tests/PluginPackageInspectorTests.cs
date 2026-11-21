@@ -119,7 +119,7 @@ public sealed class PluginPackageInspectorTests
             }
 
             var result = await _inspector.InspectAsync(path);
-            Assert.Contains(result.PackageErrors, error => error.Contains("Entry assembly does not exist", StringComparison.Ordinal));
+            Assert.Contains(result.PackageErrors, error => error.Contains("Plugin entry point does not exist", StringComparison.Ordinal));
         }
         finally { Directory.Delete(root, recursive: true); }
     }

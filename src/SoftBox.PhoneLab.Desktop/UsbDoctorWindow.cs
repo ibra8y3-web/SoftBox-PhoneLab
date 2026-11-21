@@ -1,6 +1,7 @@
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Text;
+using SoftBox.PhoneLab.Core.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -263,8 +264,30 @@ public sealed class UsbDoctorWindow : Window
         text.AppendLine("IDENTITY HINT: " + device.Identity.ModeHint);
         text.AppendLine("CATEGORY: " + device.Identity.Category);
         text.AppendLine("LIMITATION: " + device.Identity.Limitation);
+
+        var readiness = ServiceTransportReadinessPolicy.Evaluate(
+            [new ServiceTransportObservation(
+                device.InstanceId,
+                device.FriendlyName,
+                device.VendorId,
+                device.ProductId,
+                device.ProblemCode,
+                device.Service)]).FirstOrDefault();
+        if (readiness is not null)
+        {
+            text.AppendLine();
+            text.AppendLine("SERVICE TRANSPORT READINESS: " + readiness.State);
+            text.AppendLine("HARDWARE ID: " + readiness.HardwareId);
+            text.AppendLine("DRIVER: " + readiness.DriverStatus);
+            text.AppendLine("FLASH ALLOWED: " + readiness.FlashAllowed);
+            text.AppendLine("FINDINGS:");
+            text.AppendLine(string.Join(Environment.NewLine, readiness.Findings.Select(item => "- " + item)));
+            text.AppendLine("MISSING REQUIREMENTS:");
+            text.AppendLine(string.Join(Environment.NewLine, readiness.MissingRequirements.Select(item => "- " + item)));
+        }
+
         text.AppendLine();
-        text.AppendLine("No driver signature or firmware compatibility conclusion is made by this inventory.");
+        text.AppendLine("No driver signature, model-specific programmer/DA compatibility, or recovery permission is inferred.");
         _details.Text = text.ToString();
     }
 

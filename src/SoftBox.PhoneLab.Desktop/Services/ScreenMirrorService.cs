@@ -23,6 +23,15 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
     public string? ActiveSerial { get; private set; }
     public string? ActiveRecordingPath { get; private set; }
     public bool IsRecording => ActiveRecordingPath is not null;
+    public bool IsRunning
+    {
+        get
+        {
+            try { return _process is { HasExited: false }; }
+            catch (ObjectDisposedException) { return false; }
+            catch (InvalidOperationException) { return false; }
+        }
+    }
 
     public async Task<string> EnsureInstalledAsync(CancellationToken cancellationToken = default)
     {
@@ -99,6 +108,10 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         Stop();
 
         var exe = await EnsureInstalledAsync(cancellationToken);
+        // Installation may take time; perform a last ADB authorization check before launching scrcpy.
+        var adbState = await adb.RunForDeviceAsync(serial, ["get-state"], cancellationToken, TimeSpan.FromSeconds(6));
+        if (!MultiScreenSessionsPolicy.IsAuthorizedAdbState(adbState))
+            throw new UnauthorizedAccessException("الجهاز المحدد لم يعد مصرحًا به عبر ADB؛ تم منع تشغيل scrcpy.");
         var exeDir = Path.GetDirectoryName(exe)!;
         var adbDir = Path.GetDirectoryName(adb.Executable) ?? "";
         var start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = exeDir };

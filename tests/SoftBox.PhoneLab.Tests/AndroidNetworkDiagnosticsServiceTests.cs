@@ -80,6 +80,70 @@ public sealed class AndroidNetworkDiagnosticsServiceTests
             service.InspectAsync("R58M123456A"));
     }
 
+    [Fact]
+    public async Task ProbesDnsPropertiesAndSendsOnePingFromTheSelectedAndroidDevice()
+    {
+        var adb = new FakeAdbCommandRunner(
+            "device",
+            "192.168.1.1",
+            "8.8.8.8",
+            "PING example.com (93.184.216.34): 56 data bytes");
+        var service = new AndroidNetworkDiagnosticsService(adb);
+
+        var result = await service.ProbeHostAsync("R58M123456A", "example.com");
+
+        Assert.Equal("R58M123456A", result.DeviceSerial);
+        Assert.Equal("example.com", result.Target);
+        Assert.Equal("192.168.1.1", result.PrimaryDnsServer);
+        Assert.Equal("8.8.8.8", result.SecondaryDnsServer);
+        Assert.Contains("93.184.216.34", result.PingOutput);
+        Assert.Collection(adb.Calls,
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "get-state" }, call),
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "shell", "getprop", "net.dns1" }, call),
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "shell", "getprop", "net.dns2" }, call),
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "shell", "ping", "-c", "1", "-W", "3", "example.com" }, call));
+    }
+
+    [Fact]
+    public async Task RefusesNetworkProbeWhenDeviceIsNoLongerAuthorized()
+    {
+        var adb = new FakeAdbCommandRunner("unauthorized");
+        var service = new AndroidNetworkDiagnosticsService(adb);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.ProbeHostAsync("R58M123456A", "example.com"));
+
+        Assert.Collection(adb.Calls,
+            call => Assert.Equal(new[] { "-s", "R58M123456A", "get-state" }, call));
+    }
+
+    [Theory]
+    [InlineData("https://example.com")]
+    [InlineData("example.com/path")]
+    [InlineData("bad host")]
+    public async Task RejectsUnsafeAndroidNetworkProbeTargetBeforeAdb(string target)
+    {
+        var adb = new FakeAdbCommandRunner();
+        var service = new AndroidNetworkDiagnosticsService(adb);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ProbeHostAsync("R58M123456A", target));
+
+        Assert.Empty(adb.Calls);
+    }
+
+    [Fact]
+    public async Task RejectsInvalidSerialBeforeAndroidNetworkProbe()
+    {
+        var adb = new FakeAdbCommandRunner();
+        var service = new AndroidNetworkDiagnosticsService(adb);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.ProbeHostAsync("bad serial", "example.com"));
+
+        Assert.Empty(adb.Calls);
+    }
+
     private sealed class FakeAdbCommandRunner(params string[] outputs) : IAdbCommandRunner
     {
         private readonly Queue<string> _outputs = new(outputs);

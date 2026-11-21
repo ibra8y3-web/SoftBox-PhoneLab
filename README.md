@@ -158,7 +158,29 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - Currency codes and cultures only format values: PhoneLab does not provide exchange rates, tax compliance calculations, e-invoicing certification or statutory warranty interpretation.
 - The QR ticket contains only a repair identifier. It is not a cloud lookup link.
 - Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
-- Firmware inspection verifies file hash and basic archive structure only. SHA-256 identifies exact bytes; it does not prove the publisher, signature, region, model compatibility or safe installation. No flashing, bootloader unlocking or data wipe is implemented.
+- Firmware tools verify local SHA-256, inspect OTA ZIP metadata and Samsung TAR/TAR.MD5 structure, and compare available device/region/board/rollback evidence through a fail-closed compatibility gate. Hashes and appended TAR.MD5 checks do not authenticate the publisher; missing board, region, signature or Anti-Rollback evidence remains unknown and blocks the gate. No automatic flashing, bootloader unlocking or data wipe is implemented.
 - Generic iPhone diagnosis is not implemented.
 
 See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
+
+
+### Additional Network Diagnostics and Repair History tools
+
+- Network Diagnostics can inspect the selected authorized Android phone's reported DNS servers and send one bounded ICMP Ping request from the phone itself to a technician-selected hostname or IP. The result displays Android's raw output; a missing ICMP reply is not treated as proof of Internet failure.
+- Repair History supports text search across device, model, event, summary and evidence, filtering by event type, and exporting only matching entries to UTF-8 CSV. Exported serials remain masked and the device fingerprint is omitted.
+
+
+## Additional real gap-closure tools — November 2026
+
+- **Samsung Odin package inspection:** SoftBox reads TAR entries without extracting them, verifies appended MD5 in TAR.MD5 files, reports common partition payloads and records SHA-256 before opening the user-supplied external Odin. This is package-integrity checking, not firmware-source authentication or a flash operation.
+- **Firmware compatibility gate:** compares known manufacturer/model/product/board/region/rollback evidence and local integrity; any missing publisher signature, board or rollback evidence remains Unknown and blocks the gate.
+- **Xiaomi Fastboot diagnostics:** on a verified Xiaomi/Redmi/POCO ADB phone, SoftBox confirms the current manufacturer, requests a confirmed reboot to Bootloader, waits for the same serial in Fastboot, then reads getvar variables, lock state, Verified Boot and raw Anti-Rollback values. It never unlocks, flashes, erases or relocks.
+- **Qualcomm / MediaTek transport readiness:** Windows PnP observations for common 9008 and Preloader/BROM USB IDs now produce driver/problem and missing-requirements reports. The tools do not open EDL/BROM or load programmers/Download Agents.
+- **External measurement profiles:** technicians can import sourced JSON thresholds and compare real serial-fixture samples. No factory voltages or board limits are invented.
+- **Repair knowledge:** local DPAPI-protected technician notes now support add/edit/delete/search and are prefiltered by the selected phone from Repair Advisor. Entries require source/evidence from the technician and are not represented as OEM facts.
+- **Vendor properties:** read-only fixed Android property profiles cover Samsung, Xiaomi, Google Pixel, Motorola/Lenovo, OnePlus, OPPO, vivo, realme, Huawei/HONOR, TECNO and Infinix. These are data collection profiles, not proprietary service protocols.
+- **Signed plugin workflows:** RSA-signed packages, user-reviewed publisher fingerprints, DPAPI-protected public-key trust, package-library management and permission-gated JSON workflows using the fixed read-only ADB preset allow-list are implemented. External DLL execution remains disabled.
+- **Signed update pipeline:** the updater validates official release URLs, RSA publisher signature, per-file SHA-256, minimum supported version, stages the package, waits for SoftBox to exit, takes an install snapshot and creates an explicit rollback helper. The solution includes a release signer that builds the accepted manifest and RSA-PSS signature; tag publishing requires the `SOFTBOX_RELEASE_PRIVATE_KEY_PEM` GitHub Actions secret and refuses to publish unsigned packages.
+- **Device coverage matrix:** Device Intelligence exports the loaded device-profile catalogue to CSV, including model identifiers, SoC aliases, Board IDs, map references and missing evidence. A model name or BoardMapId is not treated as a verified PCB map.
+- **Xiaomi Fastboot ROM inspection:** Xiaomi Tools reads TAR/TGZ package metadata, product requirements, image names and flash/erase/unlock commands without extracting files or executing package scripts. It compares the package product with the last Product read from the selected phone's Fastboot state; it never flashes or unlocks.
+
