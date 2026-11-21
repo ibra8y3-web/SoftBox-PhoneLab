@@ -307,7 +307,9 @@ This checkpoint supersedes older catalog totals above. Historical sections are r
 | 10 MediaTek Tools | BROM/Preloader recovery | Planned. No signed, model-matched Download Agent or verified authorization flow is available. |
 | 11 Firmware Center | Firmware-to-device compatibility gate | Planned. Archive hash/metadata inspection do not establish publisher trust, exact board/region compatibility or anti-rollback safety. |
 | 14 Phone Link Studio | Multi-session real-device reliability | In Development. Session UI and concurrency policy exist; codec, lifecycle and multi-device behavior still require target-device testing. |
+| 15 Hardware Diagnostics | Board-level electrical tests | Unsupported. These require model-specific schematics, a validated fixture and safe measurement probes; the existing external measurement-rig protocol does not claim to provide these board-level tests. |
 | 17 Smart Repair AI | Expanded model-specific offline repair knowledge | In Development. The existing advisor is deterministic and evidence-linked; a reviewed model-specific repair knowledge base is not complete. |
+| 19 Safe Recovery | Official model-specific recovery procedures | Unsupported. Current preflight is inspection-only and blocks execution; there is no verified, signed, model-matched recovery sequence with proven compatibility and anti-rollback safety. |
 | 26 Plugin Store | Publisher signature trust roots | Planned. ZIP/manifest inspection exists, but trusted publisher root management is not implemented. |
 | 26 Plugin Store | Plugin installation, dependency lifecycle and sandbox runtime | Planned. Deliberately disabled until permission grants, dependency lifecycle and process isolation are implemented and tested. |
 | 31 Update Center | Signed self-updater | Planned. Release metadata inspection exists, but there is no trusted application-signing root, staged installer or verified rollback mechanism. |
