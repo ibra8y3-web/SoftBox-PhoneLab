@@ -538,6 +538,9 @@ public sealed class SamsungOdinAssistantWindow : Window
         }
         catch (Exception ex)
         {
+            _startOdinButton.IsEnabled = false;
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
             _status.Text = "تم منع أو تعذر بدء تفليش Odin: " + ex.Message;
             MessageBox.Show(this, ex.Message, "Samsung Odin Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
