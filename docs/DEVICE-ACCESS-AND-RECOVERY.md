@@ -72,3 +72,10 @@ The parser never stores the raw telephony dump in its report model and has no ou
 Registration state is not an unlock result. A device can be registered on a carrier while still being subject to SIM/network restrictions in another context, and an out-of-service state can have many causes unrelated to a network lock. The carrier remains the authority for IMEI eligibility and network unlock approval.
 
 Automated tests cover standard Android registration codes, LTE/NR technology labels, missing and conflicting fields, denied output, and the absence of subscriber identifiers from the parsed result. OEM variations and dual-SIM behavior require further physical validation.
+
+
+## Management-policy evidence inspector — 21 November 2026
+
+The Device Policy Manager result also extracts a bounded set of `ComponentInfo{package/class}` names and tokens matching Android's `no_*` user-restriction naming convention. The window labels them as components and restriction tokens *observed in the dump*. It does not assert that every displayed restriction is currently enforced for the selected user, and it never changes policy state or removes the Device Owner/Profile Owner.
+
+Only component names and bounded token strings are returned; the complete Device Policy Manager dump is not exported or persisted by this feature. Missing or permission-denied output returns empty evidence lists and remains inconclusive. Physical validation across Android and OEM versions is still required.
