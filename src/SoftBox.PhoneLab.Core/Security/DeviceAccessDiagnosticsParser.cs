@@ -29,8 +29,8 @@ public sealed record DeviceAccessDiagnosticsReport(
     /// <summary>Only component names found in the public Device Policy Manager dump.</summary>
     public IReadOnlyList<string> ManagementComponents { get; init; } = Array.Empty<string>();
 
-    /// <summary>Only restriction tokens matching Android's public no_* naming convention.</summary>
-    public IReadOnlyList<string> ActiveUserRestrictions { get; init; } = Array.Empty<string>();
+    /// <summary>Restriction tokens observed in the dump; presence alone does not attest that a restriction is currently enforced.</summary>
+    public IReadOnlyList<string> ObservedRestrictionTokens { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
@@ -104,7 +104,7 @@ public static class DeviceAccessDiagnosticsParser
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .Take(20)
                     .ToArray(),
-                ActiveUserRestrictions = UserRestrictionPattern.Matches(policy)
+                ObservedRestrictionTokens = UserRestrictionPattern.Matches(policy)
                     .Select(match => match.Value.ToLowerInvariant())
                     .Distinct(StringComparer.Ordinal)
                     .Take(60)
