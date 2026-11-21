@@ -89,6 +89,7 @@ public sealed class SamsungOdinAutomationPolicyTests
             true,
             true)
         {
-            StartButtonSupportsInvokePattern = true
+            StartButtonSupportsInvokePattern = true,
+            OperatorConfirmedComPortMatchesSelectedDevice = true
         };
 }
