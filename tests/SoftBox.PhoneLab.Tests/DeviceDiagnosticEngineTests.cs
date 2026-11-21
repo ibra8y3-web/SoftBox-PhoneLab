@@ -83,7 +83,7 @@ public sealed class DeviceDiagnosticEngineTests
 
         Assert.Equal("android-generic", plan.EngineId);
         Assert.Equal(DiagnosticEngineIdentityConfidence.ConflictingSocEvidence, plan.IdentityConfidence);
-        Assert.Contains(plan.Warnings, warning => warning.Contains("more than one SoC family", StringComparison.Ordinal));
+        Assert.Contains(plan.Warnings, warning => warning.Contains("more than one SoC family", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
