@@ -174,7 +174,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             }
             var raw = await _fastboot.ReadAllVariablesAsync(device.Serial, token);
             var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
-                _manufacturer, _serial, device, FastbootVariableParser.Parse(raw));
+                _manufacturer, _serial, device.Serial, device.Details, FastbootVariableParser.Parse(raw));
             _details.Text = FormatReport(report, raw);
             return "اكتملت قراءة متغيرات Fastboot للجهاز المحدد.";
         });
