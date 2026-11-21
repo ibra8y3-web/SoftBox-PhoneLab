@@ -942,6 +942,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenWorkshopBackup":
                 OpenWorkshopAtTab(4);
                 break;
+            case "OpenWorkshopBackupScheduler":
+                new WorkshopBackupSchedulerWindow { Owner = this }.Show();
+                break;
             case "OpenWorkshopInventory":
                 OpenWorkshopAtTab(2);
                 break;
