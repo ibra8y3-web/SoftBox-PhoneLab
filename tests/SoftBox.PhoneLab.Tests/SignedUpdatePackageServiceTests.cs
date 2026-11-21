@@ -24,7 +24,8 @@ public sealed class SignedUpdatePackageServiceTests
             var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
             await trust.TrustPublicKeyAsync("SoftBox Release Publisher", rsa.ExportSubjectPublicKeyInfoPem());
             var bytes = await File.ReadAllBytesAsync(package);
-            using var client = new HttpClient(new BytesHandler(bytes));
+            using var client = new HttpClient(new BytesHandler(bytes,
+                "https://release-assets.githubusercontent.com/github-production-release-asset/test"));
             var service = new SignedUpdatePackageService(client, trust, Path.Combine(root, "updates"));
             var asset = new ReleaseAssetInfo("SoftBox-Windows-x64.zip", bytes.Length,
                 "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
@@ -55,6 +56,30 @@ public sealed class SignedUpdatePackageServiceTests
                 "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
 
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.DownloadAndStageAsync(asset, "1.2.3"));
+            Assert.False(Directory.Exists(Path.Combine(root, "updates", "Staged")));
+        }
+        finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task RejectsUpdateRedirectedToUntrustedHost()
+    {
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "update.zip");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            await CreateSignedPackageAsync(package, rsa, "1.2.3");
+            var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
+            await trust.TrustPublicKeyAsync("SoftBox Release Publisher", rsa.ExportSubjectPublicKeyInfoPem());
+            var bytes = await File.ReadAllBytesAsync(package);
+            using var client = new HttpClient(new BytesHandler(bytes, "https://evil.example/payload.zip"));
+            var service = new SignedUpdatePackageService(client, trust, Path.Combine(root, "updates"));
+            var asset = new ReleaseAssetInfo("SoftBox-Windows-x64.zip", bytes.Length,
+                "https://github.com/ibra8y3-web/SoftBox-PhoneLab/releases/download/v1.2.3/SoftBox-Windows-x64.zip");
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+                service.DownloadAndStageAsync(asset, "1.2.3", "1.0.0"));
             Assert.False(Directory.Exists(Path.Combine(root, "updates", "Staged")));
         }
         finally { Directory.Delete(root, recursive: true); }
@@ -194,12 +219,19 @@ public sealed class SignedUpdatePackageServiceTests
         return root;
     }
 
-    private sealed class BytesHandler(byte[] bytes) : HttpMessageHandler
+    private sealed class BytesHandler(
+        byte[] bytes,
+        string finalUrl = "https://release-assets.githubusercontent.com/github-production-release-asset/test")
+        : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-            => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            var finalRequest = new HttpRequestMessage(request.Method, finalUrl);
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
+                RequestMessage = finalRequest,
                 Content = new ByteArrayContent(bytes)
             });
+        }
     }
 }
