@@ -12,6 +12,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class UsbDriverSignatureVerifierWindow : Window
 {
     private readonly TextBox _path = new();
+    private readonly TextBox _catalogMemberPath = new();
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
     private readonly WindowsDriverSignatureVerificationService _service = new();
@@ -37,7 +38,7 @@ public sealed class UsbDriverSignatureVerifierWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         root.Children.Add(Text(
-            "يفحص توقيع Authenticode لدى Windows للملف المحدد فقط. اختر ملف CAT الخاص بحزمة الشركة للتحقق من توقيع الناشر، أو SYS/DLL/EXE للتحقق من توقيع مضمّن. لا يثبت SoftBox أي تعريف ولا يغير Driver Store.",
+            "يفحص توقيع Authenticode للملف المحدد. ولإثبات أن SYS أو INF عضو فعلي داخل CAT، اختر الملفين واستخدم تحقق العضوية عبر Microsoft SignTool من Windows SDK. لا يثبت SoftBox أي تعريف ولا يغير Driver Store.",
             "#B7C9DE"));
         root.Children.Add(Text("ملف التعريف أو Catalog", "#7DD3FC"));
 
@@ -53,10 +54,23 @@ public sealed class UsbDriverSignatureVerifierWindow : Window
         row.Children.Add(browse);
         root.Children.Add(row);
 
-        var verify = Button("التحقق من توقيع Windows", (_, _) => Verify());
-        verify.HorizontalAlignment = HorizontalAlignment.Left;
-        verify.Margin = new Thickness(0, 0, 0, 10);
-        root.Children.Add(verify);
+        root.Children.Add(Text("عضو الحزمة الذي تريد مطابقة Hash الخاص به مع الكتالوج", "#7DD3FC"));
+        var memberRow = new DockPanel { Margin = new Thickness(0, 5, 0, 10) };
+        _catalogMemberPath.IsReadOnly = true;
+        _catalogMemberPath.Padding = new Thickness(8);
+        _catalogMemberPath.Background = Brush("#0F1E32");
+        _catalogMemberPath.Foreground = Brush("#EAF3FF");
+        _catalogMemberPath.BorderBrush = Brush("#36516D");
+        memberRow.Children.Add(_catalogMemberPath);
+        var browseMember = Button("اختيار SYS/INF", (_, _) => BrowseCatalogMember());
+        DockPanel.SetDock(browseMember, Dock.Left);
+        memberRow.Children.Add(browseMember);
+        root.Children.Add(memberRow);
+
+        var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
+        actions.Children.Add(Button("فحص توقيع الملف", (_, _) => Verify()));
+        actions.Children.Add(Button("تحقق CAT + عضوية الملف", async (_, _) => await VerifyCatalogMemberAsync()));
+        root.Children.Add(actions);
 
         _status.Foreground = Brush("#9FC7E8");
         _status.TextWrapping = TextWrapping.Wrap;
@@ -90,6 +104,56 @@ public sealed class UsbDriverSignatureVerifierWindow : Window
             _path.Text = dialog.FileName;
             _report.Clear();
             _status.Text = "تم اختيار الملف. لم يبدأ التحقق بعد.";
+        }
+    }
+
+    private void BrowseCatalogMember()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار ملف من حزمة التعريف لمطابقته مع CAT",
+            Filter = "Driver package members (*.sys;*.inf;*.dll;*.exe)|*.sys;*.inf;*.dll;*.exe|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) == true)
+        {
+            _catalogMemberPath.Text = dialog.FileName;
+            _report.Clear();
+            _status.Text = "تم اختيار عضو الحزمة. اختر أيضًا ملف CAT ثم شغّل تحقق العضوية.";
+        }
+    }
+
+    private async Task VerifyCatalogMemberAsync()
+    {
+        if (!Path.GetExtension(_path.Text).Equals(".cat", StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(_catalogMemberPath.Text))
+        {
+            _status.Text = "اختر ملف CAT في الحقل الأول وملف SYS/INF/DLL/EXE من الحزمة في الحقل الثاني.";
+            _status.Foreground = Brush("#FFB4A6");
+            return;
+        }
+
+        try
+        {
+            _status.Text = "جارٍ تشغيل Microsoft SignTool للتحقق من توقيع CAT وعضوية الملف...";
+            _status.Foreground = Brush("#9FC7E8");
+            var result = await _service.VerifyCatalogMembershipAsync(_path.Text, _catalogMemberPath.Text);
+            _status.Text = result.StatusMessage;
+            _status.Foreground = Brush(result.IsVerified ? "#7DDBAA" : "#FFB4A6");
+            _report.Text =
+                "Catalog: " + result.CatalogPath + Environment.NewLine +
+                "Member file: " + result.MemberPath + Environment.NewLine +
+                "Membership verified: " + result.IsVerified + Environment.NewLine +
+                "SignTool: " + (string.IsNullOrWhiteSpace(result.ToolPath) ? "غير متاح" : result.ToolPath) + Environment.NewLine +
+                "Exit code: " + (result.ExitCode?.ToString() ?? "غير متاح") + Environment.NewLine +
+                Environment.NewLine + "STDOUT:" + Environment.NewLine + result.StandardOutput +
+                Environment.NewLine + "STDERR:" + Environment.NewLine + result.StandardError;
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر التحقق من عضوية ملف التعريف: " + ex.Message;
+            _status.Foreground = Brush("#FFB4A6");
+            _report.Clear();
         }
     }
 

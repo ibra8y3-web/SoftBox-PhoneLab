@@ -1,7 +1,9 @@
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 
@@ -18,6 +20,16 @@ public sealed record WindowsDriverSignatureReport(
     DateTimeOffset? CertificateNotBefore,
     DateTimeOffset? CertificateNotAfter,
     string Limitation);
+
+public sealed record DriverCatalogMembershipReport(
+    string CatalogPath,
+    string MemberPath,
+    bool IsVerified,
+    int? ExitCode,
+    string ToolPath,
+    string StandardOutput,
+    string StandardError,
+    string StatusMessage);
 
 /// <summary>
 /// Verifies Windows Authenticode signatures with WinVerifyTrust. A selected CAT verifies
@@ -96,6 +108,178 @@ public sealed class WindowsDriverSignatureVerificationService
             notAfter,
             limitation);
     }
+
+    public static bool IsSupportedCatalogMemberExtension(string? path)
+    {
+        var extension = Path.GetExtension(path ?? string.Empty);
+        return extension.Equals(".sys", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".exe", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".inf", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".cat", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Verifies both the CAT publisher signature and the selected package member's hash
+    /// against the catalog using Microsoft's SignTool policy-aware catalog verification.
+    /// Fails closed when the Windows SDK SignTool is unavailable.
+    /// </summary>
+    public async Task<DriverCatalogMembershipReport> VerifyCatalogMembershipAsync(
+        string catalogPath,
+        string memberPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(catalogPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(memberPath);
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Driver catalog membership verification requires Windows.");
+
+        var catalog = Path.GetFullPath(catalogPath);
+        var member = Path.GetFullPath(memberPath);
+        if (!Path.GetExtension(catalog).Equals(".cat", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("The catalog file must have a .cat extension.", nameof(catalogPath));
+        if (!IsSupportedCatalogMemberExtension(member))
+            throw new ArgumentException("The selected package member must be SYS, DLL, EXE, INF or CAT.", nameof(memberPath));
+        if (!File.Exists(catalog))
+            throw new FileNotFoundException("The selected catalog file was not found.", catalog);
+        if (!File.Exists(member))
+            throw new FileNotFoundException("The selected driver package member was not found.", member);
+
+        var signTool = FindWindowsSdkSignTool();
+        if (signTool is null)
+        {
+            return new DriverCatalogMembershipReport(
+                catalog, member, false, null, string.Empty, string.Empty, string.Empty,
+                "لم يتم العثور على signtool.exe موثوق من Windows SDK. لم يتم اعتماد عضوية الملف داخل CAT؛ ثبّت Windows SDK أو استخدم جهاز فحص مجهزًا به.");
+        }
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = signTool,
+            WorkingDirectory = Path.GetDirectoryName(catalog) ?? Environment.CurrentDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        foreach (var argument in BuildCatalogMembershipArguments(catalog, member))
+            startInfo.ArgumentList.Add(argument);
+
+        using var process = new Process { StartInfo = startInfo };
+        if (!process.Start())
+            throw new InvalidOperationException("تعذر تشغيل Microsoft SignTool.");
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(30));
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch (InvalidOperationException) { }
+            if (cancellationToken.IsCancellationRequested)
+                throw;
+            return new DriverCatalogMembershipReport(
+                catalog, member, false, null, signTool,
+                Limit(await outputTask), Limit(await errorTask),
+                "انتهت مهلة تحقق Windows SignTool بعد 30 ثانية. لم يتم اعتماد توقيع التعريف.");
+        }
+
+        var standardOutput = Limit(await outputTask);
+        var standardError = Limit(await errorTask);
+        var success = process.ExitCode == 0;
+        return new DriverCatalogMembershipReport(
+            catalog,
+            member,
+            success,
+            process.ExitCode,
+            signTool,
+            standardOutput,
+            standardError,
+            success
+                ? "قبل Microsoft SignTool توقيع الكتالوج وتطابق الملف المحدد مع أحد أعضائه وفق سياسة PnP."
+                : "رفض Microsoft SignTool التحقق من توقيع CAT أو عضوية الملف. لا تستخدم هذه الحزمة كتعريف موثوق.");
+    }
+
+    public static IReadOnlyList<string> BuildCatalogMembershipArguments(string catalogPath, string memberPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(catalogPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(memberPath);
+        return
+        [
+            "verify",
+            "/v",
+            "/pa",
+            "/c",
+            Path.GetFullPath(catalogPath),
+            Path.GetFullPath(memberPath)
+        ];
+    }
+
+    private static string? FindWindowsSdkSignTool()
+    {
+        if (!OperatingSystem.IsWindows())
+            return null;
+
+        var roots = new[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10", "bin"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Windows Kits", "10", "bin")
+        }.Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var root in roots)
+        {
+            if (!Directory.Exists(root))
+                continue;
+            string[] versions;
+            try
+            {
+                versions = Directory.GetDirectories(root)
+                    .OrderByDescending(path =>
+                    {
+                        var name = Path.GetFileName(path);
+                        return Version.TryParse(name, out var version) ? version : new Version(0, 0);
+                    })
+                    .ToArray();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                continue;
+            }
+
+            foreach (var version in versions)
+            foreach (var architecture in new[] { "x64", "x86", "arm64" })
+            {
+                var candidate = Path.Combine(version, architecture, "signtool.exe");
+                if (!File.Exists(candidate))
+                    continue;
+                try
+                {
+                    if (VerifyWithWinTrust(candidate) == 0)
+                        return candidate;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
+                                           System.ComponentModel.Win32Exception or
+                                           System.Runtime.InteropServices.COMException)
+                {
+                    // A missing or untrusted SDK utility must never be executed.
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string Limit(string value)
+        => string.IsNullOrEmpty(value) ? string.Empty : value.Length <= 12000 ? value : value[..12000];
 
     private static int VerifyWithWinTrust(string filePath)
     {
