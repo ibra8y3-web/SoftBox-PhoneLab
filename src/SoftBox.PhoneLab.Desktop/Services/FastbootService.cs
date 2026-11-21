@@ -13,8 +13,9 @@ public sealed record FastbootDevice(string Serial, string Details)
 }
 
 /// <summary>
-/// Runs a restricted set of Fastboot operations. The only write path is a single, allow-listed
-/// IMG partition flash to an exact serial; unlocking, erase, format, boot and arbitrary commands remain unavailable.
+/// Runs serial-pinned Fastboot operations. The legacy single-image method retains its fixed allow-list;
+/// the Xiaomi full-ROM path accepts only commands produced by the guarded ROM plan parser, including
+/// separately confirmed userdata erase/format/wipe operations. Unlock, relock, boot and arbitrary commands remain unavailable.
 /// </summary>
 public sealed class FastbootService
 {
