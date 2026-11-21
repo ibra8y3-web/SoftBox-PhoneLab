@@ -271,7 +271,7 @@ public sealed class QualcommRecoveryWindow : Window
             EnsureRunner();
             if (_package is null) throw new InvalidOperationException("Inspect the OEM package first.");
             var result = await _runner!.DryRunAsync(_package, Required(_serial.Text, "EDL serial"), SelectedStorageType());
-            _log.Text = Format("QDL DRY-RUN", result) + Environment.NewLine + PackageReport(package);
+            _log.Text = Format("QDL DRY-RUN", result) + Environment.NewLine + PackageReport(_package!);
             if (!result.Success) throw new InvalidOperationException("Dry-run returned a non-zero exit code. Flash stays blocked.");
             _dryRunResult = result;
             _flash.IsEnabled = true;
@@ -326,7 +326,7 @@ public sealed class QualcommRecoveryWindow : Window
             if (!chipInfo.Success || !chipInfo.CombinedOutput.Contains(expectedChip, StringComparison.OrdinalIgnoreCase))
                 throw new UnauthorizedAccessException("Live Chip Info no longer matches the expected OEM chip identifier. Write was blocked.");
             var result = await runner.FlashAsync(package, serial, storageType);
-            _log.Text = Format("QDL FLASH", result) + Environment.NewLine + PackageReport(_package);
+            _log.Text = Format("QDL FLASH", result) + Environment.NewLine + PackageReport(package);
             if (!result.Success) throw new InvalidOperationException("QDL flash failed. Preserve the full log and consult OEM instructions.");
             return "QDL reported exit code 0. Verify device boot and hardware functions before further service.";
         });
