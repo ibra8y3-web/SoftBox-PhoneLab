@@ -185,11 +185,12 @@ public sealed class SignedUpdatePackageServiceTests
             await File.WriteAllTextAsync(executable, "previous-version");
 
             var stagedExecutable = Path.Combine(stage, "SoftBox.exe");
-            var newDependency = Path.Combine(stage, "NewDependency.dll");
+            var stagedDependency = Path.Combine(stage, "NewDependency.dll");
+            var installedDependency = Path.Combine(install, "NewDependency.dll");
             await File.WriteAllTextAsync(stagedExecutable, "new-version");
-            await File.WriteAllTextAsync(newDependency, "new-dependency");
+            await File.WriteAllTextAsync(stagedDependency, "new-dependency");
             var executableBytes = await File.ReadAllBytesAsync(stagedExecutable);
-            var dependencyBytes = await File.ReadAllBytesAsync(newDependency);
+            var dependencyBytes = await File.ReadAllBytesAsync(stagedDependency);
             var service = new SignedUpdatePackageService(rootDirectory: Path.Combine(root, "updates"));
             var stageInfo = new SignedUpdateStageInfo(
                 "1.2.3", stage, "SoftBox.exe", "SoftBox Release Publisher",
@@ -205,16 +206,18 @@ public sealed class SignedUpdatePackageServiceTests
                 service.BuildInstallScript(stageInfo, install, executable, 987654, "1.2.2"));
 
             Assert.Equal("new-version", await File.ReadAllTextAsync(executable));
-            Assert.Equal("new-dependency", await File.ReadAllTextAsync(newDependency));
+            Assert.Equal("new-dependency", await File.ReadAllTextAsync(installedDependency));
             var state = await service.ReadRollbackStateAsync();
             Assert.NotNull(state);
             Assert.Contains("NewDependency.dll", state!.InstalledFilePaths!);
+            Assert.False(File.Exists(Path.Combine(state.BackupDirectory, "NewDependency.dll")));
 
             await ExecutePowerShellHelperAsync(windowsPowerShell,
                 service.BuildRollbackScript(state, 987654));
 
             Assert.Equal("previous-version", await File.ReadAllTextAsync(executable));
-            Assert.False(File.Exists(newDependency));
+            Assert.False(File.Exists(installedDependency));
+            Assert.True(File.Exists(stagedDependency), "Rollback must preserve the source package in the staging directory.");
             Assert.Null(await service.ReadRollbackStateAsync());
         }
         finally { Directory.Delete(root, recursive: true); }
