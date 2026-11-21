@@ -86,7 +86,7 @@ public sealed class MediaTekRecoveryWindow : Window
             content.Children.Add(check);
         }
         content.Children.Add(new TextBlock { Text = "اكتب OPEN SPFLASH بعد نجاح الفحص لفتح الأداة الخارجية.", Foreground = Brush("#F0C9A5"), Margin = new Thickness(5, 7, 5, 3) });
-        Style(_typed);
+        ApplyInputStyle(_typed);
         content.Children.Add(_typed);
 
         var actions = new WrapPanel();
@@ -128,13 +128,13 @@ public sealed class MediaTekRecoveryWindow : Window
         var button = ButtonControl(buttonText, "#243B56", handler);
         DockPanel.SetDock(button, Dock.Left);
         row.Children.Add(button);
-        Style(box);
+        ApplyInputStyle(box);
         row.Children.Add(box);
         panel.Children.Add(row);
         return panel;
     }
 
-    private static void Style(TextBox box)
+    private static void ApplyInputStyle(TextBox box)
     {
         box.Margin = new Thickness(4);
         box.Padding = new Thickness(7);

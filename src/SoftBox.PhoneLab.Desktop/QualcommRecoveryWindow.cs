@@ -109,7 +109,7 @@ public sealed class QualcommRecoveryWindow : Window
         }
         content.Children.Add(new TextBlock { Text = "Type FLASH followed by the exact QDL serial before writing.", Foreground = Brush("#F0C9A5"), Margin = new Thickness(5, 8, 5, 3) });
         content.Children.Add(_typed);
-        Style(_typed);
+        ApplyInputStyle(_typed);
         var actions = new WrapPanel();
         actions.Children.Add(_list); actions.Children.Add(_chipInfo); actions.Children.Add(_inspect); actions.Children.Add(_dryRun); actions.Children.Add(_flash);
         actions.Children.Add(ButtonControl("مصادر Qualcomm الرسمية", "#243B56",
@@ -151,13 +151,13 @@ public sealed class QualcommRecoveryWindow : Window
             DockPanel.SetDock(button, Dock.Left);
             row.Children.Add(button);
         }
-        Style(box);
+        ApplyInputStyle(box);
         row.Children.Add(box);
         panel.Children.Add(row);
         return panel;
     }
 
-    private static void Style(TextBox box)
+    private static void ApplyInputStyle(TextBox box)
     {
         box.Margin = new Thickness(4);
         box.Padding = new Thickness(7);
@@ -259,7 +259,7 @@ public sealed class QualcommRecoveryWindow : Window
             _flash.IsEnabled = false;
             _dryRun.IsEnabled = !string.IsNullOrWhiteSpace(_chip.Text) &&
                 _chipInfoText.Contains(_chip.Text.Trim(), StringComparison.OrdinalIgnoreCase);
-            _log.Text = PackageReport(package);
+            _log.Text = PackageReport(_package!);
             return "Package structure, referenced images and SHA-256 values were inspected.";
         });
     }
