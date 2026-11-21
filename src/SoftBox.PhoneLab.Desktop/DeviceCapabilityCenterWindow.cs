@@ -342,7 +342,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
         text.AppendLine("IDENTITY CONFIDENCE: " + enginePlan.IdentityConfidence);
         text.AppendLine("ADB TIMEOUT SECONDS: " + enginePlan.Settings.AdbCommandTimeoutSeconds);
         text.AppendLine("AGENT COMMAND REQUEST TIMEOUT SECONDS: " + enginePlan.Settings.AgentCommandTimeoutSeconds);
-        text.AppendLine("MAX REPORT OUTPUT CHARACTERS: " + enginePlan.Settings.MaximumReportOutputCharacters);
+        text.AppendLine("MAX COMBINED ADB OUTPUT CHARACTERS: " + enginePlan.Settings.MaximumReportOutputCharacters);
         text.AppendLine("BATTERY REVIEW / CRITICAL ALERT C: " +
             enginePlan.Settings.BatteryReviewTemperatureCelsius.ToString("0.0") + " / " +
             enginePlan.Settings.BatteryCriticalTemperatureCelsius.ToString("0.0"));
@@ -357,7 +357,8 @@ public sealed class DeviceCapabilityCenterWindow : Window
             text.AppendLine("  REQUIRED: " + procedure.RequiredAction);
         }
         text.AppendLine("PLAN ONLY: This engine reports strategy and prerequisites; it does not itself execute the listed procedures.");
-        text.AppendLine("ADB timeout and output size limits are applied to the One-Click read-only diagnostic runner; Agent timeout applies to the local command request, not the duration of the test itself.");
+        text.AppendLine("ADB timeout and aggregate output-character budget are applied to the One-Click read-only diagnostic runner; Agent timeout applies to the local command request, not the duration of the test itself.");
+        text.AppendLine("In One-Click reports, ADB authorization is inferred only after at least one read-only command succeeds; failures do not get promoted to an authorized state.");
         text.AppendLine("Battery temperature values above are local review thresholds, not OEM-certified safety limits.");
         text.AppendLine();
         text.AppendLine("ENGINE SAFETY RULES");

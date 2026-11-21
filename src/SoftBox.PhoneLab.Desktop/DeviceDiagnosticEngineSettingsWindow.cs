@@ -67,7 +67,7 @@ public sealed class DeviceDiagnosticEngineSettingsWindow : Window
 
         AddField(fields, 0, "مهلة أمر ADB (ثانية) — من 5 إلى 90", _adbTimeout);
         AddField(fields, 1, "مهلة طلب أمر Agent (ثانية) — من 10 إلى 180", _agentTimeout);
-        AddField(fields, 2, "الحد الأقصى لأحرف المخرجات المحفوظة — من 16,384 إلى 1,048,576", _maxOutput);
+        AddField(fields, 2, "الحد الأقصى الإجمالي لمخرجات أوامر ADB المحفوظة في التقرير (حرف) — من 16,384 إلى 1,048,576", _maxOutput);
         AddField(fields, 3, "حد تنبيه مراجعة حرارة البطارية (°C)", _reviewTemperature);
         AddField(fields, 4, "حد التنبيه الحراري المرتفع (°C)", _criticalTemperature);
         root.Children.Add(fields);

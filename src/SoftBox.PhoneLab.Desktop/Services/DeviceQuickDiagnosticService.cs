@@ -67,6 +67,8 @@ public sealed class DeviceQuickDiagnosticService(
         var settingsLoad = await _settingsStore.LoadAsync(cancellationToken);
         var commandTimeout = TimeSpan.FromSeconds(settingsLoad.Settings.AdbCommandTimeoutSeconds);
         var maximumReportOutputCharacters = settingsLoad.Settings.MaximumReportOutputCharacters;
+        var remainingOutputCharacters = maximumReportOutputCharacters;
+        var outputBudgetExhausted = false;
         var results = new List<QuickDiagnosticStep>();
         for (var index = 0; index < Steps.Length; index++)
         {
@@ -78,22 +80,36 @@ public sealed class DeviceQuickDiagnosticService(
             try
             {
                 var output = await android.RunReadOnlyPresetAsync(serial, id, cancellationToken, commandTimeout);
-                if (output.Length > maximumReportOutputCharacters)
-                    output = output[..maximumReportOutputCharacters] + Environment.NewLine +
-                        $"[Output truncated at configured limit of {maximumReportOutputCharacters} characters.]";
+                if (output.Length > remainingOutputCharacters)
+                {
+                    const string truncationNote = Environment.NewLine +
+                        "[Combined ADB output budget reached; remaining command output omitted.]";
+                    var noteLength = Math.Min(truncationNote.Length, remainingOutputCharacters);
+                    var contentBudget = remainingOutputCharacters - noteLength;
+                    output = output[..Math.Min(output.Length, contentBudget)] +
+                        truncationNote[..noteLength];
+                    remainingOutputCharacters = 0;
+                    outputBudgetExhausted = true;
+                }
+                else
+                {
+                    remainingOutputCharacters -= output.Length;
+                }
                 results.Add(new QuickDiagnosticStep(
                     index + 1, id, label, true, stepStarted, DateTimeOffset.UtcNow, output, null));
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
+                var safeError = ex.Message.Length > 2_048 ? ex.Message[..2_048] : ex.Message;
                 results.Add(new QuickDiagnosticStep(
-                    index + 1, id, label, false, stepStarted, DateTimeOffset.UtcNow, "", ex.Message));
+                    index + 1, id, label, false, stepStarted, DateTimeOffset.UtcNow, "", safeError));
             }
         }
 
+        var adbAuthorized = results.Any(step => step.Success);
         var immutableComponents = componentDiagnostics.ToArray();
-        var advice = DeviceRepairAdvisor.Analyze(device, agent, immutableComponents, adbAuthorized: true);
+        var advice = DeviceRepairAdvisor.Analyze(device, agent, immutableComponents, adbAuthorized);
         var limitations = new List<string>
         {
             "هذا الفحص يجمع قراءات ADB غير المدمرة فقط؛ لا ينفذ اختبارات شاشة أو صوت أو كاميرا أو حساسات.",
@@ -101,6 +117,10 @@ public sealed class DeviceQuickDiagnosticService(
             "فشل أمر ADB قد ينتج عن الصلاحيات أو إصدار Android أو قيود الشركة ولا يثبت عطلًا ماديًا.",
             "معرف الجهاز في التقرير بصمة SHA-256 ورقم مقنّع؛ لم يتم تضمين Serial الخام."
         };
+        if (!adbAuthorized)
+            limitations.Add("لم ينجح أي أمر ADB للقراءة؛ تم اعتبار ADB غير مصرح/غير متاح وعدم إظهار جاهزية إجراءات ADB أو Agent.");
+        if (outputBudgetExhausted)
+            limitations.Add($"تم تطبيق حد إجمالي قدره {maximumReportOutputCharacters:N0} حرف لمخرجات أوامر ADB المحفوظة؛ تم حذف المخرجات المتبقية بعد الوصول للحد.");
         if (agent is null)
             limitations.Add("لم يتم إرفاق نتائج Agent؛ لا توجد نتائج اختبارات عتاد تلقائية في هذا التقرير.");
 
@@ -120,7 +140,7 @@ public sealed class DeviceQuickDiagnosticService(
             }
         }
         var enginePlan = DeviceDiagnosticEngine.Build(new DeviceDiagnosticEngineContext(
-            device, matchedProfile, AdbAuthorized: true, AgentConnected: agent is not null,
+            device, matchedProfile, AdbAuthorized: adbAuthorized, AgentConnected: agent is not null && adbAuthorized,
             FastbootDetected: false, Settings: settingsLoad.Settings, AuthorizedSerial: serial));
         limitations.Add("محرك المعالج يختار خطة تشخيص حسب SoC المبلغ عنه أو ملف موثوق؛ لا يرسل بروتوكولات OEM خاصة ولا ينفذ تفليشًا.");
         limitations.Add("حدود حرارة البطارية في هذا المحرك هي تنبيهات مراجعة محلية قابلة للتعديل وليست حدود أمان OEM.");
