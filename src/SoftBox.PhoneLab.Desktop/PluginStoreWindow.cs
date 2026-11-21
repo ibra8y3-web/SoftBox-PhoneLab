@@ -1,5 +1,7 @@
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Plugins;
+using SoftBox.PhoneLab.Core.Workflow;
+using SoftBox.PhoneLab.Desktop.Services;
 using System.IO;
 using System.Collections.ObjectModel;
 using System.Text;
@@ -15,7 +17,11 @@ namespace SoftBox.PhoneLab.Desktop;
 /// </summary>
 public sealed class PluginStoreWindow : Window
 {
-    private readonly PluginPackageInspector _inspector = new();
+    private readonly PluginPublisherTrustStore _trustStore = new();
+    private readonly PluginPackageInspector _inspector;
+    private readonly PluginWorkflowRunner _workflowRunner = new();
+    private readonly AdbClient? _adb;
+    private readonly string? _selectedSerial;
     private readonly TextBox _path = new();
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
@@ -29,11 +35,19 @@ public sealed class PluginStoreWindow : Window
     private readonly Button _saveButton;
     private readonly Button _copyToLibraryButton;
     private readonly Button _refreshLibraryButton;
+    private readonly Button _trustPublisherButton;
+    private readonly Button _runWorkflowButton;
+    private readonly Button _removeLibraryButton;
     private PluginPackageInspection? _inspection;
 
-    public PluginStoreWindow()
+    public PluginStoreWindow(AdbClient? adb = null, string? selectedSerial = null)
     {
-        Title = "SoftBox | متجر الإضافات — فحص الحزم";
+        _adb = adb;
+        _selectedSerial = !string.IsNullOrWhiteSpace(selectedSerial) && AdbClient.IsSafeSerial(selectedSerial)
+            ? selectedSerial
+            : null;
+        _inspector = new PluginPackageInspector(_trustStore);
+        Title = "SoftBox | متجر الإضافات — فحص وتوقيع وWorkflow";
         Width = 1020;
         Height = 760;
         MinWidth = 800;
@@ -45,10 +59,15 @@ public sealed class PluginStoreWindow : Window
 
         _inspectButton = ButtonControl("فحص حزمة Plugin", "#14517A", Inspect_Click);
         _saveButton = ButtonControl("حفظ تقرير الفحص JSON", "#176044", Save_Click);
-        _copyToLibraryButton = ButtonControl("حفظ في المكتبة المحلية", "#243B56", CopyToLibrary_Click);
+        _copyToLibraryButton = ButtonControl("تثبيت الحزمة في المكتبة", "#243B56", CopyToLibrary_Click);
         _refreshLibraryButton = ButtonControl("تحديث المكتبة", "#243B56", RefreshLibrary_Click);
+        _trustPublisherButton = ButtonControl("إضافة مفتاح ناشر موثوق", "#704B20", TrustPublisher_Click);
+        _runWorkflowButton = ButtonControl("تشغيل Workflow موقّع", "#176044", RunWorkflow_Click);
+        _removeLibraryButton = ButtonControl("إلغاء تثبيت الحزمة", "#713B43", RemoveLibrary_Click);
         _saveButton.IsEnabled = false;
         _copyToLibraryButton.IsEnabled = false;
+        _runWorkflowButton.IsEnabled = false;
+        _removeLibraryButton.IsEnabled = false;
         Content = BuildContent();
         _libraryList.SelectionChanged += (_, _) => SelectLibraryItem();
         Loaded += async (_, _) => await RefreshLibraryAsync();
@@ -74,7 +93,7 @@ public sealed class PluginStoreWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "اختر ملف Plugin محليًا لقراءة Manifest وفحص الصلاحيات وبنية ZIP وحساب بصمة الحزمة. هذه النسخة لا تثبت ولا تشغّل أي DLL ولا تتحقق بعد من توقيع الناشر.",
+            Text = "استورد المفتاح العام للناشر من PEM، ثم افحص الحزمة. يستطيع SoftBox التحقق من توقيع RSA وتشغيل Workflow بيانات موقّع بقائمة أوامر القراءة المسموحة؛ لا يحمّل DLL خارجيًا أو يشغّل Shell حرًا.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -93,7 +112,7 @@ public sealed class PluginStoreWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             Child = new TextBlock
             {
-                Text = "حالة الأمان: التوقيع الرقمي غير متحقق، لذلك لا توجد أزرار تثبيت أو تشغيل. لا تعتبر SHA-256 إثباتًا لهوية المطوّر. الصلاحيات غير المعروفة أو الخطرة تُرفض.",
+                Text = "التشغيل مشروط بتوقيع صحيح من مفتاح أضفته إلى مخزن الثقة. Workflow فقط يعمل من خلال أوامر قراءة SoftBox المحددة، وبعد موافقتك على الصلاحيات. لا يتم تحميل DLL خارجي.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -120,6 +139,7 @@ public sealed class PluginStoreWindow : Window
         var libraryActions = new WrapPanel { Margin = new Thickness(0, 5, 0, 0) };
         libraryActions.Children.Add(_refreshLibraryButton);
         libraryActions.Children.Add(_copyToLibraryButton);
+        libraryActions.Children.Add(_removeLibraryButton);
         library.Children.Add(libraryActions);
         DockPanel.SetDock(library, Dock.Top);
         root.Children.Add(library);
@@ -144,6 +164,8 @@ public sealed class PluginStoreWindow : Window
 
         var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         actions.Children.Add(_inspectButton);
+        actions.Children.Add(_trustPublisherButton);
+        actions.Children.Add(_runWorkflowButton);
         actions.Children.Add(_saveButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -184,7 +206,8 @@ public sealed class PluginStoreWindow : Window
             _inspection = null;
             _saveButton.IsEnabled = false;
             _copyToLibraryButton.IsEnabled = false;
-            _report.Text = "اضغط فحص حزمة Plugin لقراءة Manifest والصلاحيات.";
+            _runWorkflowButton.IsEnabled = false;
+            _report.Text = "اضغط فحص حزمة Plugin لقراءة Manifest والصلاحيات والتوقيع.";
         }
     }
 
@@ -204,13 +227,19 @@ public sealed class PluginStoreWindow : Window
             _inspection = await _inspector.InspectAsync(_path.Text);
             _report.Text = FormatReport(_inspection);
             _saveButton.IsEnabled = true;
-            _copyToLibraryButton.IsEnabled =
-                _inspection.PackageErrors.Count == 0 &&
-                _inspection.ManifestValidation.IsValid &&
-                _inspection.Manifest is not null;
-            _status.Text = _copyToLibraryButton.IsEnabled
-                ? "اجتازت الحزمة الفحص البنيوي. يمكنك حفظ نسخة خاملة في المكتبة المحلية؛ لن يتم تثبيتها أو تشغيلها."
-                : "فشل الفحص البنيوي أو تحقق Manifest؛ لا يمكن حفظ الحزمة في المكتبة.";
+            var accepted = _inspection.PackageErrors.Count == 0 &&
+                           _inspection.ManifestValidation.IsValid &&
+                           _inspection.Manifest is not null &&
+                           _inspection.PublisherSignatureVerified;
+            _copyToLibraryButton.IsEnabled = accepted;
+            _runWorkflowButton.IsEnabled = accepted &&
+                _inspection.Manifest?.ExecutionMode == "read-only-workflow" &&
+                _adb is not null && _selectedSerial is not null;
+            _status.Text = accepted
+                ? (_runWorkflowButton.IsEnabled
+                    ? "التوقيع موثوق. يمكن تثبيت الحزمة وتشغيل Workflow القراءة بعد منح الصلاحيات."
+                    : "التوقيع موثوق. يمكن تثبيت الحزمة؛ تشغيل Workflow يحتاج هاتف ADB مصرحًا به.")
+                : "لا يمكن التثبيت أو التشغيل: يلزم Manifest صالح وتوقيع ناشر موثوق وصحيح.";
         }
         catch (Exception ex)
         {
@@ -232,7 +261,9 @@ public sealed class PluginStoreWindow : Window
         _inspection = null;
         _saveButton.IsEnabled = false;
         _copyToLibraryButton.IsEnabled = false;
-        _report.Text = "اختر فحص حزمة Plugin لقراءة Manifest والصلاحيات والبصمة.";
+        _runWorkflowButton.IsEnabled = false;
+        _removeLibraryButton.IsEnabled = true;
+        _report.Text = "اختر فحص حزمة Plugin لقراءة Manifest والصلاحيات والتوقيع.";
     }
 
     private async void RefreshLibrary_Click(object sender, RoutedEventArgs e)
@@ -267,6 +298,7 @@ public sealed class PluginStoreWindow : Window
         if (_inspection is null ||
             _inspection.PackageErrors.Count != 0 ||
             !_inspection.ManifestValidation.IsValid ||
+            !_inspection.PublisherSignatureVerified ||
             _inspection.Manifest is null)
         {
             _status.Text = "افحص حزمة صالحة بنيويًا أولًا.";
@@ -305,6 +337,158 @@ public sealed class PluginStoreWindow : Window
         }
     }
 
+    private async void TrustPublisher_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار مفتاح الناشر العام RSA بصيغة PEM",
+            Filter = "RSA public key (*.pem;*.pub)|*.pem;*.pub|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            var pem = await File.ReadAllTextAsync(dialog.FileName);
+            if (pem.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("استورد المفتاح العام فقط. لا تختَر ملفًا يحتوي المفتاح الخاص.");
+            var publisherName = Path.GetFileNameWithoutExtension(dialog.FileName);
+            var trusted = await _trustStore.TrustPublicKeyAsync(publisherName, pem);
+            _status.Text = $"تم حفظ مفتاح الناشر العام داخل مخزن DPAPI لهذا المستخدم. Key ID: {trusted.KeyId}";
+            if (!string.IsNullOrWhiteSpace(_path.Text) && File.Exists(_path.Text))
+                await InspectCurrentPackageAsync();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر إضافة مفتاح الناشر: " + ex.Message;
+        }
+    }
+
+    private async Task InspectCurrentPackageAsync()
+    {
+        _inspection = await _inspector.InspectAsync(_path.Text);
+        _report.Text = FormatReport(_inspection);
+        var accepted = _inspection.PackageErrors.Count == 0 &&
+                       _inspection.ManifestValidation.IsValid &&
+                       _inspection.Manifest is not null &&
+                       _inspection.PublisherSignatureVerified;
+        _copyToLibraryButton.IsEnabled = accepted;
+        _runWorkflowButton.IsEnabled = accepted &&
+            _inspection.Manifest?.ExecutionMode == "read-only-workflow" &&
+            _adb is not null && _selectedSerial is not null;
+    }
+
+    private async void RunWorkflow_Click(object sender, RoutedEventArgs e)
+    {
+        if (_adb is null || _selectedSerial is null || _inspection?.Manifest is null ||
+            _inspection.Manifest.ExecutionMode != "read-only-workflow")
+        {
+            _status.Text = "اختر هاتف ADB مصرحًا به وحزمة Workflow موقعة أولًا.";
+            return;
+        }
+
+        try
+        {
+            await InspectCurrentPackageAsync();
+            if (_inspection is null || _inspection.PackageErrors.Count > 0 ||
+                !_inspection.PublisherSignatureVerified || _inspection.Manifest is null)
+                throw new InvalidDataException("فشل التحقق النهائي من توقيع أو محتوى الإضافة.");
+
+            var manifest = _inspection.Manifest;
+            var permissions = manifest.RequestedPermissions;
+            var message = "ستعمل الإضافة كـWorkflow قراءة فقط على الهاتف المحدد. الصلاحيات المطلوبة:" +
+                Environment.NewLine + string.Join(Environment.NewLine, permissions.Select(permission => "• " + permission)) +
+                Environment.NewLine + "لن يتم تشغيل DLL أو Shell حر أو تفليش أو حذف بيانات. هل تمنح هذه الصلاحيات لهذه الجلسة؟";
+            if (MessageBox.Show(this, message, "منح صلاحيات إضافة موقعة",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                _status.Text = "لم تمنح صلاحيات الإضافة؛ لم يبدأ التشغيل.";
+                return;
+            }
+
+            _runWorkflowButton.IsEnabled = false;
+            _status.Text = "جارٍ إعادة التحقق من تصريح الهاتف ثم تشغيل خطوات القراءة المسموحة...";
+            var state = await _adb.RunAsync(
+                ["-s", _selectedSerial, "get-state"], CancellationToken.None, TimeSpan.FromSeconds(12));
+            if (!string.Equals(state.Trim(), "device", StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("الهاتف لم يعد في حالة ADB device مصرح بها.");
+
+            var deviceTools = new AndroidDeviceToolsService(_adb);
+            var report = await _workflowRunner.RunAsync(
+                _path.Text,
+                manifest,
+                permissions.ToHashSet(StringComparer.Ordinal),
+                (preset, token) => deviceTools.RunReadOnlyPresetAsync(_selectedSerial, preset, token));
+
+            var output = new StringBuilder();
+            output.AppendLine("SIGNED PLUGIN READ-ONLY WORKFLOW");
+            output.AppendLine("PLUGIN: " + manifest.Name);
+            output.AppendLine("PUBLISHER: " + _inspection.TrustedPublisher);
+            output.AppendLine("WORKFLOW: " + report.WorkflowName);
+            output.AppendLine("STARTED UTC: " + report.StartedAtUtc.ToString("O"));
+            output.AppendLine("COMPLETED UTC: " + report.CompletedAtUtc.ToString("O"));
+            foreach (var step in report.Steps)
+            {
+                output.AppendLine();
+                output.AppendLine((step.Success ? "[SUCCESS] " : "[FAILED] ") + ReadOnlyWorkflowPolicy.GetStepLabel(step.PresetId));
+                if (!string.IsNullOrWhiteSpace(step.Error))
+                    output.AppendLine("ERROR: " + step.Error);
+                output.AppendLine(step.Output);
+            }
+            _report.Text = output.ToString();
+            _status.Text = report.Success
+                ? "انتهى Workflow القراءة. لم يتم تشغيل كود خارجي أو تغيير بيانات الهاتف."
+                : "توقفت سلسلة Workflow عند أول فشل. راجع التقرير.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تشغيل Workflow: " + ex.Message;
+            _report.Text = ex.ToString();
+        }
+        finally
+        {
+            _runWorkflowButton.IsEnabled = _inspection?.PublisherSignatureVerified == true &&
+                _inspection.Manifest?.ExecutionMode == "read-only-workflow" &&
+                _adb is not null && _selectedSerial is not null;
+        }
+    }
+
+    private async void RemoveLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_libraryList.SelectedItem is not PackageLibraryItem item)
+        {
+            _status.Text = "حدد حزمة من المكتبة لإزالتها.";
+            return;
+        }
+
+        var root = Path.GetFullPath(_libraryDirectory) + Path.DirectorySeparatorChar;
+        var fullPath = Path.GetFullPath(item.FullPath);
+        if (!fullPath.StartsWith(root, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+        {
+            _status.Text = "مسار الحزمة المحددة خارج مجلد المكتبة أو لم يعد موجودًا.";
+            return;
+        }
+        if (MessageBox.Show(this, "سيتم حذف ملف الإضافة المحدد من المكتبة المحلية. لن تتغير بيانات الهاتف.",
+                "إلغاء تثبيت الإضافة", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            File.Delete(fullPath);
+            _inspection = null;
+            _copyToLibraryButton.IsEnabled = false;
+            _runWorkflowButton.IsEnabled = false;
+            await RefreshLibraryAsync();
+            _status.Text = "تم حذف حزمة الإضافة من المكتبة المحلية.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر حذف حزمة الإضافة: " + ex.Message;
+        }
+    }
+
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (_inspection is null)
@@ -337,7 +521,10 @@ public sealed class PluginStoreWindow : Window
         text.AppendLine("SIZE: " + result.PackageSizeBytes);
         text.AppendLine("SHA-256: " + result.PackageSha256);
         text.AppendLine("MANIFEST VALID: " + result.ManifestValidation.IsValid);
+        text.AppendLine("SIGNATURE PRESENT: " + result.SignaturePresent);
         text.AppendLine("PUBLISHER SIGNATURE VERIFIED: " + result.PublisherSignatureVerified);
+        text.AppendLine("PUBLISHER KEY ID: " + (result.PublisherKeyId ?? "Not present"));
+        text.AppendLine("TRUSTED PUBLISHER: " + (result.TrustedPublisher ?? "Not trusted"));
         text.AppendLine("CODE LOADED OR EXECUTED: " + result.CodeLoadedOrExecuted);
         if (result.Manifest is { } manifest)
         {
@@ -348,7 +535,8 @@ public sealed class PluginStoreWindow : Window
             text.AppendLine("API VERSION: " + manifest.ApiVersion);
             text.AppendLine("MINIMUM SOFTBOX: " + manifest.MinimumSoftBoxVersion);
             text.AppendLine("PUBLISHER: " + manifest.Publisher);
-            text.AppendLine("ENTRY ASSEMBLY: " + manifest.EntryAssembly);
+            text.AppendLine("ENTRY POINT: " + manifest.EntryAssembly);
+            text.AppendLine("EXECUTION MODE: " + manifest.ExecutionMode);
             text.AppendLine("DESCRIPTION: " + manifest.Description);
             text.AppendLine("REQUESTED PERMISSIONS:");
             foreach (var permission in manifest.RequestedPermissions ?? Array.Empty<string>())

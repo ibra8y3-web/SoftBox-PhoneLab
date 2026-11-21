@@ -900,8 +900,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 OpenVendorDiagnostics(AndroidVendorKind.Generic, "Android Brands");
                 break;
             case "OpenPluginStore":
-                new PluginStoreWindow { Owner = this }.Show();
+            {
+                var pluginDevice = SelectedDevice;
+                var pluginSerial = pluginDevice is { IsAuthorized: true } ? pluginDevice.Serial : null;
+                new PluginStoreWindow(_adb, pluginSerial) { Owner = this }.Show();
                 break;
+            }
             case "OpenRepairAdvisor":
                 if (_snapshot is null)
                 {
