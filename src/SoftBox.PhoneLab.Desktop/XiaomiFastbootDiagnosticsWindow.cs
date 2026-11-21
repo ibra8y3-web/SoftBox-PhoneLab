@@ -1,4 +1,5 @@
 using SoftBox.PhoneLab.Core.Fastboot;
+using System.IO;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.Text;
