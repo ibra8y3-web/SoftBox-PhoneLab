@@ -223,15 +223,15 @@ public sealed class DeviceAccessRecoveryWindow : Window
             {
                 var components = string.Join(", ", report.ManagementComponents.Take(8));
                 var remaining = report.ManagementComponents.Count - Math.Min(8, report.ManagementComponents.Count);
-                _managementResult.Text += "\\nمكونات الإدارة / DPC: " + components +
+                _managementResult.Text += "\nمكونات الإدارة / DPC: " + components +
                     (remaining > 0 ? $" (+{remaining} أخرى)" : string.Empty);
             }
 
-            if (report.ActiveUserRestrictions.Count > 0)
+            if (report.ObservedRestrictionTokens.Count > 0)
             {
-                var restrictions = string.Join(", ", report.ActiveUserRestrictions.Take(12));
-                var remaining = report.ActiveUserRestrictions.Count - Math.Min(12, report.ActiveUserRestrictions.Count);
-                _managementResult.Text += "\\nقيود السياسات المرصودة: " + restrictions +
+                var restrictions = string.Join(", ", report.ObservedRestrictionTokens.Take(12));
+                var remaining = report.ObservedRestrictionTokens.Count - Math.Min(12, report.ObservedRestrictionTokens.Count);
+                _managementResult.Text += "\nرموز قيود ظهرت في التقرير: " + restrictions +
                     (remaining > 0 ? $" (+{remaining} أخرى)" : string.Empty);
             }
 
