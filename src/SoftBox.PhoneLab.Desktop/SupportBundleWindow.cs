@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Support;
+using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
