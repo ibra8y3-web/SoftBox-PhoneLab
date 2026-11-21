@@ -35,7 +35,7 @@ public sealed record AndroidTelephonyDiagnosticsReport(
 /// </summary>
 public static class AndroidTelephonyDiagnosticsParser
 {
-    private static readonly Regex FieldPattern(string name) => new(
+    private static Regex FieldPattern(string name) => new(
         @"\b" + Regex.Escape(name) + @"\s*=\s*([^,;\r\n}]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
