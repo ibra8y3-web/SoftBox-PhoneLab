@@ -1568,21 +1568,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var dialog = new OpenFileDialog
         {
             Title = "استيراد خريطة PCB / BoardView موثقة لهذا الموديل",
-            Filter = "PhoneLab board map JSON (*.json)|*.json",
+            Filter = "PhoneLab BoardMap JSON أو BoardView CSV (*.json;*.csv)|*.json;*.csv",
             CheckFileExists = true
         };
         if (dialog.ShowDialog(this) != true) return;
 
         try
         {
-            var path = await _maps.ImportVerifiedMapAsync(dialog.FileName, _snapshot);
+            string path;
+            if (Path.GetExtension(dialog.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
+            {
+                var importWindow = new BoardMapCsvImportWindow(_maps, _snapshot, dialog.FileName) { Owner = this };
+                if (importWindow.ShowDialog() != true || string.IsNullOrWhiteSpace(importWindow.ImportedPath))
+                    return;
+                path = importWindow.ImportedPath;
+            }
+            else
+            {
+                path = await _maps.ImportVerifiedMapAsync(dialog.FileName, _snapshot);
+            }
+
             _boardMap = await _maps.LoadBestMapAsync(_snapshot, _profileMatch.Profile);
             Notify(nameof(BoardMapNotice));
             BuildScene();
             StatusMessage = "تم استيراد خريطة الجهاز المطابقة: " + Path.GetFileName(path);
             MessageBox.Show(this,
-                "تم استيراد الخريطة بعد مطابقة الموديل والمصدر وبيانات المراجعة وصحة الإحداثيات. " +
-                "الاستيراد يتحقق من البيانات الوصفية والبنية؛ مسؤولية مراجعة أصل الملف وترخيصه ودقته الفنية تظل على المستورد.",
+                "تم استيراد الخريطة بعد مطابقة هوية الموديل والمراجعة والمصدر وبنية الإحداثيات. " +
+                "يحسب SoftBox بصمة SHA-256 للملف؛ مسؤولية التحقق من أصل المصدر والترخيص ودقة الإحداثيات تظل على الفني المراجع.",
                 "تم استيراد خريطة PCB", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -1752,11 +1764,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         });
 
         var state = Components.ToDictionary(x => x.Id, x => x.StatusHex, StringComparer.OrdinalIgnoreCase);
-        foreach (var part in _boardMap.Parts)
+        foreach (var originalPart in _boardMap.Parts)
         {
-            var color = state.GetValueOrDefault(part.Id, part.BaseColor);
-            if (part.Id == "frame") color = part.BaseColor;
-            if (part.Id == _selectedComponent?.Id) color = Lighten(color);
+            var part = originalPart;
+            if (_boardMap.SchemaVersion >= 2 && _boardMap.CoordinateUnit.Equals("mm", StringComparison.OrdinalIgnoreCase))
+            {
+                const double millimeterToScene = 0.1;
+                part = originalPart with
+                {
+                    X = (originalPart.X - _boardMap.BoardWidthMm / 2) * millimeterToScene,
+                    Y = (originalPart.Y - _boardMap.BoardHeightMm / 2) * millimeterToScene,
+                    Z = originalPart.Side.Equals("Bottom", StringComparison.OrdinalIgnoreCase)
+                        ? -Math.Max(Math.Abs(originalPart.Z), 0.35)
+                        : Math.Max(Math.Abs(originalPart.Z), 0.35),
+                    Width = originalPart.Width * millimeterToScene,
+                    Height = originalPart.Height * millimeterToScene,
+                    Depth = Math.Clamp(originalPart.Depth * millimeterToScene, 0.02, 0.12)
+                };
+            }
+            var color = state.GetValueOrDefault(originalPart.Id, originalPart.BaseColor);
+            if (originalPart.Id == "frame") color = originalPart.BaseColor;
+            if (originalPart.Id == _selectedComponent?.Id) color = Lighten(color);
             var visual = CreateBox(part, color);
             PhoneViewport.Children.Add(visual);
             _visualParts[visual] = part.Id;

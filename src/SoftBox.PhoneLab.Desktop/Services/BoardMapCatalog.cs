@@ -92,6 +92,42 @@ public sealed class BoardMapCatalog
         return destination;
     }
 
+    public async Task<string> ImportCsvMapAsync(
+        string csvPath,
+        DeviceSnapshot device,
+        BoardMapCsvImportMetadata metadata,
+        CancellationToken cancellationToken = default)
+    {
+        var map = await BoardMapCsvImporter.ImportAsync(csvPath, device, metadata, cancellationToken);
+        if (!IsVerifiedForDevice(map, device))
+            throw new InvalidDataException("CSV-derived BoardMap did not pass exact model/revision validation.");
+        return await SaveImportedMapAsync(map, cancellationToken);
+    }
+
+    private async Task<string> SaveImportedMapAsync(BoardMap map, CancellationToken cancellationToken = default)
+    {
+        var safeId = Regex.Replace(map.Id.Trim(), @"[^A-Za-z0-9._-]", "_");
+        if (safeId.Length is 0 or > 100)
+            throw new InvalidDataException("Board map ID is not valid.");
+        var root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SoftBox", "PhoneLab", "boardmaps");
+        Directory.CreateDirectory(root);
+        var destination = Path.Combine(root, $"{safeId}-{DateTime.UtcNow:yyyyMMddHHmmssfff}.json");
+        var temporary = destination + ".tmp";
+        try
+        {
+            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(map, _options), cancellationToken);
+            File.Move(temporary, destination, overwrite: false);
+            return destination;
+        }
+        catch
+        {
+            try { File.Delete(temporary); } catch { }
+            throw;
+        }
+    }
+
     public static bool IsVerifiedForDevice(BoardMap map, DeviceSnapshot device)
     {
         if (map is null || map.ModelNumbers is null || map.DeviceCodes is null || map.Parts is null ||
@@ -104,7 +140,15 @@ public sealed class BoardMapCatalog
                           source.Scheme == Uri.UriSchemeHttps &&
                           !string.IsNullOrWhiteSpace(map.SourceName) &&
                           !string.IsNullOrWhiteSpace(map.VerifiedBy) &&
-                          map.VerifiedAtUtc.HasValue;
+                          map.VerifiedAtUtc.HasValue &&
+                          (map.SchemaVersion < 2 ||
+                           (map.SourceDocumentId.Length > 0 &&
+                            map.SourceLicense.Length > 0 &&
+                            Regex.IsMatch(map.SourceSha256 ?? "", @"^[a-f0-9]{64}$", RegexOptions.IgnoreCase) &&
+                            map.CoordinateUnit == "mm" &&
+                            map.ManualRevisionMatchConfirmed &&
+                            double.IsFinite(map.BoardWidthMm) && map.BoardWidthMm is > 0 and <= 500 &&
+                            double.IsFinite(map.BoardHeightMm) && map.BoardHeightMm is > 0 and <= 500));
         if (!sourceValid) return false;
 
         var exactModel = device.ModelNumber != "غير متاح" &&
@@ -134,6 +178,13 @@ public sealed class BoardMapCatalog
         foreach (var part in map.Parts)
         {
             if (string.IsNullOrWhiteSpace(part.Id) || !ids.Add(part.Id) ||
+                !double.IsFinite(part.RotationDegrees) || part.RotationDegrees is < 0 or >= 360 ||
+                (map.SchemaVersion >= 2 && (part.Reference.Length == 0 ||
+                    part.Side is not ("Top" or "Bottom") || part.X - part.Width / 2 < 0 ||
+                    part.Y - part.Height / 2 < 0 ||
+                    part.X + part.Width / 2 > map.BoardWidthMm ||
+                    part.Y + part.Height / 2 > map.BoardHeightMm ||
+                    part.NetNames.Length > 256)) ||
                 !double.IsFinite(part.X) || !double.IsFinite(part.Y) || !double.IsFinite(part.Z) ||
                 !double.IsFinite(part.Width) || !double.IsFinite(part.Height) || !double.IsFinite(part.Depth) ||
                 part.Width <= 0 || part.Height <= 0 || part.Depth <= 0 ||

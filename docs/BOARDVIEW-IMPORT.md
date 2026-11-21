@@ -62,3 +62,24 @@ PhoneLab reads common Android properties when the vendor exposes them, including
 ## Native BoardView files
 
 PhoneLab can launch the separate MIT-licensed TRACE Boardviewer 1.3.3 Windows portable viewer for supported original board files. It downloads the viewer on first use, verifies the published SHA-256, then passes the local board file as a process argument. It does not upload the board file. TRACE supports selected variants of BRD/BRD2/BVR and other documented formats; unsupported variants remain unsupported. This native viewer is separate from the PhoneLab JSON placement-map importer and does not create model-specific board coordinates when source files are absent.
+
+
+## Normalized CSV import (PhoneLab format)
+
+PhoneLab can import a technician-reviewed component-placement CSV in addition to its normalized JSON map. The CSV is a normalized interchange export, not a native parser for proprietary BRD/BDV/BVR files. Export the component list from a legitimate BoardView tool and use these exact columns:
+
+```csv
+Reference,Name,Xmm,Ymm,WidthMm,HeightMm,Side,RotationDeg,Layer,Footprint,Value,Nets
+U1,Application processor,32.5,65.0,14.0,14.0,Top,0,F.Cu,BGA,SM7125,VBAT|GND|VDD_CPU
+C101,Decoupling capacitor,12.0,18.5,1.0,0.6,Bottom,90,B.Cu,0201,100nF,GND|VDD_CPU
+```
+
+- X/Y are the component centre coordinates from the top-left board origin in millimeters.
+- Width/Height are component body extents in millimeters. Side must be Top/Front/F or Bottom/Back/B.
+- Nets is a pipe-separated list of net names when the source actually provides them. Blank means unknown, not disconnected.
+- The CSV must contain unique reference designators and every component must fit inside the board dimensions entered during import.
+- The importer stores the source URL, document ID, declared license, technician reviewer, board/hardware revision, physical board dimensions, import SHA-256, component side, layer, rotation, footprint, value and reported nets.
+- A technician must explicitly confirm physical board revision matching. A matching Android model code alone is not enough to certify a PCB revision.
+- The resulting JSON map is normalized for the SoftBox 3D scene. It does not infer or fabricate missing components, pins, pads, copper traces, nets or measurements. Missing net names remain empty.
+
+The source URI, license and reviewer are provenance declarations entered by the technician; PhoneLab cannot independently prove that a submitted CSV was obtained legally or that its coordinates are accurate. The SHA-256 proves the bytes of the imported CSV have not changed since import, not that the source is authentic.
