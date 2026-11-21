@@ -19,7 +19,7 @@ public sealed class PluginStoreWindow : Window
 {
     private readonly PluginPublisherTrustStore _trustStore = new();
     private readonly PluginPackageInspector _inspector;
-    private readonly PluginWorkflowRunner _workflowRunner = new();
+    private readonly PluginWorkflowRunner _workflowRunner;
     private readonly AdbClient? _adb;
     private readonly string? _selectedSerial;
     private readonly TextBox _path = new();
@@ -36,6 +36,7 @@ public sealed class PluginStoreWindow : Window
     private readonly Button _copyToLibraryButton;
     private readonly Button _refreshLibraryButton;
     private readonly Button _trustPublisherButton;
+    private readonly Button _signPackageButton;
     private readonly Button _runWorkflowButton;
     private readonly Button _removeLibraryButton;
     private PluginPackageInspection? _inspection;
@@ -47,6 +48,7 @@ public sealed class PluginStoreWindow : Window
             ? selectedSerial
             : null;
         _inspector = new PluginPackageInspector(_trustStore);
+        _workflowRunner = new PluginWorkflowRunner(_inspector);
         Title = "SoftBox | متجر الإضافات — فحص وتوقيع وWorkflow";
         Width = 1020;
         Height = 760;
@@ -62,6 +64,7 @@ public sealed class PluginStoreWindow : Window
         _copyToLibraryButton = ButtonControl("تثبيت الحزمة في المكتبة", "#243B56", CopyToLibrary_Click);
         _refreshLibraryButton = ButtonControl("تحديث المكتبة", "#243B56", RefreshLibrary_Click);
         _trustPublisherButton = ButtonControl("إضافة مفتاح ناشر موثوق", "#704B20", TrustPublisher_Click);
+        _signPackageButton = ButtonControl("توقيع الحزمة بمفتاح الناشر", "#704B20", SignPackage_Click);
         _runWorkflowButton = ButtonControl("تشغيل Workflow موقّع", "#176044", RunWorkflow_Click);
         _removeLibraryButton = ButtonControl("إلغاء تثبيت الحزمة", "#713B43", RemoveLibrary_Click);
         _saveButton.IsEnabled = false;
@@ -165,6 +168,7 @@ public sealed class PluginStoreWindow : Window
         var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         actions.Children.Add(_inspectButton);
         actions.Children.Add(_trustPublisherButton);
+        actions.Children.Add(_signPackageButton);
         actions.Children.Add(_runWorkflowButton);
         actions.Children.Add(_saveButton);
         DockPanel.SetDock(actions, Dock.Top);
@@ -355,6 +359,15 @@ public sealed class PluginStoreWindow : Window
             if (pem.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("استورد المفتاح العام فقط. لا تختَر ملفًا يحتوي المفتاح الخاص.");
             var publisherName = Path.GetFileNameWithoutExtension(dialog.FileName);
+            var keyId = PluginPublisherTrustStore.GetKeyId(pem);
+            var confirmation = MessageBox.Show(this,
+                $"بصمة المفتاح العام (SHA-256):\n{keyId}\n\nاسم المفتاح: {publisherName}\n\nلا تثق بالمفتاح لمجرد استلامه مع الحزمة. قارن البصمة مع الناشر عبر قناة مستقلة موثوقة قبل المتابعة. هل تحققت منها وتريد إضافته؟",
+                "تأكيد جذر ثقة Plugin", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+            {
+                _status.Text = "لم تتم إضافة المفتاح؛ لم يتم تغيير مخزن الثقة.";
+                return;
+            }
             var trusted = await _trustStore.TrustPublicKeyAsync(publisherName, pem);
             _status.Text = $"تم حفظ مفتاح الناشر العام داخل مخزن DPAPI لهذا المستخدم. Key ID: {trusted.KeyId}";
             if (!string.IsNullOrWhiteSpace(_path.Text) && File.Exists(_path.Text))
@@ -378,6 +391,54 @@ public sealed class PluginStoreWindow : Window
         _runWorkflowButton.IsEnabled = accepted &&
             _inspection.Manifest?.ExecutionMode == "read-only-workflow" &&
             _adb is not null && _selectedSerial is not null;
+    }
+
+    private async void SignPackage_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_path.Text) || !File.Exists(_path.Text))
+        {
+            _status.Text = "اختر حزمة Plugin أولًا.";
+            return;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "اختيار مفتاح RSA الخاص بالناشر لتوقيع الحزمة",
+            Filter = "RSA private key (*.pem;*.key)|*.pem;*.key|All files (*.*)|*.*",
+            CheckFileExists = true,
+            Multiselect = false
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        var warning = MessageBox.Show(this,
+            "سيستخدم SoftBox المفتاح الخاص الموجود في الملف لتوقيع هذه الحزمة فقط. لن يتم نسخ المفتاح إلى المكتبة أو حفظه في إعدادات SoftBox. لا تستخدم المفتاح الخاص لمفتاح ناشر لا تملكه.",
+            "تأكيد توقيع Plugin", MessageBoxButton.OKCancel, MessageBoxImage.Warning);
+        if (warning != MessageBoxResult.OK)
+            return;
+
+        try
+        {
+            _signPackageButton.IsEnabled = false;
+            var privatePem = await File.ReadAllTextAsync(dialog.FileName);
+            if (!privatePem.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase) ||
+                privatePem.Contains("PUBLIC KEY", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("الملف المحدد لا يحتوي مفتاح RSA خاصًا صالحًا.");
+
+            var keyId = await PluginPackageSigner.SignPackageAsync(_path.Text, privatePem);
+            _status.Text = "تم توقيع الحزمة. Key ID: " + keyId +
+                ". أضف المفتاح العام المقابل إلى مخزن الثقة ثم أعد الفحص للتحقق من التوقيع.";
+            await InspectCurrentPackageAsync();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر توقيع الحزمة: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "Plugin Signer", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _signPackageButton.IsEnabled = true;
+        }
     }
 
     private async void RunWorkflow_Click(object sender, RoutedEventArgs e)
