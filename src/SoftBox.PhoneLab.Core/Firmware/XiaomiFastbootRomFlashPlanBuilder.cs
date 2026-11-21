@@ -13,6 +13,7 @@ namespace SoftBox.PhoneLab.Core.Firmware;
 public enum XiaomiFastbootRomStepKind
 {
     FlashPartition,
+    FlashUserData,
     WipeUserData,
     RebootFastbootd
 }
@@ -23,7 +24,10 @@ public sealed record XiaomiFastbootRomFlashStep(
     string? Partition,
     string? ImagePath,
     long ImageBytes,
-    string? Sha256);
+    string? Sha256)
+{
+    public string? CommandVerb { get; init; }
+}
 
 public sealed record XiaomiFastbootRomFlashPlan(
     string ScriptPath,
@@ -36,9 +40,12 @@ public sealed record XiaomiFastbootRomFlashPlan(
     IReadOnlyList<XiaomiFastbootRomFlashStep> Steps,
     IReadOnlyList<string> Findings)
 {
-    public int FlashImageCount => Steps.Count(step => step.Kind == XiaomiFastbootRomStepKind.FlashPartition);
-    public bool RequiresDataWipe => Steps.Any(step => step.Kind == XiaomiFastbootRomStepKind.WipeUserData);
-    public long TotalImageBytes => Steps.Where(step => step.Kind == XiaomiFastbootRomStepKind.FlashPartition)
+    public int FlashImageCount => Steps.Count(step =>
+        step.Kind is XiaomiFastbootRomStepKind.FlashPartition or XiaomiFastbootRomStepKind.FlashUserData);
+    public bool RequiresDataWipe => Steps.Any(step =>
+        step.Kind is XiaomiFastbootRomStepKind.WipeUserData or XiaomiFastbootRomStepKind.FlashUserData);
+    public long TotalImageBytes => Steps.Where(step =>
+        step.Kind is XiaomiFastbootRomStepKind.FlashPartition or XiaomiFastbootRomStepKind.FlashUserData)
         .Sum(step => step.ImageBytes);
 
     public bool CanExecute => ProductMatch == XiaomiRomProductMatchState.Match &&
@@ -200,7 +207,10 @@ public static class XiaomiFastbootRomFlashPlanBuilder
                 if (++wipeCount > 1)
                     throw new InvalidDataException("السكربت يحاول تنفيذ أكثر من عملية مسح لبيانات المستخدم؛ تم رفضه.");
                 steps.Add(new XiaomiFastbootRomFlashStep(
-                    ++logicalIndex, XiaomiFastbootRomStepKind.WipeUserData, null, null, 0, null));
+                    ++logicalIndex, XiaomiFastbootRomStepKind.WipeUserData, "userdata", null, 0, null)
+                {
+                    CommandVerb = verb
+                });
                 continue;
             }
 
@@ -216,7 +226,10 @@ public static class XiaomiFastbootRomFlashPlanBuilder
                 if (++wipeCount > 1)
                     throw new InvalidDataException("السكربت يحاول تنفيذ أكثر من عملية wipe؛ تم رفضه.");
                 steps.Add(new XiaomiFastbootRomFlashStep(
-                    ++logicalIndex, XiaomiFastbootRomStepKind.WipeUserData, null, null, 0, null));
+                    ++logicalIndex, XiaomiFastbootRomStepKind.WipeUserData, "userdata", null, 0, null)
+                {
+                    CommandVerb = "-w"
+                });
                 continue;
             }
 
@@ -227,8 +240,11 @@ public static class XiaomiFastbootRomFlashPlanBuilder
                 var partition = tokens[1];
                 if (!PartitionPattern.IsMatch(partition))
                     throw new InvalidDataException("اسم قسم Fastboot غير صالح: " + partition);
-                if (IsProtectedPartition(partition))
+                var isUserDataImage = partition.Equals("userdata", StringComparison.OrdinalIgnoreCase);
+                if (IsProtectedPartition(partition) && !isUserDataImage)
                     throw new InvalidDataException("تم منع التفليش المباشر لقسم حساس أو خاص ببيانات المستخدم: " + partition);
+                if (isUserDataImage && !scriptName.Equals("flash_all.bat", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("لا يسمح بكتابة userdata من flash_all_except_storage.bat.");
 
                 var imagePath = ResolveImagePath(root, tokens[2]);
                 var imageInfo = new FileInfo(imagePath);
@@ -250,7 +266,8 @@ public static class XiaomiFastbootRomFlashPlanBuilder
                 }
 
                 steps.Add(new XiaomiFastbootRomFlashStep(
-                    ++logicalIndex, XiaomiFastbootRomStepKind.FlashPartition,
+                    ++logicalIndex,
+                    isUserDataImage ? XiaomiFastbootRomStepKind.FlashUserData : XiaomiFastbootRomStepKind.FlashPartition,
                     partition, imagePath, imageInfo.Length, hash));
                 if (steps.Count > MaximumFlashSteps + 1)
                     throw new InvalidDataException("عدد أوامر ROM يتجاوز الحد 128 صورة وخطوة wipe واحدة.");
