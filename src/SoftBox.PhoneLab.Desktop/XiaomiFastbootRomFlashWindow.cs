@@ -47,7 +47,7 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
     };
     private readonly CheckBox _confirmWipe = new()
     {
-        Content = "أسمح صراحة بمسح بيانات المستخدم لأن سكربت flash_all يتطلب ذلك"
+        Content = "أسمح صراحة بمسح أو استبدال قسم userdata لأن سكربت flash_all يتطلب ذلك"
     };
     private readonly Button _inspectButton;
     private readonly Button _flashButton;
@@ -259,8 +259,10 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
             {
                 XiaomiFastbootRomStepKind.FlashPartition =>
                     $"{step.Index}. FLASH {step.Partition} | {Path.GetFileName(step.ImagePath)} | {step.ImageBytes:N0} bytes | SHA256 {step.Sha256}",
+                XiaomiFastbootRomStepKind.FlashUserData =>
+                    $"{step.Index}. FLASH USERDATA IMAGE (DESTRUCTIVE; requires separate consent) | {Path.GetFileName(step.ImagePath)} | SHA256 {step.Sha256}",
                 XiaomiFastbootRomStepKind.WipeUserData =>
-                    $"{step.Index}. WIPE USERDATA (DESTRUCTIVE; requires separate consent)",
+                    $"{step.Index}. {step.CommandVerb?.ToUpperInvariant() ?? "-W"} USERDATA (DESTRUCTIVE; requires separate consent)",
                 XiaomiFastbootRomStepKind.RebootFastbootd =>
                     $"{step.Index}. REBOOT FASTBOOTD",
                 _ => $"{step.Index}. UNSUPPORTED"
@@ -337,10 +339,10 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
                 throw new UnauthorizedAccessException("فشل تحقق Anti-Rollback قبل الكتابة.");
 
             var summary = string.Join(Environment.NewLine, plan.Steps.Select(step =>
-                step.Kind == XiaomiFastbootRomStepKind.FlashPartition
+                step.Kind is XiaomiFastbootRomStepKind.FlashPartition or XiaomiFastbootRomStepKind.FlashUserData
                     ? $"{step.Index}. {step.Partition}: {Path.GetFileName(step.ImagePath)}"
                     : step.Kind == XiaomiFastbootRomStepKind.WipeUserData
-                        ? $"{step.Index}. مسح بيانات المستخدم"
+                        ? $"{step.Index}. {step.CommandVerb?.ToUpperInvariant() ?? "-W"} USERDATA"
                         : $"{step.Index}. الانتقال إلى Fastbootd"));
             var warning = plan.RequiresDataWipe
                 ? "\n\nتحذير مهم: هذه الحزمة ستنفذ مسح بيانات المستخدم بشكل لا يمكن التراجع عنه."
@@ -378,7 +380,11 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
                     switch (step.Kind)
                     {
                         case XiaomiFastbootRomStepKind.FlashPartition:
+                        case XiaomiFastbootRomStepKind.FlashUserData:
                         {
+                            if (step.Kind == XiaomiFastbootRomStepKind.FlashUserData &&
+                                !_confirmWipe.IsChecked.GetValueOrDefault())
+                                throw new UnauthorizedAccessException("تم منع كتابة userdata دون موافقة تدميرية مستقلة.");
                             if (step.ImagePath is null || step.Partition is null || step.Sha256 is null)
                                 throw new InvalidDataException("بيانات خطوة Flash غير مكتملة.");
                             await using var imageStream = new FileStream(
@@ -398,7 +404,8 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
                         case XiaomiFastbootRomStepKind.WipeUserData:
                             if (!_confirmWipe.IsChecked.GetValueOrDefault())
                                 throw new UnauthorizedAccessException("تم منع مسح بيانات المستخدم دون موافقة مستقلة.");
-                            var wipeOutput = await _fastboot.WipeUserDataAsync(_serial);
+                            var wipeOutput = await _fastboot.ExecuteUserDataOperationAsync(
+                                _serial, step.CommandVerb ?? "-w");
                             _details.AppendText(Environment.NewLine + wipeOutput);
                             break;
                         case XiaomiFastbootRomStepKind.RebootFastbootd:
@@ -552,10 +559,10 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
     }
 
     private static string FormatStep(XiaomiFastbootRomFlashStep step)
-        => step.Kind == XiaomiFastbootRomStepKind.FlashPartition
+        => step.Kind is XiaomiFastbootRomStepKind.FlashPartition or XiaomiFastbootRomStepKind.FlashUserData
             ? $"FLASH {step.Partition} — {Path.GetFileName(step.ImagePath)} — SHA-256 {step.Sha256}"
             : step.Kind == XiaomiFastbootRomStepKind.WipeUserData
-                ? "WIPE USERDATA"
+                ? $"{step.CommandVerb ?? "-w"} USERDATA"
                 : "REBOOT FASTBOOTD";
 
     private static string Mask(string serial) => serial.Length > 4 ? "••••" + serial[^4..] : "••••";
