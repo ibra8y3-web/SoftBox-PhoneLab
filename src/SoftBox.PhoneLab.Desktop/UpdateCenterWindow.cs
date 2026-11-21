@@ -314,6 +314,16 @@ public sealed class UpdateCenterWindow : Window
             var pem = await File.ReadAllTextAsync(dialog.FileName);
             if (pem.Contains("PRIVATE KEY", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("استورد المفتاح العام فقط؛ لا تختَر المفتاح الخاص.");
+            var keyId = PluginPublisherTrustStore.GetKeyId(pem);
+            var confirmation = MessageBox.Show(this,
+                "بصمة المفتاح العام (SHA-256):\n" + keyId +
+                "\n\nيجب مقارنة هذه البصمة مع الناشر عبر قناة مستقلة موثوقة قبل إضافتها. لا تستورد مفتاحًا وصل مع ملف التحديث نفسه فقط. هل تحققت من البصمة وتريد الوثوق بالمفتاح؟",
+                "تأكيد مفتاح تحديث SoftBox", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+            {
+                _status.Text = "لم تتم إضافة مفتاح التحديث إلى مخزن الثقة.";
+                return;
+            }
             var trusted = await _trustStore.TrustPublicKeyAsync("SoftBox Release Publisher", pem);
             _status.Text = "تم حفظ مفتاح إصدار SoftBox مشفرًا لهذا المستخدم. Key ID: " + trusted.KeyId;
             _stageButton.IsEnabled = _lastResult?.UpdateAvailable == true && _assets.SelectedItem is ReleaseAssetInfo;
@@ -341,7 +351,7 @@ public sealed class UpdateCenterWindow : Window
         try
         {
             _stagedUpdate = await _packageService.DownloadAndStageAsync(
-                asset, _lastResult.LatestRelease.TagName, _operation.Token);
+                asset, _lastResult.LatestRelease.TagName, CurrentVersion, _operation.Token);
             var output = new StringBuilder();
             output.AppendLine("SIGNED WINDOWS UPDATE VERIFIED");
             output.AppendLine("VERSION: " + _stagedUpdate.Version);
