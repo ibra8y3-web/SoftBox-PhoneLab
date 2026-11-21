@@ -120,6 +120,11 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
     {
         if (_operation is not null)
             return;
+        if (!_fastboot.IsAvailable)
+        {
+            _status.Text = "Fastboot غير متاح داخل حزمة SoftBox أو PATH؛ لم يتم إعادة تشغيل الهاتف.";
+            return;
+        }
         var confirmation = MessageBox.Show(this,
             $"سيعيد SoftBox تشغيل هاتف Xiaomi/Redmi/POCO المحدد إلى Bootloader/Fastboot:\n{_model} | {Mask(_serial)}\n\nلن يتم تفليش أو مسح أو فتح Bootloader. قد يتوقف ADB حتى يعاد تشغيل الهاتف. متابعة؟",
             "تأكيد الانتقال إلى Xiaomi Fastboot", MessageBoxButton.YesNo, MessageBoxImage.Warning);

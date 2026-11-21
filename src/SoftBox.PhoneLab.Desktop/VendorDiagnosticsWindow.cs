@@ -18,6 +18,7 @@ public sealed class VendorDiagnosticsWindow : Window
     private readonly AdbClient _adb;
     private readonly string _serial;
     private readonly string _manufacturer;
+    private readonly string _model;
     private readonly TextBox _output = new();
     private readonly TextBlock _status = new();
     private readonly Button _scanButton;
@@ -34,6 +35,7 @@ public sealed class VendorDiagnosticsWindow : Window
         _service = new AndroidDeviceToolsService(adb);
         _serial = serial;
         _manufacturer = manufacturer ?? "";
+        _model = model ?? "";
 
         var vendor = AndroidDeviceToolsService.NormalizeVendor(manufacturer);
         Title = $"SoftBox | {vendor} Vendor Diagnostics";
@@ -149,7 +151,7 @@ public sealed class VendorDiagnosticsWindow : Window
             _status.Text = "تم منع فتح أدوات Xiaomi لأن هوية الشركة الحالية لا تطابق Xiaomi.";
             return;
         }
-        new XiaomiFastbootDiagnosticsWindow(_adb, _serial, _manufacturer, Title)
+        new XiaomiFastbootDiagnosticsWindow(_adb, _serial, _manufacturer, _model)
         {
             Owner = this
         }.ShowDialog();
