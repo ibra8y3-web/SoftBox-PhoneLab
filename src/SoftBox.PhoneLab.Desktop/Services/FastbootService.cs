@@ -127,10 +127,31 @@ public sealed class FastbootService
         return ExecuteAsync(BuildWipeUserDataArguments(serial), cancellationToken, TimeSpan.FromMinutes(5));
     }
 
+    public Task<string> ExecuteUserDataOperationAsync(
+        string serial,
+        string commandVerb,
+        CancellationToken cancellationToken = default)
+    {
+        return ExecuteAsync(BuildUserDataOperationArguments(serial, commandVerb),
+            cancellationToken, TimeSpan.FromMinutes(5));
+    }
+
     public static IReadOnlyList<string> BuildWipeUserDataArguments(string serial)
     {
         ValidateSerial(serial);
         return ["-s", serial, "-w"];
+    }
+
+    public static IReadOnlyList<string> BuildUserDataOperationArguments(string serial, string commandVerb)
+    {
+        ValidateSerial(serial);
+        return commandVerb?.ToLowerInvariant() switch
+        {
+            "-w" => ["-s", serial, "-w"],
+            "erase" => ["-s", serial, "erase", "userdata"],
+            "format" => ["-s", serial, "format", "userdata"],
+            _ => throw new ArgumentException("Unsupported userdata operation.", nameof(commandVerb))
+        };
     }
 
     private static bool IsSafeRomPartition(string? partition)
