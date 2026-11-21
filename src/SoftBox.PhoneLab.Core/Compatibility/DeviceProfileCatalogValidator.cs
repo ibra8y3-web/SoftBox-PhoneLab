@@ -44,6 +44,7 @@ public static class DeviceProfileCatalogValidator
                     string.IsNullOrWhiteSpace(source.License) ||
                     source.License.Length > 80 ||
                     !Sha256Pattern.IsMatch(source.Sha256) ||
+                    (string.IsNullOrWhiteSpace(source.Revision) || source.Revision.Length > 160) ||
                     source.RecordCount < 1 ||
                     source.RecordCount > 250_000 ||
                     source.RetrievedAtUtc == default)

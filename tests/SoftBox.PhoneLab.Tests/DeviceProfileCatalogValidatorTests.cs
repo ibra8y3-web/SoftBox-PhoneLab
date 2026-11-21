@@ -85,6 +85,7 @@ public sealed class DeviceProfileCatalogValidatorTests
             Url = "https://example.com/catalog",
             License = "MIT",
             Sha256 = new string('a', 64),
+            Revision = "abc123",
             RecordCount = 1,
             RetrievedAtUtc = now
         };

@@ -241,8 +241,10 @@ public sealed class DeviceCapabilityCenterWindow : Window
         try
         {
             var count = await _profiles.UpdateAsync();
-            _status.Text = $"اكتمل تحديث قاعدة الموديلات: {count:N0} ملف تعريف. جارٍ إعادة تقييم الجهاز...";
+            _status.Text = $"اكتمل تنزيل وتحقق قاعدة الموديلات: {count:N0} ملف تعريف. جارٍ إعادة تقييم الجهاز...";
+            _busy = false;
             await RefreshAsync();
+            _busy = true;
             _status.Text = $"اكتمل تحديث قاعدة الموديلات وإعادة التقييم: {count:N0} ملف تعريف. راجع حالة مطابقة موديل الجهاز أدناه.";
         }
         catch (Exception ex)
