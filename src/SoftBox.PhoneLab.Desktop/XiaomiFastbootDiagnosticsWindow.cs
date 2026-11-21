@@ -30,6 +30,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
     private readonly Button _inspectRomButton;
     private readonly Button _cancelButton;
     private readonly Button _flashImageButton;
+    private readonly Button _fullRomButton;
     private readonly Button _officialUnlockButton;
     private readonly ComboBox _flashPartition = new();
     private readonly CheckBox _confirmOfficialSource = new() { Content = "أؤكد أن IMG من مصدر Xiaomi الرسمي ومخصص لـ Product الحالي" };
@@ -70,6 +71,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         _inspectRomButton = ButtonControl("فحص حزمة Fastboot ROM (قراءة فقط)", "#176044", InspectFastbootRom_Click);
         _cancelButton = ButtonControl("إلغاء", "#713B43", Cancel_Click);
         _flashImageButton = ButtonControl("تفليش قسم IMG محدد", "#713B43", FlashImage_Click);
+        _fullRomButton = ButtonControl("تفليش ROM كامل متعدد الصور", "#713B43", OpenFullRomFlash_Click);
         _officialUnlockButton = ButtonControl("أداة Xiaomi Mi Unlock الرسمية", "#704B20", (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.Show());
         _flashImageButton.IsEnabled = false;
         _refreshButton.IsEnabled = false;
@@ -97,7 +99,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "يقرأ هوية Fastboot ويتيح تفليش IMG واحدة فقط بعد مطابقة Product من حزمة ROM التي فُحصت، ومطابقة Serial وحالة Bootloader Unlocked وتأكيد المصدر والنسخة الاحتياطية. فتح Bootloader يتم عبر أداة Xiaomi الرسمية فقط.",
+            Text = "يقرأ هوية Fastboot ويدعم تفليش IMG واحدة بشروط محددة، أو فتح مسار تفليش ROM كامل متعدد الصور من سكربت مفكوك بعد تحليله وتنفيذه بأوامر منفصلة. لا يتم تشغيل سكربت OEM نفسه. فتح Bootloader عبر Mi Unlock الرسمية فقط.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#F0C9A5"),
             Margin = new Thickness(0, 8, 0, 0)
@@ -125,6 +127,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         actions.Children.Add(_romProducts);
         actions.Children.Add(_flashPartition);
         actions.Children.Add(_flashImageButton);
+        actions.Children.Add(_fullRomButton);
         actions.Children.Add(_officialUnlockButton);
         actions.Children.Add(_cancelButton);
         _confirmOfficialSource.Foreground = Brush("#F0C9A5");
@@ -165,6 +168,27 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         DockPanel.SetDock(_status, Dock.Bottom);
         root.Children.Add(_status);
         return root;
+    }
+
+    private void OpenFullRomFlash_Click(object sender, RoutedEventArgs e)
+    {
+        if (_operation is not null)
+        {
+            _status.Text = "انتظر انتهاء عملية Fastboot الحالية قبل فتح أداة ROM كامل.";
+            return;
+        }
+
+        try
+        {
+            new XiaomiFastbootRomFlashWindow(_serial, _manufacturer, _model)
+            {
+                Owner = this
+            }.Show();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر فتح أداة Xiaomi Full ROM: " + ex.Message;
+        }
     }
 
     private async void EnterFastboot_Click(object sender, RoutedEventArgs e)

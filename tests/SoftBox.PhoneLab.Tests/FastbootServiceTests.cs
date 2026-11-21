@@ -113,5 +113,87 @@ public sealed class FastbootServiceTests
         }
         finally { System.IO.Directory.Delete(root, recursive: true); }
     }
+    [Fact]
+    public void RomFlashBuilderPinsExactSerialAndValidatedPartitionAndImage()
+    {
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "softbox-fastboot-rom-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(root);
+        var image = System.IO.Path.Combine(root, "super.img");
+        System.IO.File.WriteAllBytes(image, [1, 2, 3, 4]);
+        try
+        {
+            var args = FastbootService.BuildFlashRomImageArguments("FASTBOOT-123", "super", image);
+            Assert.Equal(new[] { "-s", "FASTBOOT-123", "flash", "super", image }, args);
+        }
+        finally { System.IO.Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-s")]
+    [InlineData("bad/serial")]
+    public void RomFlashBuilderRejectsUnsafeSerials(string serial)
+    {
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "softbox-fastboot-rom-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(root);
+        var image = System.IO.Path.Combine(root, "boot.img");
+        System.IO.File.WriteAllBytes(image, [1]);
+        try
+        {
+            Assert.Throws<ArgumentException>(() =>
+                FastbootService.BuildFlashRomImageArguments(serial, "boot", image));
+        }
+        finally { System.IO.Directory.Delete(root, recursive: true); }
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("../boot")]
+    [InlineData("bad/partition")]
+    [InlineData("-w")]
+    public void RomFlashBuilderRejectsInvalidPartitionNames(string partition)
+    {
+        var root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "softbox-fastboot-rom-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(root);
+        var image = System.IO.Path.Combine(root, "boot.img");
+        System.IO.File.WriteAllBytes(image, [1]);
+        try
+        {
+            Assert.Throws<ArgumentException>(() =>
+                FastbootService.BuildFlashRomImageArguments("FASTBOOT-123", partition, image));
+        }
+        finally { System.IO.Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public void WipeBuilderTargetsOnlyTheExplicitSelectedSerial()
+    {
+        Assert.Equal(
+            new[] { "-s", "FASTBOOT-123", "-w" },
+            FastbootService.BuildWipeUserDataArguments("FASTBOOT-123"));
+        Assert.Throws<ArgumentException>(() => FastbootService.BuildWipeUserDataArguments("bad/serial"));
+    }
+
+    [Theory]
+    [InlineData("-w", "-s FASTBOOT-123 -w")]
+    [InlineData("erase", "-s FASTBOOT-123 erase userdata")]
+    [InlineData("format", "-s FASTBOOT-123 format userdata")]
+    public void UserDataOperationBuilderProducesOnlyExplicitSelectedSerialCommand(
+        string verb, string expected)
+    {
+        Assert.Equal(expected.Split(' '), FastbootService.BuildUserDataOperationArguments("FASTBOOT-123", verb));
+    }
+
+    [Theory]
+    [InlineData("unlock")]
+    [InlineData("flashing")]
+    [InlineData("oem")]
+    [InlineData("erase system")]
+    public void UserDataOperationBuilderRejectsArbitraryCommands(string verb)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            FastbootService.BuildUserDataOperationArguments("FASTBOOT-123", verb));
+    }
+
 }
 

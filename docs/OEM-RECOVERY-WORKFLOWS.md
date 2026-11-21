@@ -5,20 +5,27 @@ This document describes the additive OEM workflow work on top of PR #21. It dist
 ## Samsung Odin
 
 - The existing Odin assistant validates the selected BL/AP/CP/CSC or HOME_CSC package plan, reads TAR/TAR.MD5 metadata, checks the appended MD5 and records SHA-256.
-- SoftBox can launch the Odin executable selected by the technician. It does not inject files into undocumented Odin controls, click Start, or claim that Odin is a publicly documented Samsung CLI.
-- Samsung Download Mode entry remains the separately confirmed ADB reboot path.
-- The Samsung USB driver and official support resources are linked in the Samsung section.
-- **Remaining:** any full Odin automation needs a documented Samsung service interface, access granted by Samsung, exact model/CSC/bootloader/rollback data, and hardware validation. No GUI-click automation is advertised as a supported protocol.
+- SoftBox can launch the Odin executable selected by the technician and retain the existing BL/AP/CP/CSC or HOME_CSC package integrity checks.
+- Samsung Download Mode is connected to the selected authorized Samsung ADB device through the existing guarded `adb reboot download` workflow; the live manufacturer/brand is rechecked before the command.
+- A new Windows UI Automation path inspects the exact selected Odin process path, its Odin window, one enabled Start button with an InvokePattern, visible package filenames and a COM port. It sends one Start Invoke only after the technician confirms firmware compatibility, backup and that the COM port belongs to the selected handset, and types the last four characters of the selected serial.
+- There are no coordinate clicks, simulated keystrokes or blind retries. If Odin does not expose the required accessibility data, Start stays blocked. SoftBox reports only that Start was invoked; the technician must still monitor Odin's Progress/Result fields.
+- This is UI automation, not an official Samsung protocol or proof of firmware authenticity/device compatibility. Exact model, CSC, bootloader binary and rollback values remain technician-verified. Physical Download Mode/Odin testing across supported Odin versions and Samsung devices remains required.
 
 ## Xiaomi / Redmi / POCO Fastboot
 
 - The ROM inspector reads .tar/.tar.gz/.tgz archives without extracting or running scripts. It reports products from android-info.txt, image names, flash partition names and destructive commands found in scripts.
 - The Fastboot screen takes the selected package Product from the inspected archive, not from the phone's own Product value. The selected package Product must match a fresh Product read from the same Fastboot serial.
 - A write is restricted to one local IMG with a filename matching the selected partition and a partition referenced by the inspected ROM's flash script. It is allowed only when the exact selected serial is present, Xiaomi identity is confirmed, the bootloader state is explicitly Unlocked, the operator confirms the OEM source and backup, and the live checks are repeated immediately before the command.
-- The restricted list currently excludes vbmeta, erase, format, relock and arbitrary commands.
-- Xiaomi bootloader unlocking is a hand-off to Xiaomi's Mi Unlock tool. Account eligibility, waiting periods, data-loss warnings and approval remain with Xiaomi.
+- The existing single-image action remains restricted to its explicit partition allow-list.
+- A new full-ROM workflow accepts only an already-extracted ROM folder and exactly `flash_all.bat` or `flash_all_except_storage.bat`. It reads `android-info.txt`, requires exact live Product match, parses only direct Fastboot commands and creates an ordered plan; it never launches the BAT, SH, or other OEM executable.
+- Every referenced image must resolve inside the ROM `images` directory, be a regular file under the configured size limits and pass SHA-256 before it is admitted to the plan. Each image is re-hashed and the exact serial, Product and unlocked Bootloader state are checked again immediately before its individual write.
+- The interpreter rejects unlock/relock, erase/format of partitions other than the explicitly modelled userdata operation, OEM commands, arbitrary shell chaining, unknown commands, path traversal and protected data/calibration partitions such as metadata, persist, FRP, keystore, modemst, FSG/FSC and SSD. A userdata image may be written only from `flash_all.bat`.
+- `fastboot -w` or `erase/format userdata` is represented as a separate destructive step, and is accepted only from `flash_all.bat`, not `flash_all_except_storage.bat`. It requires its own checkbox and a different typed confirmation. `flash_all_lock.bat` is always rejected.
+- The tool executes each approved command separately against the exact selected Fastboot serial and stops at the first failed command. It does not cancel or close the window during an active write, and it does not automatically continue after an error. After a failed step the device may be partially flashed and must remain connected in Fastboot for technician recovery.
+- Where both the ROM `images/anti_version.txt` and the device's numeric Fastboot `anti` value are available, SoftBox blocks a lower ROM index. When a comparable value is unavailable, the operator must acknowledge that Anti-Rollback was checked manually from OEM information. A region name is recorded as technician-provided confirmation, not independently authenticated by the app.
+- Xiaomi bootloader unlocking remains a hand-off to Xiaomi's Mi Unlock tool. Account eligibility, waiting periods, data-loss warnings and approval remain with Xiaomi.
 
-The manual IMG selection is still an operator-controlled hand-off: the UI records SHA-256 and asks the technician to confirm that the extracted image came from the official package. It does not cryptographically prove that an arbitrary IMG file was extracted from the archive.
+The package folder must be extracted by the technician before use. SHA-256 identifies the inspected bytes but does not authenticate Xiaomi as publisher, prove region compatibility or prove that every package component is OEM-signed. Real device/region-specific testing and recovery validation are still required before calling the workflow hardware-verified.
 
 ## Qualcomm EDL / QDL
 

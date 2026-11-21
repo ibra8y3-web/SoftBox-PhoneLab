@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using SoftBox.PhoneLab.Desktop.Services;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -23,10 +24,45 @@ public sealed class SamsungOdinAssistantWindow : Window
     private readonly Dictionary<SamsungOdinSlot, string> _inspectedHashes = [];
     private readonly Button _inspectButton;
     private readonly Button _launchButton;
-    private bool _packagesInspected;
-
-    public SamsungOdinAssistantWindow()
+    private readonly Button _inspectOdinUiButton;
+    private readonly Button _startOdinButton;
+    private readonly Button _downloadModeButton;
+    private readonly CheckBox _confirmCompatibility = new()
     {
+        Content = "أؤكد مطابقة موديل الهاتف والمنطقة وBinary/Bootloader وAnti-Rollback"
+    };
+    private readonly CheckBox _confirmBackup = new()
+    {
+        Content = "أؤكد وجود نسخة احتياطية صالحة وأنني أتحمل مخاطر التفليش"
+    };
+    private readonly CheckBox _confirmComPort = new()
+    {
+        Content = "أؤكد أن منفذ COM الظاهر في Odin يخص نفس الهاتف المحدد في SoftBox"
+    };
+    private readonly TextBox _flashConfirmation = new();
+    private readonly SamsungOdinUiAutomationService _odinAutomation = new();
+    private readonly AdbClient? _adb;
+    private readonly string? _deviceSerial;
+    private readonly string? _deviceManufacturer;
+    private readonly string? _deviceModel;
+    private bool _packagesInspected;
+    private int? _inspectedOdinProcessId;
+    private string? _inspectedComPort;
+
+    public SamsungOdinAssistantWindow(
+        AdbClient? adb = null,
+        string? deviceSerial = null,
+        string? deviceManufacturer = null,
+        string? deviceModel = null)
+    {
+        _adb = adb;
+        _deviceSerial = AdbClient.IsSafeSerial(deviceSerial ?? "") ? deviceSerial : null;
+        _deviceManufacturer = deviceManufacturer;
+        _deviceModel = deviceModel;
+        if (_deviceSerial is not null &&
+            AndroidDeviceToolsService.NormalizeVendor(_deviceManufacturer) != AndroidVendorKind.Samsung)
+            throw new UnauthorizedAccessException("تم رفض ربط Odin بجهاز لم يتم تأكيد أنه Samsung.");
+
         Title = "SoftBox | Samsung Odin Assistant";
         Width = 1120;
         Height = 820;
@@ -39,7 +75,13 @@ public sealed class SamsungOdinAssistantWindow : Window
 
         _inspectButton = ButtonControl("فحص حزم Firmware والبصمات", "#14517A", InspectPackages_Click);
         _launchButton = ButtonControl("فتح Odin المحدد", "#176044", LaunchOdin_Click);
+        _inspectOdinUiButton = ButtonControl("فحص واجهة Odin ومنفذ COM", "#14517A", InspectOdinUi_Click);
+        _startOdinButton = ButtonControl("تنفيذ Start بعد التحقق", "#713B43", StartOdin_Click);
+        _downloadModeButton = ButtonControl("إعادة تشغيل Samsung إلى Download Mode", "#704B20", DownloadMode_Click);
         _launchButton.IsEnabled = false;
+        _inspectOdinUiButton.IsEnabled = false;
+        _startOdinButton.IsEnabled = false;
+        _downloadModeButton.IsEnabled = _adb is not null && _deviceSerial is not null;
         Content = BuildContent();
     }
 
@@ -55,7 +97,7 @@ public sealed class SamsungOdinAssistantWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         header.Children.Add(TextBlock(
-            "إدارة ملفات BL / AP / CP / CSC وتجهيزها قبل فتح Odin الخارجي. SoftBox لا يوزع Odin ولا يحقن الملفات داخله أو يضغط Start تلقائيًا.",
+            "إدارة حزم BL / AP / CP / CSC، وربط Download Mode، وفحص واجهة Odin عبر Windows UI Automation. لا يستخدم SoftBox نقرات إحداثية أو أوامر غير موثقة.",
             12, "#B7C9DE"));
         header.Children.Add(TextBlock(
             "تنبيه: اختيار ملف أو حساب SHA-256 لا يثبت صحة المصدر أو توافق Firmware مع موديل الهاتف أو المنطقة أو Anti-Rollback. لا تبدأ التفليش إلا بعد مراجعة هذه المعلومات ووجود نسخة احتياطية.",
@@ -68,6 +110,9 @@ public sealed class SamsungOdinAssistantWindow : Window
         var buttons = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         buttons.Children.Add(_inspectButton);
         buttons.Children.Add(_launchButton);
+        buttons.Children.Add(_downloadModeButton);
+        buttons.Children.Add(_inspectOdinUiButton);
+        buttons.Children.Add(_startOdinButton);
         buttons.Children.Add(ButtonControl("مصادر Samsung الرسمية", "#243B56",
             (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show()));
         footer.Children.Add(buttons);
@@ -82,7 +127,28 @@ public sealed class SamsungOdinAssistantWindow : Window
         content.Children.Add(BuildSlotPanel(SamsungOdinSlot.CSC, "CSC — تثبيت قد يمسح بيانات المستخدم"));
         content.Children.Add(BuildSlotPanel(SamsungOdinSlot.HomeCsc, "HOME_CSC — يحاول الاحتفاظ ببيانات المستخدم، دون ضمان"));
         content.Children.Add(TextBlock(
-            "اختر CSC أو HOME_CSC فقط، ولا تضع الملفين معًا. AP مطلوب في خطة الحزم. SoftBox يتحقق من الامتداد والملف والبصمة فقط، ولا يقرأ محتويات TAR ولا يثبت توافقها.",
+            "اختر CSC أو HOME_CSC فقط، ولا تضع الملفين معًا. AP مطلوب في خطة الحزم. فحص الحزمة لا يثبت وحده توافق الموديل أو المنطقة أو Binary أو Anti-Rollback.",
+            11, "#F0C9A5"));
+
+        _confirmCompatibility.Foreground = Brush("#F0C9A5");
+        _confirmBackup.Foreground = Brush("#F0C9A5");
+        _confirmCompatibility.Margin = new Thickness(4);
+        _confirmBackup.Margin = new Thickness(4);
+        _confirmComPort.Foreground = Brush("#F0C9A5");
+        _confirmComPort.Margin = new Thickness(4);
+        content.Children.Add(_confirmCompatibility);
+        content.Children.Add(_confirmBackup);
+        content.Children.Add(_confirmComPort);
+        _flashConfirmation.Width = 260;
+        _flashConfirmation.Margin = new Thickness(4);
+        _flashConfirmation.Padding = new Thickness(8);
+        _flashConfirmation.Background = Brush("#071625");
+        _flashConfirmation.Foreground = Brush("#DCEBFA");
+        _flashConfirmation.BorderBrush = Brush("#263D58");
+        _flashConfirmation.ToolTip = "اكتب FLASH ثم آخر أربعة أحرف من Serial للجهاز المحدد";
+        content.Children.Add(_flashConfirmation);
+        content.Children.Add(TextBlock(
+            "زر Start لن يتفعّل إلا إذا استطاع Windows قراءة نافذة Odin وزر Start الوحيد وأسماء كل الحزم ومنفذ COM. عند غياب أي دليل ستُرفض الأتمتة. الضغط على Start لا يثبت نجاح التفليش.",
             11, "#F0C9A5"));
 
         _inspection.IsReadOnly = true;
@@ -172,6 +238,11 @@ public sealed class SamsungOdinAssistantWindow : Window
         if (dialog.ShowDialog(this) == true)
         {
             _odinExecutable.Text = Path.GetFullPath(dialog.FileName);
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
+            _startOdinButton.IsEnabled = false;
+            _inspectOdinUiButton.IsEnabled = _packagesInspected && _deviceSerial is not null;
+            _startOdinButton.IsEnabled = false;
             _status.Text = "تم اختيار ملف Odin. لم يتم تشغيله أو التحقق من ناشره.";
         }
     }
@@ -189,8 +260,12 @@ public sealed class SamsungOdinAssistantWindow : Window
         {
             _slotPaths[slot].Text = Path.GetFullPath(dialog.FileName);
             _packagesInspected = false;
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
             _inspectedHashes.Clear();
             _launchButton.IsEnabled = false;
+            _inspectOdinUiButton.IsEnabled = false;
+            _startOdinButton.IsEnabled = false;
             _inspection.Text = "تغير اختيار الملفات. أعد فحص الحزم والبصمات قبل فتح Odin.";
             _status.Text = "تم اختيار ملف " + slot + ".";
         }
@@ -202,6 +277,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         {
             _inspectButton.IsEnabled = false;
             _launchButton.IsEnabled = false;
+            _inspectOdinUiButton.IsEnabled = false;
+            _startOdinButton.IsEnabled = false;
             _packagesInspected = false;
             _inspectedHashes.Clear();
 
@@ -247,11 +324,13 @@ public sealed class SamsungOdinAssistantWindow : Window
 
             lines.Add("TAR.MD5 verifies package integrity only; SHA-256 is recorded locally.");
             lines.Add("No publisher authenticity or exact device/region/bootloader compatibility verdict is produced.");
-            lines.Add("SoftBox does not automate Odin controls or press Start.");
+            lines.Add("Odin Start may be invoked only by the separate fail-closed Windows UI Automation workflow after fresh control, COM, package and technician-confirmation checks.");
             _inspection.Text = string.Join(Environment.NewLine, lines);
             _packagesInspected = true;
             _launchButton.IsEnabled = true;
-            _status.Text = $"تم فحص {plan.Count} ملف/ملفات وحساب SHA-256 من البايتات الحالية.";
+            _inspectOdinUiButton.IsEnabled = !string.IsNullOrWhiteSpace(_odinExecutable.Text) &&
+                File.Exists(_odinExecutable.Text) && _deviceSerial is not null;
+            _status.Text = $"تم فحص {plan.Count} ملف/ملفات وحساب SHA-256 من البايتات الحالية. أعد فحص واجهة Odin بعد تحميل الملفات يدويًا داخلها.";
         }
         catch (Exception ex)
         {
@@ -319,6 +398,159 @@ public sealed class SamsungOdinAssistantWindow : Window
             MessageBox.Show(this, ex.Message, "Samsung Odin Assistant", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    private async void DownloadMode_Click(object sender, RoutedEventArgs e)
+    {
+        if (_adb is null || _deviceSerial is null ||
+            AndroidDeviceToolsService.NormalizeVendor(_deviceManufacturer) != AndroidVendorKind.Samsung)
+        {
+            _status.Text = "لا يوجد هاتف Samsung مصرح به مرتبط بهذه الجلسة.";
+            return;
+        }
+
+        var answer = MessageBox.Show(this,
+            $"سيتم إرسال ADB reboot download إلى الهاتف المحدد:\n{_deviceManufacturer} {_deviceModel}\nSerial: {_deviceSerial}\n\nقد يتوقف ADB ويظهر الهاتف في Odin بعد تثبيت تعريف Samsung USB. متابعة؟",
+            "تأكيد Samsung Download Mode", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes)
+            return;
+
+        _downloadModeButton.IsEnabled = false;
+        try
+        {
+            var service = new AndroidDeviceToolsService(_adb);
+            var output = await service.RebootDeviceAsync(_deviceSerial, AndroidRebootTarget.DownloadMode);
+            _status.Text = "تم إرسال أمر Download Mode بعد إعادة التحقق من هوية Samsung وتصريح ADB. " + output +
+                " انتظر ظهور منفذ COM في Odin ثم حمّل الحزم يدويًا.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر دخول Download Mode: " + ex.Message;
+        }
+        finally
+        {
+            _downloadModeButton.IsEnabled = true;
+        }
+    }
+
+    private void InspectOdinUi_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (!_packagesInspected)
+                throw new InvalidOperationException("افحص حزم Firmware أولًا.");
+            if (_deviceSerial is null)
+                throw new InvalidOperationException("فحص واجهة Odin قبل Start يتطلب هاتف Samsung مصرحًا ومحددًا في SoftBox.");
+            var report = _odinAutomation.Inspect(
+                _odinExecutable.Text,
+                SelectedPackagePaths(),
+                _confirmCompatibility.IsChecked == true,
+                _confirmBackup.IsChecked == true,
+                _confirmComPort.IsChecked == true);
+            _startOdinButton.IsEnabled = report.Decision.CanInvokeStart;
+            _inspectedOdinProcessId = report.Decision.CanInvokeStart ? report.ProcessId : null;
+            _inspectedComPort = report.Decision.CanInvokeStart ? report.ComPort : null;
+            _inspection.AppendText(Environment.NewLine + Environment.NewLine +
+                "SAMSUNG ODIN UI AUTOMATION INSPECTION" + Environment.NewLine +
+                "Window: " + (report.WindowTitle ?? "Not detected") + Environment.NewLine +
+                "Process ID: " + (report.ProcessId?.ToString() ?? "Not detected") + Environment.NewLine +
+                "COM Port: " + (report.ComPort ?? "Not detected") + Environment.NewLine +
+                "Start allowed: " + report.Decision.CanInvokeStart + Environment.NewLine +
+                "Verified evidence:" + Environment.NewLine +
+                string.Join(Environment.NewLine, report.Decision.VerifiedEvidence.Select(x => "  + " + x)) +
+                Environment.NewLine + "Blockers:" + Environment.NewLine +
+                string.Join(Environment.NewLine, report.Decision.Blockers.Select(x => "  - " + x)));
+            _status.Text = report.Decision.CanInvokeStart
+                ? "اكتملت أدلة واجهة Odin. لا يبدأ التفليش حتى تكتب عبارة التأكيد النهائية."
+                : "تم منع Start بسبب عدم اكتمال أدلة Windows UI Automation. راجع أسباب المنع.";
+        }
+        catch (Exception ex)
+        {
+            _startOdinButton.IsEnabled = false;
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
+            _status.Text = "تعذر فحص واجهة Odin: " + ex.Message;
+        }
+    }
+
+    private async void StartOdin_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (_deviceSerial is null)
+                throw new InvalidOperationException("تنفيذ Start يتطلب هاتف Samsung مصرحًا ومحددًا.");
+            if (!_packagesInspected)
+                throw new InvalidOperationException("أعد فحص حزم Firmware قبل Start.");
+            var suffix = _deviceSerial.Length > 4 ? _deviceSerial[^4..] : _deviceSerial;
+            if (!string.Equals(_flashConfirmation.Text.Trim(), "FLASH " + suffix, StringComparison.Ordinal))
+                throw new InvalidOperationException("اكتب FLASH ثم مسافة وآخر أربعة أحرف من Serial لتأكيد الجهاز المستهدف.");
+
+            if (_confirmCompatibility.IsChecked != true || _confirmBackup.IsChecked != true ||
+                _confirmComPort.IsChecked != true)
+                throw new InvalidOperationException("يجب تأكيد توافق الموديل والمنطقة وBinary/Anti-Rollback والنسخة الاحتياطية وتطابق الهاتف مع منفذ COM.");
+
+            var paths = SelectedPackagePaths();
+            foreach (var item in _slotPaths.Where(pair => !string.IsNullOrWhiteSpace(pair.Value.Text)))
+            {
+                if (!File.Exists(item.Value.Text))
+                    throw new FileNotFoundException("اختفى ملف Firmware بعد الفحص.", item.Value.Text);
+                var current = await CalculateSha256Async(item.Value.Text);
+                if (!_inspectedHashes.TryGetValue(item.Key, out var inspected) ||
+                    !CryptographicOperations.FixedTimeEquals(Convert.FromHexString(current), Convert.FromHexString(inspected)))
+                    throw new InvalidDataException("تغيرت حزمة Firmware بعد الفحص: " + Path.GetFileName(item.Value.Text));
+            }
+
+            var report = _odinAutomation.Inspect(
+                _odinExecutable.Text, paths,
+                _confirmCompatibility.IsChecked == true,
+                _confirmBackup.IsChecked == true,
+                _confirmComPort.IsChecked == true);
+            if (!report.Decision.CanInvokeStart)
+            {
+                _startOdinButton.IsEnabled = false;
+                throw new InvalidOperationException("لم تعد أدلة Odin صالحة؛ تم منع Start:\n" +
+                    string.Join("\n", report.Decision.Blockers));
+            }
+            if (_inspectedOdinProcessId is null || _inspectedComPort is null ||
+                report.ProcessId != _inspectedOdinProcessId ||
+                !string.Equals(report.ComPort, _inspectedComPort, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("تغيرت عملية Odin أو منفذ COM بعد آخر فحص. أعد الفحص وتأكد من نفس الهاتف.");
+
+            var confirmation = MessageBox.Show(this,
+                $"سيتم إرسال Invoke واحد إلى زر Start في Odin عبر Windows UI Automation.\n\nالجهاز: {_deviceManufacturer} {_deviceModel}\nSerial: {_deviceSerial}\nCOM: {report.ComPort}\nالحزم:\n{string.Join("\n", paths.Select(Path.GetFileName))}\n\nتأكد أن معلومات الجهاز وCSC وBinary وAnti-Rollback صحيحة. هذا الإجراء يبدأ التفليش ولا يمكن التراجع عنه بأمان. هل تريد الاستمرار؟",
+                "تأكيد نهائي لتفليش Samsung عبر Odin", MessageBoxButton.YesNo, MessageBoxImage.Stop);
+            if (confirmation != MessageBoxResult.Yes)
+                return;
+
+            _startOdinButton.IsEnabled = false;
+            var started = _odinAutomation.InvokeStart(
+                _odinExecutable.Text, paths,
+                _confirmCompatibility.IsChecked == true,
+                _confirmBackup.IsChecked == true,
+                _confirmComPort.IsChecked == true,
+                report.ProcessId!.Value,
+                report.ComPort!);
+            _inspection.AppendText(Environment.NewLine + Environment.NewLine +
+                "ODIN START RESULT: " + (started.StartInvoked ? "INVOKE SENT" : "BLOCKED") +
+                Environment.NewLine + string.Join(Environment.NewLine, started.Decision.Blockers));
+            _status.Text = started.StartInvoked
+                ? "تم إرسال Invoke إلى Start في Odin. تابع Progress/ID:COM/Result داخل Odin؛ لم يؤكد SoftBox نجاح التفليش."
+                : "لم يتم تنفيذ Start: " + string.Join(" | ", started.Decision.Blockers);
+        }
+        catch (Exception ex)
+        {
+            _startOdinButton.IsEnabled = false;
+            _inspectedOdinProcessId = null;
+            _inspectedComPort = null;
+            _status.Text = "تم منع أو تعذر بدء تفليش Odin: " + ex.Message;
+            MessageBox.Show(this, ex.Message, "Samsung Odin Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private string[] SelectedPackagePaths()
+        => _slotPaths.Values
+            .Where(text => !string.IsNullOrWhiteSpace(text.Text))
+            .Select(text => Path.GetFullPath(text.Text))
+            .ToArray();
 
     private static async Task<string> CalculateSha256Async(string path)
     {

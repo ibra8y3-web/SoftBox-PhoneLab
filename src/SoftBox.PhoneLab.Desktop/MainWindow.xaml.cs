@@ -800,8 +800,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new FastbootManagerWindow { Owner = this }.Show();
                 break;
             case "OpenSamsungOdinAssistant":
-                new SamsungOdinAssistantWindow { Owner = this }.Show();
+            {
+                var samsungDevice = SelectedDevice;
+                var hasAuthorizedSamsung = samsungDevice is not null && samsungDevice.IsAuthorized &&
+                    AndroidDeviceToolsService.NormalizeVendor(samsungDevice.Manufacturer) == AndroidVendorKind.Samsung;
+                new SamsungOdinAssistantWindow(
+                    hasAuthorizedSamsung ? _adb : null,
+                    hasAuthorizedSamsung ? samsungDevice!.Serial : null,
+                    hasAuthorizedSamsung ? samsungDevice!.Manufacturer : null,
+                    hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null)
+                { Owner = this }.Show();
                 break;
+            }
             case "OpenSamsungOfficialTools":
                 new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show();
                 break;
