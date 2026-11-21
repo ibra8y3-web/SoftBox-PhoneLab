@@ -413,7 +413,7 @@ public sealed class UpdateCenterWindow : Window
             start.ArgumentList.Add("Bypass");
             start.ArgumentList.Add("-EncodedCommand");
             start.ArgumentList.Add(script);
-            Process.Start(start) ?? throw new InvalidOperationException("تعذر بدء مساعد التحديث.");
+            _ = Process.Start(start) ?? throw new InvalidOperationException("تعذر بدء مساعد التحديث.");
             _status.Text = "بدأ مساعد التحديث. سيتم إغلاق SoftBox، ثم حفظ النسخة السابقة والتحقق مجددًا قبل استبدال الملفات.";
             Application.Current.Shutdown();
         }
@@ -453,7 +453,7 @@ public sealed class UpdateCenterWindow : Window
             start.ArgumentList.Add("Bypass");
             start.ArgumentList.Add("-EncodedCommand");
             start.ArgumentList.Add(script);
-            Process.Start(start) ?? throw new InvalidOperationException("تعذر بدء مساعد الرجوع.");
+            _ = Process.Start(start) ?? throw new InvalidOperationException("تعذر بدء مساعد الرجوع.");
             _status.Text = "بدأ مساعد الرجوع. سيتم إغلاق SoftBox واستعادة نسخة الملفات السابقة.";
             Application.Current.Shutdown();
         }
