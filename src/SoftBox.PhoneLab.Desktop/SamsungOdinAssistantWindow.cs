@@ -35,6 +35,10 @@ public sealed class SamsungOdinAssistantWindow : Window
     {
         Content = "أؤكد وجود نسخة احتياطية صالحة وأنني أتحمل مخاطر التفليش"
     };
+    private readonly CheckBox _confirmComPort = new()
+    {
+        Content = "أؤكد أن منفذ COM الظاهر في Odin يخص نفس الهاتف المحدد في SoftBox"
+    };
     private readonly TextBox _flashConfirmation = new();
     private readonly SamsungOdinUiAutomationService _odinAutomation = new();
     private readonly AdbClient? _adb;
@@ -128,8 +132,11 @@ public sealed class SamsungOdinAssistantWindow : Window
         _confirmBackup.Foreground = Brush("#F0C9A5");
         _confirmCompatibility.Margin = new Thickness(4);
         _confirmBackup.Margin = new Thickness(4);
+        _confirmComPort.Foreground = Brush("#F0C9A5");
+        _confirmComPort.Margin = new Thickness(4);
         content.Children.Add(_confirmCompatibility);
         content.Children.Add(_confirmBackup);
+        content.Children.Add(_confirmComPort);
         _flashConfirmation.Width = 260;
         _flashConfirmation.Margin = new Thickness(4);
         _flashConfirmation.Padding = new Thickness(8);
@@ -430,7 +437,8 @@ public sealed class SamsungOdinAssistantWindow : Window
                 _odinExecutable.Text,
                 SelectedPackagePaths(),
                 _confirmCompatibility.IsChecked == true,
-                _confirmBackup.IsChecked == true);
+                _confirmBackup.IsChecked == true,
+                _confirmComPort.IsChecked == true);
             _startOdinButton.IsEnabled = report.Decision.CanInvokeStart;
             _inspection.AppendText(Environment.NewLine + Environment.NewLine +
                 "SAMSUNG ODIN UI AUTOMATION INSPECTION" + Environment.NewLine +
@@ -465,8 +473,9 @@ public sealed class SamsungOdinAssistantWindow : Window
             if (!string.Equals(_flashConfirmation.Text.Trim(), "FLASH " + suffix, StringComparison.Ordinal))
                 throw new InvalidOperationException("اكتب FLASH ثم مسافة وآخر أربعة أحرف من Serial لتأكيد الجهاز المستهدف.");
 
-            if (_confirmCompatibility.IsChecked != true || _confirmBackup.IsChecked != true)
-                throw new InvalidOperationException("يجب تأكيد توافق الموديل والمنطقة وBinary/Anti-Rollback والنسخة الاحتياطية.");
+            if (_confirmCompatibility.IsChecked != true || _confirmBackup.IsChecked != true ||
+                _confirmComPort.IsChecked != true)
+                throw new InvalidOperationException("يجب تأكيد توافق الموديل والمنطقة وBinary/Anti-Rollback والنسخة الاحتياطية وتطابق الهاتف مع منفذ COM.");
 
             var paths = SelectedPackagePaths();
             foreach (var item in _slotPaths.Where(pair => !string.IsNullOrWhiteSpace(pair.Value.Text)))
@@ -482,7 +491,8 @@ public sealed class SamsungOdinAssistantWindow : Window
             var report = _odinAutomation.Inspect(
                 _odinExecutable.Text, paths,
                 _confirmCompatibility.IsChecked == true,
-                _confirmBackup.IsChecked == true);
+                _confirmBackup.IsChecked == true,
+                _confirmComPort.IsChecked == true);
             if (!report.Decision.CanInvokeStart)
             {
                 _startOdinButton.IsEnabled = false;
@@ -500,7 +510,8 @@ public sealed class SamsungOdinAssistantWindow : Window
             var started = _odinAutomation.InvokeStart(
                 _odinExecutable.Text, paths,
                 _confirmCompatibility.IsChecked == true,
-                _confirmBackup.IsChecked == true);
+                _confirmBackup.IsChecked == true,
+                _confirmComPort.IsChecked == true);
             _inspection.AppendText(Environment.NewLine + Environment.NewLine +
                 "ODIN START RESULT: " + (started.StartInvoked ? "INVOKE SENT" : "BLOCKED") +
                 Environment.NewLine + string.Join(Environment.NewLine, started.Decision.Blockers));
