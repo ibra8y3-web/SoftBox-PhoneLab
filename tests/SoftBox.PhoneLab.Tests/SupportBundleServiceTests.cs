@@ -68,7 +68,10 @@ public sealed class SupportBundleServiceTests
         var root = CreateTempDirectory();
         var log = Path.Combine(root, "desktop-events.jsonl");
         var archivePath = Path.Combine(root, "support.zip");
-        await File.WriteAllTextAsync(log, "{\\"event\\":\\"desktop-started\\"}\\n{\\"event\\":\\"crash\\",\\"password\\":\\"do-not-share\\"}");
+        await File.WriteAllTextAsync(log, """
+{"event":"desktop-started"}
+{"event":"crash","password":"do-not-share"}
+""");
         try
         {
             var service = new SupportBundleService();
