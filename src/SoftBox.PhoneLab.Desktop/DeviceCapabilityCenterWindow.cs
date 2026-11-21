@@ -27,6 +27,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
     private readonly Button _refreshButton;
+    private readonly Button _updateCatalogButton;
     private readonly Button _exportMatrixButton;
     private DeviceCapabilityMatrixReport? _lastMatrix;
     private bool _busy;
@@ -56,6 +57,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
         Foreground = Brush("#EAF3FF");
 
         _refreshButton = ButtonControl("إعادة فحص القدرات", "#14517A", async (_, _) => await RefreshAsync());
+        _updateCatalogButton = ButtonControl("تحديث قاعدة الموديلات", "#5B477A", async (_, _) => await UpdateCatalogAsync());
         _exportMatrixButton = ButtonControl("تصدير مصفوفة تغطية الموديلات CSV", "#176044", ExportMatrix_Click);
         _exportMatrixButton.IsEnabled = false;
         Content = BuildContent();
@@ -102,6 +104,7 @@ public sealed class DeviceCapabilityCenterWindow : Window
 
         var toolbar = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         toolbar.Children.Add(_refreshButton);
+        toolbar.Children.Add(_updateCatalogButton);
         toolbar.Children.Add(_exportMatrixButton);
         DockPanel.SetDock(toolbar, Dock.Top);
         root.Children.Add(toolbar);
@@ -136,6 +139,8 @@ public sealed class DeviceCapabilityCenterWindow : Window
 
         _busy = true;
         _refreshButton.IsEnabled = false;
+        _updateCatalogButton.IsEnabled = false;
+        _exportMatrixButton.IsEnabled = false;
         _status.Text = "جارٍ إعادة اكتشاف ADB وFastboot وتحميل ملفات تعريف الأجهزة...";
         try
         {
@@ -209,6 +214,47 @@ public sealed class DeviceCapabilityCenterWindow : Window
         {
             _busy = false;
             _refreshButton.IsEnabled = true;
+            _updateCatalogButton.IsEnabled = true;
+            _exportMatrixButton.IsEnabled = _lastMatrix is not null;
+        }
+    }
+
+    private async Task UpdateCatalogAsync()
+    {
+        if (_busy)
+            return;
+
+        var confirmation = MessageBox.Show(
+            this,
+            "سيتم تنزيل قاعدة تعريف الموديلات من مصادرها المفتوحة والتحقق من الترخيص والبصمات والتعارضات قبل حفظها محليًا. قد يحتاج التنزيل إلى اتصال إنترنت ومساحة إضافية. لا يتم تنزيل خرائط PCB أو مخططات خاصة.",
+            "تأكيد تحديث قاعدة الموديلات",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Information);
+        if (confirmation != MessageBoxResult.Yes)
+            return;
+
+        _busy = true;
+        _refreshButton.IsEnabled = false;
+        _updateCatalogButton.IsEnabled = false;
+        _exportMatrixButton.IsEnabled = false;
+        _status.Text = "جارٍ تنزيل قاعدة الموديلات والتحقق من المصادر...";
+        try
+        {
+            var count = await _profiles.UpdateAsync();
+            _status.Text = $"اكتمل تحديث قاعدة الموديلات: {count:N0} ملف تعريف. جارٍ إعادة تقييم الجهاز...";
+            await RefreshAsync();
+            _status.Text = $"اكتمل تحديث قاعدة الموديلات وإعادة التقييم: {count:N0} ملف تعريف. راجع حالة مطابقة موديل الجهاز أدناه.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تحديث قاعدة الموديلات: " + ex.Message +
+                " ستظل النسخة المحلية السابقة مستخدمة إن كانت موجودة.";
+        }
+        finally
+        {
+            _busy = false;
+            _refreshButton.IsEnabled = true;
+            _updateCatalogButton.IsEnabled = true;
             _exportMatrixButton.IsEnabled = _lastMatrix is not null;
         }
     }
@@ -250,6 +296,15 @@ public sealed class DeviceCapabilityCenterWindow : Window
         text.AppendLine("EVALUATED UTC: " + report.EvaluatedAtUtc.ToString("O"));
         text.AppendLine("PROFILE CATALOG: " + catalog.CatalogVersion);
         text.AppendLine("PROFILE COUNT: " + catalog.Profiles.Count);
+        text.AppendLine("CATALOG UPDATED UTC: " + (catalog.UpdatedAtUtc == default ? "Unknown" : catalog.UpdatedAtUtc.ToString("O")));
+        text.AppendLine("CATALOG GENERATED UTC: " + (catalog.GeneratedAtUtc == default ? "Unknown" : catalog.GeneratedAtUtc.ToString("O")));
+        text.AppendLine("SOURCE COUNT: " + catalog.Sources.Count);
+        foreach (var source in catalog.Sources)
+        {
+            text.AppendLine($"SOURCE: {source.Name} | License: {source.License} | Records: {source.RecordCount}");
+            text.AppendLine($"SOURCE REVISION: {source.Revision} | SHA-256: {source.Sha256}");
+            text.AppendLine($"SOURCE URL: {source.Url}");
+        }
         text.AppendLine();
         text.AppendLine("MODEL AND BOARD COVERAGE MATRIX");
         text.AppendLine("TOTAL PROFILE ROWS: " + matrix.TotalProfiles);

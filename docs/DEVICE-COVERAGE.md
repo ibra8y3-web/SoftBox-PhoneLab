@@ -48,3 +48,10 @@ python scripts/validate_device_profiles.py
 ```
 
 The scheduled GitHub workflow refreshes the snapshot every Monday and on manual dispatch. Device-profile coverage is broader than the curated starter list, but it is not a guarantee that every device ever manufactured or every regional variant is represented.
+
+
+## Updating the model database in PhoneLab
+
+Open the Device Capability Center and select **تحديث قاعدة الموديلات**. The app downloads the published catalog, checks its schema, HTTPS source references, checksums, licenses, source revision metadata, and community verification restrictions, then saves the last accepted snapshot under the current Windows user's LocalAppData. The existing local snapshot remains available when an update cannot be validated. The report shows source revision, update time, and catalog coverage.
+
+The community catalogue currently contains 43,216 identity/specification rows from 43,058 Google Play-supported model identifiers and 778 LineageOS device YAML profiles (counts can change at the next successful refresh). It is not a list of every handset ever manufactured. A source row is not a certification of a specific regional SKU, board revision, repair procedure, bootloader command, electrical rail, or component placement. No community row is allowed to grant a write/flash/unlock capability or to assign a model-specific PCB map.
