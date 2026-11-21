@@ -54,7 +54,7 @@ public sealed class VendorDiagnosticsWindow : Window
             ? ButtonControl("تشخيص Xiaomi Fastboot", "#704B20", XiaomiFastboot_Click)
             : null;
         _saveButton.IsEnabled = false;
-        Content = BuildContent(vendor, model);
+        Content = BuildContent(vendor, _model);
         Closed += (_, _) => _operation?.Cancel();
     }
 

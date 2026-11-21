@@ -96,16 +96,18 @@ public static class FirmwareCompatibilityPolicy
             .Select(value => Normalize(value!))
             .ToHashSet(StringComparer.Ordinal);
         var packageModel = Normalize(firmwareModel!);
-        return accepted.Contains(packageModel)
-            ? Passed("الموديل", "تطابق موديل Firmware مع Model أو Product المقروءين من الهاتف.")
-            : Failed("الموديل", $"موديل الحزمة ({firmwareModel}) لا يطابق Model/Product المقروءين من الهاتف.");
+        if (!accepted.Contains(packageModel))
+            return Failed("الموديل", $"موديل الحزمة ({firmwareModel}) لا يطابق Model/Product المقروءين من الهاتف.");
+        return Passed("الموديل", "تطابق موديل Firmware مع Model أو Product المقروءين من الهاتف.");
     }
 
     private static FirmwareCompatibilityCheck CompareOptionalExact(string name, string? device, string? firmware)
     {
         if (IsMissing(device) || IsMissing(firmware))
             return Unknown(name, "لا توجد قيمتان موثوقتان للمقارنة.");
-        return Normalize(device).Equals(Normalize(firmware), StringComparison.Ordinal)
+        var normalizedDevice = Normalize(device!);
+        var normalizedFirmware = Normalize(firmware!);
+        return normalizedDevice.Equals(normalizedFirmware, StringComparison.Ordinal)
             ? Passed(name, "تطابق القيمة المقروءة مع بيانات الحزمة.")
             : Failed(name, $"القيمة على الهاتف ({device}) لا تطابق قيمة الحزمة ({firmware}).");
     }
