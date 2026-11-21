@@ -190,7 +190,21 @@ public static class XiaomiFastbootRomFlashPlanBuilder
             if (hasShellOperators)
                 throw new InvalidDataException("أوامر Fastboot ذات pipe أو redirection أو chaining غير مدعومة.");
 
-            if (verb is "erase" or "format" or "flashing" or "oem" or "set_active" or "boot" or "update" or "continue")
+            if (verb is "erase" or "format")
+            {
+                if (tokens.Count != 2 ||
+                    !tokens[1].Equals("userdata", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("يسمح فقط بمسح userdata كخطوة معلنة في flash_all.bat؛ أوامر erase/format الأخرى ممنوعة.");
+                if (!scriptName.Equals("flash_all.bat", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("تم رفض مسح userdata داخل flash_all_except_storage.bat.");
+                if (++wipeCount > 1)
+                    throw new InvalidDataException("السكربت يحاول تنفيذ أكثر من عملية مسح لبيانات المستخدم؛ تم رفضه.");
+                steps.Add(new XiaomiFastbootRomFlashStep(
+                    ++logicalIndex, XiaomiFastbootRomStepKind.WipeUserData, null, null, 0, null));
+                continue;
+            }
+
+            if (verb is "flashing" or "oem" or "set_active" or "boot" or "update" or "continue")
                 throw new InvalidDataException("السكربت يحتوي أمر Fastboot غير مسموح: " + verb);
 
             if (verb == "-w")
@@ -213,6 +227,8 @@ public static class XiaomiFastbootRomFlashPlanBuilder
                 var partition = tokens[1];
                 if (!PartitionPattern.IsMatch(partition))
                     throw new InvalidDataException("اسم قسم Fastboot غير صالح: " + partition);
+                if (IsProtectedPartition(partition))
+                    throw new InvalidDataException("تم منع التفليش المباشر لقسم حساس أو خاص ببيانات المستخدم: " + partition);
 
                 var imagePath = ResolveImagePath(root, tokens[2]);
                 var imageInfo = new FileInfo(imagePath);
@@ -292,6 +308,13 @@ public static class XiaomiFastbootRomFlashPlanBuilder
             firmwareAntiRollback,
             steps,
             findings);
+    }
+
+    private static bool IsProtectedPartition(string partition)
+    {
+        var name = partition.Trim().ToLowerInvariant();
+        return name is "userdata" or "metadata" or "persist" or "frp" or "keystore" or
+            "modemst1" or "modemst2" or "fsg" or "fsc" or "ssd" or "devinfo";
     }
 
     private static string? FindAndroidInfo(string root)
