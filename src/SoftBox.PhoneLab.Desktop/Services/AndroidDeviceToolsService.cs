@@ -7,7 +7,7 @@ using SoftBox.PhoneLab.Core.Android;
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 public sealed record AndroidPackageInfo(string PackageName);
-public enum AndroidRebootTarget { System, Recovery, Bootloader }
+public enum AndroidRebootTarget { System, Recovery, Bootloader, DownloadMode }
 public sealed record AndroidSplitApkFile(string FullPath, string FileName, string? SplitName, string Sha256);
 public sealed record AndroidSplitApkInstallPlan(
     string PackageName,
@@ -38,7 +38,8 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             ["storage"] = ["shell", "df", "-h", "/storage/emulated/0"],
             ["uptime"] = ["shell", "cat", "/proc/uptime"],
             ["third-party-apps"] = ["shell", "pm", "list", "packages", "-3"],
-            ["services"] = ["shell", "service", "list"]
+            ["services"] = ["shell", "service", "list"],
+            ["logcat"] = ["logcat", "-b", "all", "-d", "-v", "threadtime", "-t", "3000"]
         };
 
     public static IReadOnlyList<string> PresetIds => ReadOnlyPresets.Keys.OrderBy(x => x, StringComparer.Ordinal).ToArray();
@@ -447,11 +448,26 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             throw new UnauthorizedAccessException(
                 "الجهاز المحدد ليس في حالة ADB device المصرح بها حاليًا؛ لم يتم إرسال أمر إعادة التشغيل.");
 
+        if (target == AndroidRebootTarget.DownloadMode)
+        {
+            var manufacturer = await adb.RunAsync(
+                ["-s", serial, "shell", "getprop", "ro.product.manufacturer"],
+                cancellationToken, TimeSpan.FromSeconds(12));
+            var brand = await adb.RunAsync(
+                ["-s", serial, "shell", "getprop", "ro.product.brand"],
+                cancellationToken, TimeSpan.FromSeconds(12));
+            if (NormalizeVendor(manufacturer) != AndroidVendorKind.Samsung &&
+                NormalizeVendor(brand) != AndroidVendorKind.Samsung)
+                throw new UnauthorizedAccessException(
+                    "رُفض دخول Download Mode: لم تؤكد خصائص Android أن الجهاز من Samsung. لم يتم إرسال أمر reboot download.");
+        }
+
         var arguments = target switch
         {
             AndroidRebootTarget.System => new[] { "reboot" },
             AndroidRebootTarget.Recovery => new[] { "reboot", "recovery" },
             AndroidRebootTarget.Bootloader => new[] { "reboot", "bootloader" },
+            AndroidRebootTarget.DownloadMode => new[] { "reboot", "download" },
             _ => throw new ArgumentOutOfRangeException(nameof(target))
         };
         var output = await adb.RunAsync(
@@ -464,6 +480,7 @@ public sealed class AndroidDeviceToolsService(IAdbCommandRunner adb)
             AndroidRebootTarget.System => "Android System",
             AndroidRebootTarget.Recovery => "Recovery",
             AndroidRebootTarget.Bootloader => "Bootloader / Fastboot",
+            AndroidRebootTarget.DownloadMode => "Samsung Download Mode",
             _ => "Unknown"
         };
         return $"تم قبول أمر إعادة تشغيل الجهاز المحدد إلى {mode}. قد ينقطع ADB أثناء انتقال الهاتف إلى الوضع المطلوب. {output}".Trim();

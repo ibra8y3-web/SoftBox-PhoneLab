@@ -52,6 +52,8 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly Button _rebootSystemButton;
     private readonly Button _rebootRecoveryButton;
     private readonly Button _rebootBootloaderButton;
+    private readonly Button _rebootDownloadModeButton;
+    private readonly bool _isSamsungDevice;
     private readonly Button _commandButton;
     private readonly Button _batchButton;
     private readonly Button _cancelButton;
@@ -61,7 +63,8 @@ public sealed class AndroidDeviceToolsWindow : Window
         string serial,
         IReadOnlyList<string> authorizedSerials,
         int maximumBatchConcurrency = 3,
-        int selectedTabIndex = 0)
+        int selectedTabIndex = 0,
+        string? manufacturer = null)
     {
         if (!AdbClient.IsSafeSerial(serial))
             throw new ArgumentException("معرف ADB غير صالح.", nameof(serial));
@@ -70,6 +73,7 @@ public sealed class AndroidDeviceToolsWindow : Window
             throw new ArgumentOutOfRangeException(nameof(maximumBatchConcurrency));
         _maximumBatchConcurrency = maximumBatchConcurrency;
         _selectedTabIndex = selectedTabIndex;
+        _isSamsungDevice = AndroidDeviceToolsService.NormalizeVendor(manufacturer) == AndroidVendorKind.Samsung;
         _authorizedSerials = authorizedSerials.Where(AdbClient.IsSafeSerial)
             .Distinct(StringComparer.Ordinal).ToArray();
         if (!_authorizedSerials.Contains(serial, StringComparer.Ordinal))
@@ -102,6 +106,8 @@ public sealed class AndroidDeviceToolsWindow : Window
         _rebootSystemButton = ButtonControl("إعادة تشغيل Android", "#14517A", (_, _) => RebootDevice_Click(AndroidRebootTarget.System));
         _rebootRecoveryButton = ButtonControl("الدخول إلى Recovery", "#704B20", (_, _) => RebootDevice_Click(AndroidRebootTarget.Recovery));
         _rebootBootloaderButton = ButtonControl("الدخول إلى Bootloader", "#704B20", (_, _) => RebootDevice_Click(AndroidRebootTarget.Bootloader));
+        _rebootDownloadModeButton = ButtonControl("Samsung Download Mode", "#7A3434", (_, _) => RebootDevice_Click(AndroidRebootTarget.DownloadMode));
+        _rebootDownloadModeButton.IsEnabled = _isSamsungDevice;
         _commandButton = ButtonControl("تنفيذ الأمر الآمن", "#14517A", RunCommand_Click);
         _batchButton = ButtonControl("تنفيذ على الأجهزة المحددة", "#14517A", RunBatch_Click);
         _cancelButton = ButtonControl("إلغاء العملية", "#51333A", Cancel_Click);
@@ -498,6 +504,8 @@ public sealed class AndroidDeviceToolsWindow : Window
         rebootButtons.Children.Add(_rebootSystemButton);
         rebootButtons.Children.Add(_rebootRecoveryButton);
         rebootButtons.Children.Add(_rebootBootloaderButton);
+        if (_isSamsungDevice)
+            rebootButtons.Children.Add(_rebootDownloadModeButton);
         systemPanel.Children.Add(rebootButtons);
         system.Child = systemPanel;
         panel.Children.Add(system);
@@ -660,6 +668,7 @@ public sealed class AndroidDeviceToolsWindow : Window
             AndroidRebootTarget.System => "إعادة تشغيل Android",
             AndroidRebootTarget.Recovery => "الدخول إلى Recovery",
             AndroidRebootTarget.Bootloader => "الدخول إلى Bootloader / Fastboot",
+            AndroidRebootTarget.DownloadMode => "الدخول إلى Samsung Download Mode",
             _ => "إعادة تشغيل الجهاز"
         };
         var details = target switch
@@ -667,6 +676,7 @@ public sealed class AndroidDeviceToolsWindow : Window
             AndroidRebootTarget.System => "سيعاد تشغيل الهاتف إلى Android.",
             AndroidRebootTarget.Recovery => "سينتقل الهاتف إلى Recovery. هذا الأمر لا ينفذ Wipe أو Factory Reset.",
             AndroidRebootTarget.Bootloader => "سينتقل الهاتف إلى Bootloader/Fastboot. هذا الأمر لا يفتح Bootloader ولا ينفذ Flash.",
+            AndroidRebootTarget.DownloadMode => "سيطلب SoftBox من هاتف Samsung الدخول إلى Download Mode فقط. لن يتم تحميل Firmware أو بدء التفليش. قد يحتاج الخروج من هذا الوضع إلى إعادة تشغيل يدوية وفق موديل الهاتف.",
             _ => ""
         };
         var confirmation = MessageBox.Show(this,
@@ -884,6 +894,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         _rebootSystemButton.IsEnabled = !busy;
         _rebootRecoveryButton.IsEnabled = !busy;
         _rebootBootloaderButton.IsEnabled = !busy;
+        _rebootDownloadModeButton.IsEnabled = _isSamsungDevice && !busy;
         _commandButton.IsEnabled = !busy;
         _batchButton.IsEnabled = !busy;
     }

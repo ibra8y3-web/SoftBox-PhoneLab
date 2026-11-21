@@ -178,6 +178,35 @@ public sealed class AndroidDeviceOperationsTests
     }
 
     [Fact]
+    public async Task RebootsConfirmedSamsungIntoDownloadModeOnlyAfterVendorIdentityCheck()
+    {
+        var adb = new FakeAdbCommandRunner("device", "samsung", "samsung", "");
+        var service = new AndroidDeviceToolsService(adb);
+
+        var result = await service.RebootDeviceAsync(Device, AndroidRebootTarget.DownloadMode);
+
+        Assert.Contains("Samsung Download Mode", result);
+        Assert.Equal(4, adb.Calls.Count);
+        Assert.Equal(new[] { "-s", Device, "get-state" }, adb.Calls[0]);
+        Assert.Equal(new[] { "-s", Device, "shell", "getprop", "ro.product.manufacturer" }, adb.Calls[1]);
+        Assert.Equal(new[] { "-s", Device, "shell", "getprop", "ro.product.brand" }, adb.Calls[2]);
+        Assert.Equal(new[] { "-s", Device, "reboot", "download" }, adb.Calls[3]);
+    }
+
+    [Fact]
+    public async Task DoesNotRequestDownloadModeWhenSamsungIdentityIsNotConfirmed()
+    {
+        var adb = new FakeAdbCommandRunner("device", "Google", "Pixel");
+        var service = new AndroidDeviceToolsService(adb);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            service.RebootDeviceAsync(Device, AndroidRebootTarget.DownloadMode));
+
+        Assert.Equal(3, adb.Calls.Count);
+        Assert.DoesNotContain(adb.Calls, call => call.Contains("reboot", StringComparer.Ordinal));
+    }
+
+    [Fact]
     public async Task DoesNotRebootWhenAdbStateIsNotAuthorizedDevice()
     {
         var adb = new FakeAdbCommandRunner("unauthorized");

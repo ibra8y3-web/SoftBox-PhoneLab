@@ -786,6 +786,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenFastbootManager":
                 new FastbootManagerWindow { Owner = this }.Show();
                 break;
+            case "OpenSamsungOdinAssistant":
+                new SamsungOdinAssistantWindow { Owner = this }.Show();
+                break;
+            case "OpenSamsungServiceOperations":
+                OpenSamsungServiceOperations();
+                break;
+            case "OpenAndroidLogAnalyzer":
+                if (SelectedDevice is { IsAuthorized: true } logAnalyzerDevice)
+                    new AndroidLogAnalyzerWindow(_adb, logAnalyzerDevice.Serial) { Owner = this }.Show();
+                else
+                    MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "محلل Logcat",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                break;
             case "OpenDeviceCapabilityCenter":
             {
                 var capabilitySelectedDevice = SelectedDevice;
@@ -955,7 +968,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
 
-    private void OpenAndroidToolsWindow(int selectedTabIndex = 0)
+    private void OpenAndroidToolsWindow(int selectedTabIndex = 0, string? manufacturerOverride = null)
     {
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
@@ -967,7 +980,38 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var authorized = Devices.Where(device => device.IsAuthorized)
             .Select(device => device.Serial).ToArray();
-        new AndroidDeviceToolsWindow(_adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex) { Owner = this }.Show();
+        var manufacturer = manufacturerOverride ??
+            (_snapshot is not null && _snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal)
+                ? _snapshot.Manufacturer
+                : selected.Manufacturer);
+        new AndroidDeviceToolsWindow(
+            _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer)
+        { Owner = this }.Show();
+    }
+
+    private void OpenSamsungServiceOperations()
+    {
+        var selected = SelectedDevice;
+        if (selected is null || !selected.IsAuthorized)
+        {
+            MessageBox.Show(this, "اختر هاتف Samsung حاصلًا على تصريح ADB أولًا.", "Samsung Service",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var manufacturer = _snapshot is not null &&
+                           _snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal)
+            ? _snapshot.Manufacturer
+            : selected.Manufacturer;
+        if (AndroidDeviceToolsService.NormalizeVendor(manufacturer) != AndroidVendorKind.Samsung)
+        {
+            MessageBox.Show(this,
+                "لم يتم تأكيد هوية Samsung للجهاز المحدد. لم يتم فتح أو إرسال أي عملية خاصة بالشركة.",
+                "Samsung Service", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        OpenAndroidToolsWindow(4, manufacturer);
     }
 
     private void OpenVendorDiagnostics(AndroidVendorKind expectedVendor, string sectionName)

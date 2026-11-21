@@ -27,6 +27,40 @@ public sealed class FastbootServiceTests
     }
 
     [Fact]
+    public void RecoveryRebootArgumentBuilderTargetsOnlyTheSelectedFastbootSerial()
+    {
+        var arguments = FastbootService.BuildRebootRecoveryArguments("FASTBOOT-123");
+
+        Assert.Equal(new[] { "-s", "FASTBOOT-123", "reboot", "recovery" }, arguments);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-s")]
+    [InlineData("bad/serial")]
+    public void RecoveryRebootArgumentBuilderRejectsInvalidSerials(string serial)
+    {
+        Assert.Throws<ArgumentException>(() => FastbootService.BuildRebootRecoveryArguments(serial));
+    }
+
+    [Fact]
+    public void FastbootdRebootArgumentBuilderTargetsOnlyTheSelectedSerial()
+    {
+        var arguments = FastbootService.BuildRebootFastbootdArguments("FASTBOOT-123");
+
+        Assert.Equal(new[] { "-s", "FASTBOOT-123", "reboot", "fastboot" }, arguments);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-s")]
+    [InlineData("bad/serial")]
+    public void FastbootdRebootArgumentBuilderRejectsInvalidSerials(string serial)
+    {
+        Assert.Throws<ArgumentException>(() => FastbootService.BuildRebootFastbootdArguments(serial));
+    }
+
+    [Fact]
     public void DeviceParserReturnsEmptyListForNoConnectedFastbootDevice()
     {
         var devices = FastbootService.ParseDevices("< waiting for any device >\n");
