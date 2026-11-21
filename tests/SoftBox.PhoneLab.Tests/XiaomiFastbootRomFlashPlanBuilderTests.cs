@@ -112,6 +112,46 @@ public sealed class XiaomiFastbootRomFlashPlanBuilderTests
             XiaomiFastbootRomFlashPlanBuilder.BuildAsync(script, "ruby"));
     }
 
+    [Fact]
+    public async Task UserdataImageIsMarkedAsDestructiveAndAllowedOnlyInCleanFlashScript()
+    {
+        using var root = new RomFixture();
+        root.Write("android-info.txt", "require product=ruby\\n");
+        root.Write("images/boot.img", "boot");
+        root.Write("images/userdata.img", "userdata-image");
+        var clean = root.Write("flash_all.bat",
+            "fastboot %* flash boot images\\\\boot.img\\n" +
+            "fastboot %* flash userdata images\\\\userdata.img\\n");
+        var preserve = root.Write("flash_all_except_storage.bat",
+            "fastboot %* flash userdata images\\\\userdata.img\\n");
+
+        var plan = await XiaomiFastbootRomFlashPlanBuilder.BuildAsync(clean, "ruby");
+
+        Assert.True(plan.RequiresDataWipe);
+        Assert.Contains(plan.Steps, step => step.Kind == XiaomiFastbootRomStepKind.FlashUserData);
+        await Assert.ThrowsAsync<InvalidDataException>(() =>
+            XiaomiFastbootRomFlashPlanBuilder.BuildAsync(preserve, "ruby"));
+    }
+
+    [Theory]
+    [InlineData("erase")]
+    [InlineData("format")]
+    public async Task UserdataEraseAndFormatAreExplicitDestructivePlanSteps(string verb)
+    {
+        using var root = new RomFixture();
+        root.Write("android-info.txt", "require product=ruby\\n");
+        root.Write("images/boot.img", "boot");
+        var script = root.Write("flash_all.bat",
+            "fastboot %* flash boot images\\\\boot.img\\nfastboot %* " + verb + " userdata\\n");
+
+        var plan = await XiaomiFastbootRomFlashPlanBuilder.BuildAsync(script, "ruby");
+        var wipe = Assert.Single(plan.Steps.Where(step => step.Kind == XiaomiFastbootRomStepKind.WipeUserData));
+
+        Assert.True(plan.RequiresDataWipe);
+        Assert.Equal(verb, wipe.CommandVerb);
+        Assert.Equal("userdata", wipe.Partition);
+    }
+
     private sealed class RomFixture : IDisposable
     {
         public string Root { get; } = Path.Combine(Path.GetTempPath(), "softbox-xiaomi-flash-plan-" + Guid.NewGuid().ToString("N"));
