@@ -82,7 +82,9 @@ public static class FirmwareCompatibilityPolicy
     {
         if (IsMissing(device) || IsMissing(firmware))
             return Unknown(name, "بيانات الشركة غير مكتملة.");
-        return Normalize(device).Equals(Normalize(firmware), StringComparison.Ordinal)
+        var normalizedDevice = Normalize(device!);
+        var normalizedFirmware = Normalize(firmware!);
+        return normalizedDevice.Equals(normalizedFirmware, StringComparison.Ordinal)
             ? Passed(name, $"تطابق اسم الشركة: {device}.")
             : Failed(name, $"الشركة على الجهاز ({device}) تختلف عن بيانات الحزمة ({firmware}).");
     }
