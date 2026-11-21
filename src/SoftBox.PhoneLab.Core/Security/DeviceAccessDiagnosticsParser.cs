@@ -33,19 +33,19 @@ public sealed record DeviceAccessDiagnosticsReport(
 public static class DeviceAccessDiagnosticsParser
 {
     private static readonly Regex KeyguardPattern = new(
-        @"\\b(?:mShowingLockscreen|mKeyguardShowing)\\s*=\\s*(true|false)\\b",
+        @"\b(?:mShowingLockscreen|mKeyguardShowing)\s*=\s*(true|false)\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex DeviceOwnerPattern = new(
-        @"(?im)^\\s*Device\\s+Owner\\b[^\\r\\n]*",
+        @"(?im)^\s*Device\s+Owner\b[^\r\n]*",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ProfileOwnerPattern = new(
-        @"(?im)^\\s*Profile\\s+Owner\\b[^\\r\\n]*",
+        @"(?im)^\s*Profile\s+Owner\b[^\r\n]*",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ActiveAdminPattern = new(
-        @"(?im)^.*\\bActive\\s+admin\\b.*(?:ComponentInfo|admin\\s*=).*",
+        @"(?im)^.*\bActive\s+admin\b.*(?:ComponentInfo|admin\s*=).*",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public static DeviceAccessDiagnosticsReport Parse(
