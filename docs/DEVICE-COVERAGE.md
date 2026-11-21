@@ -28,3 +28,23 @@ A desktop app cannot prove solder-joint integrity, shorted rails, PMIC operation
 
 ## iPhone
 This repository does not claim generic iPhone hardware read access over USB. iOS uses separate Apple-controlled diagnostics and pairing interfaces. Any future iPhone support must use authorized interfaces and must label unsupported tests.
+
+
+## Community device database pipeline
+
+The maintained catalog is assembled from two independent public sources and regenerated weekly:
+
+- Google Play supported-device model-code mapping via [bsthen/device-models](https://github.com/bsthen/device-models) (Apache-2.0): model code, brand and marketing name.
+- [LineageOS Wiki device metadata](https://github.com/LineageOS/lineage_wiki/tree/main/_data/devices) (MIT): device codename, model variants, SoC, CPU/GPU, RAM/storage, display, battery capacity, connectivity, peripherals and supported LineageOS branches when published.
+
+The generated `community-catalog.json` records the retrieval time, source digest, record count and license for each source. Community records always remain `identityVerified=false`. If two records disagree or duplicate an identifier, the resolver must retain the ambiguity rather than select an arbitrary hardware identity. These records do not populate `BoardMapId`, board revision, PCB coordinates or repair limits. They describe model identity and published specifications only.
+
+Run locally with:
+
+```powershell
+python -m pip install PyYAML==6.0.3
+python scripts/sync_device_profiles.py
+python scripts/validate_device_profiles.py
+```
+
+The scheduled GitHub workflow refreshes the snapshot every Monday and on manual dispatch. Device-profile coverage is broader than the curated starter list, but it is not a guarantee that every device ever manufactured or every regional variant is represented.

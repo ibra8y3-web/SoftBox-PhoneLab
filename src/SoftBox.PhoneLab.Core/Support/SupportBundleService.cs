@@ -28,6 +28,13 @@ public sealed class SupportBundleService
     private const long MaximumTotalRedactedBytes = 50 * 1024 * 1024;
     private const int MaximumNotesCharacters = 4_000;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    // JSONL/JSON logs quote both property names and values, so redact those before applying plain-text patterns.
+    private static readonly Regex JsonSecretProperty = new(
+        @""""(?<key>password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization|client[_-]?secret)""""(\\s*:\\s*)""""(?:\\\\.|[^""""\\\\])*""""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex JsonDeviceIdentifierProperty = new(
+        @""""(?<key>serial|device[_-]?serial|adb[_-]?serial|adb[_-]?id|device[_-]?id|android[_-]?id|imei|imsi|iccid)""""(\\s*:\\s*)""""(?:\\\\.|[^""""\\\\])*""""",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex SecretAssignment = new(
         @"(?im)\b(password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|secret|authorization)\b(\s*[:=]\s*)([^\s,;]+)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -150,7 +157,11 @@ public sealed class SupportBundleService
     public static string RedactSensitiveData(string content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        var redacted = AuthorizationHeader.Replace(content, "$1[REDACTED]");
+        var redacted = JsonSecretProperty.Replace(content, match =>
+            match.Value[..(match.Value.IndexOf(':') + 1)] + "\"[REDACTED]\"");
+        redacted = JsonDeviceIdentifierProperty.Replace(redacted, match =>
+            match.Value[..(match.Value.IndexOf(':') + 1)] + "\"[DEVICE-ID-REDACTED]\"");
+        redacted = AuthorizationHeader.Replace(redacted, "$1[REDACTED]");
         redacted = SecretAssignment.Replace(redacted, match =>
             match.Groups[1].Value + match.Groups[2].Value + "[REDACTED]");
         redacted = BearerSecret.Replace(redacted, "Bearer [REDACTED]");

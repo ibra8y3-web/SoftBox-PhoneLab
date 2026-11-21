@@ -24,6 +24,13 @@ PhoneLab integrates or downloads the following third-party software/data. Downlo
 - License: Apache-2.0 (upstream repository).
 - Downloaded at runtime as a model-code-to-brand/model identity mapping; community records are not treated as certified hardware revision or PCB data.
 
+## LineageOS device identity and hardware metadata
+
+- Project: https://github.com/LineageOS/lineage_wiki
+- License: MIT (upstream `licenses/LICENSE`).
+- SoftBox's scheduled maintainer workflow reads the public `_data/devices` YAML profiles and stores normalized identity/specification fields with the source revision digest.
+- Community device metadata is not an OEM service specification, a verified board revision, or a PCB map.
+
 ## iFixit repair search
 
 - PhoneLab uses the public suggestion API to find original repair-guide pages and opens the original URLs.

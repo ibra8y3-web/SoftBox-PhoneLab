@@ -90,6 +90,18 @@ public sealed class SupportBundleServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("{\"password\":\"secret-value\",\"nested\":{\"access_token\":\"token-value\"}}", "secret-value")]
+    [InlineData("{\"imei\":\"123456789012345\",\"status\":\"ready\"}", "123456789012345")]
+    public void RedactSensitiveDataHandlesQuotedJsonProperties(string input, string secret)
+    {
+        var redacted = SupportBundleService.RedactSensitiveData(input);
+        Assert.DoesNotContain(secret, redacted);
+        Assert.True(redacted.Contains("ready", StringComparison.Ordinal) ||
+                    redacted.Contains("[REDACTED]", StringComparison.Ordinal) ||
+                    redacted.Contains("[DEVICE-ID-REDACTED]", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task CreateBundleRejectsUnsupportedFileExtension()
     {

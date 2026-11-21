@@ -1,0 +1,47 @@
+name: Refresh community device catalog
+
+on:
+  schedule:
+    - cron: "25 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: community-device-catalog
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Download, normalize and validate device sources
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install YAML parser
+        run: python -m pip install --disable-pip-version-check PyYAML==6.0.3
+      - name: Generate combined device database
+        run: python scripts/sync_device_profiles.py --output data/device-profiles/community-catalog.json
+      - name: Validate source metadata and profiles
+        run: python scripts/validate_device_profiles.py data/device-profiles/community-catalog.json
+      - name: Commit snapshot when sources changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/device-profiles/community-catalog.json; then
+            echo "Community device catalog is unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/device-profiles/community-catalog.json
+          git commit -m "Refresh community Android device profiles"
+          git push origin HEAD:main
