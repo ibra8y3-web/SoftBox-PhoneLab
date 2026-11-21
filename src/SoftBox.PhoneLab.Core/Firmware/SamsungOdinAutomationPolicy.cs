@@ -15,7 +15,10 @@ public sealed record SamsungOdinAutomationEvidence(
     IReadOnlyList<string> ExpectedPackageNames,
     IReadOnlyList<string> VisibleUiText,
     bool OperatorConfirmedCompatibility,
-    bool OperatorConfirmedBackup);
+    bool OperatorConfirmedBackup)
+{
+    public bool StartButtonSupportsInvokePattern { get; init; }
+}
 
 public sealed record SamsungOdinAutomationDecision(
     bool CanInvokeStart,
@@ -53,8 +56,10 @@ public static class SamsungOdinAutomationPolicy
             blockers.Add("لم يتم العثور على زر Start واحد فقط دون التباس.");
         else if (!evidence.StartButtonEnabled)
             blockers.Add("زر Start موجود لكنه غير مفعّل.");
+        else if (!evidence.StartButtonSupportsInvokePattern)
+            blockers.Add("زر Start لا يدعم InvokePattern؛ لا يتم استخدام النقر بالإحداثيات كبديل.");
         else
-            verified.Add("زر Start واحد ظاهر ومفعّل.");
+            verified.Add("زر Start واحد ظاهر ومفعّل ويدعم InvokePattern.");
 
         if (!evidence.HasConnectedComPort)
             blockers.Add("لم يظهر منفذ COM متصل داخل شجرة عناصر Odin.");
