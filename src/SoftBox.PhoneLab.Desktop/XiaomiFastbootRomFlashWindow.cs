@@ -330,6 +330,11 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
                 throw new InvalidOperationException("عبارة التأكيد غير صحيحة. أدخل النص المطلوب كما هو.");
 
             var freshState = await ReadSelectedDeviceStateAsync();
+            var inspectedAntiRollback = ReadDeviceAntiRollback(inspectedState);
+            var freshAntiRollback = ReadDeviceAntiRollback(freshState);
+            if (inspectedAntiRollback.HasValue &&
+                (!freshAntiRollback.HasValue || freshAntiRollback.Value < inspectedAntiRollback.Value))
+                throw new UnauthorizedAccessException("اختفت قيمة Anti-Rollback المقروءة أو انخفضت منذ الفحص الأول. تم منع الكتابة.");
             var freshPlan = await XiaomiFastbootRomFlashPlanBuilder.BuildAsync(_scriptPath.Text, freshState.Product);
             if (!PlansMatch(plan, freshPlan))
                 throw new InvalidDataException("تغير سكربت ROM أو صور Firmware بعد الفحص. أعد الفحص قبل التفليش.");
@@ -371,6 +376,11 @@ public sealed class XiaomiFastbootRomFlashWindow : Window
                         throw new UnauthorizedAccessException("تغير Product أثناء التفليش؛ تم إيقاف باقي الخطوات.");
                     if (currentState.LockState != BootloaderLockState.Unlocked)
                         throw new UnauthorizedAccessException("لم يعد Fastboot يؤكد Bootloader Unlocked؛ تم إيقاف باقي الخطوات.");
+                    var currentDeviceAntiRollback = ReadDeviceAntiRollback(currentState);
+                    if (freshAntiRollback.HasValue &&
+                        (!currentDeviceAntiRollback.HasValue ||
+                         currentDeviceAntiRollback.Value < freshAntiRollback.Value))
+                        throw new UnauthorizedAccessException("اختفت قيمة Anti-Rollback أثناء التفليش أو انخفضت عن القراءة السابقة. تم إيقاف باقي الخطوات.");
                     var currentArb = EvaluateAntiRollback(freshPlan, currentState);
                     if (currentArb.Blocked)
                         throw new UnauthorizedAccessException("فشل تحقق Anti-Rollback أثناء التفليش.");
