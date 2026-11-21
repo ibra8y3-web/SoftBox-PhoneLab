@@ -33,13 +33,14 @@ public static class XiaomiFastbootDiagnosticsPolicy
     public static XiaomiFastbootDiagnosticsReport Evaluate(
         string? manufacturer,
         string expectedSerial,
-        FastbootDevice? detectedDevice,
+        string? detectedSerial,
+        string? deviceDetails,
         FastbootStateReport? state)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(expectedSerial);
         var isXiaomi = IsXiaomiManufacturer(manufacturer);
-        var serialMatches = detectedDevice is not null &&
-            detectedDevice.Serial.Equals(expectedSerial, StringComparison.OrdinalIgnoreCase);
+        var serialMatches = !string.IsNullOrWhiteSpace(detectedSerial) &&
+            detectedSerial.Equals(expectedSerial, StringComparison.OrdinalIgnoreCase);
         var findings = new List<string>();
         var warnings = new List<string>();
 
@@ -48,7 +49,7 @@ public static class XiaomiFastbootDiagnosticsPolicy
         else
             findings.Add("هوية الشركة تأكدت من خصائص Android قبل الانتقال إلى Fastboot.");
 
-        if (detectedDevice is null)
+        if (string.IsNullOrWhiteSpace(detectedSerial))
             findings.Add("لم يتم العثور على جلسة Fastboot للجهاز المحدد.");
         else if (!serialMatches)
             findings.Add("Serial المكتشف في Fastboot لا يطابق الهاتف الذي بدأ منه الفني العملية.");
@@ -75,7 +76,7 @@ public static class XiaomiFastbootDiagnosticsPolicy
         return new XiaomiFastbootDiagnosticsReport(
             isXiaomi,
             serialMatches,
-            detectedDevice?.Details ?? "",
+            deviceDetails ?? "",
             state?.Product,
             state?.Variant,
             state?.HardwareRevision,

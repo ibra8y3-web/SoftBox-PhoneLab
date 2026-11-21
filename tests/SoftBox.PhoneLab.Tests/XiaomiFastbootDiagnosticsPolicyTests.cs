@@ -24,7 +24,7 @@ public sealed class XiaomiFastbootDiagnosticsPolicyTests
             "(bootloader) anti: 4");
 
         var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
-            "Xiaomi", "ABC123", new FastbootDevice("ABC123", "product: ruby"), parsed);
+            "Xiaomi", "ABC123", "ABC123", "product: ruby", parsed);
 
         Assert.True(report.IsXiaomiDevice);
         Assert.True(report.SelectedSerialMatches);
@@ -38,7 +38,7 @@ public sealed class XiaomiFastbootDiagnosticsPolicyTests
     {
         var parsed = FastbootVariableParser.Parse("(bootloader) product: ruby\n(bootloader) unlocked: no");
         var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
-            "Redmi", "SELECTED", new FastbootDevice("OTHER", "product: ruby"), parsed);
+            "Redmi", "SELECTED", "OTHER", "product: ruby", parsed);
 
         Assert.True(report.IsXiaomiDevice);
         Assert.False(report.SelectedSerialMatches);
@@ -51,7 +51,7 @@ public sealed class XiaomiFastbootDiagnosticsPolicyTests
     {
         var parsed = FastbootVariableParser.Parse("(bootloader) product: sm-a546e");
         var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
-            "Samsung", "ABC123", new FastbootDevice("ABC123", ""), parsed);
+            "Samsung", "ABC123", "ABC123", "", parsed);
 
         Assert.False(report.IsXiaomiDevice);
         Assert.False(report.FlashAllowed);

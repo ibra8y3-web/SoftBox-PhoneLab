@@ -150,7 +150,8 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             var device = await WaitForSelectedFastbootDeviceAsync(token);
             var raw = await _fastboot.ReadAllVariablesAsync(device.Serial, token);
             var parsed = FastbootVariableParser.Parse(raw);
-            var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(manufacturer + " " + brand, _serial, device, parsed);
+            var report = XiaomiFastbootDiagnosticsPolicy.Evaluate(
+                manufacturer + " " + brand, _serial, device.Serial, device.Details, parsed);
             _details.Text = FormatReport(report, raw);
             _refreshButton.IsEnabled = true;
             return "ظهر الجهاز في Fastboot وتمت قراءة متغيراته. لم يتم تغيير أي قسم أو إعداد.";
