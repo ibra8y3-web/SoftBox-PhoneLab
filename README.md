@@ -158,7 +158,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - Currency codes and cultures only format values: PhoneLab does not provide exchange rates, tax compliance calculations, e-invoicing certification or statutory warranty interpretation.
 - The QR ticket contains only a repair identifier. It is not a cloud lookup link.
 - Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
-- Firmware inspection verifies file hash and basic archive structure only. SHA-256 identifies exact bytes; it does not prove the publisher, signature, region, model compatibility or safe installation. No flashing, bootloader unlocking or data wipe is implemented.
+- Firmware tools verify local SHA-256, inspect OTA ZIP metadata and Samsung TAR/TAR.MD5 structure, and compare available device/region/board/rollback evidence through a fail-closed compatibility gate. Hashes and appended TAR.MD5 checks do not authenticate the publisher; missing board, region, signature or Anti-Rollback evidence remains unknown and blocks the gate. No automatic flashing, bootloader unlocking or data wipe is implemented.
 - Generic iPhone diagnosis is not implemented.
 
 See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
