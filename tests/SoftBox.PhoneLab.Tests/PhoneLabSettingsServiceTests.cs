@@ -16,13 +16,15 @@ public sealed class PhoneLabSettingsServiceTests
             Assert.True(defaults.AutoDiscoverDevices);
             Assert.Equal(3, defaults.DiscoveryIntervalSeconds);
             Assert.True(defaults.AutoInstallAgent);
+            Assert.Equal(1.0, defaults.UiScale);
 
             var selected = defaults with
             {
                 AutoDiscoverDevices = false,
                 DiscoveryIntervalSeconds = 15,
                 AutoInstallAgent = false,
-                MaximumBatchConcurrency = 5
+                MaximumBatchConcurrency = 5,
+                UiScale = 0.85
             };
             await store.SaveAsync(selected);
 
