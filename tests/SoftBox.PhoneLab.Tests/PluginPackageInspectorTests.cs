@@ -27,7 +27,7 @@ public sealed class PluginPackageInspectorTests
                 "Sample.Plugin.dll",
                 "Example Publisher",
                 "Read-only sample extension package.",
-                [PluginPermissionIds.DeviceRead, PluginPermissionIds.ReportsCreate]));
+                []));
 
             var result = await _inspector.InspectAsync(path);
 
@@ -134,7 +134,7 @@ public sealed class PluginPackageInspectorTests
         "Sample.Plugin.dll",
         "Example Publisher",
         "Sample plugin package.",
-        [PluginPermissionIds.DeviceRead]);
+        []);
 
     private static async Task CreatePackageAsync(string path, PluginManifest manifest)
     {

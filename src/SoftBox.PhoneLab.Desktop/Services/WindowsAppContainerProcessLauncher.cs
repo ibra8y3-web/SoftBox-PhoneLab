@@ -6,6 +6,14 @@ using System.Text;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
 
+public sealed record NativePluginSandboxProcessResult(
+    bool Started,
+    bool TimedOut,
+    bool Cancelled,
+    int? ExitCode,
+    string? Error,
+    string AppContainerName);
+
 /// <summary>Launches one worker in a no-capability AppContainer and limits it using a Job Object.</summary>
 public sealed class WindowsAppContainerProcessLauncher
 {
