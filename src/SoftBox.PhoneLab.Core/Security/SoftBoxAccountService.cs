@@ -72,6 +72,7 @@ public sealed class SoftBoxAccountService
     private const int MaximumAccounts = 100;
     private const int MaximumAuditEntries = 5_000;
     private const int MaximumStoreBytes = 2 * 1024 * 1024;
+    private const int MaximumSupportRecoveryCodes = 10_000;
     private const int MaximumFailedAttempts = 5;
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
     private static readonly Regex UserNamePattern = new("^[a-zA-Z0-9][a-zA-Z0-9._-]{2,31}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -332,6 +333,144 @@ public sealed class SoftBoxAccountService
         finally { _gate.Release(); }
     }
 
+    /// <summary>
+    /// Issues one-time support recovery codes for this local installation. Plaintext codes are
+    /// returned once to the administrator; only keyed verifiers are persisted in the DPAPI store.
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GenerateSupportRecoveryCodesAsync(
+        Guid actorUserId,
+        int count = 1_000,
+        CancellationToken cancellationToken = default)
+    {
+        if (count is < 1 or > 2_000)
+            throw new ArgumentOutOfRangeException(nameof(count), "يمكن إصدار من 1 إلى 2000 رمز في الدفعة الواحدة.");
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var data = await LoadLockedAsync(cancellationToken);
+            var actor = RequireAdministrator(data, actorUserId);
+            data.RecoveryCodes ??= [];
+            if (data.RecoveryCodes.Count + count > MaximumSupportRecoveryCodes)
+                throw new InvalidOperationException("وصل مخزون رموز الدعم لهذا التثبيت إلى الحد الآمن. لا يمكن حذف سجل الرموز المستهلكة.");
+
+            var pepper = Convert.FromBase64String(data.RecoveryCodePepper!);
+            var issued = new List<string>(count);
+            try
+            {
+                for (var index = 0; index < count; index++)
+                {
+                    var random = RandomNumberGenerator.GetBytes(16);
+                    string code;
+                    try { code = Convert.ToHexString(random); }
+                    finally { CryptographicOperations.ZeroMemory(random); }
+
+                    var codeBytes = Encoding.UTF8.GetBytes(code);
+                    byte[] digest;
+                    try { digest = HMACSHA256.HashData(pepper, codeBytes); }
+                    finally { CryptographicOperations.ZeroMemory(codeBytes); }
+
+                    data.RecoveryCodes.Add(new StoredSupportRecoveryCode
+                    {
+                        Id = Guid.NewGuid(),
+                        CodeHash = Convert.ToBase64String(digest),
+                        CreatedAtUtc = DateTimeOffset.UtcNow
+                    });
+                    CryptographicOperations.ZeroMemory(digest);
+                    issued.Add(code);
+                }
+            }
+            finally { CryptographicOperations.ZeroMemory(pepper); }
+
+            AddAudit(data, actor.Id, actor.Id, "SupportRecoveryCodesIssued", count.ToString(
+                System.Globalization.CultureInfo.InvariantCulture),
+                $"أصدر المدير {count} رمز استرداد أحادي الاستخدام لهذا التثبيت.");
+            await SaveLockedAsync(data, cancellationToken);
+            return issued;
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
+    /// Resets only the named local account password when a valid, unused installation-bound
+    /// support recovery code is supplied. Every accepted code is consumed atomically.
+    /// </summary>
+    public async Task<AuthenticatedSoftBoxUser> RecoverPasswordWithSupportCodeAsync(
+        string userName,
+        string recoveryCode,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        ValidatePassword(newPassword);
+        var normalizedUserName = NormalizeUserNameForLookup(userName);
+        var normalizedCode = (recoveryCode ?? string.Empty)
+            .Replace("-", string.Empty, StringComparison.Ordinal)
+            .Replace(" ", string.Empty, StringComparison.Ordinal)
+            .Trim()
+            .ToUpperInvariant();
+        if (normalizedCode.Length != 32 || !normalizedCode.All(Uri.IsHexDigit))
+            throw new SoftBoxAuthenticationException("اسم المستخدم أو رمز الدعم غير صحيح.");
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var data = await LoadLockedAsync(cancellationToken);
+            var account = data.Accounts.FirstOrDefault(x =>
+                x.UserName.Equals(normalizedUserName, StringComparison.OrdinalIgnoreCase));
+            if (account is null || !account.IsEnabled)
+                throw new SoftBoxAuthenticationException("اسم المستخدم أو رمز الدعم غير صحيح.");
+
+            var pepper = Convert.FromBase64String(data.RecoveryCodePepper!);
+            var codeBytes = Encoding.UTF8.GetBytes(normalizedCode);
+            byte[] digest;
+            try { digest = HMACSHA256.HashData(pepper, codeBytes); }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(pepper);
+                CryptographicOperations.ZeroMemory(codeBytes);
+            }
+
+            StoredSupportRecoveryCode? matched = null;
+            try
+            {
+                foreach (var candidate in data.RecoveryCodes ?? [])
+                {
+                    if (candidate.ConsumedAtUtc is not null)
+                        continue;
+                    byte[] stored;
+                    try { stored = Convert.FromBase64String(candidate.CodeHash); }
+                    catch (FormatException) { continue; }
+                    try
+                    {
+                        if (CryptographicOperations.FixedTimeEquals(digest, stored))
+                        {
+                            matched = candidate;
+                            break;
+                        }
+                    }
+                    finally { CryptographicOperations.ZeroMemory(stored); }
+                }
+            }
+            finally { CryptographicOperations.ZeroMemory(digest); }
+
+            if (matched is null)
+                throw new SoftBoxAuthenticationException("اسم المستخدم أو رمز الدعم غير صحيح أو سبق استخدامه.");
+
+            var now = DateTimeOffset.UtcNow;
+            SetPassword(account, newPassword);
+            account.FailedLoginAttempts = 0;
+            account.LockedUntilUtc = null;
+            account.LastLoginAtUtc = now;
+            account.UpdatedAtUtc = now;
+            matched.ConsumedAtUtc = now;
+            AddAudit(data, null, account.Id, "PasswordRecoveredWithSupportCode", account.UserName,
+                "أعيد تعيين كلمة مرور الحساب باستخدام رمز دعم أحادي الاستخدام. لم يُسجل الرمز أو كلمة المرور.");
+            await SaveLockedAsync(data, cancellationToken);
+            return ToAuthenticatedUser(account, now);
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task ChangeOwnPasswordAsync(
         Guid userId,
         string currentPassword,
@@ -462,8 +601,22 @@ public sealed class SoftBoxAccountService
             throw new InvalidDataException($"إصدار ملف الحسابات غير مدعوم: {data.SchemaVersion}.");
         data.Accounts ??= [];
         data.Audit ??= [];
-        if (data.Accounts.Count > MaximumAccounts || data.Audit.Count > MaximumAuditEntries)
+        if (data.Accounts.Count > MaximumAccounts || data.Audit.Count > MaximumAuditEntries ||
+            (data.RecoveryCodes?.Count ?? 0) > MaximumSupportRecoveryCodes)
             throw new InvalidDataException("ملف حسابات SoftBox يحتوي على عدد عناصر غير آمن.");
+
+        // Older account stores did not contain a recovery-code pepper. Add it without
+        // changing any existing account, password verifier or audit entry.
+        var needsRecoveryMigration = !TryDecodeVerifier(data.RecoveryCodePepper, 32);
+        if (needsRecoveryMigration)
+            data.RecoveryCodePepper = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
+        data.RecoveryCodes ??= [];
+        foreach (var recoveryCode in data.RecoveryCodes)
+        {
+            if (!Guid.TryParse(recoveryCode.Id.ToString(), out _) ||
+                !TryDecodeVerifier(recoveryCode.CodeHash, 32))
+                throw new InvalidDataException("ملف رموز استرداد SoftBox يحتوي على بيانات غير صالحة.");
+        }
         var duplicateNames = data.Accounts.GroupBy(x => x.UserName, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1);
         if (duplicateNames)
             throw new InvalidDataException("ملف الحسابات يحتوي على أسماء مستخدمين مكررة.");
@@ -663,6 +816,16 @@ public sealed class SoftBoxAccountService
         public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public List<StoredSoftBoxUserAccount> Accounts { get; set; } = [];
         public List<SoftBoxUserAuditEntry> Audit { get; set; } = [];
+        public string? RecoveryCodePepper { get; set; }
+        public List<StoredSupportRecoveryCode> RecoveryCodes { get; set; } = [];
+    }
+
+    private sealed class StoredSupportRecoveryCode
+    {
+        public Guid Id { get; set; }
+        public string CodeHash { get; set; } = "";
+        public DateTimeOffset CreatedAtUtc { get; set; }
+        public DateTimeOffset? ConsumedAtUtc { get; set; }
     }
 
     private sealed class StoredSoftBoxUserAccount
