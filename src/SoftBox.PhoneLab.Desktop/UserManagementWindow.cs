@@ -90,11 +90,7 @@ public sealed class UserManagementWindow : Window
         _status.Foreground = Brush("#9FC7E8");
         _status.TextWrapping = TextWrapping.Wrap;
         footer.Children.Add(_status);
-        var recoveryCodes = ButtonControl("إصدار 1000 رمز استرداد للدعم لهذا التثبيت", "#14517A",
-            (_, _) => new SupportRecoveryCodesWindow(_service, _actor) { Owner = this }.Show());
-        recoveryCodes.HorizontalAlignment = HorizontalAlignment.Left;
-        recoveryCodes.Margin = new Thickness(0, 8, 0, 0);
-        footer.Children.Add(recoveryCodes);
+        // Support approvals are issued only by the separate owner-operated Support Key Manager.
         _refreshButton.HorizontalAlignment = HorizontalAlignment.Left;
         _refreshButton.Margin = new Thickness(0, 8, 0, 0);
         footer.Children.Add(_refreshButton);
