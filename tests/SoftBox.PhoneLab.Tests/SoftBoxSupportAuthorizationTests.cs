@@ -8,6 +8,21 @@ namespace SoftBox.PhoneLab.Tests;
 public sealed class SoftBoxSupportAuthorizationTests
 {
     [Fact]
+    public void OwnerPublicKeyIsPinnedAndMatchesTheExportedKeyFingerprint()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var authorization = new SoftBoxSupportAuthorizationService(root);
+            Assert.True(authorization.IsTrustedKeyConfigured);
+            Assert.Equal(
+                "9631EEA2D7DB1177D529DC487D18055ECF491CA019A27B3AF2AD9E06F4A4FCFE",
+                authorization.TrustedPublicKeyFingerprint);
+        }
+        finally { DeleteTempDirectory(root); }
+    }
+
+    [Fact]
     public async Task SignedPasswordRecoveryIsBoundToInstallationAndRequestAndCanBeUsedOnlyOnce()
     {
         var root = CreateTempDirectory();
