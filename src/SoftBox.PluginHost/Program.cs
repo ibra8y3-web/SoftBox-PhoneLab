@@ -82,7 +82,7 @@ internal static class Program
         Shutdown? shutdown = null;
         try
         {
-            lib = NativeLibrary.Load(path, DllImportSearchPath.SafeDirectories);
+            lib = NativeLibrary.Load(path, typeof(Program).Assembly, DllImportSearchPath.SafeDirectories);
             if (!NativeLibrary.TryGetExport(lib, "SoftBoxPluginGetApiVersion", out var versionPtr) ||
                 !NativeLibrary.TryGetExport(lib, "SoftBoxPluginExecute", out var executePtr))
                 throw new InvalidDataException("Required SoftBox C ABI exports are missing.");
