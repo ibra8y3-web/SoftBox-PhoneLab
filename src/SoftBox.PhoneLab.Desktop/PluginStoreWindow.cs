@@ -554,7 +554,7 @@ public sealed class PluginStoreWindow : Window
             _runNativeButton.IsEnabled = _inspection?.PublisherSignatureVerified == true &&
                 _inspection.Manifest?.ExecutionMode == "native-assembly" &&
                 _inspection.Manifest.RequestedPermissions is { Count: 0 } &&
-                File.Exists(Path.Combine(AppContext.BaseDirectory, "PluginHost", "SoftBox.PluginHost.exe"));
+                _nativeRuntime.IsHostAvailable;
         }
     }
 

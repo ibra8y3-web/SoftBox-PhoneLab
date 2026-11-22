@@ -1,3 +1,4 @@
+using System.IO;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -201,7 +202,7 @@ public static class BoardMapCsvImporter
             SourceUri = metadata.SourceUri.Trim(),
             SourceDocumentId = metadata.SourceDocumentId.Trim(),
             SourceLicense = metadata.SourceLicense.Trim(),
-            SourceSha256 = sourceSha256,
+            SourceSha256 = sourceSha256 ?? string.Empty,
             VerifiedBy = metadata.VerifiedBy.Trim(),
             VerifiedAtUtc = DateTimeOffset.UtcNow,
             AccuracyLevel = metadata.AccuracyLevel,
