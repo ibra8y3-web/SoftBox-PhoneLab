@@ -82,7 +82,7 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
         _lockPath = Path.Combine(_root, "authorization.lock");
         var configuredKeys = trustedPublicKeyPems?.ToArray()
             ?? (trustedPublicKeyPem is not null
-                ? [trustedPublicKeyPem]
+                ? new[] { trustedPublicKeyPem }
                 : new[] { PinnedPublicKeyPem, AndroidPinnedPublicKeyPem });
         _trustedPublicKeyPems = configuredKeys
             .Where(pem => !string.IsNullOrWhiteSpace(pem) &&
