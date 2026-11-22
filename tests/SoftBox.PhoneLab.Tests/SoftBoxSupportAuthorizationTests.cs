@@ -18,7 +18,10 @@ public sealed class SoftBoxSupportAuthorizationTests
             Assert.Equal(
                 "9631EEA2D7DB1177D529DC487D18055ECF491CA019A27B3AF2AD9E06F4A4FCFE",
                 authorization.TrustedPublicKeyFingerprint);
-            Assert.Single(authorization.TrustedPublicKeyFingerprints);
+            Assert.Equal(2, authorization.TrustedPublicKeyFingerprints.Count);
+            Assert.Equal(
+                "E2CC4F47D2642E3AA91B16899D046581D9397362154EB9BFA032F9BEA8B2CFD1",
+                authorization.TrustedPublicKeyFingerprints[1]);
         }
         finally { DeleteTempDirectory(root); }
     }
