@@ -26,7 +26,12 @@ public sealed class SoftBoxSupportAuthorizationService
     private const string PendingPurpose = "SoftBox.Support.PendingRequest.v1";
     private const string LedgerPurpose = "SoftBox.Support.ConsumedGrantLedger.v1";
     private const string InstallationPurpose = "SoftBox.Support.InstallationIdentity.v1";
-    private const string PinnedPublicKeyPem = "SOFTBOX_OWNER_SUPPORT_PUBLIC_KEY_NOT_CONFIGURED";
+    private const string PinnedPublicKeyPem = """
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmU3Toj3BJ0ngCqWpbNI/a9qll7ZF
+hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
+-----END PUBLIC KEY-----
+""";
     private static readonly TimeSpan RequestLifetime = TimeSpan.FromHours(24);
     private static readonly TimeSpan MaximumGrantLifetime = TimeSpan.FromHours(24);
     private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = CreateJsonOptions();
@@ -38,9 +43,38 @@ public sealed class SoftBoxSupportAuthorizationService
     private readonly string _trustedPublicKeyPem;
 
     public Guid InstallationId { get; }
-    public bool IsTrustedKeyConfigured =>
-        !string.IsNullOrWhiteSpace(_trustedPublicKeyPem) &&
-        !_trustedPublicKeyPem.Contains("NOT_CONFIGURED", StringComparison.Ordinal);
+    public bool IsTrustedKeyConfigured
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_trustedPublicKeyPem) ||
+                _trustedPublicKeyPem.Contains("NOT_CONFIGURED", StringComparison.Ordinal))
+                return false;
+            try
+            {
+                using var key = ECDsa.Create();
+                key.ImportFromPem(_trustedPublicKeyPem);
+                return key.KeySize == 256;
+            }
+            catch (Exception ex) when (ex is ArgumentException or CryptographicException)
+            {
+                return false;
+            }
+        }
+    }
+
+    public string? TrustedPublicKeyFingerprint
+    {
+        get
+        {
+            if (!IsTrustedKeyConfigured) return null;
+            using var key = ECDsa.Create();
+            key.ImportFromPem(_trustedPublicKeyPem);
+            var encoded = key.ExportSubjectPublicKeyInfo();
+            try { return Convert.ToHexString(SHA256.HashData(encoded)); }
+            finally { CryptographicOperations.ZeroMemory(encoded); }
+        }
+    }
 
     public SoftBoxSupportAuthorizationService(string? rootDirectory = null, string? trustedPublicKeyPem = null)
     {
