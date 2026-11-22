@@ -381,7 +381,16 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
                 executable = Environment.ProcessPath ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(executable) && File.Exists(executable))
             {
-                Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
+                try
+                {
+                    Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
+                }
+                catch (Exception restartError)
+                {
+                    MessageBox.Show(this,
+                        "تم التصفير بنجاح، لكن تعذر تشغيل SoftBox تلقائيًا. أغلق البرنامج وافتحه يدويًا لإنشاء حساب المدير الجديد.\n\n" + restartError.Message,
+                        "SoftBox | إعادة التشغيل", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             else
             {
