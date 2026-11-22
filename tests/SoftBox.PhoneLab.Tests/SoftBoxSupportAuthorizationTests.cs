@@ -18,6 +18,34 @@ public sealed class SoftBoxSupportAuthorizationTests
             Assert.Equal(
                 "9631EEA2D7DB1177D529DC487D18055ECF491CA019A27B3AF2AD9E06F4A4FCFE",
                 authorization.TrustedPublicKeyFingerprint);
+            Assert.Single(authorization.TrustedPublicKeyFingerprints);
+        }
+        finally { DeleteTempDirectory(root); }
+    }
+
+    [Fact]
+    public async Task SecondaryOwnerKeyIsAcceptedWithoutReplacingTheExistingWindowsKey()
+    {
+        var root = CreateTempDirectory();
+        using var windowsSigner = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var androidSigner = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var accounts = new SoftBoxAccountService(Path.Combine(root, "accounts"), 300_000);
+            await accounts.CreateInitialAdministratorAsync("admin", "Administrator", "Old Administrator Password 12!");
+            var windowsPem = windowsSigner.ExportSubjectPublicKeyInfoPem();
+            var androidPem = androidSigner.ExportSubjectPublicKeyInfoPem();
+            var auth = new SoftBoxSupportAuthorizationService(
+                Path.Combine(root, "support"),
+                trustedPublicKeyPems: new[] { windowsPem, androidPem });
+
+            var request = ParseRequest(auth.CreatePasswordRecoveryRequest("admin"));
+            Assert.False(string.IsNullOrWhiteSpace(request.DeviceLabel));
+            var approval = CreateApprovalJson(androidSigner, request);
+            var result = await auth.RecoverPasswordAsync(accounts, approval, "admin", "Recovered Android Owner Password 12!");
+
+            Assert.Equal("admin", result.UserName);
+            Assert.Equal(2, auth.TrustedPublicKeyFingerprints.Count);
         }
         finally { DeleteTempDirectory(root); }
     }
