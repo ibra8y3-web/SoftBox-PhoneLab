@@ -193,13 +193,44 @@ public sealed class WindowsAppContainerProcessLauncher
 
     private static void GrantRootOnlyAccess(string root, SecurityIdentifier sid)
     {
-        var info = new DirectoryInfo(root);
-        var security = info.GetAccessControl(AccessControlSections.Access);
-        security.AddAccessRule(new FileSystemAccessRule(sid,
+        var inheritedRule = new FileSystemAccessRule(sid,
             FileSystemRights.ReadAndExecute | FileSystemRights.Modify,
             InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
-            PropagationFlags.None, AccessControlType.Allow));
-        info.SetAccessControl(security);
+            PropagationFlags.None, AccessControlType.Allow);
+
+        ApplyDirectoryAccess(root, sid, inheritedRule);
+    }
+
+    private static void ApplyDirectoryAccess(
+        string directoryPath, SecurityIdentifier sid, FileSystemAccessRule inheritedRule)
+    {
+        var directory = new DirectoryInfo(directoryPath);
+        var directorySecurity = directory.GetAccessControl(AccessControlSections.Access);
+        directorySecurity.AddAccessRule(inheritedRule);
+        directory.SetAccessControl(directorySecurity);
+
+        var fileRule = new FileSystemAccessRule(
+            sid,
+            FileSystemRights.ReadAndExecute | FileSystemRights.Modify,
+            AccessControlType.Allow);
+
+        foreach (var entry in directory.EnumerateFileSystemInfos())
+        {
+            // Never follow links while granting the temporary AppContainer identity access.
+            if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+                continue;
+
+            if (entry is DirectoryInfo childDirectory)
+            {
+                ApplyDirectoryAccess(childDirectory.FullName, sid, inheritedRule);
+            }
+            else if (entry is FileInfo childFile)
+            {
+                var fileSecurity = childFile.GetAccessControl(AccessControlSections.Access);
+                fileSecurity.AddAccessRule(fileRule);
+                childFile.SetAccessControl(fileSecurity);
+            }
+        }
     }
 
     private static IntPtr BuildMinimalEnvironment(string root)
@@ -225,7 +256,10 @@ public sealed class WindowsAppContainerProcessLauncher
     }
     private static void Check(int hresult) { if (hresult < 0) Marshal.ThrowExceptionForHR(hresult); }
     private static Win32Exception LastError(string operation)
-        => new(Marshal.GetLastWin32Error(), operation + " failed.");
+    {
+        var error = Marshal.GetLastWin32Error();
+        return new Win32Exception(error, operation + " failed (Win32 error " + error + ").");
+    }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct SECURITY_CAPABILITIES { public IntPtr AppContainerSid; public IntPtr Capabilities; public uint CapabilityCount; public uint Reserved; }
