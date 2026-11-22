@@ -1,4 +1,6 @@
 using SoftBox.PhoneLab.Core.Security;
+using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,6 +21,8 @@ public sealed class SoftBoxAuthenticationWindow : Window
     private readonly PasswordBox _confirmPassword = new();
     private readonly TextBlock _status = new();
     private readonly Button _submit;
+    private readonly Button _generateCredentials = new();
+    private readonly Button _copyCredentials = new();
 
     public AuthenticatedSoftBoxUser? AuthenticatedUser { get; private set; }
 
@@ -80,7 +84,26 @@ public sealed class SoftBoxAuthenticationWindow : Window
         var form = new StackPanel();
         if (_initialSetup)
             AddField(form, "اسم المدير الظاهر", _displayName, "مثال: مدير مركز الصيانة");
-        AddField(form, "اسم المستخدم", _userName, _initialSetup ? "admin" : "اسم المستخدم");
+        AddField(form, "اسم المستخدم", _userName, _initialSetup ? "admin أو اسم عشوائي" : "اسم المستخدم");
+        if (_initialSetup)
+        {
+            var credentialActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
+            _generateCredentials.Content = "توليد بيانات عشوائية لهذا التثبيت";
+            _generateCredentials.Padding = new Thickness(10, 6, 10, 6);
+            _generateCredentials.Background = Brush("#14517A");
+            _generateCredentials.Foreground = Brushes.White;
+            _generateCredentials.Click += GenerateCredentials_Click;
+            _copyCredentials.Content = "نسخ بيانات الدخول";
+            _copyCredentials.Padding = new Thickness(10, 6, 10, 6);
+            _copyCredentials.Margin = new Thickness(8, 0, 0, 0);
+            _copyCredentials.Background = Brush("#24364B");
+            _copyCredentials.Foreground = Brushes.White;
+            _copyCredentials.IsEnabled = false;
+            _copyCredentials.Click += CopyCredentials_Click;
+            credentialActions.Children.Add(_generateCredentials);
+            credentialActions.Children.Add(_copyCredentials);
+            form.Children.Add(credentialActions);
+        }
         AddPasswordField(form, "كلمة المرور", _password);
         if (_initialSetup)
         {
@@ -108,6 +131,18 @@ public sealed class SoftBoxAuthenticationWindow : Window
         _submit.Height = 44;
         _submit.IsDefault = true;
         footer.Children.Add(_submit);
+
+        if (!_initialSetup)
+        {
+            var recovery = ButtonControl("نسيت كلمة المرور؟ استرداد برمز الدعم", "#14517A", (_, _) =>
+            {
+                var window = new SoftBoxAccountRecoveryWindow(_service) { Owner = this };
+                window.ShowDialog();
+            });
+            recovery.Margin = new Thickness(0, 8, 0, 0);
+            recovery.HorizontalAlignment = HorizontalAlignment.Stretch;
+            footer.Children.Add(recovery);
+        }
 
         var exit = ButtonControl("خروج", "#24364B", (_, _) => { DialogResult = false; Close(); });
         exit.Margin = new Thickness(0, 8, 0, 0);
@@ -160,6 +195,44 @@ public sealed class SoftBoxAuthenticationWindow : Window
         field.Foreground = Brush("#EAF3FF");
         field.BorderBrush = Brush("#35516F");
         panel.Children.Add(field);
+    }
+
+    private void GenerateCredentials_Click(object sender, RoutedEventArgs e)
+    {
+        var number = RandomNumberGenerator.GetInt32(10_000_000, 100_000_000);
+        _userName.Text = "sbx-" + number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        var password = new char[22];
+        for (var index = 0; index < password.Length; index++)
+            password[index] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
+        _password.Password = new string(password);
+        _confirmPassword.Password = new string(password);
+        _copyCredentials.IsEnabled = true;
+        _status.Text = "تم توليد بيانات فريدة لهذا التثبيت. انسخها واحفظها في مكان آمن قبل إغلاق النافذة.";
+        _status.Foreground = Brush("#86EFAC");
+    }
+
+    private void CopyCredentials_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_userName.Text) || _password.Password.Length < SoftBoxAccountService.MinimumPasswordLength)
+        {
+            _status.Text = "أدخل اسم المستخدم وكلمة المرور أولًا.";
+            _status.Foreground = Brush("#FCA5A5");
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText("SoftBox username: " + _userName.Text.Trim() +
+                Environment.NewLine + "SoftBox password: " + _password.Password);
+            _status.Text = "تم نسخ بيانات الدخول. احفظها في مكان خاص ولا ترسلها في مجموعة عامة.";
+            _status.Foreground = Brush("#86EFAC");
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر النسخ إلى الحافظة: " + ex.Message;
+            _status.Foreground = Brush("#FCA5A5");
+        }
     }
 
     private async void Submit_Click(object sender, RoutedEventArgs e)
