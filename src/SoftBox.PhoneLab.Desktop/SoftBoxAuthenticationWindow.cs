@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -32,6 +33,7 @@ public sealed class SoftBoxAuthenticationWindow : Window
         _initialSetup = initialSetup;
 
         Title = initialSetup ? "SoftBox | إعداد المدير الأول" : "SoftBox | تسجيل الدخول";
+        Icon = BitmapFrame.Create(new Uri("pack://application:,,,/Assets/SoftBox-AppIcon.ico", UriKind.Absolute));
         var workArea = SystemParameters.WorkArea;
         Width = Math.Min(620, workArea.Width * 0.86);
         Height = Math.Min(initialSetup ? 720 : 620, workArea.Height * 0.88);
