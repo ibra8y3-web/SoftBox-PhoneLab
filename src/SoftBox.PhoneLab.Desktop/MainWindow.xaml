@@ -3,6 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:interop="clr-namespace:SoftBox.PhoneLab.Desktop.Interop"
  Title="SoftBox | Universal Smart Device Service &amp; Repair Platform"
+ Icon="pack://application:,,,/Assets/SoftBox-AppIcon.ico"
  Width="1640" Height="1000" MinWidth="1320" MinHeight="820"
  WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}"
  Foreground="{StaticResource TextBrush}" FlowDirection="RightToLeft"
@@ -14,8 +15,8 @@
    <Grid>
     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-     <Border Width="46" Height="46" Background="#0D3958" BorderBrush="#177EB4" BorderThickness="1" CornerRadius="12">
-      <TextBlock Text="SB" Foreground="#74D7FF" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+     <Border Width="46" Height="46" Background="#0D3958" BorderBrush="#177EB4" BorderThickness="1" CornerRadius="12" ClipToBounds="True">
+      <Image Source="pack://application:,,,/Assets/SoftBox-AppIcon.ico" Width="42" Height="42" Stretch="Uniform"/>
      </Border>
      <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
       <TextBlock Text="SoftBox" FontSize="21" FontWeight="Bold"/>
@@ -117,7 +118,8 @@ nel>
        <TextBlock Text="الأجهزة المتصلة" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="USB / ADB • اكتشاف دوري" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,10"/>
       </StackPanel>
-      <TextBlock DockPanel.Dock="Bottom" Text="{Binding DiscoveryHint}" FontSize="9" Foreground="#8199B5" TextWrapping="Wrap" Margin="2,10,2,0"/>
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding DiscoveryHint}" FontSize="9" Foreground="#8199B5" TextWrapping="Wrap" Margin="2,8,2,0"/>
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding UsbRecognitionStatus}" FontSize="9" Foreground="#70C8E8" TextWrapping="Wrap" MaxHeight="42" Margin="2,8,2,0"/>
       <ListBox x:Name="DevicesList" ItemsSource="{Binding Devices}" SelectionChanged="Devices_SelectionChanged">
        <ListBox.ItemTemplate>
         <DataTemplate>
