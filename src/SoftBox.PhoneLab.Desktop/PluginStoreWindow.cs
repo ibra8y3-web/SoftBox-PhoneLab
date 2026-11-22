@@ -13,7 +13,8 @@ using System.Windows.Media;
 namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
-/// Local plugin package inspector. It does not install or execute plugin assemblies.
+/// Local plugin package inspector, signed workflow runner and isolated native DLL launcher.
+/// Native code runs only in a temporary Windows AppContainer worker.
 /// </summary>
 public sealed class PluginStoreWindow : Window
 {

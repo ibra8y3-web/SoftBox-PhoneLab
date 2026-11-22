@@ -19,7 +19,7 @@
     <Content Include="..\..\data\device-profiles\**\*.json" Link="Data\device-profiles\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
-    <ProjectReference Include="..\\SoftBox.PluginHost\\SoftBox.PluginHost.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../SoftBox.PluginHost/SoftBox.PluginHost.csproj" ReferenceOutputAssembly="false" />
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="10.0.0" />
   </ItemGroup>
 </Project>

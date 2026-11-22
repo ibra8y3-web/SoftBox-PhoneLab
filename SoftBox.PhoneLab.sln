@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PhoneLab.Tests", "t
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.ReleaseSigner", "tools\SoftBox.ReleaseSigner\SoftBox.ReleaseSigner.csproj", "{8CCAAE22-7C39-4EB8-AD79-F37BDE4DD2D9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoftBox.PluginHost", "src\SoftBox.PluginHost\SoftBox.PluginHost.csproj", "{D7F3C9A4-7A2E-4B5C-8F10-7BA95F048A21}"
+EndProject
 Global
   GlobalSection(SolutionConfigurationPlatforms) = preSolution
     Debug|Any CPU = Debug|Any CPU
