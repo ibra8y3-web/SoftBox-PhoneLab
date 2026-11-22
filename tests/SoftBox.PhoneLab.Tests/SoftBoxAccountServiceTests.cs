@@ -322,6 +322,32 @@ public sealed class SoftBoxAccountServiceTests
         finally { DeleteTempDirectory(directory); }
     }
 
+    [Fact]
+    public async Task SupportRecoveryCodesCannotBeUsedOnAnotherInstallation()
+    {
+        var firstDirectory = CreateTempDirectory();
+        var secondDirectory = CreateTempDirectory();
+        try
+        {
+            var first = CreateService(firstDirectory);
+            var second = CreateService(secondDirectory);
+            var firstAdmin = await first.CreateInitialAdministratorAsync(
+                "admin", "المدير الأول", "First Administrator Password 12!");
+            await second.CreateInitialAdministratorAsync(
+                "admin", "المدير الثاني", "Second Administrator Password 12!");
+            var code = Assert.Single(await first.GenerateSupportRecoveryCodesAsync(firstAdmin.Id, 1));
+
+            await Assert.ThrowsAsync<SoftBoxAuthenticationException>(() =>
+                second.RecoverPasswordWithSupportCodeAsync(
+                    "admin", code, "Recovered Password For Second 12!"));
+        }
+        finally
+        {
+            DeleteTempDirectory(firstDirectory);
+            DeleteTempDirectory(secondDirectory);
+        }
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "SoftBox-Accounts-Test-" + Guid.NewGuid().ToString("N"));
