@@ -91,8 +91,8 @@ public sealed class PhoneLabSettingsService
             throw new ArgumentOutOfRangeException(nameof(settings.DiscoveryIntervalSeconds), "فترة اكتشاف الأجهزة يجب أن تكون من 3 إلى 120 ثانية.");
         if (settings.MaximumBatchConcurrency is < 1 or > 8)
             throw new ArgumentOutOfRangeException(nameof(settings.MaximumBatchConcurrency), "حد التوازي يجب أن يكون بين 1 و8.");
-        if (!double.IsFinite(settings.UiScale) || settings.UiScale is < 0.82 or > 1.10)
-            throw new ArgumentOutOfRangeException(nameof(settings.UiScale), "تكبير الواجهة يجب أن يكون بين 82% و110%.");
+        if (!double.IsFinite(settings.UiScale) || settings.UiScale is < 0.70 or > 1.05)
+            throw new ArgumentOutOfRangeException(nameof(settings.UiScale), "تكبير الواجهة يجب أن يكون بين 70% و105%.");
         return settings;
     }
 }
