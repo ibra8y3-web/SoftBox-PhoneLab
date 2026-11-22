@@ -48,7 +48,7 @@ jobs:
       - name: Unit tests including signed DLL AppContainer integration
         env:
           SOFTBOX_PLUGINHOST_DIR: ${{ github.workspace }}/artifacts/PhoneLab-win-x64/PluginHost
-        run: dotnet test SoftBox.PhoneLab.sln --no-restore --configuration Release
+        run: dotnet test SoftBox.PhoneLab.sln --no-restore --configuration Release -p:Platform="Any CPU"
       - name: Publish self-contained Windows x64
         shell: pwsh
         run: |
