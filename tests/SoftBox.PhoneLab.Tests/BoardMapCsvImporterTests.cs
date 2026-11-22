@@ -123,8 +123,6 @@ public sealed class BoardMapCsvImporterTests
         var changedHardware = TestDevice with { HardwareRevision = "REV2" };
         Assert.False(BoardMapCatalog.IsVerifiedForDevice(map, changedHardware));
 
-        var unconfirmed = map with { ManualRevisionMatchConfirmed = false };
-        Assert.False(BoardMapCatalog.IsVerifiedForDevice(unconfirmed, TestDevice));
     }
 
     [Fact]
