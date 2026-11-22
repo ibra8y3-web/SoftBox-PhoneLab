@@ -373,7 +373,8 @@ public static class SoftBoxModuleCatalog
             [
                 new("android-logs", "جمع سجلات Android وتحليل أولي", "Android logs and boot hints", "يحفظ أدلة محدودة مع تنبيه خصوصية؛ تحليل إعادة التشغيل heuristic وليس تشخيصًا مؤكدًا.", ModuleImplementationStatus.Implemented, "AndroidLogs"),
                 new("firmware-log", "تقرير فحص Firmware والبصمة", "Firmware inspection report", "يعرض SHA-256 وبنية الأرشيف دون تفليش؛ أداة الفحص والتقرير في قسم Firmware Center.", ModuleImplementationStatus.Implemented),
-                new("app-debug-bundle", "حزمة دعم محلية مع تنقيح كلمات المرور وTokens", "Offline redacted support bundle", "تضم معلومات النظام وإصدار SoftBox والملفات التي يختارها المستخدم فقط، مع تنقيح حقول Password/Token/Authorization/Serial قبل إنشاء ZIP؛ لا يتم رفعها.", ModuleImplementationStatus.Implemented, "OpenSupportBundle")
+                new("app-debug-bundle", "حزمة دعم محلية مع تنقيح كلمات المرور وTokens", "Offline redacted support bundle", "تضم معلومات النظام وإصدار SoftBox والملفات التي يختارها المستخدم فقط، مع تنقيح حقول Password/Token/Authorization/Serial قبل إنشاء ZIP؛ لا يتم رفعها.", ModuleImplementationStatus.Implemented, "OpenSupportBundle", "OpenSupportCenter"),
+                new("whatsapp-support", "التواصل مع دعم SoftBox عبر WhatsApp", "WhatsApp support contact", "يفتح مركز الدعم المحلي مع رقم WhatsApp وخطوات استرداد الحساب برمز أحادي الاستخدام.", ModuleImplementationStatus.Implemented, "OpenSupportCenter")
             ]),
         new("settings", 35, "النظام والحماية", "الإعدادات", "Settings",
             "إعدادات مركز الصيانة وإعدادات تشغيل SoftBox المحلية محفوظة في ملف JSON مع تحقق من القيم.",
