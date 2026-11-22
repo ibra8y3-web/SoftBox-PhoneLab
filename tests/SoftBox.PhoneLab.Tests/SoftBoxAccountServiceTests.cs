@@ -263,6 +263,65 @@ public sealed class SoftBoxAccountServiceTests
         finally { DeleteTempDirectory(directory); }
     }
 
+    [Fact]
+    public async Task OneThousandInstallationRecoveryCodesAreHashedAndConsumedOnce()
+    {
+        var directory = CreateTempDirectory();
+        try
+        {
+            var service = CreateService(directory);
+            var admin = await service.CreateInitialAdministratorAsync(
+                "admin", "المدير", "Administrator Password 12!");
+            var codes = await service.GenerateSupportRecoveryCodesAsync(admin.Id, 1_000);
+
+            Assert.Equal(1_000, codes.Count);
+            Assert.Equal(1_000, codes.Distinct(StringComparer.Ordinal).Count());
+            Assert.All(codes, code => Assert.Matches("^[A-F0-9]{32}$", code));
+
+            var stored = await File.ReadAllBytesAsync(service.StorePath);
+            var jsonBytes = WindowsUserDataProtection.UnprotectOrLegacy(
+                stored, "SoftBoxAccountStore.v1", out var protectedStore);
+            try
+            {
+                Assert.True(protectedStore);
+                var json = System.Text.Encoding.UTF8.GetString(jsonBytes);
+                Assert.DoesNotContain(codes[0], json);
+                Assert.Contains("RecoveryCodePepper", json);
+                Assert.Contains("CodeHash", json);
+            }
+            finally { CryptographicOperations.ZeroMemory(jsonBytes); }
+
+            var newPassword = "Recovered Administrator Password 12!";
+            var recovered = await service.RecoverPasswordWithSupportCodeAsync(
+                "admin", codes[0], newPassword);
+            Assert.Equal(admin.Id, recovered.Id);
+            Assert.Equal(admin.Id, (await service.AuthenticateAsync("admin", newPassword)).Id);
+
+            await Assert.ThrowsAsync<SoftBoxAuthenticationException>(() =>
+                service.RecoverPasswordWithSupportCodeAsync(
+                    "admin", codes[0], "Another Recovered Password 12!"));
+        }
+        finally { DeleteTempDirectory(directory); }
+    }
+
+    [Fact]
+    public async Task OnlyAnAdministratorCanIssueInstallationRecoveryCodes()
+    {
+        var directory = CreateTempDirectory();
+        try
+        {
+            var service = CreateService(directory);
+            var admin = await service.CreateInitialAdministratorAsync(
+                "admin", "المدير", "Administrator Password 12!");
+            var technician = await service.CreateUserAsync(
+                admin.Id, "tech01", "فني", SoftBoxUserRole.Technician, "Technician Password 12!");
+
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+                service.GenerateSupportRecoveryCodesAsync(technician.Id, 1));
+        }
+        finally { DeleteTempDirectory(directory); }
+    }
+
     private static string CreateTempDirectory()
     {
         var path = Path.Combine(Path.GetTempPath(), "SoftBox-Accounts-Test-" + Guid.NewGuid().ToString("N"));
