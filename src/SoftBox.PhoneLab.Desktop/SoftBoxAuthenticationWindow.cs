@@ -85,6 +85,7 @@ public sealed class SoftBoxAuthenticationWindow : Window
         if (_initialSetup)
             AddField(form, "اسم المدير الظاهر", _displayName, "مثال: مدير مركز الصيانة");
         AddField(form, "اسم المستخدم", _userName, _initialSetup ? "admin أو اسم عشوائي" : "اسم المستخدم");
+        _userName.TextChanged += (_, _) => _copyCredentials.IsEnabled = !_initialSetup || !string.IsNullOrWhiteSpace(_userName.Text) || !string.IsNullOrEmpty(_password.Password);
         if (_initialSetup)
         {
             var credentialActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
@@ -104,6 +105,7 @@ public sealed class SoftBoxAuthenticationWindow : Window
             credentialActions.Children.Add(_copyCredentials);
             form.Children.Add(credentialActions);
         }
+        _password.PasswordChanged += (_, _) => _copyCredentials.IsEnabled = !_initialSetup || !string.IsNullOrWhiteSpace(_userName.Text) || !string.IsNullOrEmpty(_password.Password);
         AddPasswordField(form, "كلمة المرور", _password);
         if (_initialSetup)
         {
