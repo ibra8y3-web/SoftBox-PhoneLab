@@ -47,6 +47,12 @@ public sealed class SoftBoxSupportAuthorizationTests
             }, JsonOptions());
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 auth.RecoverPasswordAsync(accounts, forged, "admin", "Attacker Password 12!"));
+
+            var signatureTamper = JsonSerializer.Serialize(approval with {
+                Payload = approval.Payload with { IssuedAtUtc = approval.Payload.IssuedAtUtc.AddSeconds(-30) }
+            }, JsonOptions());
+            await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+                auth.RecoverPasswordAsync(accounts, signatureTamper, "admin", "Another Attacker Password 12!"));
             Assert.NotEqual(Guid.Empty, (await accounts.AuthenticateAsync("admin", "Old Administrator Password 12!")).Id);
         }
         finally { DeleteTempDirectory(root); }
