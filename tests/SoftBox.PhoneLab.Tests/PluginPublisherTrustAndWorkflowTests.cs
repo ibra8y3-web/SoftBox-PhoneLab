@@ -170,7 +170,7 @@ public sealed class PluginPublisherTrustAndWorkflowTests
 
     private static PluginManifest NativeManifest()
         => new(1, "org.softbox.sample", "Sample", "1.0.0", "1.0.0", "1.0.0",
-            "sample.dll", "Workshop Publisher", "A signed test package", [PluginPermissionIds.DeviceRead]);
+            "sample.dll", "Workshop Publisher", "A signed test package", []);
 
     private static async Task CreateNativePackageAsync(string path, string content)
     {
