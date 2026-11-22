@@ -202,18 +202,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-boot-timeout: 900
-          script: |
-            mkdir -p artifacts/android-ui-test-diagnostics
-            cd agent
-            set +e
-            gradle :app:connectedDebugAndroidTest --stacktrace --info
-            test_exit_code=$?
-            adb logcat -d -v threadtime > ../artifacts/android-ui-test-diagnostics/logcat.txt 2>&1
-            adb shell dumpsys activity exit-info com.softbox.phonelab.agent > ../artifacts/android-ui-test-diagnostics/app-exit-info.txt 2>&1 || true
-            adb shell dumpsys activity lastanr > ../artifacts/android-ui-test-diagnostics/last-anr.txt 2>&1 || true
-            adb shell dumpsys meminfo > ../artifacts/android-ui-test-diagnostics/meminfo.txt 2>&1 || true
-            adb shell getprop > ../artifacts/android-ui-test-diagnostics/getprop.txt 2>&1 || true
-            exit $test_exit_code
+          script: cd agent && (gradle :app:connectedDebugAndroidTest --stacktrace --info; test_exit_code=$?; mkdir -p ../artifacts/android-ui-test-diagnostics; "${ANDROID_HOME}/platform-tools/adb" logcat -d -v threadtime > ../artifacts/android-ui-test-diagnostics/logcat.txt 2>&1 || true; "${ANDROID_HOME}/platform-tools/adb" shell dumpsys activity exit-info com.softbox.phonelab.agent > ../artifacts/android-ui-test-diagnostics/app-exit-info.txt 2>&1 || true; "${ANDROID_HOME}/platform-tools/adb" shell dumpsys activity lastanr > ../artifacts/android-ui-test-diagnostics/last-anr.txt 2>&1 || true; "${ANDROID_HOME}/platform-tools/adb" shell dumpsys meminfo > ../artifacts/android-ui-test-diagnostics/meminfo.txt 2>&1 || true; "${ANDROID_HOME}/platform-tools/adb" shell getprop > ../artifacts/android-ui-test-diagnostics/getprop.txt 2>&1 || true; exit $test_exit_code)
       - name: Upload Android UI test diagnostics
         if: always()
         uses: actions/upload-artifact@v4
