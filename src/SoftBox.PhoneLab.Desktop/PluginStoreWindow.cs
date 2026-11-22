@@ -20,9 +20,11 @@ public sealed class PluginStoreWindow : Window
     private readonly PluginPublisherTrustStore _trustStore = new();
     private readonly PluginPackageInspector _inspector;
     private readonly PluginWorkflowRunner _workflowRunner;
+    private readonly NativePluginRuntimeService _nativeRuntime;
     private readonly AdbClient? _adb;
     private readonly string? _selectedSerial;
     private readonly TextBox _path = new();
+    private readonly TextBox _nativeRequest = new();
     private readonly TextBox _report = new();
     private readonly TextBlock _status = new();
     private readonly TextBlock _libraryLocation = new();
@@ -38,6 +40,7 @@ public sealed class PluginStoreWindow : Window
     private readonly Button _trustPublisherButton;
     private readonly Button _signPackageButton;
     private readonly Button _runWorkflowButton;
+    private readonly Button _runNativeButton;
     private readonly Button _removeLibraryButton;
     private PluginPackageInspection? _inspection;
 
@@ -49,7 +52,8 @@ public sealed class PluginStoreWindow : Window
             : null;
         _inspector = new PluginPackageInspector(_trustStore);
         _workflowRunner = new PluginWorkflowRunner(_inspector);
-        Title = "SoftBox | متجر الإضافات — فحص وتوقيع وWorkflow";
+        _nativeRuntime = new NativePluginRuntimeService(_inspector);
+        Title = "SoftBox | متجر الإضافات — فحص وWorkflow وAppContainer";
         Width = 1020;
         Height = 760;
         MinWidth = 800;
@@ -66,10 +70,12 @@ public sealed class PluginStoreWindow : Window
         _trustPublisherButton = ButtonControl("إضافة مفتاح ناشر موثوق", "#704B20", TrustPublisher_Click);
         _signPackageButton = ButtonControl("توقيع الحزمة بمفتاح الناشر", "#704B20", SignPackage_Click);
         _runWorkflowButton = ButtonControl("تشغيل Workflow موقّع", "#176044", RunWorkflow_Click);
+        _runNativeButton = ButtonControl("تشغيل DLL معزول AppContainer", "#704B20", RunNative_Click);
         _removeLibraryButton = ButtonControl("إلغاء تثبيت الحزمة", "#713B43", RemoveLibrary_Click);
         _saveButton.IsEnabled = false;
         _copyToLibraryButton.IsEnabled = false;
         _runWorkflowButton.IsEnabled = false;
+        _runNativeButton.IsEnabled = false;
         _removeLibraryButton.IsEnabled = false;
         Content = BuildContent();
         _libraryList.SelectionChanged += (_, _) => SelectLibraryItem();
@@ -96,7 +102,7 @@ public sealed class PluginStoreWindow : Window
         });
         header.Children.Add(new TextBlock
         {
-            Text = "استورد المفتاح العام للناشر من PEM، ثم افحص الحزمة. يستطيع SoftBox التحقق من توقيع RSA وتشغيل Workflow بيانات موقّع بقائمة أوامر القراءة المسموحة؛ لا يحمّل DLL خارجيًا أو يشغّل Shell حرًا.",
+            Text = "استورد المفتاح العام للناشر من PEM، ثم افحص الحزمة. Workflow البيانات يعمل بقائمة القراءة المسموحة، وملفات DLL الموقعة تعمل فقط في AppContainer مؤقت بلا شبكة أو صلاحيات هاتف أو ملفات مستخدم.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#B7C9DE"),
             Margin = new Thickness(0, 8, 0, 0),
@@ -115,7 +121,7 @@ public sealed class PluginStoreWindow : Window
             Margin = new Thickness(0, 0, 0, 10),
             Child = new TextBlock
             {
-                Text = "التشغيل مشروط بتوقيع صحيح من مفتاح أضفته إلى مخزن الثقة. Workflow فقط يعمل من خلال أوامر قراءة SoftBox المحددة، وبعد موافقتك على الصلاحيات. لا يتم تحميل DLL خارجي.",
+                Text = "كل تشغيل يتطلب توقيع ناشر موثوق. Workflow لا ينفذ إلا أوامر قراءة محددة. Native DLL يعمل داخل AppContainer منفصل بلا قدرات شبكة أو ADB أو وصول لملفات المستخدم، وبحد أقصى 256 MiB و120 ثانية.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -165,11 +171,32 @@ public sealed class PluginStoreWindow : Window
         DockPanel.SetDock(form, Dock.Top);
         root.Children.Add(form);
 
+        var nativeInput = new StackPanel { Margin = new Thickness(0, 0, 0, 10) };
+        nativeInput.Children.Add(new TextBlock
+        {
+            Text = "مدخل JSON للـNative Plugin (لا يمنحه صلاحية للهاتف أو ملفات النظام):",
+            Foreground = Brush("#C4D5E8"),
+            Margin = new Thickness(0, 0, 0, 5)
+        });
+        _nativeRequest.Text = "{}";
+        _nativeRequest.AcceptsReturn = true;
+        _nativeRequest.TextWrapping = TextWrapping.Wrap;
+        _nativeRequest.Height = 54;
+        _nativeRequest.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        _nativeRequest.Background = Brush("#071625");
+        _nativeRequest.Foreground = Brush("#DCEBFA");
+        _nativeRequest.BorderBrush = Brush("#38536F");
+        _nativeRequest.Padding = new Thickness(8);
+        nativeInput.Children.Add(_nativeRequest);
+        DockPanel.SetDock(nativeInput, Dock.Top);
+        root.Children.Add(nativeInput);
+
         var actions = new WrapPanel { Margin = new Thickness(0, 0, 0, 10) };
         actions.Children.Add(_inspectButton);
         actions.Children.Add(_trustPublisherButton);
         actions.Children.Add(_signPackageButton);
         actions.Children.Add(_runWorkflowButton);
+        actions.Children.Add(_runNativeButton);
         actions.Children.Add(_saveButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -211,6 +238,7 @@ public sealed class PluginStoreWindow : Window
             _saveButton.IsEnabled = false;
             _copyToLibraryButton.IsEnabled = false;
             _runWorkflowButton.IsEnabled = false;
+            _runNativeButton.IsEnabled = false;
             _report.Text = "اضغط فحص حزمة Plugin لقراءة Manifest والصلاحيات والتوقيع.";
         }
     }
@@ -239,6 +267,10 @@ public sealed class PluginStoreWindow : Window
             _runWorkflowButton.IsEnabled = accepted &&
                 _inspection.Manifest?.ExecutionMode == "read-only-workflow" &&
                 _adb is not null && _selectedSerial is not null;
+            _runNativeButton.IsEnabled = accepted &&
+                _inspection.Manifest?.ExecutionMode == "native-assembly" &&
+                _inspection.Manifest.RequestedPermissions is { Count: 0 } &&
+                File.Exists(Path.Combine(AppContext.BaseDirectory, "PluginHost", "SoftBox.PluginHost.exe"));
             _status.Text = accepted
                 ? (_runWorkflowButton.IsEnabled
                     ? "التوقيع موثوق. يمكن تثبيت الحزمة وتشغيل Workflow القراءة بعد منح الصلاحيات."
@@ -266,6 +298,7 @@ public sealed class PluginStoreWindow : Window
         _saveButton.IsEnabled = false;
         _copyToLibraryButton.IsEnabled = false;
         _runWorkflowButton.IsEnabled = false;
+        _runNativeButton.IsEnabled = false;
         _removeLibraryButton.IsEnabled = true;
         _report.Text = "اختر فحص حزمة Plugin لقراءة Manifest والصلاحيات والتوقيع.";
     }
@@ -513,6 +546,68 @@ public sealed class PluginStoreWindow : Window
             _runWorkflowButton.IsEnabled = _inspection?.PublisherSignatureVerified == true &&
                 _inspection.Manifest?.ExecutionMode == "read-only-workflow" &&
                 _adb is not null && _selectedSerial is not null;
+            _runNativeButton.IsEnabled = _inspection?.PublisherSignatureVerified == true &&
+                _inspection.Manifest?.ExecutionMode == "native-assembly" &&
+                _inspection.Manifest.RequestedPermissions is { Count: 0 } &&
+                File.Exists(Path.Combine(AppContext.BaseDirectory, "PluginHost", "SoftBox.PluginHost.exe"));
+        }
+    }
+
+    private async void RunNative_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await InspectCurrentPackageAsync();
+            if (_inspection is null || _inspection.PackageErrors.Count != 0 ||
+                !_inspection.PublisherSignatureVerified || _inspection.Manifest is null ||
+                _inspection.Manifest.ExecutionMode != "native-assembly" ||
+                _inspection.Manifest.RequestedPermissions is not { Count: 0 })
+                throw new UnauthorizedAccessException("Native execution requires a valid trusted package and an empty permission list.");
+
+            var confirmation = MessageBox.Show(
+                this,
+                "سيعمل DLL موقّع في عملية Windows AppContainer منفصلة، بلا شبكة أو ADB أو USB أو صلاحيات هاتف أو وصول لملفات المستخدم. حدود التنفيذ: 120 ثانية و256 MiB و1 MiB مخرجات JSON. هل تبدأ؟",
+                "تشغيل Native Plugin معزول",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirmation != MessageBoxResult.Yes)
+            {
+                _status.Text = "تم إلغاء تشغيل Native Plugin.";
+                return;
+            }
+
+            _runNativeButton.IsEnabled = false;
+            _status.Text = "جارٍ إعادة فحص التوقيع وتجهيز AppContainer...";
+            var report = await _nativeRuntime.RunAsync(_path.Text, _nativeRequest.Text);
+            var output = new StringBuilder();
+            output.AppendLine("SOFTBOX NATIVE APPCONTAINER EXECUTION");
+            output.AppendLine("PLUGIN: " + report.PluginName + " (" + report.PluginId + ")");
+            output.AppendLine("PUBLISHER: " + report.Publisher);
+            output.AppendLine("PACKAGE SHA-256: " + report.PackageSha256);
+            output.AppendLine("APP CONTAINER: " + report.AppContainerName);
+            output.AppendLine("SANDBOXED: " + report.Sandboxed);
+            output.AppendLine("STARTED UTC: " + report.StartedAtUtc.ToString("O"));
+            output.AppendLine("COMPLETED UTC: " + report.CompletedAtUtc.ToString("O"));
+            output.AppendLine("EXIT CODE: " + (report.ExitCode?.ToString() ?? "N/A"));
+            output.AppendLine("TIMED OUT: " + report.TimedOut);
+            output.AppendLine();
+            output.AppendLine(report.ResponseJson ?? report.Error ?? "No response.");
+            _report.Text = output.ToString();
+            _status.Text = report.Success
+                ? "اكتمل Native Plugin داخل AppContainer وأُغلقت العملية المؤقتة."
+                : "فشل أو أُلغي Native Plugin. راجع التقرير؛ لم يحصل على صلاحية للهاتف أو الملفات الشخصية.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تشغيل Native Plugin المعزول: " + ex.Message;
+            _report.Text = ex.ToString();
+        }
+        finally
+        {
+            _runNativeButton.IsEnabled = _inspection?.PublisherSignatureVerified == true &&
+                _inspection.Manifest?.ExecutionMode == "native-assembly" &&
+                _inspection.Manifest.RequestedPermissions is { Count: 0 } &&
+                File.Exists(Path.Combine(AppContext.BaseDirectory, "PluginHost", "SoftBox.PluginHost.exe"));
         }
     }
 
@@ -541,6 +636,7 @@ public sealed class PluginStoreWindow : Window
             _inspection = null;
             _copyToLibraryButton.IsEnabled = false;
             _runWorkflowButton.IsEnabled = false;
+            _runNativeButton.IsEnabled = false;
             await RefreshLibraryAsync();
             _status.Text = "تم حذف حزمة الإضافة من المكتبة المحلية.";
         }
