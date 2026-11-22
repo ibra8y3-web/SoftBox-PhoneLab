@@ -10,7 +10,8 @@ public sealed record PhoneLabSettings(
     bool AutoOpenScreenMirror = true,
     bool AutoInstallAgent = true,
     bool AutoInspectOnConnect = true,
-    int MaximumBatchConcurrency = 3);
+    int MaximumBatchConcurrency = 3,
+    double UiScale = 1.0);
 
 /// <summary>
 /// Local user preferences for connection automation and batch limits.
@@ -90,6 +91,8 @@ public sealed class PhoneLabSettingsService
             throw new ArgumentOutOfRangeException(nameof(settings.DiscoveryIntervalSeconds), "فترة اكتشاف الأجهزة يجب أن تكون من 3 إلى 120 ثانية.");
         if (settings.MaximumBatchConcurrency is < 1 or > 8)
             throw new ArgumentOutOfRangeException(nameof(settings.MaximumBatchConcurrency), "حد التوازي يجب أن يكون بين 1 و8.");
+        if (!double.IsFinite(settings.UiScale) || settings.UiScale is < 0.82 or > 1.10)
+            throw new ArgumentOutOfRangeException(nameof(settings.UiScale), "تكبير الواجهة يجب أن يكون بين 82% و110%.");
         return settings;
     }
 }
