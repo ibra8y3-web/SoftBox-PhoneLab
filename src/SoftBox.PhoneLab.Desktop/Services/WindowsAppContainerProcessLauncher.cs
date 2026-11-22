@@ -201,7 +201,7 @@ public sealed class WindowsAppContainerProcessLauncher
             ["TEMP"] = root,
             ["TMP"] = root
         };
-        return Marshal.StringToHGlobalUni(string.Join('\0', values.Select(x => x.Key + "=" + x.Value)) + "\0\0");
+        return Marshal.StringToHGlobalUni(string.Join("\0", values.Select(x => x.Key + "=" + x.Value)) + "\0\0");
     }
 
     private static string Quote(string s) => "\"" + s.Replace("\"", "\\\"") + "\"";

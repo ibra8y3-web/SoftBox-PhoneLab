@@ -2,14 +2,11 @@
 
 ## Current supported scope
 
-This repository now contains the version-1 plugin manifest contract and a local ZIP package inspector.
+This repository contains the version-1 plugin manifest contract, a local ZIP package inspector, signed data-only workflows and a signed native DLL worker hosted in Windows AppContainer.
 
-The current release does **not** install or execute plugin assemblies. Publisher signatures, trusted signing roots, runtime isolation, permission prompts, dependency installation and uninstall lifecycle are not implemented. The inspector always reports:
+The native execution path requires a trusted publisher signature, an exact re-check of the package at execution time and an empty requestedPermissions list. Native code runs in a temporary low-privilege Windows AppContainer with no network, ADB, USB, shared storage, host API or user-profile capabilities. A Job Object limits the worker to one process, 256 MiB memory, 15% CPU, and 120 seconds. Input/output is JSON only (64 KiB input, 1 MiB output).
 
-- \`PublisherSignatureVerified = false\`
-- \`CodeLoadedOrExecuted = false\`
-
-Do not distribute a DLL as a working SoftBox plugin based on the manifest contract alone.
+Inspection alone never executes code. The Plugin Store requires an explicit user click and confirmation before launching an accepted native package. This is process isolation, not a guarantee that arbitrary native code is safe; trust only publisher keys obtained through an independent channel.
 
 ## Package layout
 
@@ -75,3 +72,15 @@ A production runtime still needs:
 7. Security review and malicious-package test corpus.
 
 Until all of these are available and tested, inspect-only behavior is intentional.
+
+## Native plugin ABI v1
+
+Native packages use a root-level DLL and an empty `requestedPermissions` array. The DLL exports:
+
+- `int __cdecl SoftBoxPluginGetApiVersion(void)` — returns `1`.
+- `int __cdecl SoftBoxPluginExecute(const uint8_t* requestUtf8, int requestLength, uint8_t* responseBuffer, int responseCapacity, int* responseLength)` — reads UTF-8 JSON and writes UTF-8 JSON; return `0` on success.
+- Optional `void __cdecl SoftBoxPluginShutdown(void)` — called just before unloading.
+
+Buffers are owned by the host and valid only during the call; do not retain pointers. Responses must be valid JSON and no larger than 1 MiB. Dependencies must be root-level DLL files within the 80 MiB combined extraction limit.
+
+The ABI header is in `samples/NativePlugin/softbox_plugin.h`. The example manifest is illustrative and unsigned. Never place publisher private keys inside a plugin package.

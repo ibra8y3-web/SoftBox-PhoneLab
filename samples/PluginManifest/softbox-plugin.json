@@ -1,16 +1,12 @@
 {
   "manifestVersion": 1,
   "id": "org.softbox.sample",
-  "name": "Sample Diagnostics",
+  "name": "Sample Native Diagnostics",
   "version": "1.0.0",
   "apiVersion": "1.0.0",
   "minimumSoftBoxVersion": "0.1.0",
   "entryAssembly": "Sample.Plugin.dll",
   "publisher": "Example Publisher",
-  "description": "Read-only sample extension manifest. The DLL is not included or executable.",
-  "requestedPermissions": [
-    "device.read",
-    "device.diagnostics",
-    "reports.create"
-  ]
+  "description": "Native AppContainer sample. Receives JSON and returns JSON only.",
+  "requestedPermissions": []
 }

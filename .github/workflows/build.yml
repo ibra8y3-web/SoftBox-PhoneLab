@@ -46,6 +46,9 @@ jobs:
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:IncludeAllContentForSelfExtract=true
+      - name: Publish isolated native PluginHost
+        run: dotnet publish src/SoftBox.PluginHost/SoftBox.PluginHost.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/PhoneLab-win-x64/PluginHost -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+
       - name: Download Android Agent into Windows package
         uses: actions/download-artifact@v4
         with:
