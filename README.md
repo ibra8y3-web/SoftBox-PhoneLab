@@ -225,3 +225,8 @@ The Device Access & Recovery screen also reads Android `dumpsys telephony.regist
 ### Management-policy evidence inspector — 21 November 2026
 
 The Device Access & Recovery screen now shows bounded Device Policy Manager component names and observed `no_*` policy restriction tokens where Android exposes them. These are evidence strings from the diagnostic output, not proof that each restriction is active for every user. SoftBox does not remove administrators or alter enterprise policy.
+
+
+## Owner support approvals
+
+See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline Windows/Android Support Key Manager workflow, WhatsApp exchange, protocol verification, and Android public-key provisioning. The Android owner key is not trusted by released clients until it has been exported from the owner's physical phone and pinned in a subsequent client build.
