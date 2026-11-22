@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Security.Cryptography;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -21,6 +22,7 @@ public sealed class UserManagementWindow : Window
     private readonly TextBox _newUserName = new();
     private readonly TextBox _newDisplayName = new();
     private readonly PasswordBox _newPassword = new();
+    private readonly Button _copyNewCredentials = new();
     private readonly ComboBox _newRole = new();
     private readonly ComboBox _selectedRole = new();
     private readonly CheckBox _selectedEnabled = new();
@@ -166,6 +168,19 @@ public sealed class UserManagementWindow : Window
         AddLabeledControl(createGrid, 3, "الدور", _newRole);
         actions.Children.Add(createGrid);
 
+        var generatedActions = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
+        generatedActions.Children.Add(ButtonControl("توليد اسم مستخدم وكلمة مرور", "#14517A", GenerateNewUserCredentials_Click));
+        _copyNewCredentials.Content = "نسخ بيانات الحساب";
+        _copyNewCredentials.Background = Brush("#24364B");
+        _copyNewCredentials.Foreground = Brushes.White;
+        _copyNewCredentials.BorderBrush = Brush("#3E7096");
+        _copyNewCredentials.Padding = new Thickness(10, 7, 10, 7);
+        _copyNewCredentials.Margin = new Thickness(8, 0, 0, 0);
+        _copyNewCredentials.IsEnabled = false;
+        _copyNewCredentials.Click += CopyNewUserCredentials_Click;
+        generatedActions.Children.Add(_copyNewCredentials);
+        actions.Children.Add(generatedActions);
+
         var createButton = ButtonControl("إنشاء الحساب", "#176044", CreateUser_Click);
         createButton.HorizontalAlignment = HorizontalAlignment.Left;
         createButton.Margin = new Thickness(0, 10, 0, 12);
@@ -294,6 +309,39 @@ public sealed class UserManagementWindow : Window
         _status.Text = $"الحساب المحدد: {selected.UserName} • {SoftBoxAccountService.RoleLabel(selected.Role)}";
     }
 
+    private void GenerateNewUserCredentials_Click(object sender, RoutedEventArgs e)
+    {
+        var number = RandomNumberGenerator.GetInt32(10_000_000, 100_000_000);
+        _newUserName.Text = "sbx-" + number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+        var password = new char[22];
+        for (var index = 0; index < password.Length; index++)
+            password[index] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
+        _newPassword.Password = new string(password);
+        _copyNewCredentials.IsEnabled = true;
+        _status.Text = "تم توليد بيانات دخول عشوائية للحساب الجديد. انسخها وسلّمها لصاحب الحساب عبر قناة آمنة.";
+        _status.Foreground = Brush("#86EFAC");
+    }
+
+    private void CopyNewUserCredentials_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_newUserName.Text) ||
+            _newPassword.Password.Length < SoftBoxAccountService.MinimumPasswordLength)
+        {
+            SetError("أدخل اسم المستخدم وكلمة المرور أولًا.");
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText("SoftBox username: " + _newUserName.Text.Trim() +
+                Environment.NewLine + "SoftBox password: " + _newPassword.Password);
+            _status.Text = "تم نسخ بيانات المستخدم الجديد.";
+            _status.Foreground = Brush("#86EFAC");
+        }
+        catch (Exception ex) { SetError("تعذر نسخ بيانات الحساب: " + ex.Message); }
+    }
+
     private async void CreateUser_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -303,6 +351,7 @@ public sealed class UserManagementWindow : Window
             _newPassword.Clear();
             _newUserName.Clear();
             _newDisplayName.Clear();
+            _copyNewCredentials.IsEnabled = false;
             await RefreshAsync();
             _status.Text = "تم إنشاء الحساب وحفظ سجل التدقيق.";
         }
