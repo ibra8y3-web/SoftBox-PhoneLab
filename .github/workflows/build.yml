@@ -29,7 +29,25 @@ jobs:
           dotnet-version: 10.0.x
       - name: Restore
         run: dotnet restore SoftBox.PhoneLab.sln
-      - name: Unit tests
+      - name: Configure MSVC native compiler
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Build native AppContainer smoke DLL
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $smokeDirectory = Join-Path $env:RUNNER_TEMP "SoftBox-AppContainer-Smoke"
+          New-Item -ItemType Directory -Force -Path $smokeDirectory | Out-Null
+          $smokeDll = Join-Path $smokeDirectory "softbox-native-smoke.dll"
+          $smokeObject = Join-Path $smokeDirectory "softbox-native-smoke.obj"
+          $smokeLibrary = Join-Path $smokeDirectory "softbox-native-smoke.lib"
+          & cl.exe /nologo /LD /MT /O2 /W4 /WX "/Fo$smokeObject" "/Fe$smokeDll" "tests/native-plugin-smoke/SoftBoxAppContainerSmoke.c" /link "/IMPLIB:$smokeLibrary"
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path $smokeDll)) { throw "Native AppContainer smoke DLL compilation failed." }
+          Add-Content -Path $env:GITHUB_ENV -Value "SOFTBOX_SMOKE_NATIVE_DLL=$smokeDll"
+      - name: Publish isolated native PluginHost for integration tests
+        run: dotnet publish src/SoftBox.PluginHost/SoftBox.PluginHost.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/PhoneLab-win-x64/PluginHost -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+      - name: Unit tests including signed DLL AppContainer integration
+        env:
+          SOFTBOX_PLUGINHOST_DIR: ${{ github.workspace }}/artifacts/PhoneLab-win-x64/PluginHost
         run: dotnet test SoftBox.PhoneLab.sln --no-restore --configuration Release
       - name: Publish self-contained Windows x64
         shell: pwsh
@@ -46,8 +64,12 @@ jobs:
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:IncludeAllContentForSelfExtract=true
-      - name: Publish isolated native PluginHost
-        run: dotnet publish src/SoftBox.PluginHost/SoftBox.PluginHost.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/PhoneLab-win-x64/PluginHost -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+      - name: Verify isolated native PluginHost publish
+        shell: pwsh
+        run: |
+          if (!(Test-Path "artifacts/PhoneLab-win-x64/PluginHost/SoftBox.PluginHost.exe")) {
+            throw "The isolated native PluginHost publish output is missing."
+          }
 
       - name: Download Android Agent into Windows package
         uses: actions/download-artifact@v4
