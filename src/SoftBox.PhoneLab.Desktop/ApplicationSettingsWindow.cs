@@ -65,7 +65,7 @@ public sealed class ApplicationSettingsWindow : Window
         _concurrency.ItemsSource = Enumerable.Range(1, 8).ToArray();
         _concurrency.SelectedItem = settings.MaximumBatchConcurrency;
 
-        _uiScale.ItemsSource = new[] { 0.82, 0.90, 1.00, 1.05, 1.10 };
+        _uiScale.ItemsSource = new[] { 0.70, 0.80, 0.90, 1.00, 1.05 };
         _uiScale.SelectedItem = settings.UiScale;
         if (_uiScale.SelectedItem is null) _uiScale.SelectedItem = 1.0;
     }
