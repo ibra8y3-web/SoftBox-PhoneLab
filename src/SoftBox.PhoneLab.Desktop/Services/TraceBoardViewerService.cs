@@ -24,8 +24,9 @@ public sealed class TraceBoardViewerService
 
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".brd", ".brd2", ".bdv", ".bvr", ".bv", ".cad", ".gcd", ".pcb", ".kicad_pcb",
-        ".pcbdoc", ".asc", ".fz", ".tvw", ".cae"
+        ".brd", ".brd2", ".bdv", ".bvr", ".bv", ".bv2", ".gr", ".cad", ".gcd",
+        ".pcb", ".kicad_pcb", ".pcbdoc", ".asc", ".fz", ".tvw", ".cae", ".epro", ".epro2",
+        ".f2b", ".farc", ".faz", ".ict", ".tgz", ".tar", ".gz", ".zip"
     };
 
     public async Task OpenAsync(string boardFile, CancellationToken cancellationToken = default)
