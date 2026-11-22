@@ -36,7 +36,7 @@ public sealed class WindowsAppContainerProcessLauncher
 
     public async Task<NativePluginSandboxProcessResult> RunAsync(
         string rootPath, string executablePath, string requestPath, string responsePath,
-        TimeSpan timeout, CancellationToken cancellationToken = default)
+        TimeSpan timeout, CancellationToken cancellationToken = default, bool selfTest = false)
     {
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("Windows AppContainer is required.");
         if (timeout < TimeSpan.FromSeconds(1) || timeout > TimeSpan.FromMinutes(2))
@@ -80,7 +80,10 @@ public sealed class WindowsAppContainerProcessLauncher
             ConfigureJob(job);
             environment = BuildMinimalEnvironment(root);
 
-            var command = new StringBuilder(Quote(exe) + " --request " + Quote(request) + " --response " + Quote(response));
+            var arguments = selfTest
+                ? "--self-test " + Quote(response)
+                : "--request " + Quote(request) + " --response " + Quote(response);
+            var command = new StringBuilder(Quote(exe) + " " + arguments);
             if (!CreateProcessW(exe, command, IntPtr.Zero, IntPtr.Zero, false,
                     ExtendedStartupInfo | CreateSuspended | CreateNoWindow | UnicodeEnvironment,
                     environment, Path.GetDirectoryName(exe)!, ref startup, out process))

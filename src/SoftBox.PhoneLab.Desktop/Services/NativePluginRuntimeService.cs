@@ -13,6 +13,12 @@ public sealed record NativePluginRunReport(
     string? ResponseJson, string? Error, string AppContainerName);
 
 /// <summary>Executes signed native plugins only inside a no-capability AppContainer worker.</summary>
+public sealed record NativePluginSandboxCheckReport(
+    bool Success,
+    string AppContainerName,
+    DateTimeOffset CheckedAtUtc,
+    string? Error);
+
 public sealed class NativePluginRuntimeService
 {
     private const int MaxRequest = 64 * 1024;
@@ -28,7 +34,68 @@ public sealed class NativePluginRuntimeService
     {
         _inspector = inspector ?? new PluginPackageInspector();
         _launcher = launcher ?? new WindowsAppContainerProcessLauncher();
-        _hostDirectory = Path.GetFullPath(hostDirectory ?? Path.Combine(AppContext.BaseDirectory, "PluginHost"));
+        _hostDirectory = ResolveHostDirectory(hostDirectory);
+    }
+
+    public bool IsHostAvailable => File.Exists(Path.Combine(_hostDirectory, "SoftBox.PluginHost.exe"));
+
+    public async Task<NativePluginSandboxCheckReport> VerifySandboxAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var startedAt = DateTimeOffset.UtcNow;
+        if (!IsHostAvailable)
+            return new(false, "", startedAt, "SoftBox.PluginHost.exe was not found. Build or publish the PluginHost project.");
+
+        var root = Path.Combine(Path.GetTempPath(), "SoftBox-PluginSandbox-Test-" + Guid.NewGuid().ToString("N"));
+        var runtimeFolder = Path.Combine(root, "runtime");
+        var exchangeFolder = Path.Combine(root, "exchange");
+        Directory.CreateDirectory(runtimeFolder);
+        Directory.CreateDirectory(exchangeFolder);
+        try
+        {
+            CopyRuntimeFiles(_hostDirectory, runtimeFolder);
+            var unusedRequest = Path.Combine(exchangeFolder, "unused-request.json");
+            var responsePath = Path.Combine(exchangeFolder, "self-test.json");
+            var result = await _launcher.RunAsync(
+                root,
+                Path.Combine(runtimeFolder, "SoftBox.PluginHost.exe"),
+                unusedRequest,
+                responsePath,
+                TimeSpan.FromSeconds(20),
+                cancellationToken,
+                selfTest: true);
+
+            if (result.TimedOut || result.Cancelled || result.ExitCode != 0 || !File.Exists(responsePath))
+                return new(false, result.AppContainerName, DateTimeOffset.UtcNow,
+                    result.Error ?? "AppContainer worker self-test did not complete successfully.");
+
+            var hostResponse = JsonSerializer.Deserialize<HostResponse>(
+                await File.ReadAllTextAsync(responsePath), JsonOptions);
+            if (hostResponse is null || !hostResponse.Success || hostResponse.ApiVersion != 1 ||
+                string.IsNullOrWhiteSpace(hostResponse.Json))
+                return new(false, result.AppContainerName, DateTimeOffset.UtcNow,
+                    hostResponse?.Error ?? "AppContainer self-test response is invalid.");
+
+            using var json = JsonDocument.Parse(hostResponse.Json);
+            var rootElement = json.RootElement;
+            if (!rootElement.TryGetProperty("appContainer", out var inContainer) || !inContainer.GetBoolean() ||
+                !rootElement.TryGetProperty("apiVersion", out var apiVersion) || apiVersion.GetInt32() != 1)
+                return new(false, result.AppContainerName, DateTimeOffset.UtcNow,
+                    "PluginHost did not confirm the AppContainer process token.");
+            return new(true, result.AppContainerName, DateTimeOffset.UtcNow, null);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new(false, "", DateTimeOffset.UtcNow, ex.GetType().Name + ": " + ex.Message);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
     }
 
     public async Task<NativePluginRunReport> RunAsync(string packagePath, string requestJson = "{}",
@@ -96,6 +163,24 @@ public sealed class NativePluginRuntimeService
                     success, true, timedOut, exitCode, json, error, container);
         }
         finally { try { Directory.Delete(root, recursive: true); } catch { } }
+    }
+
+    private static string ResolveHostDirectory(string? supplied)
+    {
+        if (!string.IsNullOrWhiteSpace(supplied))
+            return Path.GetFullPath(supplied);
+        var packaged = Path.Combine(AppContext.BaseDirectory, "PluginHost");
+        if (File.Exists(Path.Combine(packaged, "SoftBox.PluginHost.exe")))
+            return packaged;
+        foreach (var configuration in new[] { "Debug", "Release" })
+        {
+            var development = Path.GetFullPath(Path.Combine(
+                AppContext.BaseDirectory, "..", "..", "..", "..", "SoftBox.PluginHost",
+                "bin", configuration, "net10.0-windows"));
+            if (File.Exists(Path.Combine(development, "SoftBox.PluginHost.exe")))
+                return development;
+        }
+        return packaged;
     }
 
     private static void CopyRuntimeFiles(string source, string destination)

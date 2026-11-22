@@ -42,6 +42,7 @@ public sealed class PluginStoreWindow : Window
     private readonly Button _signPackageButton;
     private readonly Button _runWorkflowButton;
     private readonly Button _runNativeButton;
+    private readonly Button _testSandboxButton;
     private readonly Button _removeLibraryButton;
     private PluginPackageInspection? _inspection;
 
@@ -72,11 +73,13 @@ public sealed class PluginStoreWindow : Window
         _signPackageButton = ButtonControl("توقيع الحزمة بمفتاح الناشر", "#704B20", SignPackage_Click);
         _runWorkflowButton = ButtonControl("تشغيل Workflow موقّع", "#176044", RunWorkflow_Click);
         _runNativeButton = ButtonControl("تشغيل DLL معزول AppContainer", "#704B20", RunNative_Click);
+        _testSandboxButton = ButtonControl("اختبار بيئة العزل", "#28435D", TestSandbox_Click);
         _removeLibraryButton = ButtonControl("إلغاء تثبيت الحزمة", "#713B43", RemoveLibrary_Click);
         _saveButton.IsEnabled = false;
         _copyToLibraryButton.IsEnabled = false;
         _runWorkflowButton.IsEnabled = false;
         _runNativeButton.IsEnabled = false;
+        _testSandboxButton.IsEnabled = _nativeRuntime.IsHostAvailable;
         _removeLibraryButton.IsEnabled = false;
         Content = BuildContent();
         _libraryList.SelectionChanged += (_, _) => SelectLibraryItem();
@@ -198,6 +201,7 @@ public sealed class PluginStoreWindow : Window
         actions.Children.Add(_signPackageButton);
         actions.Children.Add(_runWorkflowButton);
         actions.Children.Add(_runNativeButton);
+        actions.Children.Add(_testSandboxButton);
         actions.Children.Add(_saveButton);
         DockPanel.SetDock(actions, Dock.Top);
         root.Children.Add(actions);
@@ -271,7 +275,7 @@ public sealed class PluginStoreWindow : Window
             _runNativeButton.IsEnabled = accepted &&
                 _inspection.Manifest?.ExecutionMode == "native-assembly" &&
                 _inspection.Manifest.RequestedPermissions is { Count: 0 } &&
-                File.Exists(Path.Combine(AppContext.BaseDirectory, "PluginHost", "SoftBox.PluginHost.exe"));
+                _nativeRuntime.IsHostAvailable;
             _status.Text = accepted
                 ? (_runWorkflowButton.IsEnabled
                     ? "التوقيع موثوق. يمكن تثبيت الحزمة وتشغيل Workflow القراءة بعد منح الصلاحيات."
@@ -554,6 +558,34 @@ public sealed class PluginStoreWindow : Window
         }
     }
 
+    private async void TestSandbox_Click(object sender, RoutedEventArgs e)
+    {
+        _testSandboxButton.IsEnabled = false;
+        _status.Text = "جارٍ اختبار إنشاء AppContainer وفحص Token للعملية المعزولة...";
+        try
+        {
+            var result = await _nativeRuntime.VerifySandboxAsync();
+            _report.Text = string.Join(Environment.NewLine,
+                "SOFTBOX APPCONTAINER SELF-TEST",
+                "SUCCESS: " + result.Success,
+                "CONTAINER: " + result.AppContainerName,
+                "CHECKED UTC: " + result.CheckedAtUtc.ToString("O"),
+                "ERROR: " + (result.Error ?? "None"));
+            _status.Text = result.Success
+                ? "نجح اختبار AppContainer: الـHost تحقق بنفسه أن Token العملية معزول."
+                : "فشل اختبار AppContainer؛ سيتم منع تشغيل DLL حتى تنجح بيئة العزل.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر اختبار AppContainer: " + ex.Message;
+            _report.Text = ex.ToString();
+        }
+        finally
+        {
+            _testSandboxButton.IsEnabled = _nativeRuntime.IsHostAvailable;
+        }
+    }
+
     private async void RunNative_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -578,7 +610,10 @@ public sealed class PluginStoreWindow : Window
             }
 
             _runNativeButton.IsEnabled = false;
-            _status.Text = "جارٍ إعادة فحص التوقيع وتجهيز AppContainer...";
+            _status.Text = "جارٍ إعادة فحص التوقيع واختبار AppContainer قبل تحميل DLL...";
+            var sandboxCheck = await _nativeRuntime.VerifySandboxAsync();
+            if (!sandboxCheck.Success)
+                throw new UnauthorizedAccessException("فشل تحقق AppContainer: " + sandboxCheck.Error);
             var report = await _nativeRuntime.RunAsync(_path.Text, _nativeRequest.Text);
             var output = new StringBuilder();
             output.AppendLine("SOFTBOX NATIVE APPCONTAINER EXECUTION");

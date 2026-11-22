@@ -84,3 +84,6 @@ Native packages use a root-level DLL and an empty `requestedPermissions` array. 
 Buffers are owned by the host and valid only during the call; do not retain pointers. Responses must be valid JSON and no larger than 1 MiB. Dependencies must be root-level DLL files within the 80 MiB combined extraction limit.
 
 The ABI header is in `samples/NativePlugin/softbox_plugin.h`. The example manifest is illustrative and unsigned. Never place publisher private keys inside a plugin package.
+
+
+The Plugin Store includes an **اختبار بيئة العزل** action. Native launch also runs this AppContainer self-test automatically before loading the plugin DLL. If the worker token does not report `TokenIsAppContainer = 1`, native execution is refused before plugin code is loaded.
