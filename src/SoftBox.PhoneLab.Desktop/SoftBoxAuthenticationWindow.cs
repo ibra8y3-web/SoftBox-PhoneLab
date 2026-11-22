@@ -136,7 +136,7 @@ public sealed class SoftBoxAuthenticationWindow : Window
 
         if (!_initialSetup)
         {
-            var recovery = ButtonControl("نسيت كلمة المرور؟ استرداد برمز الدعم", "#14517A", (_, _) =>
+            var recovery = ButtonControl("نسيت كلمة المرور؟ استرداد بموافقة دعم موقعة", "#14517A", (_, _) =>
             {
                 var window = new SoftBoxAccountRecoveryWindow(_service) { Owner = this };
                 window.ShowDialog();
