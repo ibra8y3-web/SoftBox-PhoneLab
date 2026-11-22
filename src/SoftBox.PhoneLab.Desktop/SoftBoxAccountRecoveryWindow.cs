@@ -134,7 +134,6 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
     {
         try
         {
-            var user = Uri.EscapeDataString(_userName.Text.Trim());
             var message = Uri.EscapeDataString(
                 "مرحبًا دعم SoftBox، أحتاج مساعدة في استرداد حساب SoftBox المحلي. اسم المستخدم: " +
                 (string.IsNullOrWhiteSpace(_userName.Text) ? "سأرسله بعد التواصل" : _userName.Text.Trim()) +
