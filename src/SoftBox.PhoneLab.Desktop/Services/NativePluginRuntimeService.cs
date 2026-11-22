@@ -104,8 +104,8 @@ public sealed class NativePluginRuntimeService
     {
         var started = DateTimeOffset.UtcNow;
         if (!File.Exists(packagePath)) throw new FileNotFoundException("Native plugin package not found.", packagePath);
-        if (Encoding.UTF8.GetByteCount(requestJson ?? "") > MaxRequest)
-            throw new InvalidDataException("Plugin input exceeds 64 KiB.");
+        if (requestJson is null || Encoding.UTF8.GetByteCount(requestJson) > MaxRequest)
+            throw new InvalidDataException("Plugin input is null or exceeds 64 KiB.");
         using (JsonDocument.Parse(requestJson)) { }
 
         var inspection = await _inspector.InspectAsync(packagePath, cancellationToken);

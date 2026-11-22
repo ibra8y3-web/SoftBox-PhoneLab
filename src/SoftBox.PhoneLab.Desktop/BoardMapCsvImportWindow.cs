@@ -1,3 +1,4 @@
+using System.IO;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -53,9 +54,13 @@ public sealed class BoardMapCsvImportWindow : Window
         _boardRevision.Text = _device.BoardRevision == "غير متاح" ? "" : _device.BoardRevision;
         _width.Text = "65";
         _height.Text = "130";
-        _confirmRevision.Content = "أكدت يدويًا أن رقم الموديل ومراجعة اللوحة الفيزيائية مطابقان لمصدر BoardView، وأن الإحداثيات بالمليمتر.";
+        _confirmRevision.Content = new TextBlock
+        {
+            Text = "أكدت يدويًا أن رقم الموديل ومراجعة اللوحة الفيزيائية مطابقان لمصدر BoardView، وأن الإحداثيات بالمليمتر.",
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = Brush("#F0C9A5")
+        };
         _confirmRevision.Foreground = Brush("#F0C9A5");
-        _confirmRevision.TextWrapping = TextWrapping.Wrap;
         _import = ButtonControl("تحقق واستيراد الخريطة", "#176044", Import_Click);
         Content = BuildContent();
     }
