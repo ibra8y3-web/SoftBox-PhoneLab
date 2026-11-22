@@ -10,8 +10,10 @@
     <Authors>SoftBox</Authors>
     <Description>Intelligent smartphone diagnostics workstation</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\SoftBox-AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Resource Include="Assets\SoftBox-AppIcon.ico" />
     <ProjectReference Include="..\SoftBox.PhoneLab.Core\SoftBox.PhoneLab.Core.csproj" />
     <PackageReference Include="System.IO.Ports" Version="10.0.0" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
