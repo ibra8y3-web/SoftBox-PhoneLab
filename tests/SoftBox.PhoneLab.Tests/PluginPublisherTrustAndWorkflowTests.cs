@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using SoftBox.PhoneLab.Core.Plugins;
 using SoftBox.PhoneLab.Core.Security;
+using SoftBox.PhoneLab.Desktop.Services;
 using Xunit;
 
 namespace SoftBox.PhoneLab.Tests;
@@ -161,6 +162,60 @@ public sealed class PluginPublisherTrustAndWorkflowTests
             Assert.Equal("native-assembly", inspected.Manifest!.ExecutionMode);
         }
         finally { Directory.Delete(root, recursive: true); }
+    }
+
+    [Fact]
+    public async Task SignedNativeDllIsLoadedAndExecutedInsideAnActualAppContainerWhenCiInputsAreProvided()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        var dllPath = Environment.GetEnvironmentVariable("SOFTBOX_SMOKE_NATIVE_DLL");
+        var hostDirectory = Environment.GetEnvironmentVariable("SOFTBOX_PLUGINHOST_DIR");
+        if (string.IsNullOrWhiteSpace(dllPath) || string.IsNullOrWhiteSpace(hostDirectory))
+            return;
+
+        Assert.True(File.Exists(dllPath), "The CI native smoke DLL was not built.");
+        Assert.True(File.Exists(Path.Combine(hostDirectory, "SoftBox.PluginHost.exe")),
+            "The self-contained PluginHost was not published.");
+
+        var root = CreateTempDirectory();
+        var package = Path.Combine(root, "signed-native-smoke.sbxplugin");
+        try
+        {
+            using var rsa = RSA.Create(2048);
+            var manifest = new PluginManifest(1, "org.softbox.ci.appcontainer", "AppContainer integration smoke",
+                "1.0.0", "1.0.0", "0.1.0", "softbox-native-smoke.dll", "SoftBox CI",
+                "Signed test DLL that returns a fixed JSON marker from inside AppContainer.", []);
+            using (var archive = ZipFile.Open(package, ZipArchiveMode.Create))
+            {
+                var manifestEntry = archive.CreateEntry(PluginPackageInspector.ManifestEntryName);
+                await using (var stream = manifestEntry.Open())
+                    await JsonSerializer.SerializeAsync(stream, manifest);
+                var dllEntry = archive.CreateEntry(manifest.EntryAssembly, CompressionLevel.Optimal);
+                await using var dllOutput = dllEntry.Open();
+                await using var dllInput = new FileStream(dllPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                await dllInput.CopyToAsync(dllOutput);
+            }
+
+            await PluginPackageSigner.SignPackageAsync(package, rsa.ExportPkcs8PrivateKeyPem());
+            var trust = new PluginPublisherTrustStore(Path.Combine(root, "trust"));
+            await trust.TrustPublicKeyAsync("SoftBox CI", rsa.ExportSubjectPublicKeyInfoPem());
+            var runtime = new NativePluginRuntimeService(new PluginPackageInspector(trust), hostDirectory: hostDirectory);
+            var report = await runtime.RunAsync(package, "{\"probe\":\"appcontainer\"}");
+
+            Assert.True(report.Success, report.Error ?? "Native DLL did not complete.");
+            Assert.True(report.Sandboxed);
+            Assert.False(report.TimedOut);
+            Assert.False(string.IsNullOrWhiteSpace(report.AppContainerName));
+            using var result = JsonDocument.Parse(report.ResponseJson!);
+            Assert.Equal("softbox-appcontainer-smoke", result.RootElement.GetProperty("marker").GetString());
+            Assert.True(result.RootElement.GetProperty("executed").GetBoolean());
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
     }
 
     private static PluginManifest ReadOnlyManifest()
