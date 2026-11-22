@@ -6,6 +6,7 @@ using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Core.Settings;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Core.Security;
+using SoftBox.PhoneLab.Core.Parsing;
 using SoftBox.PhoneLab.Desktop.Models;
 using SoftBox.PhoneLab.Desktop.Services;
 using System.Collections.ObjectModel;
@@ -27,6 +28,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DispatcherTimer _backupSchedulerTimer;
     private bool _processingBackupSchedules;
     private readonly PhoneDiscoveryService _discovery;
+    private readonly WindowsUsbInventoryService _usbInventory = new();
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
@@ -68,16 +70,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string EngineStatus => _adb.IsAvailable ? "USB / ADB ENGINE READY" : "ADB TOOL MISSING";
+    public string EngineStatus => _adb.IsAvailable ? "USB AUTO-DETECT / ADB READY" : "USB AUTO-DETECT READY / ADB MISSING";
     public string DiscoveryHint => _adb.IsAvailable
-        ? "وصّل Android بكابل بيانات وفعّل USB debugging. وافق على رسالة الثقة في الهاتف."
-        : "ثبّت Android SDK Platform-Tools، ثم ضع adb.exe في PATH أو Tools/platform-tools.";
+        ? "يتم فحص USB تلقائيًا، ثم قراءة خصائص Android عبر ADB عند منح تصريح USB debugging."
+        : "فحص واجهات USB يعمل دون ADB؛ ثبّت Android Platform-Tools لقراءة خصائص الهاتف عبر ADB.";
     public string DeviceTitle => _snapshot is null ? SelectedDevice?.DisplayName ?? "لا يوجد هاتف متصل" : $"{_snapshot.Manufacturer} {_snapshot.Model}".Trim();
     public string DeviceSubtitle => _snapshot is null
         ? "بانتظار جهاز Android عبر USB"
         : $"Android {_snapshot.AndroidVersion} • {_snapshot.ModelNumber} • {_snapshot.DeviceCode}" +
           (_profileMatch.Profile is null ? " • قاعدة الموديلات: غير مدرج" : $" • {_profileMatch.DisplayName} ({_profileMatch.Confidence})");
     public string ScanStatus { get; private set; } = "بانتظار جهاز";
+    public string UsbRecognitionStatus { get; private set; } = "فحص واجهات USB تلقائيًا عند بدء التشغيل.";
     public string StatusMessage { get; private set; } = "PhoneLab جاهز لاكتشاف أجهزة Android المصرّح بها.";
     public string BoardMapNotice => _boardMap.AccuracyNotice;
     public string AgentStatus { get; private set; } = "سيُثبت Agent تلقائيًا بعد تصريح ADB، ثم يطلب موافقتك على الهاتف.";
@@ -195,14 +198,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public async Task RefreshDevicesAsync()
     {
         if (_busy || _refreshing) return;
-        if (!_adb.IsAvailable)
-        {
-            StatusMessage = "أدوات ADB غير موجودة. استخدم حزمة PhoneLab المتكاملة.";
-            Notify(nameof(StatusMessage)); return;
-        }
         _refreshing = true;
         try
         {
+            await RefreshUsbRecognitionAsync();
+            if (!_adb.IsAvailable)
+            {
+                StatusMessage = "أدوات ADB غير موجودة. " + UsbRecognitionStatus;
+                Notify(nameof(StatusMessage));
+                return;
+            }
             var list = await _discovery.DiscoverAsync();
             var signature = string.Join("|", list.Select(d => d.Serial + ":" + d.State));
             if (signature == _deviceSignature) return;
@@ -225,9 +230,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 {
                     try
                     {
-                        var model = await _adb.RunForDeviceAsync(device.Serial, "shell", "getprop", "ro.product.model");
-                        var maker = await _adb.RunForDeviceAsync(device.Serial, "shell", "getprop", "ro.product.manufacturer");
-                        item = device with { Model = model.Trim(), Manufacturer = maker.Trim() };
+                        var rawProperties = await _adb.RunForDeviceAsync(device.Serial, "shell", "getprop");
+                        var identity = DevicePropertyParser.ParseIdentityHint(rawProperties);
+                        item = device with
+                        {
+                            Model = identity.Model == "غير متاح" ? device.Model : identity.Model,
+                            Manufacturer = identity.Manufacturer == "غير متاح" ? device.Manufacturer : identity.Manufacturer
+                        };
                     }
                     catch { }
                 }
@@ -289,7 +298,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (Devices.Count == 0)
             {
                 ClearDevice("لا يوجد جهاز ADB متصل.");
-                StatusMessage = "لم يتم رصد ADB. ظهور الهاتف في مستكشف الملفات يعني نقل MTP فقط، وليس تصريح تشخيص USB.";
+                StatusMessage = "لم يتم رصد قناة ADB. " + UsbRecognitionStatus +
+                    " ظهور الهاتف في مستكشف الملفات عبر MTP لا يمنح تصريح تشخيص ADB.";
                 AgentStatus = "بانتظار اتصال ADB مصرح به.";
                 Notify(nameof(StatusMessage)); Notify(nameof(AgentStatus)); return;
             }
@@ -610,6 +620,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StatusMessage = message;
         Notify(nameof(DeviceTitle)); Notify(nameof(DeviceSubtitle));
         Notify(nameof(ScanStatus)); Notify(nameof(StatusMessage));
+    }
+
+    private async Task RefreshUsbRecognitionAsync()
+    {
+        try
+        {
+            var devices = await _usbInventory.EnumeratePresentDevicesAsync();
+            var summary = UsbRecognitionSummary.Build(devices);
+            if (string.Equals(summary, UsbRecognitionStatus, StringComparison.Ordinal)) return;
+            UsbRecognitionStatus = summary;
+            Notify(nameof(UsbRecognitionStatus));
+        }
+        catch (Exception ex)
+        {
+            var summary = "تعذر فحص Windows USB PnP: " + ex.Message;
+            if (!string.Equals(summary, UsbRecognitionStatus, StringComparison.Ordinal))
+            {
+                UsbRecognitionStatus = summary;
+                Notify(nameof(UsbRecognitionStatus));
+            }
+        }
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
@@ -1524,16 +1555,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var dialog = new OpenFileDialog
         {
             Title = "فتح ملف BoardView / PCB أصلي",
-            Filter = "BoardView / PCB|*.brd;*.brd2;*.bdv;*.bvr;*.bv;*.cad;*.gcd;*.pcb;*.kicad_pcb;*.PcbDoc;*.asc;*.fz;*.tvw;*.cae|All files|*.*",
+            Filter = "BoardView / PCB|*.brd;*.brd2;*.bdv;*.bvr;*.bv;*.bv2;*.gr;*.cad;*.gcd;*.pcb;*.kicad_pcb;*.PcbDoc;*.asc;*.fz;*.tvw;*.cae;*.epro;*.epro2;*.f2b;*.farc;*.faz;*.ict;*.tgz;*.tar;*.gz;*.zip|All files|*.*",
             CheckFileExists = true
         };
         if (dialog.ShowDialog(this) != true) return;
         try
         {
-            StatusMessage = "جارٍ تثبيت TRACE Boardviewer الرسمي والتحقق من SHA-256 (التنزيل الأول يقارب 102 MB)...";
+            var format = await BoardViewNativeFormatDetector.DetectAsync(dialog.FileName);
+            StatusMessage = format.ContentRecognized
+                ? $"تعرّف SoftBox على صيغة الملف: {format.DisplayName}. جارٍ فتح القارئ الأصلي."
+                : $"لم يطابق رأس الملف توقيعًا معروفًا ({Path.GetExtension(dialog.FileName)}). سيحاول TRACE قراءة الصيغة مباشرةً.";
             Notify(nameof(StatusMessage));
             await _traceBoardViewer.OpenAsync(dialog.FileName);
-            StatusMessage = "تم فتح ملف اللوحة محليًا في TRACE Boardviewer. الملفات لا تُرفع إلى الإنترنت.";
+            StatusMessage = $"تم فتح {format.DisplayName} محليًا في TRACE Boardviewer. إدخال المكوّنات إلى مجسم SoftBox يتطلب خريطة JSON/CSV موثّقة ومطابقة للمراجعة؛ لم يتم اختراع إحداثيات.";
         }
         catch (Exception ex) { StatusMessage = "تعذر فتح ملف BoardView: " + ex.Message; }
         Notify(nameof(StatusMessage));
