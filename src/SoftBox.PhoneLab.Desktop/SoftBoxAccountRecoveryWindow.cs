@@ -7,28 +7,30 @@ using System.Windows.Media;
 namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
-/// Password recovery using an administrator-issued, one-time code for this installation.
-/// No account is unlocked by a universal password or support contact alone.
+/// Requests an owner-signed support approval, then applies only the exact approved action.
 /// </summary>
 public sealed class SoftBoxAccountRecoveryWindow : Window
 {
     private const string SupportWhatsAppUrl = "https://wa.me/201121241941?text=";
-    private readonly SoftBoxAccountService _service;
+    private readonly SoftBoxAccountService _accounts;
+    private readonly SoftBoxSupportAuthorizationService _authorization;
     private readonly TextBox _userName = new();
-    private readonly TextBox _recoveryCode = new();
+    private readonly TextBox _approval = new();
     private readonly PasswordBox _newPassword = new();
     private readonly PasswordBox _confirmPassword = new();
     private readonly TextBlock _status = new();
-    private readonly Button _submit = new();
+    private readonly Button _recoverPassword = new();
+    private readonly Button _resetDatabase = new();
 
     public SoftBoxAccountRecoveryWindow(SoftBoxAccountService service)
     {
-        _service = service ?? throw new ArgumentNullException(nameof(service));
-        Title = "SoftBox | استرداد الحساب";
-        Width = 560;
-        Height = 700;
-        MinWidth = 480;
-        MinHeight = 620;
+        _accounts = service ?? throw new ArgumentNullException(nameof(service));
+        _authorization = new SoftBoxSupportAuthorizationService();
+        Title = "SoftBox | استرداد الحساب بموافقة الدعم";
+        Width = 620;
+        Height = 790;
+        MinWidth = 520;
+        MinHeight = 680;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         FlowDirection = FlowDirection.RightToLeft;
         Background = Brush("#081321");
@@ -39,39 +41,21 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
     private UIElement BuildContent()
     {
         var root = new DockPanel { Margin = new Thickness(24), LastChildFill = true };
-        var header = new StackPanel { Margin = new Thickness(0, 0, 0, 16) };
-        header.Children.Add(new TextBlock
-        {
-            Text = "استرداد حساب SoftBox",
-            FontSize = 24,
-            FontWeight = FontWeights.Bold,
-            Foreground = Brush("#7DD3FC")
-        });
-        header.Children.Add(new TextBlock
-        {
-            Text = "أدخل اسم المستخدم ورمز دعم أحادي الاستخدام صادرًا لهذا التثبيت، ثم اختر كلمة مرور جديدة.",
-            TextWrapping = TextWrapping.Wrap,
-            FontSize = 11,
-            Foreground = Brush("#9CB3CC"),
-            Margin = new Thickness(0, 8, 0, 0)
-        });
-        DockPanel.SetDock(header, Dock.Top);
-        root.Children.Add(header);
-
         var footer = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
-        _submit.Content = "التحقق من الرمز وتغيير كلمة المرور";
-        StyleButton(_submit, "#176044");
-        _submit.Height = 44;
-        _submit.Click += Submit_Click;
-        footer.Children.Add(_submit);
+        _recoverPassword.Content = "التحقق من الموافقة واسترداد كلمة المرور";
+        StyleButton(_recoverPassword, "#176044");
+        _recoverPassword.Height = 42;
+        _recoverPassword.Click += RecoverPassword_Click;
+        footer.Children.Add(_recoverPassword);
 
-        var contact = new Button { Content = "التواصل مع دعم SoftBox عبر WhatsApp" };
-        StyleButton(contact, "#14517A");
-        contact.Margin = new Thickness(0, 8, 0, 0);
-        contact.Click += ContactSupport_Click;
-        footer.Children.Add(contact);
+        _resetDatabase.Content = "تصفير قاعدة الحسابات المحلية بموافقة منفصلة";
+        StyleButton(_resetDatabase, "#8A3D32");
+        _resetDatabase.Margin = new Thickness(0, 8, 0, 0);
+        _resetDatabase.Height = 42;
+        _resetDatabase.Click += ResetDatabase_Click;
+        footer.Children.Add(_resetDatabase);
 
-        _status.Text = "رمز الدعم لا يُستخدم إلا مرة واحدة، ولا يعمل على تثبيت SoftBox آخر.";
+        _status.Text = "لا يمكن تنفيذ أي إجراء برقم عشوائي. يجب استيراد موافقة صحيحة موقعة ومخصصة لهذا التثبيت والطلب والإجراء.";
         _status.Foreground = Brush("#F0C9A5");
         _status.TextWrapping = TextWrapping.Wrap;
         _status.Margin = new Thickness(0, 12, 0, 0);
@@ -80,13 +64,47 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         root.Children.Add(footer);
 
         var form = new StackPanel();
-        AddTextField(form, "اسم المستخدم", _userName, "مثال: sbx-12345678");
-        AddTextField(form, "رمز الاسترداد الذي أرسله الدعم", _recoveryCode, "الصق الرمز المكوّن من 32 حرفًا/رقمًا");
+        form.Children.Add(new TextBlock
+        {
+            Text = "استرداد حساب SoftBox",
+            FontSize = 24,
+            FontWeight = FontWeights.Bold,
+            Foreground = Brush("#7DD3FC")
+        });
+        form.Children.Add(new TextBlock
+        {
+            Text = "اطلب موافقة من الدعم عبر WhatsApp. سيُصدر المالك موافقة رقمية لا تعمل إلا على هذا التثبيت ولإجراء واحد ولمرة واحدة.",
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 11,
+            Foreground = Brush("#9CB3CC"),
+            Margin = new Thickness(0, 8, 0, 8)
+        });
+
+        AddTextField(form, "اسم المستخدم (لاسترداد كلمة المرور)", _userName, "اسم المستخدم المحلي");
+        var requestButtons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 8) };
+        var passwordRequest = new Button { Content = "طلب استرداد كلمة المرور عبر WhatsApp" };
+        StyleButton(passwordRequest, "#14517A");
+        passwordRequest.Click += RequestPasswordRecovery_Click;
+        requestButtons.Children.Add(passwordRequest);
+        var resetRequest = new Button { Content = "طلب تصفير الحسابات" };
+        StyleButton(resetRequest, "#713B35");
+        resetRequest.Margin = new Thickness(8, 0, 0, 0);
+        resetRequest.Click += RequestDatabaseReset_Click;
+        requestButtons.Children.Add(resetRequest);
+        form.Children.Add(requestButtons);
+
+        AddTextField(form, "ملف الموافقة الموقعة (الصق JSON الذي أرسله الدعم)", _approval, "الصق محتوى ملف الموافقة هنا");
+        _approval.Height = 150;
+        _approval.AcceptsReturn = true;
+        _approval.TextWrapping = TextWrapping.Wrap;
+        _approval.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+        _approval.FontFamily = new FontFamily("Consolas");
+
         AddPasswordField(form, "كلمة المرور الجديدة", _newPassword);
         AddPasswordField(form, "تأكيد كلمة المرور الجديدة", _confirmPassword);
         form.Children.Add(new TextBlock
         {
-            Text = $"كلمة المرور الجديدة يجب أن تكون {SoftBoxAccountService.MinimumPasswordLength} حرفًا على الأقل. لا ترسل كلمة المرور للدعم؛ الرمز وحده يكفي لإتمام الاسترداد.",
+            Text = $"يُطلب إدخال كلمة المرور فقط عند استرداد حساب محدد. الحد الأدنى {SoftBoxAccountService.MinimumPasswordLength} حرفًا. تصفير قاعدة الحسابات إجراء منفصل يمسح حسابات المستخدمين المحلية ويُبقي أدوات SoftBox والإعدادات وهوية التثبيت وسجل منع إعادة الاستخدام.",
             FontSize = 10,
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#9CB3CC"),
@@ -96,23 +114,54 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         return root;
     }
 
-    private async void Submit_Click(object sender, RoutedEventArgs e)
+    private void RequestPasswordRecovery_Click(object sender, RoutedEventArgs e)
     {
-        if (!_submit.IsEnabled)
-            return;
-        if (!string.Equals(_newPassword.Password, _confirmPassword.Password, StringComparison.Ordinal))
-        {
-            SetError("كلمتا المرور الجديدتان غير متطابقتين.");
-            return;
-        }
-
-        _submit.IsEnabled = false;
         try
         {
-            var user = await _service.RecoverPasswordWithSupportCodeAsync(
-                _userName.Text, _recoveryCode.Text, _newPassword.Password);
+            var request = _authorization.CreatePasswordRecoveryRequest(_userName.Text);
+            OpenWhatsAppRequest(request, "طلب استرداد كلمة مرور حساب SoftBox");
+        }
+        catch (Exception ex) { SetError(ex.Message); }
+    }
+
+    private void RequestDatabaseReset_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var confirm = MessageBox.Show(this,
+                "طلب تصفير قاعدة الحسابات يختلف عن استرداد كلمة المرور، وسيحذف حسابات SoftBox المحلية عند تطبيق موافقة المالك. هل تريد إنشاء هذا الطلب؟",
+                "تأكيد طلب تصفير الحسابات", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.Yes) return;
+            var request = _authorization.CreateDatabaseResetRequest();
+            OpenWhatsAppRequest(request, "طلب تصفير قاعدة حسابات SoftBox المحلية");
+        }
+        catch (Exception ex) { SetError(ex.Message); }
+    }
+
+    private void OpenWhatsAppRequest(string requestJson, string title)
+    {
+        var message = title + Environment.NewLine +
+            "يرجى مراجعة طلب JSON وإرساله كما هو. لا يحتوي الطلب على كلمة المرور:" +
+            Environment.NewLine + requestJson;
+        try { Clipboard.SetText(requestJson); } catch { }
+        Process.Start(new ProcessStartInfo(SupportWhatsAppUrl + Uri.EscapeDataString(message)) { UseShellExecute = true });
+        _status.Text = "تم إنشاء طلب خاص بهذا التثبيت ونسخه إلى الحافظة. افتح WhatsApp واضغط إرسال. لا ترسل كلمة المرور.";
+        _status.Foreground = Brush("#86EFAC");
+    }
+
+    private async void RecoverPassword_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_recoverPassword.IsEnabled) return;
+        if (!string.Equals(_newPassword.Password, _confirmPassword.Password, StringComparison.Ordinal))
+        { SetError("كلمتا المرور الجديدتان غير متطابقتين."); return; }
+
+        SetBusy(true);
+        try
+        {
+            var user = await _authorization.RecoverPasswordAsync(
+                _accounts, _approval.Text, _userName.Text, _newPassword.Password);
             MessageBox.Show(this,
-                $"تم استرداد الحساب {user.UserName} وتغيير كلمة المرور. استخدم كلمة المرور الجديدة لتسجيل الدخول.",
+                $"تم استرداد الحساب {user.UserName}. استخدم كلمة المرور الجديدة لتسجيل الدخول.",
                 "SoftBox | تم الاسترداد", MessageBoxButton.OK, MessageBoxImage.Information);
             Close();
         }
@@ -121,38 +170,41 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
             SetError(ex.Message);
             _newPassword.Clear();
             _confirmPassword.Clear();
-            _newPassword.Focus();
         }
-        finally
-        {
-            if (IsVisible)
-                _submit.IsEnabled = true;
-        }
+        finally { if (IsVisible) SetBusy(false); }
     }
 
-    private void ContactSupport_Click(object sender, RoutedEventArgs e)
+    private async void ResetDatabase_Click(object sender, RoutedEventArgs e)
     {
+        if (!_resetDatabase.IsEnabled) return;
+        var confirm = MessageBox.Show(this,
+            "سيتم حذف قاعدة حسابات المستخدمين المحلية بالكامل. ستبقى أدوات SoftBox والإعدادات وملفات الأجهزة وهوية التثبيت وسجل منع إعادة الاستخدام. بعد العملية أغلق SoftBox وافتحه مجددًا لإنشاء مدير جديد. هل توافق؟",
+            "تأكيد نهائي لتصفير قاعدة الحسابات", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        SetBusy(true);
         try
         {
-            var message = Uri.EscapeDataString(
-                "مرحبًا دعم SoftBox، أحتاج مساعدة في استرداد حساب SoftBox المحلي. اسم المستخدم: " +
-                (string.IsNullOrWhiteSpace(_userName.Text) ? "سأرسله بعد التواصل" : _userName.Text.Trim()) +
-                ". أرجو التحقق من ملكية الحساب وإصدار رمز استرداد أحادي الاستخدام لهذا التثبيت. لن أرسل كلمة المرور.");
-            Process.Start(new ProcessStartInfo(SupportWhatsAppUrl + message) { UseShellExecute = true });
-            _status.Text = "تم فتح WhatsApp. لا ترسل كلمة المرور أو ملف الرموز الكامل؛ اطلب رمزًا واحدًا بعد التحقق من ملكية الحساب.";
-            _status.Foreground = Brush("#86EFAC");
+            await _authorization.ResetLocalAccountDatabaseAsync(_accounts, _approval.Text);
+            MessageBox.Show(this,
+                "تم تصفير قاعدة الحسابات المحلية. أغلق SoftBox وافتحه مجددًا لإعداد حساب المدير الأول. الموافقة المستهلكة لا يمكن استخدامها مرة أخرى.",
+                "SoftBox | اكتمل التصفير", MessageBoxButton.OK, MessageBoxImage.Information);
+            Application.Current.Shutdown(0);
         }
-        catch (Exception ex)
-        {
-            _status.Text = "تعذر فتح WhatsApp: " + ex.Message;
-            _status.Foreground = Brush("#FCA5A5");
-        }
+        catch (Exception ex) { SetError(ex.Message); }
+        finally { if (IsVisible) SetBusy(false); }
+    }
+
+    private void SetBusy(bool busy)
+    {
+        _recoverPassword.IsEnabled = !busy;
+        _resetDatabase.IsEnabled = !busy;
     }
 
     private static void AddTextField(Panel panel, string label, TextBox field, string hint)
     {
         AddLabel(panel, label);
-        field.Height = 38;
+        field.MinHeight = 38;
         field.Padding = new Thickness(10, 7, 10, 7);
         field.Background = Brush("#0A1B2D");
         field.Foreground = Brush("#EAF3FF");
