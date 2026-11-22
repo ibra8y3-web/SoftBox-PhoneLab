@@ -613,8 +613,7 @@ public sealed class SoftBoxAccountService
         data.RecoveryCodes ??= [];
         foreach (var recoveryCode in data.RecoveryCodes)
         {
-            if (!Guid.TryParse(recoveryCode.Id.ToString(), out _) ||
-                !TryDecodeVerifier(recoveryCode.CodeHash, 32))
+            if (recoveryCode.Id == Guid.Empty || !TryDecodeVerifier(recoveryCode.CodeHash, 32))
                 throw new InvalidDataException("ملف رموز استرداد SoftBox يحتوي على بيانات غير صالحة.");
         }
         var duplicateNames = data.Accounts.GroupBy(x => x.UserName, StringComparer.OrdinalIgnoreCase).Any(x => x.Count() > 1);
@@ -631,7 +630,7 @@ public sealed class SoftBoxAccountService
                 throw new InvalidDataException($"بيانات مصادقة الحساب {account.UserName} غير صالحة.");
         }
 
-        if (!wasProtected)
+        if (!wasProtected || needsRecoveryMigration)
             await SaveLockedAsync(data, cancellationToken);
         return data;
     }
@@ -816,7 +815,7 @@ public sealed class SoftBoxAccountService
         public DateTimeOffset UpdatedAtUtc { get; set; } = DateTimeOffset.UtcNow;
         public List<StoredSoftBoxUserAccount> Accounts { get; set; } = [];
         public List<SoftBoxUserAuditEntry> Audit { get; set; } = [];
-        public string? RecoveryCodePepper { get; set; }
+        public string? RecoveryCodePepper { get; set; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         public List<StoredSupportRecoveryCode> RecoveryCodes { get; set; } = [];
     }
 
