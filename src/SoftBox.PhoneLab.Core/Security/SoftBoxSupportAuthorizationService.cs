@@ -38,7 +38,12 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
 """;
     // Provision this slot only with the PEM exported by the initialized owner Android app.
     // Never put an Android private key in this repository.
-    private const string AndroidPinnedPublicKeyPem = "NOT_CONFIGURED_ANDROID_SUPPORT_PUBLIC_KEY";
+    private const string AndroidPinnedPublicKeyPem = """
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
+4jJKYpMPKGwgjUO7531RoBT6QmA43T4K2YPsmBejzxFbrc8ND0vSdtKYDg==
+-----END PUBLIC KEY-----
+""";
     private static readonly TimeSpan RequestLifetime = TimeSpan.FromHours(24);
     private static readonly TimeSpan MaximumGrantLifetime = TimeSpan.FromHours(24);
     private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = CreateJsonOptions();
