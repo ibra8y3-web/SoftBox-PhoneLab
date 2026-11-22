@@ -46,6 +46,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenNotificationCenter"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenDashboardAnalytics"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenSupportBundle"] = SoftBoxAccountPermission.ExportData,
+            ["OpenSupportCenter"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenUpdateCenter"] = SoftBoxAccountPermission.ManageUpdates,
             ["OpenHelpCenter"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenOfflineCenter"] = SoftBoxAccountPermission.ViewWorkspace,
