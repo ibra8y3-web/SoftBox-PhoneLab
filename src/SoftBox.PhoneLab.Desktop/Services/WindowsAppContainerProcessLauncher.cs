@@ -236,8 +236,13 @@ public sealed class WindowsAppContainerProcessLauncher
     private static IntPtr BuildMinimalEnvironment(string root)
     {
         var windows = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        var localApplicationData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(localApplicationData) || !Directory.Exists(localApplicationData))
+            throw new InvalidOperationException("The Windows LOCALAPPDATA directory is required to start an AppContainer process.");
+
         var values = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            ["LOCALAPPDATA"] = localApplicationData,
             ["SYSTEMROOT"] = windows,
             ["WINDIR"] = windows,
             ["PATH"] = Path.Combine(windows, "System32"),
