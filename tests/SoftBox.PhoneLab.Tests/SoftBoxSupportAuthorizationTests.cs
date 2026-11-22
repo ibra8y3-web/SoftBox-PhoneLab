@@ -22,7 +22,7 @@ public sealed class SoftBoxSupportAuthorizationTests
             var recovered = await authorization.RecoverPasswordAsync(accountService, approvalJson, "admin", "New Administrator Password 12!");
             Assert.Equal(admin.Id, recovered.Id);
             Assert.Equal(admin.Id, (await accountService.AuthenticateAsync("admin", "New Administrator Password 12!")).Id);
-            var nextRequest = authorization.CreatePasswordRecoveryRequest("admin");
+            _ = authorization.CreatePasswordRecoveryRequest("admin");
             await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
                 authorization.RecoverPasswordAsync(accountService, approvalJson, "admin", "Another Password 12!"));
         }
