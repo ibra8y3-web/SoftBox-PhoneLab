@@ -223,13 +223,24 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         });
 
         var root = document.RootElement;
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("requestId", out _) &&
+            root.TryGetProperty("installationId", out _) &&
+            root.TryGetProperty("nonce", out _) &&
+            !root.TryGetProperty("payload", out _))
+        {
+            throw new InvalidDataException(
+                "هذا هو طلب الدعم الأصلي الذي أنشأه SoftBox، وليس الموافقة الموقّعة. أرسل هذا الطلب إلى تطبيق SoftBox Support Key Manager عند المالك، ثم استورد ملف الموافقة الذي يعيده لك ويحتوي على payload و signature.");
+        }
+
         if (root.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("payload", out var payload) ||
             payload.ValueKind != JsonValueKind.Object ||
             !root.TryGetProperty("signature", out var signature) ||
             signature.ValueKind != JsonValueKind.String ||
             string.IsNullOrWhiteSpace(signature.GetString()))
-            throw new InvalidDataException("الملف ليس موافقة SoftBox موقّعة معروفة.");
+            throw new InvalidDataException(
+                "ملف الموافقة غير مكتمل. الموافقة الصحيحة يجب أن تحتوي على payload و signature صادرين من تطبيق المالك.");
 
         if (!payload.TryGetProperty("action", out var action) ||
             !string.Equals(action.GetString(), expectedAction.ToString(), StringComparison.Ordinal))
@@ -255,7 +266,6 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         {
             var request = _authorization.CreatePasswordRecoveryRequest(_userName.Text);
             _recoveryApproval.Clear();
-            _resetApproval.Clear();
             OpenWhatsAppRequest(request, "طلب استرداد كلمة مرور حساب SoftBox");
         }
         catch (Exception ex) { SetError(ex.Message); }
@@ -271,7 +281,6 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         try
         {
             var request = _authorization.CreateDatabaseResetRequest();
-            _recoveryApproval.Clear();
             _resetApproval.Clear();
             OpenWhatsAppRequest(request, "طلب تصفير قاعدة حسابات SoftBox المحلية");
         }
@@ -333,8 +342,11 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         {
             var user = await _authorization.RecoverPasswordAsync(
                 _accounts, _recoveryApproval.Text, _userName.Text, _newPassword.Password);
+            if (Owner is SoftBoxAuthenticationWindow loginWindow)
+                loginWindow.PrepareForRecoveredPasswordLogin(user.UserName);
+
             MessageBox.Show(this,
-                $"تم استرداد الحساب {user.UserName}. استخدم كلمة المرور الجديدة لتسجيل الدخول.",
+                $"تم تغيير كلمة مرور الحساب {user.UserName} بنجاح. ارجع إلى شاشة الدخول واكتب كلمة المرور الجديدة؛ لا تستخدم كلمة المرور القديمة.",
                 "SoftBox | تم الاسترداد", MessageBoxButton.OK, MessageBoxImage.Information);
             Close();
         }
@@ -361,8 +373,22 @@ public sealed class SoftBoxAccountRecoveryWindow : Window
         {
             await _authorization.ResetLocalAccountDatabaseAsync(_accounts, _resetApproval.Text);
             MessageBox.Show(this,
-                "تم تصفير قاعدة الحسابات المحلية. أغلق SoftBox وافتحه مجددًا لإعداد حساب المدير الأول. الموافقة المستهلكة لا يمكن استخدامها مرة أخرى.",
+                "تم تصفير قاعدة الحسابات المحلية بنجاح. سيُعاد تشغيل SoftBox الآن لفتح شاشة إنشاء حساب المدير الجديد. يمكنك توليد اسم مستخدم وكلمة مرور عشوائيين ونسخهما قبل إكمال التسجيل. الموافقة المستهلكة لا يمكن استخدامها مرة أخرى.",
                 "SoftBox | اكتمل التصفير", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            var executable = Path.Combine(AppContext.BaseDirectory, "SoftBox-PhoneLab.exe");
+            if (!File.Exists(executable))
+                executable = Environment.ProcessPath ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(executable) && File.Exists(executable))
+            {
+                Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
+            }
+            else
+            {
+                MessageBox.Show(this,
+                    "تم التصفير. أغلق SoftBox ثم شغّله يدويًا لفتح شاشة إنشاء حساب المدير الجديد.",
+                    "SoftBox | إعادة التشغيل", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
             Application.Current.Shutdown(0);
         }
         catch (Exception ex) { SetError(ex.Message); }

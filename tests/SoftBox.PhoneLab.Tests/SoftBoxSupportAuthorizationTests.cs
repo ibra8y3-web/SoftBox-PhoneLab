@@ -76,6 +76,56 @@ public sealed class SoftBoxSupportAuthorizationTests
     }
 
     [Fact]
+    public async Task PasswordRecoveryAndDatabaseResetKeepIndependentPendingRequests()
+    {
+        var root = CreateTempDirectory();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var accounts = new SoftBoxAccountService(Path.Combine(root, "accounts"), 300_000);
+            await accounts.CreateInitialAdministratorAsync("admin", "Administrator", "Initial Password 123!");
+            var auth = new SoftBoxSupportAuthorizationService(
+                Path.Combine(root, "support"), signer.ExportSubjectPublicKeyInfoPem());
+
+            var passwordRequest = ParseRequest(auth.CreatePasswordRecoveryRequest("admin"));
+            var resetRequest = ParseRequest(auth.CreateDatabaseResetRequest());
+            var passwordApproval = CreateApprovalJson(signer, passwordRequest);
+            var resetApproval = CreateApprovalJson(signer, resetRequest);
+
+            await auth.RecoverPasswordAsync(accounts, passwordApproval, "admin", "Recovered Password 456!");
+            Assert.Equal("admin", (await accounts.AuthenticateAsync("admin", "Recovered Password 456!")).UserName);
+
+            await auth.ResetLocalAccountDatabaseAsync(accounts, resetApproval);
+            Assert.False(await accounts.HasAccountsAsync());
+        }
+        finally { DeleteTempDirectory(root); }
+    }
+
+    [Fact]
+    public async Task MissingRecoveryAccountDoesNotConsumeOwnerApproval()
+    {
+        var root = CreateTempDirectory();
+        using var signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            var accounts = new SoftBoxAccountService(Path.Combine(root, "accounts"), 300_000);
+            var auth = new SoftBoxSupportAuthorizationService(
+                Path.Combine(root, "support"), signer.ExportSubjectPublicKeyInfoPem());
+            var request = ParseRequest(auth.CreatePasswordRecoveryRequest("admin"));
+            var approval = CreateApprovalJson(signer, request);
+
+            await Assert.ThrowsAsync<SoftBoxAuthenticationException>(() =>
+                auth.RecoverPasswordAsync(accounts, approval, "admin", "Recovered Password 456!"));
+
+            await accounts.CreateInitialAdministratorAsync("admin", "Administrator", "Initial Password 123!");
+            var recovered = await auth.RecoverPasswordAsync(accounts, approval, "admin", "Recovered Password 456!");
+            Assert.Equal("admin", recovered.UserName);
+            Assert.Equal("admin", (await accounts.AuthenticateAsync("admin", "Recovered Password 456!")).UserName);
+        }
+        finally { DeleteTempDirectory(root); }
+    }
+
+    [Fact]
     public async Task TamperedSignatureAndWrongActionAreRejectedWithoutChangingPassword()
     {
         var root = CreateTempDirectory();

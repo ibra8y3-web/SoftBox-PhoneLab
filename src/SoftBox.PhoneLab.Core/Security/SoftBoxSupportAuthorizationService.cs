@@ -28,6 +28,8 @@ public sealed class SoftBoxSupportAuthorizationService
 {
     private const int ProtocolVersion = 1;
     private const string PendingPurpose = "SoftBox.Support.PendingRequest.v1";
+    private const string PasswordRecoveryPendingPurpose = "SoftBox.Support.PasswordRecoveryPendingRequest.v1";
+    private const string DatabaseResetPendingPurpose = "SoftBox.Support.DatabaseResetPendingRequest.v1";
     private const string LedgerPurpose = "SoftBox.Support.ConsumedGrantLedger.v1";
     private const string InstallationPurpose = "SoftBox.Support.InstallationIdentity.v1";
     private const string PinnedPublicKeyPem = """
@@ -49,7 +51,9 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
     private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     private readonly string _root;
-    private readonly string _pendingPath;
+    private readonly string _pendingPath; // Legacy v1 single-pending request file.
+    private readonly string _passwordRecoveryPendingPath;
+    private readonly string _databaseResetPendingPath;
     private readonly string _ledgerPath;
     private readonly string _lockPath;
     private readonly IReadOnlyList<string> _trustedPublicKeyPems;
@@ -83,6 +87,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
             "SoftBox", "PhoneLab", "SupportAuthorization"));
         Directory.CreateDirectory(_root);
         _pendingPath = Path.Combine(_root, "pending-request.dpapi");
+        _passwordRecoveryPendingPath = Path.Combine(_root, "pending-password-recovery.dpapi");
+        _databaseResetPendingPath = Path.Combine(_root, "pending-database-reset.dpapi");
         _ledgerPath = Path.Combine(_root, "consumed-grants.dpapi");
         _lockPath = Path.Combine(_root, "authorization.lock");
         var configuredKeys = trustedPublicKeyPems?.ToArray()
@@ -121,7 +127,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
         {
             DeviceLabel = Environment.MachineName
         };
-        WriteProtectedJson(_pendingPath, request, PendingPurpose);
+        var storage = GetPendingRequestStorage(action);
+        WriteProtectedJson(storage.Path, request, storage.Purpose);
         return JsonSerializer.Serialize(request, JsonOptions);
     }
 
@@ -132,6 +139,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
         ArgumentNullException.ThrowIfNull(accountService);
         SoftBoxAccountService.ValidatePassword(newPassword);
         var normalized = SoftBoxAccountService.NormalizeUserName(userName);
+        // Check that the target account exists before consuming its one-time owner approval.
+        await accountService.EnsureAccountCanRecoverWithSignedSupportGrantAsync(normalized, cancellationToken);
         var payload = ConsumeApproval(approvalJson, SoftBoxSupportAction.PasswordRecovery, normalized);
         return await accountService.RecoverPasswordWithSignedSupportGrantAsync(
             payload, normalized, newPassword, cancellationToken);
@@ -156,8 +165,11 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
             throw new InvalidDataException("ملف موافقة الدعم فارغ أو تجاوز الحجم المسموح.");
 
         using var fileLock = AcquireLock();
-        var pending = ReadProtectedJson<SoftBoxSupportRequest>(_pendingPath, PendingPurpose)
-            ?? throw new InvalidOperationException("لا يوجد طلب دعم معلّق على هذا التثبيت. أنشئ طلبًا جديدًا أولًا.");
+        var storage = GetPendingRequestStorage(expectedAction);
+        var pendingPath = File.Exists(storage.Path) ? storage.Path : _pendingPath;
+        var pendingPurpose = pendingPath == _pendingPath ? PendingPurpose : storage.Purpose;
+        var pending = ReadProtectedJson<SoftBoxSupportRequest>(pendingPath, pendingPurpose)
+            ?? throw new InvalidOperationException("لا يوجد طلب دعم معلّق لهذا الإجراء على هذا التثبيت. أنشئ طلبًا جديدًا من التبويب نفسه أولًا.");
 
         SoftBoxSupportApproval approval;
         try
@@ -201,9 +213,19 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEgdldk6DWFF/+QpBabMUwLW0DpY6L
         ledger.GrantIds.Add(grantId);
         ledger.RequestIds.Add(requestId);
         WriteProtectedJson(_ledgerPath, ledger, LedgerPurpose);
-        File.Delete(_pendingPath);
+        File.Delete(pendingPath);
         return payload;
     }
+
+    private (string Path, string Purpose) GetPendingRequestStorage(SoftBoxSupportAction action)
+        => action switch
+        {
+            SoftBoxSupportAction.PasswordRecovery =>
+                (_passwordRecoveryPendingPath, PasswordRecoveryPendingPurpose),
+            SoftBoxSupportAction.ResetLocalAccountDatabase =>
+                (_databaseResetPendingPath, DatabaseResetPendingPurpose),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), "نوع طلب دعم غير معروف.")
+        };
 
     private Guid LoadOrCreateInstallationId()
     {

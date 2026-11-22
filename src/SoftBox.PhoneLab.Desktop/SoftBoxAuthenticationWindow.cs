@@ -80,8 +80,8 @@ public sealed class SoftBoxAuthenticationWindow : Window
         header.Children.Add(new TextBlock
         {
             Text = _initialSetup
-                ? "لا يوجد حساب في هذا التثبيت بعد. أنشئ حساب المدير بنفسك؛ لا توجد كلمة مرور افتراضية."
-                : "أدخل بيانات حساب SoftBox المحلي للمتابعة. الحسابات المعطلة أو المقفلة مؤقتًا لن تتمكن من الدخول.",
+                ? "تم تصفير الحسابات أو لم يتم إنشاء حساب بعد. أنشئ حساب المدير الجديد الآن. يمكنك توليد اسم مستخدم وكلمة مرور عشوائيين ثم نسخهما وحفظهما. لا توجد كلمة مرور افتراضية."
+                : "أدخل بيانات حساب SoftBox المحلي للمتابعة. إذا أكملت استرداد كلمة المرور للتو، استخدم كلمة المرور الجديدة وليس القديمة.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = Brush("#9CB3CC"),
             FontSize = 11
@@ -128,7 +128,7 @@ public sealed class SoftBoxAuthenticationWindow : Window
             });
         }
 
-        _status.Text = _initialSetup ? "سيتم حفظ الحساب محليًا في ملف حماية SoftBox." : "سجّل الدخول لفتح مساحة العمل.";
+        _status.Text = _initialSetup ? "إنشاء حساب المدير الجديد: اكتب بياناتك بنفسك أو ولّد بيانات عشوائية ثم انسخها قبل تسجيل الدخول." : "سجّل الدخول لفتح مساحة العمل. عند نجاح الاسترداد ستظهر هنا رسالة تطلب استخدام كلمة المرور الجديدة.";
         _status.Foreground = Brush("#9FC7E8");
         _status.TextWrapping = TextWrapping.Wrap;
         _status.Margin = new Thickness(0, 16, 0, 0);
@@ -211,6 +211,18 @@ public sealed class SoftBoxAuthenticationWindow : Window
         field.Foreground = Brush("#EAF3FF");
         field.BorderBrush = Brush("#35516F");
         panel.Children.Add(field);
+    }
+
+    internal void PrepareForRecoveredPasswordLogin(string userName)
+    {
+        if (_initialSetup) return;
+        _userName.Text = userName;
+        _password.Clear();
+        _confirmPassword.Clear();
+        _status.Text = "تم استرداد الحساب بنجاح. أدخل كلمة المرور الجديدة التي اخترتها في شاشة الاسترداد، ثم اضغط تسجيل الدخول. لا تستخدم كلمة المرور القديمة.";
+        _status.Foreground = Brush("#86EFAC");
+        Activate();
+        _password.Focus();
     }
 
     private void GenerateCredentials_Click(object sender, RoutedEventArgs e)

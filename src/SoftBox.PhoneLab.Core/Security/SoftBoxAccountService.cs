@@ -113,6 +113,23 @@ public sealed class SoftBoxAccountService
         finally { _gate.Release(); }
     }
 
+    internal async Task EnsureAccountCanRecoverWithSignedSupportGrantAsync(
+        string userName,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = NormalizeUserName(userName);
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var data = await LoadLockedAsync(cancellationToken);
+            var account = data.Accounts.FirstOrDefault(x =>
+                x.UserName.Equals(normalized, StringComparison.OrdinalIgnoreCase));
+            if (account is null || !account.IsEnabled)
+                throw new SoftBoxAuthenticationException("الحساب المطلوب غير موجود أو معطل. لم يتم استهلاك موافقة الدعم.");
+        }
+        finally { _gate.Release(); }
+    }
+
     public async Task<AuthenticatedSoftBoxUser> CreateInitialAdministratorAsync(
         string userName,
         string displayName,
