@@ -93,7 +93,7 @@ public sealed class MediaTekRecoveryWindow : Window
         actions.Children.Add(_inspect);
         actions.Children.Add(_launch);
         actions.Children.Add(ButtonControl("مراجع MediaTek الرسمية", "#243B56",
-            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.MediaTek) { Owner = this }.Show()));
+            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.MediaTek) { Owner = this }.ShowEmbedded()));
         content.Children.Add(actions);
 
         _report.IsReadOnly = true;

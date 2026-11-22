@@ -212,7 +212,7 @@ public sealed class OneClickDiagnosticWindow : Window
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
         var window = new DeviceDiagnosticEngineSettingsWindow(_settingsStore) { Owner = this };
-        window.ShowDialog();
+        window.ShowDialogEmbedded();
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => _operation?.Cancel();

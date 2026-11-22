@@ -45,7 +45,7 @@ public sealed class SupportCenterWindow : Window
         bundle.Foreground = Brushes.White;
         bundle.BorderBrush = Brush("#3E7096");
         bundle.Margin = new Thickness(0, 8, 0, 0);
-        bundle.Click += (_, _) => new SupportBundleWindow { Owner = this }.Show();
+        bundle.Click += (_, _) => new SupportBundleWindow { Owner = this }.ShowEmbedded();
         footer.Children.Add(bundle);
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);

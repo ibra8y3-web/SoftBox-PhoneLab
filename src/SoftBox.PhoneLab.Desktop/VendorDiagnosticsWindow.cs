@@ -154,7 +154,7 @@ public sealed class VendorDiagnosticsWindow : Window
         new XiaomiFastbootDiagnosticsWindow(_adb, _serial, _manufacturer, _model)
         {
             Owner = this
-        }.ShowDialog();
+        }.ShowDialogEmbedded();
     }
 
     private async void Scan_Click(object sender, RoutedEventArgs e)

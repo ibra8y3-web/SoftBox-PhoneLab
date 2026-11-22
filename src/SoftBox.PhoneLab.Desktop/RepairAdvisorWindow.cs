@@ -96,7 +96,7 @@ public sealed class RepairAdvisorWindow : Window
             FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Right
         };
-        knowledgeButton.Click += (_, _) => new RepairKnowledgeWindow(_knowledgeManufacturer, _knowledgeModel) { Owner = this }.ShowDialog();
+        knowledgeButton.Click += (_, _) => new RepairKnowledgeWindow(_knowledgeManufacturer, _knowledgeModel) { Owner = this }.ShowDialogEmbedded();
         header.Children.Add(knowledgeButton);
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);

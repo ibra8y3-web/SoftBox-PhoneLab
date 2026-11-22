@@ -118,7 +118,7 @@ public sealed class SamsungOdinAssistantWindow : Window
         buttons.Children.Add(_startOdinButton);
         buttons.Children.Add(_monitorOdinButton);
         buttons.Children.Add(ButtonControl("مصادر Samsung الرسمية", "#243B56",
-            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show()));
+            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.ShowEmbedded()));
         footer.Children.Add(buttons);
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);

@@ -81,7 +81,7 @@ public sealed class SupplierReceiptWindow : Window
 
         var actions = new WrapPanel();
         var save = ButtonControl("تأكيد استلام الشراء", "#176044", Save_Click);
-        var cancel = ButtonControl("إلغاء", "#243B56", (_, _) => DialogResult = false);
+        var cancel = ButtonControl("إلغاء", "#243B56", (_, _) => this.SetResult(false));
         actions.Children.Add(save);
         actions.Children.Add(cancel);
         panel.Children.Add(actions);
@@ -110,7 +110,7 @@ public sealed class SupplierReceiptWindow : Window
 
         Quantity = quantity;
         PurchaseUnitCostEgp = unitCost;
-        DialogResult = true;
+        this.SetResult(true);
     }
 
     private static void AddField(Panel panel, string label, TextBox box)

@@ -67,7 +67,7 @@ internal static class SoftBoxLocalization
             ["المستخدم الحالي"] = "Current User",
             ["قفل الجلسة"] = "Lock Session",
             ["أقسام SoftBox"] = "SoftBox Modules",
-            ["36 قسمًا • كل قسم في نافذة مستقلة"] = "36 modules • each opens in a separate workspace",
+            ["36 قسمًا • كل قسم يفتح داخل نفس الواجهة"] = "36 modules • each opens inside the same workspace",
             ["اختر قسمًا لعرض أدواته وحالة تنفيذها"] = "Select a module to view its tools and implementation status",
             ["الأجهزة المتصلة"] = "Connected Devices",
             ["USB / ADB • اكتشاف دوري"] = "USB / ADB • periodic discovery",
@@ -188,6 +188,13 @@ internal static class SoftBoxLocalization
         window.Title = Translate(window.Title);
         if (window.Content is DependencyObject content)
             ApplyTree(content);
+    }
+
+    /// <summary>Translates a UI subtree that was moved out of its original window (embedded pages).</summary>
+    public static void ApplyTo(DependencyObject root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ApplyTree(root);
     }
 
     private static void ApplyTree(DependencyObject node)

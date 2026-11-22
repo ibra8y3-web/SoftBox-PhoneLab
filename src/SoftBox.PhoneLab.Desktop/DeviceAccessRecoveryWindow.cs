@@ -181,7 +181,7 @@ public sealed class DeviceAccessRecoveryWindow : Window
         caseBuilderButton.Click += (_, _) =>
         {
             var builder = new OfficialRecoveryCaseWindow(_manufacturer, _model) { Owner = this };
-            builder.ShowDialog();
+            builder.ShowDialogEmbedded();
         };
         resources.Children.Add(caseBuilderButton);
         content.Children.Add(resources);

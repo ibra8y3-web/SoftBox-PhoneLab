@@ -71,7 +71,7 @@ public sealed class WorkshopCenterWindow : Window
         header.Children.Add(Button("Global Workshop | الإدارة الدولية", (_, _) =>
         {
             var window = new GlobalWorkshopWindow { Owner = this };
-            window.Show();
+            window.ShowEmbedded();
         }));
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
@@ -242,7 +242,7 @@ public sealed class WorkshopCenterWindow : Window
         actions.Children.Add(Button("جدولة النسخ اليومي المشفر", (_, _) =>
         {
             var window = new WorkshopBackupSchedulerWindow { Owner = this };
-            window.Show();
+            window.ShowEmbedded();
         }));
         actions.Children.Add(Button("فتح مجلد قاعدة البيانات", (_, _) =>
         {

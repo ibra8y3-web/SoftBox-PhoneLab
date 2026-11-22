@@ -353,7 +353,7 @@ public sealed class GlobalWorkshopWindow : Window
         {
             Owner = this
         };
-        window.ShowDialog();
+        window.ShowDialogEmbedded();
     }
 
     private async Task SaveOrderAsync()
@@ -663,10 +663,10 @@ public sealed class GlobalWorkshopWindow : Window
         input.Height = 100;
         panel.Children.Add(input);
         var save = new Button { Content = "حفظ", Width = 100, Margin = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Left };
-        save.Click += (_, _) => dialog.DialogResult = true;
+        save.Click += (_, _) => dialog.SetResult(true);
         panel.Children.Add(save);
         dialog.Content = panel;
-        return dialog.ShowDialog() == true ? input.Text : null;
+        return dialog.ShowDialogEmbedded() == true ? input.Text : null;
     }
 
     private void SetResult(string message) => _result.Text = message;

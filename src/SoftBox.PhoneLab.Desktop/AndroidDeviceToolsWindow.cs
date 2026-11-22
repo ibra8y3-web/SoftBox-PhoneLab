@@ -570,7 +570,7 @@ public sealed class AndroidDeviceToolsWindow : Window
         }
 
         var window = new AndroidRuntimePermissionsWindow(_service, _serial, packageName) { Owner = this };
-        window.ShowDialog();
+        window.ShowDialogEmbedded();
         await LoadPackagesRefreshDetailsAsync(packageName);
     }
 

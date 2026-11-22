@@ -38,6 +38,7 @@ public sealed class FastbootService
         }
 
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "Tools", "platform-tools", "fastboot.exe"));
+        candidates.Add(Path.Combine(AdbInstallerService.InstallRoot, "platform-tools", "fastboot.exe"));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "Tools", "fastboot.exe"));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "fastboot.exe"));
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";

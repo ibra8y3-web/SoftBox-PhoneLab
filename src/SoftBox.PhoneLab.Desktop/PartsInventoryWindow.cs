@@ -262,7 +262,7 @@ public sealed class PartsInventoryWindow : Window
         }
 
         var prompt = new StockMovementPromptWindow(item) { Owner = this };
-        if (prompt.ShowDialog() != true)
+        if (prompt.ShowDialogEmbedded() != true)
             return;
 
         try
@@ -288,7 +288,7 @@ public sealed class PartsInventoryWindow : Window
         }
 
         var prompt = new SupplierReceiptWindow(item) { Owner = this };
-        if (prompt.ShowDialog() != true)
+        if (prompt.ShowDialogEmbedded() != true)
             return;
 
         try
@@ -494,7 +494,7 @@ public sealed class PartsInventoryWindow : Window
             }
             Delta = delta;
             Reason = _reason.Text.Trim();
-            DialogResult = true;
+            this.SetResult(true);
         }
 
         private static void Configure(TextBox box)

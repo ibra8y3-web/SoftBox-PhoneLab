@@ -72,7 +72,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
         _cancelButton = ButtonControl("إلغاء", "#713B43", Cancel_Click);
         _flashImageButton = ButtonControl("تفليش قسم IMG محدد", "#713B43", FlashImage_Click);
         _fullRomButton = ButtonControl("تفليش ROM كامل متعدد الصور", "#713B43", OpenFullRomFlash_Click);
-        _officialUnlockButton = ButtonControl("أداة Xiaomi Mi Unlock الرسمية", "#704B20", (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.Show());
+        _officialUnlockButton = ButtonControl("أداة Xiaomi Mi Unlock الرسمية", "#704B20", (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.ShowEmbedded());
         _flashImageButton.IsEnabled = false;
         _refreshButton.IsEnabled = false;
         _cancelButton.IsEnabled = false;
@@ -183,7 +183,7 @@ public sealed class XiaomiFastbootDiagnosticsWindow : Window
             new XiaomiFastbootRomFlashWindow(_serial, _manufacturer, _model)
             {
                 Owner = this
-            }.Show();
+            }.ShowEmbedded();
         }
         catch (Exception ex)
         {

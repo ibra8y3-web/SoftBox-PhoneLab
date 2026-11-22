@@ -113,7 +113,7 @@ public sealed class QualcommRecoveryWindow : Window
         var actions = new WrapPanel();
         actions.Children.Add(_list); actions.Children.Add(_chipInfo); actions.Children.Add(_inspect); actions.Children.Add(_dryRun); actions.Children.Add(_flash);
         actions.Children.Add(ButtonControl("مصادر Qualcomm الرسمية", "#243B56",
-            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Qualcomm) { Owner = this }.Show()));
+            (_, _) => new OemOfficialToolsWindow(OemServiceVendor.Qualcomm) { Owner = this }.ShowEmbedded()));
         content.Children.Add(actions);
         _log.IsReadOnly = true;
         _log.AcceptsReturn = true;

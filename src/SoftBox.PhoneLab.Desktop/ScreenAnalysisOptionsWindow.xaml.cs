@@ -11,6 +11,6 @@ public partial class ScreenAnalysisOptionsWindow : Window
     private void Analyze_Click(object sender, RoutedEventArgs e)
     {
         PatternKind = (PatternCombo.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "unknown";
-        DialogResult = true;
+        this.SetResult(true);
     }
 }

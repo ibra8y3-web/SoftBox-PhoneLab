@@ -56,7 +56,7 @@
     <DockPanel LastChildFill="True">
      <StackPanel DockPanel.Dock="Top">
       <TextBlock Text="أقسام SoftBox" FontSize="18" FontWeight="Bold" Foreground="#7DD3FC"/>
-      <TextBlock Text="36 قسمًا • كل قسم في نافذة مستقلة" FontSize="9" Foreground="#8199B5" Margin="0,4,0,9"/>
+      <TextBlock Text="36 قسمًا • كل قسم يفتح داخل نفس الواجهة" FontSize="9" Foreground="#8199B5" Margin="0,4,0,9"/>
       <TextBlock Text="اختر قسمًا لعرض أدواته وحالة تنفيذها" FontSize="9" Foreground="#9CB3CC" TextWrapping="Wrap" Margin="0,0,0,7"/>
      </StackPanel>
      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -118,7 +118,7 @@
    </Border>
 
       <!-- Discovery and component tree -->
-   <Grid Grid.Column="1" Margin="0,0,12,0">
+   <Grid x:Name="DevicesColumn" Grid.Column="1" Margin="0,0,12,0">
     <Grid.RowDefinitions><RowDefinition Height="0.8*"/><RowDefinition Height="1.2*"/></Grid.RowDefinitions>
     <Border Grid.Row="0" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="13" Margin="0,0,0,10">
      <DockPanel LastChildFill="True">
@@ -126,6 +126,8 @@
        <TextBlock Text="الأجهزة المتصلة" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="USB / ADB • اكتشاف دوري" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,10"/>
       </StackPanel>
+      <Button DockPanel.Dock="Top" Content="تثبيت ADB تلقائيًا (مطلوب لاكتشاف الهاتف)" Click="InstallAdb_Click"
+       Visibility="{Binding AdbInstallVisibility}" Background="#0F5C8A" Margin="0,0,0,10" Padding="8,8" FontSize="10"/>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding DiscoveryHint}" FontSize="9" Foreground="#8199B5" TextWrapping="Wrap" Margin="2,8,2,0"/>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding UsbRecognitionStatus}" FontSize="9" Foreground="#70C8E8" TextWrapping="Wrap" MaxHeight="42" Margin="2,8,2,0"/>
       <ListBox x:Name="DevicesList" ItemsSource="{Binding Devices}" SelectionChanged="Devices_SelectionChanged">
@@ -170,7 +172,7 @@
    </Grid>
 
    <!-- 3D exploded view -->
-   <Grid Grid.Column="2" Margin="0,0,12,0">
+   <Grid x:Name="ViewerColumn" Grid.Column="2" Margin="0,0,12,0">
     <Grid.RowDefinitions><RowDefinition Height="82"/><RowDefinition Height="*"/><RowDefinition Height="82"/></Grid.RowDefinitions>
     <Border Grid.Row="0" Background="#10243B" BorderBrush="#284C6A" BorderThickness="1" CornerRadius="13" Padding="16" Margin="0,0,0,11">
      <Grid>
@@ -189,7 +191,17 @@
 <Border Grid.Row="1" Background="#091321" BorderBrush="#203751" BorderThickness="1" CornerRadius="14" ClipToBounds="True">
      <Grid>
       <Viewport3D x:Name="PhoneViewport" ClipToBounds="True"
-       MouseDown="Viewport_MouseDown" MouseMove="Viewport_MouseMove" MouseUp="Viewport_MouseUp" MouseWheel="Viewport_MouseWheel"/>
+       MouseDown="Viewport_MouseDown" MouseLeftButtonDown="Viewport_DoubleClick" MouseMove="Viewport_MouseMove" MouseUp="Viewport_MouseUp" MouseWheel="Viewport_MouseWheel"/>
+      <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="13" Background="#CC111F33" BorderBrush="#2A425D" BorderThickness="1" CornerRadius="9" Padding="10,7">
+       <StackPanel>
+        <DockPanel>
+         <TextBlock Text="التفكيك" FontSize="9" Foreground="#9CB3CC" VerticalAlignment="Center" Margin="0,0,8,0"/>
+         <Slider x:Name="ExplodeSlider" Minimum="0" Maximum="100" Value="80" Width="130" VerticalAlignment="Center" ValueChanged="Explode_Changed"/>
+        </DockPanel>
+        <CheckBox x:Name="DisplayLayerCheck" Content="إظهار طبقة الشاشة" IsChecked="True" FontSize="9" Foreground="#C3D3E7" Margin="0,7,0,0" Checked="DisplayLayer_Changed" Unchecked="DisplayLayer_Changed"/>
+        <Button Content="إعادة ضبط العرض" Click="ResetView_Click" FontSize="9" Padding="8,4" Margin="0,7,0,0"/>
+       </StackPanel>
+      </Border>
       <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15" IsHitTestVisible="False">
        <TextBlock Text="EXPLODED SMARTPHONE ASSEMBLY" FontSize="9" FontWeight="Bold" Foreground="#66CFF8"/>
        <TextBlock Text="اسحب للتدوير • عجلة الماوس للتكبير • اختر القطعة" FontSize="9" Foreground="#7794B4" Margin="0,4,0,0"/>
@@ -229,7 +241,7 @@
    </Grid>
 
    <!-- Device properties and selected part detail -->
-   <ScrollViewer Grid.Column="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+   <ScrollViewer x:Name="DetailsColumn" Grid.Column="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel>
      <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="14" Padding="14" Margin="0,0,0,11">
       <StackPanel>
@@ -268,6 +280,21 @@
      </Border>
     </StackPanel>
    </ScrollViewer>
+
+   <!-- Embedded pages: every section and tool opens here, inside the same workspace. -->
+   <Border x:Name="EmbeddedHostPanel" Grid.Column="1" Grid.ColumnSpan="3" Visibility="Collapsed"
+    Background="#081321" BorderBrush="#263D58" BorderThickness="1" CornerRadius="14">
+    <DockPanel LastChildFill="True">
+     <Border DockPanel.Dock="Top" Background="#0F1E32" BorderBrush="#263D58" BorderThickness="0,0,0,1" CornerRadius="14,14,0,0" Padding="10,7">
+      <StackPanel Orientation="Horizontal">
+       <Button Content="→ رجوع" Click="EmbeddedBack_Click" Padding="14,6" Margin="0,0,8,0"/>
+       <Button Content="⌂ الرئيسية" Click="EmbeddedHome_Click" Padding="14,6" Margin="0,0,14,0"/>
+       <TextBlock x:Name="EmbeddedTitle" FontSize="14" FontWeight="Bold" Foreground="#7DD3FC" VerticalAlignment="Center"/>
+      </StackPanel>
+     </Border>
+     <Border x:Name="EmbeddedBody" Padding="6"/>
+    </DockPanel>
+   </Border>
   </Grid>
 
   <Border Grid.Row="2" Background="#0D192A" BorderBrush="#1E324A" BorderThickness="1" CornerRadius="8" Padding="10,5">

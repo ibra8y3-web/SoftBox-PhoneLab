@@ -54,7 +54,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private Point _lastPointer;
     private double _yaw = -32;
     private double _pitch = 23;
-    private double _zoom = 25;
+    private double _zoom = 30;
+    private double _explode = 0.8;
+    private bool _showDisplayLayer = true;
     private string _deviceSignature = "\\0";
     private DeviceSnapshot? _snapshot;
     private AgentSnapshot? _agentSnapshot;
@@ -122,6 +124,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         WindowState = WindowState.Maximized;
 
         DataContext = this;
+        EmbeddedWindowExtensions.Host = this;
         _discovery = new PhoneDiscoveryService(_adb);
         _inspection = new DeviceInspectionEngine(_adb);
         _agentBridge = new AgentBridgeClient(_adb);
@@ -158,6 +161,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (_settings.AutoDiscoverDevices)
                 _timer.Start();
 
+            if (!_adb.IsAvailable)
+                await EnsureAdbInstalledAsync(askFirst: true);
+
             if ((SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
                  SoftBoxAccountPermission.DeviceOperations) != 0)
             {
@@ -170,6 +176,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
         Notify(nameof(CurrentUserDisplay));
+        Notify(nameof(AdbInstallVisibility));
         BuildScene();
     }
 
@@ -714,19 +721,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ConnectionHelp_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show(this,
-            "ظهور الهاتف في مستكشف الملفات يعني نقل ملفات MTP فقط، وليس اتصال ADB.\\n\\n" +
-            "1) إعدادات الهاتف > حول الهاتف > اضغط رقم الإصدار 7 مرات.\\n" +
-            "2) افتح خيارات المطور وفعّل تصحيح أخطاء USB.\\n" +
-            "3) افتح قفل الشاشة ثم وصّل كابل بيانات.\\n" +
-            "4) وافق على «السماح بتصحيح أخطاء USB» واختر «السماح دائمًا من هذا الكمبيوتر».\\n" +
-            "5) سيُثبت PhoneLab Agent تلقائيًا ويطلب موافقة ثانية على الهاتف.\\n\\n" +
+            "ظهور الهاتف في مستكشف الملفات يعني نقل ملفات MTP فقط، وليس اتصال ADB.\n\n" +
+            "1) إعدادات الهاتف > حول الهاتف > اضغط رقم الإصدار 7 مرات.\n" +
+            "2) افتح خيارات المطور وفعّل تصحيح أخطاء USB.\n" +
+            "3) افتح قفل الشاشة ثم وصّل كابل بيانات.\n" +
+            "4) وافق على «السماح بتصحيح أخطاء USB» واختر «السماح دائمًا من هذا الكمبيوتر».\n" +
+            "5) سيُثبت PhoneLab Agent تلقائيًا ويطلب موافقة ثانية على الهاتف.\n\n" +
             "إذا استمر نقل الملفات دون ADB فقد تحتاج إلى تعريف ADB الخاص بالشركة المصنّعة أو إلغاء تصاريح USB debugging القديمة ثم إعادة التوصيل.",
             "تهيئة اتصال USB", MessageBoxButton.OK, MessageBoxImage.Information);
     }
     private void WorkshopCenter_Click(object sender, RoutedEventArgs e)
     {
         var window = new WorkshopCenterWindow { Owner = this };
-        window.Show();
+        window.ShowEmbedded(this);
     }
     private void ModuleNavigation_Click(object sender, RoutedEventArgs e)
     {
@@ -741,11 +748,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        CloseAllEmbeddedPages();
         var window = new ModuleSectionWindow(
             module,
             OpenModuleAction,
             actionId => SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId)) { Owner = this };
-        window.Show();
+        window.ShowEmbedded(this);
     }
 
     private async void OpenModuleAction(string actionId)
@@ -809,7 +817,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 InstallSamsungUsbDriver_Click(this, new RoutedEventArgs());
                 break;
             case "OpenUsbDriverSignatureVerifier":
-                new UsbDriverSignatureVerifierWindow { Owner = this }.Show();
+                new UsbDriverSignatureVerifierWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "InspectFirmware":
                 FirmwareInspect_Click(this, new RoutedEventArgs());
@@ -824,7 +832,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 MirrorScreen_Click(this, new RoutedEventArgs());
                 break;
             case "OpenMultiScreenSessions":
-                new MultiScreenSessionsWindow(_adb) { Owner = this }.Show();
+                new MultiScreenSessionsWindow(_adb) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenScreenRecording":
                 OpenScreenRecordingWindow();
@@ -839,17 +847,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 RepairGuides_Click(this, new RoutedEventArgs());
                 break;
             case "OpenApkLab":
-                new ApkLabWindow { Owner = this }.Show();
+                new ApkLabWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenNetworkDiagnostics":
             {
                 var networkDevice = SelectedDevice;
                 var serial = networkDevice is { IsAuthorized: true } ? networkDevice.Serial : null;
-                new NetworkDiagnosticsWindow(_adb, serial) { Owner = this }.Show();
+                new NetworkDiagnosticsWindow(_adb, serial) { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenWirelessAdbPairing":
-                new WirelessAdbPairingWindow(_adb) { Owner = this }.Show();
+                new WirelessAdbPairingWindow(_adb) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenAndroidFileManager":
                 OpenAndroidToolsWindow(0);
@@ -870,7 +878,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 OpenAndroidWorkflowWindow();
                 break;
             case "OpenFastbootManager":
-                new FastbootManagerWindow { Owner = this }.Show();
+                new FastbootManagerWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenDeviceAccessRecoveryCenter":
             {
@@ -881,7 +889,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     hasAuthorizedAccessDevice ? accessDevice!.Serial : null,
                     accessDevice?.Manufacturer,
                     accessDevice?.Model ?? accessDevice?.DisplayName)
-                { Owner = this }.Show();
+                { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenSamsungOdinAssistant":
@@ -894,11 +902,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     hasAuthorizedSamsung ? samsungDevice!.Serial : null,
                     hasAuthorizedSamsung ? samsungDevice!.Manufacturer : null,
                     hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null)
-                { Owner = this }.Show();
+                { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenSamsungOfficialTools":
-                new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.Show();
+                new OemOfficialToolsWindow(OemServiceVendor.Samsung) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenSamsungServiceOperations":
                 OpenSamsungServiceOperations();
@@ -906,22 +914,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenXiaomiFastbootService":
             {
                 var xiaomiDevice = SelectedDevice;
-                if (xiaomiDevice is null || !xiaomiDevice.IsAuthorized ||
-                    AndroidDeviceToolsService.NormalizeVendor(xiaomiDevice.Manufacturer) != AndroidVendorKind.Xiaomi)
+                if (xiaomiDevice is null || !xiaomiDevice.IsAuthorized)
                 {
-                    MessageBox.Show(this, "اختر هاتف Xiaomi/Redmi/POCO حاصلًا على تصريح ADB أولًا.", "Xiaomi Fastboot Service",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    ExplainNoAuthorizedDevice("Xiaomi Fastboot Service");
+                    break;
+                }
+                if (AndroidDeviceToolsService.NormalizeVendor(xiaomiDevice.Manufacturer) != AndroidVendorKind.Xiaomi)
+                {
+                    MessageBox.Show(this,
+                        "الجهاز المحدد ليس Xiaomi/Redmi/POCO (الشركة المقروءة: " + xiaomiDevice.Manufacturer + "). اختر هاتف Xiaomi أولًا.",
+                        "Xiaomi Fastboot Service", MessageBoxButton.OK, MessageBoxImage.Warning);
                     break;
                 }
                 var manufacturer = _snapshot is not null && _snapshot.Serial.Equals(xiaomiDevice.Serial, StringComparison.Ordinal)
                     ? _snapshot.Manufacturer : xiaomiDevice.Manufacturer;
                 var model = _snapshot is not null && _snapshot.Serial.Equals(xiaomiDevice.Serial, StringComparison.Ordinal)
                     ? _snapshot.Model : xiaomiDevice.DisplayName;
-                new XiaomiFastbootDiagnosticsWindow(_adb, xiaomiDevice.Serial, manufacturer, model) { Owner = this }.Show();
+                new XiaomiFastbootDiagnosticsWindow(_adb, xiaomiDevice.Serial, manufacturer, model) { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenXiaomiOfficialTools":
-                new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.Show();
+                new OemOfficialToolsWindow(OemServiceVendor.Xiaomi) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenBrandOfficialTools":
             {
@@ -943,7 +956,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                                     : selectedVendor.Contains("mediatek", StringComparison.OrdinalIgnoreCase)
                                         ? OemServiceVendor.MediaTek
                                         : OemServiceVendor.OtherAndroid;
-                new OemOfficialToolsWindow(vendor) { Owner = this }.Show();
+                new OemOfficialToolsWindow(vendor) { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenQualcommRecovery":
@@ -965,7 +978,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     break;
                 }
-                new QualcommRecoveryWindow(_snapshot) { Owner = this }.Show();
+                new QualcommRecoveryWindow(_snapshot) { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenMediaTekRecovery":
@@ -987,15 +1000,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     break;
                 }
-                new MediaTekRecoveryWindow(_snapshot.ModelNumber, _snapshot.HardwareSku) { Owner = this }.Show();
+                new MediaTekRecoveryWindow(_snapshot.ModelNumber, _snapshot.HardwareSku) { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenAndroidLogAnalyzer":
                 if (SelectedDevice is { IsAuthorized: true } logAnalyzerDevice)
-                    new AndroidLogAnalyzerWindow(_adb, logAnalyzerDevice.Serial) { Owner = this }.Show();
+                    new AndroidLogAnalyzerWindow(_adb, logAnalyzerDevice.Serial) { Owner = this }.ShowEmbedded(this);
                 else
-                    MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "محلل Logcat",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    ExplainNoAuthorizedDevice("محلل Logcat");
                 break;
             case "OpenDeviceCapabilityCenter":
             {
@@ -1016,17 +1028,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     _agentSnapshot is not null)
                 {
                     Owner = this
-                }.Show();
+                }.ShowEmbedded(this);
                 break;
             }
             case "OpenUsbDoctor":
-                new UsbDoctorWindow { Owner = this }.Show();
+                new UsbDoctorWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenQualcommUsbDiagnostics":
-                new UsbDoctorWindow("qualcomm") { Owner = this }.Show();
+                new UsbDoctorWindow("qualcomm") { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenMediaTekUsbDiagnostics":
-                new UsbDoctorWindow("mediatek") { Owner = this }.Show();
+                new UsbDoctorWindow("mediatek") { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenFirmwareCenter":
             {
@@ -1039,7 +1051,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     hasMatchingAuthorizedSnapshot)
                 {
                     Owner = this
-                }.Show();
+                }.ShowEmbedded(this);
                 break;
             }
             case "OpenDeviceHistory":
@@ -1049,34 +1061,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 OpenActivityCenter(1, false);
                 break;
             case "OpenDashboardAnalytics":
-                new DashboardAnalyticsWindow(_activity) { Owner = this }.Show();
+                new DashboardAnalyticsWindow(_activity) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenSupportBundle":
-                new SupportBundleWindow { Owner = this }.Show();
+                new SupportBundleWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenSupportCenter":
-                new SupportCenterWindow { Owner = this }.Show();
+                new SupportCenterWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenUpdateCenter":
-                new UpdateCenterWindow { Owner = this }.Show();
+                new UpdateCenterWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenHelpCenter":
-                new HelpCenterWindow { Owner = this }.Show();
+                new HelpCenterWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenOfflineCenter":
-                new OfflineCenterWindow() { Owner = this }.Show();
+                new OfflineCenterWindow() { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenApplicationSettings":
-                new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.Show();
+                new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenAbout":
-                new AboutWindow { Owner = this }.Show();
+                new AboutWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenUserManagement":
-                new UserManagementWindow(_accountService, _currentUser) { Owner = this }.Show();
+                new UserManagementWindow(_accountService, _currentUser) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenPartsInventory":
-                new PartsInventoryWindow() { Owner = this }.Show();
+                new PartsInventoryWindow() { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenSamsungDiagnostics":
                 OpenVendorDiagnostics(AndroidVendorKind.Samsung, "Samsung Tools");
@@ -1091,7 +1103,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 var pluginDevice = SelectedDevice;
                 var pluginSerial = pluginDevice is { IsAuthorized: true } ? pluginDevice.Serial : null;
-                new PluginStoreWindow(_adb, pluginSerial) { Owner = this }.Show();
+                new PluginStoreWindow(_adb, pluginSerial) { Owner = this }.ShowEmbedded(this);
                 break;
             }
             case "OpenRepairAdvisor":
@@ -1106,7 +1118,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         _snapshot,
                         _agentSnapshot,
                         Components.Select(component => component.Diagnostic).ToArray(),
-                        SelectedDevice?.IsAuthorized == true) { Owner = this }.Show();
+                        SelectedDevice?.IsAuthorized == true) { Owner = this }.ShowEmbedded(this);
                 }
                 break;
             case "OpenOneClickDiagnostic":
@@ -1122,7 +1134,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                         selected.Serial,
                         _snapshot,
                         _agentSnapshot,
-                        Components.Select(component => component.Diagnostic).ToArray()) { Owner = this }.Show();
+                        Components.Select(component => component.Diagnostic).ToArray()) { Owner = this }.ShowEmbedded(this);
                 }
                 break;
             case "OpenPhoneBackup":
@@ -1135,7 +1147,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 OpenWorkshopAtTab(4);
                 break;
             case "OpenWorkshopBackupScheduler":
-                new WorkshopBackupSchedulerWindow { Owner = this }.Show();
+                new WorkshopBackupSchedulerWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenWorkshopInventory":
                 OpenWorkshopAtTab(2);
@@ -1184,8 +1196,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "أدوات Android",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice("أدوات Android");
             return;
         }
 
@@ -1197,7 +1208,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 : selected.Manufacturer);
         new AndroidDeviceToolsWindow(
             _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer)
-        { Owner = this }.Show();
+        { Owner = this }.ShowEmbedded(this);
     }
 
     private void OpenSamsungServiceOperations()
@@ -1205,8 +1216,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتف Samsung حاصلًا على تصريح ADB أولًا.", "Samsung Service",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice("Samsung Service");
             return;
         }
 
@@ -1230,8 +1240,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتفًا حاصلًا على تصريح ADB أولًا.", sectionName,
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice(sectionName);
             return;
         }
 
@@ -1247,7 +1256,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         new VendorDiagnosticsWindow(_adb, selected.Serial, selected.Manufacturer, selected.Model ?? selected.DisplayName)
         {
             Owner = this
-        }.Show();
+        }.ShowEmbedded(this);
     }
 
     private void OpenAndroidWorkflowWindow()
@@ -1255,12 +1264,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "Workflow Automation",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice("Workflow Automation");
             return;
         }
 
-        new AndroidWorkflowWindow(_adb, selected.Serial) { Owner = this }.Show();
+        new AndroidWorkflowWindow(_adb, selected.Serial) { Owner = this }.ShowEmbedded(this);
     }
 
     private void OpenAndroidBackupWindow()
@@ -1268,12 +1276,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "Smart Backup",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice("Smart Backup");
             return;
         }
 
-        new AndroidBackupWindow(_adb, selected.Serial) { Owner = this }.Show();
+        new AndroidBackupWindow(_adb, selected.Serial) { Owner = this }.ShowEmbedded(this);
     }
 
     private void OpenAndroidBackupSchedulerWindow()
@@ -1281,15 +1288,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.", "جدولة النسخ الاحتياطي",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice("جدولة النسخ الاحتياطي");
             return;
         }
 
         new BackupScheduleWindow(_backupScheduler, selected.Serial, selected.DisplayName)
         {
             Owner = this
-        }.Show();
+        }.ShowEmbedded(this);
     }
 
     private async Task ProcessBackupSchedulesAsync()
@@ -1438,24 +1444,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var serial = filterToSelectedDevice && selected is { IsAuthorized: true }
             ? selected.Serial
             : null;
-        new ActivityCenterWindow(_activity, serial, initialTab) { Owner = this }.Show();
+        new ActivityCenterWindow(_activity, serial, initialTab) { Owner = this }.ShowEmbedded(this);
     }
 
     private void GlobalWorkshop_Click(object sender, RoutedEventArgs e)
     {
         var window = new GlobalWorkshopWindow { Owner = this };
-        window.Show();
+        window.ShowEmbedded(this);
     }
     private void OpenWorkshopAtTab(int tabIndex)
     {
         var window = new WorkshopCenterWindow(tabIndex) { Owner = this };
-        window.Show();
+        window.ShowEmbedded(this);
     }
 
     private void OpenGlobalWorkshopAtTab(int tabIndex)
     {
         var window = new GlobalWorkshopWindow(tabIndex) { Owner = this };
-        window.Show();
+        window.ShowEmbedded(this);
     }
 
 
@@ -1545,8 +1551,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
-            MessageBox.Show(this, "اختر هاتف Android حاصلًا على تصريح ADB أولًا.",
-                "تسجيل شاشة الهاتف", MessageBoxButton.OK, MessageBoxImage.Information);
+            ExplainNoAuthorizedDevice("تسجيل شاشة الهاتف");
             return;
         }
 
@@ -1556,7 +1561,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             selected.Model ?? selected.DisplayName)
         {
             Owner = this
-        }.Show();
+        }.ShowEmbedded(this);
     }
 
     private void OpenScreenRecording()
@@ -1580,7 +1585,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             Owner = this
         };
-        window.Show();
+        window.ShowEmbedded(this);
     }
 
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
@@ -1612,7 +1617,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
         if (dialog.ShowDialog(this) != true) return;
         var options = new ScreenAnalysisOptionsWindow { Owner = this };
-        if (options.ShowDialog() != true) return;
+        if (options.ShowDialogEmbedded() != true) return;
 
         try
         {
@@ -1667,7 +1672,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
                 return latest;
             }, () => _agentBridge.ReadTelemetryAsync(selected.Serial)) { Owner = this };
-        window.Show();
+        window.ShowEmbedded(this);
     }
     private async void ImportBoardMap_Click(object sender, RoutedEventArgs e)
     {
@@ -1691,7 +1696,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (Path.GetExtension(dialog.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
             {
                 var importWindow = new BoardMapCsvImportWindow(_maps, _snapshot, dialog.FileName) { Owner = this };
-                if (importWindow.ShowDialog() != true || string.IsNullOrWhiteSpace(importWindow.ImportedPath))
+                if (importWindow.ShowDialogEmbedded() != true || string.IsNullOrWhiteSpace(importWindow.ImportedPath))
                     return;
                 path = importWindow.ImportedPath;
             }
@@ -1752,7 +1757,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             StatusMessage = "تم ربط عينة القياس الخارجية بمكونات USB والبطارية ودوائر الطاقة.";
             Notify(nameof(StatusMessage));
         });
-        window.Show();
+        window.ShowEmbedded(this);
     }
 
     private async void RepairGuides_Click(object sender, RoutedEventArgs e)
@@ -1868,16 +1873,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 Children =
                 {
-                    new AmbientLight(Color.FromRgb(165,185,210)),
+                    new AmbientLight(Color.FromRgb(120,140,168)),
                     new DirectionalLight(Colors.White,new Vector3D(-1,-2,-3)),
-                    new DirectionalLight(Color.FromRgb(68,145,205),new Vector3D(2,1,-1))
+                    new DirectionalLight(Color.FromRgb(68,145,205),new Vector3D(2,1,-1)),
+                    new DirectionalLight(Color.FromRgb(200,210,225),new Vector3D(1,2,3))
                 }
             }
         });
 
         var state = Components.ToDictionary(x => x.Id, x => x.StatusHex, StringComparer.OrdinalIgnoreCase);
+        var glassLayers = new List<(BoardPart Part, string Color, double Opacity)>();
+
         foreach (var originalPart in _boardMap.Parts)
         {
+            if (!_showDisplayLayer && IsDisplayLayer(originalPart.Id)) continue;
+
             var part = originalPart;
             if (_boardMap.SchemaVersion >= 2 && _boardMap.CoordinateUnit.Equals("mm", StringComparison.OrdinalIgnoreCase))
             {
@@ -1894,9 +1904,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     Depth = Math.Clamp(originalPart.Depth * millimeterToScene, 0.02, 0.12)
                 };
             }
+
+            // Real exploded view: every layer is lifted apart so nothing hides the parts below it.
+            part = part with { Z = part.Z + ExplodeOffset(part.Id) * _explode };
+
             var color = state.GetValueOrDefault(originalPart.Id, originalPart.BaseColor);
             if (originalPart.Id == "frame") color = originalPart.BaseColor;
             if (originalPart.Id == _selectedComponent?.Id) color = Lighten(color);
+
+            var opacity = GlassOpacity(originalPart.Id);
+            if (opacity < 1)
+            {
+                glassLayers.Add((part, color, opacity)); // transparent layers are drawn last
+                continue;
+            }
             var visual = CreateBox(part, color);
             PhoneViewport.Children.Add(visual);
             _visualParts[visual] = part.Id;
@@ -1904,13 +1925,45 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var rearCover = CreateBox(new BoardPart
         {
-            Id = "rear-cover", X = 0, Y = 0, Z = -0.68, Width = 6.55, Height = 13.15, Depth = 0.10, BaseColor = "#1A314B"
-        }, "#1A314B");
+            Id = "rear-cover", X = 0, Y = 0,
+            Z = -0.68 + ExplodeOffset("rear-cover") * _explode,
+            Width = 6.55, Height = 13.15, Depth = 0.10, BaseColor = "#1A314B"
+        }, "#2B4A6B", 0.85);
         PhoneViewport.Children.Add(rearCover);
+
+        foreach (var (part, color, opacity) in glassLayers)
+        {
+            var visual = CreateBox(part, color, opacity);
+            PhoneViewport.Children.Add(visual);
+            _visualParts[visual] = part.Id;
+        }
         UpdateCamera();
     }
 
-    private static ModelVisual3D CreateBox(BoardPart part, string colorHex)
+    private static bool IsDisplayLayer(string id) => id is "display" or "touch";
+
+    private static double GlassOpacity(string id) => id switch
+    {
+        "display" => 0.42,
+        "touch" => 0.22,
+        "frame" => 0.55,
+        _ => 1.0
+    };
+
+    private static double ExplodeOffset(string id) => id switch
+    {
+        "display" => 3.6,
+        "touch" => 2.7,
+        "front-camera" => 2.7,
+        "mainboard" or "processor" or "ram" or "storage" or "pmic" or "charge-ic" or "rf" or "sensors" or "rear-camera" => 1.1,
+        "battery" => -0.9,
+        "frame" => -1.9,
+        "rear-cover" => -3.6,
+        "usb-port" or "speaker" or "microphone" or "vibrator" or "charging-board" or "sim" => -0.5,
+        _ => 0
+    };
+
+    private static ModelVisual3D CreateBox(BoardPart part, string colorHex, double opacity = 1.0)
     {
         var mesh = new MeshGeometry3D
         {
@@ -1921,14 +1974,43 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             },
             TriangleIndices = new Int32Collection { 0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,1,2,6,1,6,5,2,3,7,2,7,6,3,0,4,3,4,7 }
         };
-        var material = new DiffuseMaterial(new SolidColorBrush(ParseColor(colorHex)));
-        var geometry = new GeometryModel3D(mesh, material) { BackMaterial = material };
+        var brush = new SolidColorBrush(ParseColor(colorHex)) { Opacity = opacity };
+        var material = new MaterialGroup();
+        material.Children.Add(new DiffuseMaterial(brush));
+        material.Children.Add(new SpecularMaterial(new SolidColorBrush(Color.FromRgb(120, 150, 185)), 24));
+        var geometry = new GeometryModel3D(mesh, material) { BackMaterial = new DiffuseMaterial(brush) };
         var transform = new Transform3DGroup();
         transform.Children.Add(new RotateTransform3D(
             new AxisAngleRotation3D(new Vector3D(0, 0, 1), part.RotationDegrees)));
         transform.Children.Add(new ScaleTransform3D(part.Width, part.Height, part.Depth));
         transform.Children.Add(new TranslateTransform3D(part.X, part.Y, part.Z));
         return new ModelVisual3D { Content = geometry, Transform = transform };
+    }
+
+    private void Explode_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _explode = Math.Clamp(e.NewValue / 100d, 0, 1);
+        if (IsLoaded) BuildScene();
+    }
+
+    private void DisplayLayer_Changed(object sender, RoutedEventArgs e)
+    {
+        _showDisplayLayer = (sender as System.Windows.Controls.CheckBox)?.IsChecked == true;
+        if (IsLoaded) BuildScene();
+    }
+
+    private void ResetView_Click(object sender, RoutedEventArgs e)
+    {
+        _yaw = -32; _pitch = 23; _zoom = 30; _explode = 0.8;
+        _showDisplayLayer = true;
+        if (ExplodeSlider is not null) ExplodeSlider.Value = 80;
+        if (DisplayLayerCheck is not null) DisplayLayerCheck.IsChecked = true;
+        BuildScene();
+    }
+
+    private void Viewport_DoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2) ResetView_Click(sender, e);
     }
 
     private PerspectiveCamera CreateCamera()
@@ -1953,7 +2035,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         camera.Position = new Point3D(x,y,z);
         camera.LookDirection = new Vector3D(-x,-y,-z);
         camera.UpDirection = new Vector3D(0,0,1);
-        camera.FieldOfView = 42;
+        camera.FieldOfView = 38;
     }
 
     private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
@@ -1990,7 +2072,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
     private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)
     {
-        _zoom = Math.Clamp(_zoom + (e.Delta > 0 ? -1.2 : 1.2), 16, 42);
+        _zoom = Math.Clamp(_zoom + (e.Delta > 0 ? -1.5 : 1.5), 14, 70);
         UpdateCamera();
     }
 

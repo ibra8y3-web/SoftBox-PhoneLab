@@ -111,7 +111,7 @@ public sealed class BoardMapCsvImportWindow : Window
         footer.Children.Add(_confirmRevision);
         var buttons = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
         buttons.Children.Add(_import);
-        buttons.Children.Add(ButtonControl("إلغاء", "#51333A", (_, _) => { DialogResult = false; Close(); }));
+        buttons.Children.Add(ButtonControl("إلغاء", "#51333A", (_, _) => { this.SetResult(false); }));
         footer.Children.Add(buttons);
         _status.Text = "صيغة CSV المطلوبة موضحة في docs/BOARDVIEW-IMPORT.md.";
         _status.Foreground = Brush("#9FC7E8");
@@ -145,7 +145,7 @@ public sealed class BoardMapCsvImportWindow : Window
                 _reviewer.Text, _hardwareRevision.Text, _boardRevision.Text, width, height,
                 "boardview", RevisionMatchConfirmed: true);
             ImportedPath = await _catalog.ImportCsvMapAsync(_csvPath, _device, metadata);
-            DialogResult = true;
+            this.SetResult(true);
             Close();
         }
         catch (Exception ex)
