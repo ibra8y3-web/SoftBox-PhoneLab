@@ -59,6 +59,25 @@ public sealed class PhoneLabSettingsServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(0.69)]
+    [InlineData(1.06)]
+    public async Task SaveRejectsOutOfRangeUiScale(double scale)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "softbox-invalid-scale-" + Guid.NewGuid().ToString("N"), "settings.json");
+        try
+        {
+            var store = new PhoneLabSettingsService(path);
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+                store.SaveAsync(new PhoneLabSettings(UiScale: scale)));
+        }
+        finally
+        {
+            var directory = Path.GetDirectoryName(path)!;
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task LoadRejectsUnsupportedSchema()
     {
