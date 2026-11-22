@@ -9,6 +9,17 @@ public static partial class DevicePropertyParser
     [GeneratedRegex(@"(?m)^\[(?<key>[^\]]+)\]:\s*\[(?<value>.*)\]\s*$")]
     private static partial Regex PropertyRegex();
 
+    public static (string Manufacturer, string Model, string Product, string DeviceCode) ParseIdentityHint(string propertiesText)
+    {
+        var values = ParseProperties(propertiesText);
+        string Read(params string[] keys) => First(keys.Select(key => Get(values, key)).ToArray());
+        return (
+            Read("ro.product.manufacturer", "ro.product.vendor.manufacturer", "ro.product.system.manufacturer", "ro.product.odm.manufacturer"),
+            Read("ro.product.marketname", "ro.product.model", "ro.product.vendor.model", "ro.product.system.model", "ro.product.odm.model", "ro.product.product.model"),
+            Read("ro.product.name", "ro.product.vendor.name", "ro.product.system.name", "ro.product.odm.name", "ro.build.product"),
+            Read("ro.product.device", "ro.product.vendor.device", "ro.product.system.device", "ro.product.odm.device", "ro.build.product"));
+    }
+
     public static Dictionary<string, string> ParseProperties(string text)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -39,11 +50,16 @@ public static partial class DevicePropertyParser
         return new DeviceSnapshot
         {
             Serial = serial,
-            Manufacturer = First(Get(p, "ro.product.manufacturer"), Get(p, "ro.product.vendor.manufacturer")),
-            Model = First(Get(p, "ro.product.marketname"), Get(p, "ro.product.model"), Get(p, "ro.product.vendor.model")),
-            ModelNumber = First(Get(p, "ro.product.model"), Get(p, "ro.product.vendor.model"), Get(p, "ro.boot.product.hardware.sku")),
-            Product = First(Get(p, "ro.product.name"), Get(p, "ro.product.vendor.name"), Get(p, "ro.build.product")),
-            DeviceCode = First(Get(p, "ro.product.device"), Get(p, "ro.product.vendor.device"), Get(p, "ro.build.product")),
+            Manufacturer = First(Get(p, "ro.product.manufacturer"), Get(p, "ro.product.vendor.manufacturer"),
+                Get(p, "ro.product.system.manufacturer"), Get(p, "ro.product.odm.manufacturer")),
+            Model = First(Get(p, "ro.product.marketname"), Get(p, "ro.product.model"), Get(p, "ro.product.vendor.model"),
+                Get(p, "ro.product.system.model"), Get(p, "ro.product.odm.model"), Get(p, "ro.product.product.model")),
+            ModelNumber = First(Get(p, "ro.product.model"), Get(p, "ro.product.vendor.model"),
+                Get(p, "ro.product.system.model"), Get(p, "ro.product.odm.model"), Get(p, "ro.boot.product.hardware.sku")),
+            Product = First(Get(p, "ro.product.name"), Get(p, "ro.product.vendor.name"),
+                Get(p, "ro.product.system.name"), Get(p, "ro.product.odm.name"), Get(p, "ro.build.product")),
+            DeviceCode = First(Get(p, "ro.product.device"), Get(p, "ro.product.vendor.device"),
+                Get(p, "ro.product.system.device"), Get(p, "ro.product.odm.device"), Get(p, "ro.build.product")),
             HardwareSku = First(Get(p, "ro.boot.hardware.sku"), Get(p, "ro.boot.product.hardware.sku"), Get(p, "ro.boot.product.vendor.sku")),
             BuildFingerprint = First(Get(p, "ro.build.fingerprint"), Get(p, "ro.vendor.build.fingerprint")),
             Bootloader = First(Get(p, "ro.bootloader"), Get(p, "ro.boot.bootloader")),
