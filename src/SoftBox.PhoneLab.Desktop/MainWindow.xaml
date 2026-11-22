@@ -4,8 +4,8 @@
  xmlns:interop="clr-namespace:SoftBox.PhoneLab.Desktop.Interop"
  Title="SoftBox | Universal Smart Device Service &amp; Repair Platform"
  Icon="pack://application:,,,/Assets/SoftBox-AppIcon.ico"
- Width="1440" Height="900" MinWidth="1024" MinHeight="640"
- ResizeMode="CanResize" WindowState="Maximized"
+ Width="1440" Height="900" MinWidth="900" MinHeight="560"
+ ResizeMode="CanResize"
  WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}"
  Foreground="{StaticResource TextBrush}" FlowDirection="RightToLeft"
  FontFamily="Segoe UI Variable Text, Segoe UI">

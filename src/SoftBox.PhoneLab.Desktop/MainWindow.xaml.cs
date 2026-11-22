@@ -111,6 +111,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _accountService = accountService ?? throw new ArgumentNullException(nameof(accountService));
         _currentUser = currentUser ?? throw new ArgumentNullException(nameof(currentUser));
         InitializeComponent();
+
+        // Keep the restored (non-maximized) window within the current monitor's work area.
+        // The application still starts maximized and retains normal Windows minimize/restore behavior.
+        var workArea = SystemParameters.WorkArea;
+        MinWidth = Math.Min(900, workArea.Width * 0.82);
+        MinHeight = Math.Min(560, workArea.Height * 0.76);
+        Width = Math.Min(1440, workArea.Width * 0.92);
+        Height = Math.Min(900, workArea.Height * 0.88);
+        WindowState = WindowState.Maximized;
+
         DataContext = this;
         _discovery = new PhoneDiscoveryService(_adb);
         _inspection = new DeviceInspectionEngine(_adb);
