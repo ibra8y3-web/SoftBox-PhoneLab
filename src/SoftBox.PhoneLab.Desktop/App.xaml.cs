@@ -25,6 +25,10 @@ public partial class App : Application
 
         try
         {
+            // The sign-in dialog is the first window shown. Prevent WPF from shutting
+            // down when that dialog closes successfully, before the main window exists.
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             var accounts = new SoftBoxAccountService();
             var initialSetup = !await accounts.HasAccountsAsync();
             var authentication = new SoftBoxAuthenticationWindow(accounts, initialSetup);
@@ -37,6 +41,9 @@ public partial class App : Application
             var mainWindow = new MainWindow(accounts, authentication.AuthenticatedUser);
             MainWindow = mainWindow;
             mainWindow.Show();
+
+            // From this point, closing the actual workspace should end the application.
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
         }
         catch (Exception ex)
         {
