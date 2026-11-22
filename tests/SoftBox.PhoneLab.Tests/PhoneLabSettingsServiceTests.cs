@@ -17,6 +17,7 @@ public sealed class PhoneLabSettingsServiceTests
             Assert.Equal(3, defaults.DiscoveryIntervalSeconds);
             Assert.True(defaults.AutoInstallAgent);
             Assert.Equal(1.0, defaults.UiScale);
+            Assert.Equal("ar", defaults.UiLanguage);
 
             var selected = defaults with
             {
@@ -24,7 +25,8 @@ public sealed class PhoneLabSettingsServiceTests
                 DiscoveryIntervalSeconds = 15,
                 AutoInstallAgent = false,
                 MaximumBatchConcurrency = 5,
-                UiScale = 0.85
+                UiScale = 0.85,
+                UiLanguage = "en"
             };
             await store.SaveAsync(selected);
 
@@ -70,6 +72,40 @@ public sealed class PhoneLabSettingsServiceTests
             var store = new PhoneLabSettingsService(path);
             await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
                 store.SaveAsync(new PhoneLabSettings(UiScale: scale)));
+        }
+        finally
+        {
+            var directory = Path.GetDirectoryName(path)!;
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task LegacySettingsWithoutLanguageDefaultToArabic()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "softbox-legacy-language-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "settings.json");
+        try
+        {
+            await File.WriteAllTextAsync(path, """{"SchemaVersion":1,"DiscoveryIntervalSeconds":15,"UiScale":0.9}""");
+            var loaded = await new PhoneLabSettingsService(path).LoadAsync();
+            Assert.Equal("ar", loaded.UiLanguage);
+            Assert.Equal(15, loaded.DiscoveryIntervalSeconds);
+            Assert.Equal(0.9, loaded.UiScale);
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
+    public async Task SaveRejectsUnsupportedUiLanguage()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "softbox-invalid-language-" + Guid.NewGuid().ToString("N"), "settings.json");
+        try
+        {
+            var store = new PhoneLabSettingsService(path);
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+                store.SaveAsync(new PhoneLabSettings(UiLanguage: "fr")));
         }
         finally
         {

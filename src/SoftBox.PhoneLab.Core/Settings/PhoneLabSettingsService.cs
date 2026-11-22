@@ -11,7 +11,8 @@ public sealed record PhoneLabSettings(
     bool AutoInstallAgent = true,
     bool AutoInspectOnConnect = true,
     int MaximumBatchConcurrency = 3,
-    double UiScale = 1.0);
+    double UiScale = 1.0,
+    string UiLanguage = "ar");
 
 /// <summary>
 /// Local user preferences for connection automation and batch limits.
@@ -93,6 +94,10 @@ public sealed class PhoneLabSettingsService
             throw new ArgumentOutOfRangeException(nameof(settings.MaximumBatchConcurrency), "حد التوازي يجب أن يكون بين 1 و8.");
         if (!double.IsFinite(settings.UiScale) || settings.UiScale is < 0.70 or > 1.05)
             throw new ArgumentOutOfRangeException(nameof(settings.UiScale), "تكبير الواجهة يجب أن يكون بين 70% و105%.");
+        if (settings.UiLanguage is null)
+            settings = settings with { UiLanguage = "ar" }; // Legacy settings files predate language selection.
+        if (settings.UiLanguage is not ("ar" or "en"))
+            throw new ArgumentOutOfRangeException(nameof(settings.UiLanguage), "لغة SoftBox المدعومة هي العربية أو الإنجليزية.");
         return settings;
     }
 }

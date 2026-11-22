@@ -32,11 +32,14 @@ public sealed class SoftBoxAuthenticationWindow : Window
         _initialSetup = initialSetup;
 
         Title = initialSetup ? "SoftBox | إعداد المدير الأول" : "SoftBox | تسجيل الدخول";
-        Width = 500;
-        Height = initialSetup ? 640 : 520;
-        MinWidth = 440;
-        MinHeight = initialSetup ? 600 : 480;
-        ResizeMode = ResizeMode.NoResize;
+        var workArea = SystemParameters.WorkArea;
+        Width = Math.Min(620, workArea.Width * 0.86);
+        Height = Math.Min(initialSetup ? 720 : 620, workArea.Height * 0.88);
+        MinWidth = Math.Min(440, Width * 0.82);
+        MinHeight = Math.Min(initialSetup ? 560 : 440, Height * 0.76);
+        MaxWidth = workArea.Width;
+        MaxHeight = workArea.Height;
+        ResizeMode = ResizeMode.CanResize;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         FlowDirection = FlowDirection.RightToLeft;
         Background = Brush("#081321");
@@ -44,7 +47,12 @@ public sealed class SoftBoxAuthenticationWindow : Window
 
         _submit = ButtonControl(initialSetup ? "إنشاء حساب المدير والدخول" : "تسجيل الدخول إلى SoftBox", "#176044", Submit_Click);
         Content = BuildContent();
-        Loaded += (_, _) => _userName.Focus();
+        SoftBoxLocalization.Apply(this);
+        Loaded += (_, _) =>
+        {
+            SoftBoxLocalization.Apply(this);
+            _userName.Focus();
+        };
     }
 
     private UIElement BuildContent()
@@ -125,8 +133,14 @@ public sealed class SoftBoxAuthenticationWindow : Window
         _status.TextWrapping = TextWrapping.Wrap;
         _status.Margin = new Thickness(0, 16, 0, 0);
         form.Children.Add(_status);
-        Grid.SetRow(form, 1);
-        root.Children.Add(form);
+        var formScroll = new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = form
+        };
+        Grid.SetRow(formScroll, 1);
+        root.Children.Add(formScroll);
 
         var footer = new StackPanel { Margin = new Thickness(0, 18, 0, 0) };
         _submit.HorizontalAlignment = HorizontalAlignment.Stretch;

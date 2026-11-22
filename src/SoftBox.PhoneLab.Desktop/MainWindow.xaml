@@ -4,7 +4,8 @@
  xmlns:interop="clr-namespace:SoftBox.PhoneLab.Desktop.Interop"
  Title="SoftBox | Universal Smart Device Service &amp; Repair Platform"
  Icon="pack://application:,,,/Assets/SoftBox-AppIcon.ico"
- Width="1640" Height="1000" MinWidth="1320" MinHeight="820"
+ Width="1440" Height="900" MinWidth="1024" MinHeight="640"
+ ResizeMode="CanResize" WindowState="Maximized"
  WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}"
  Foreground="{StaticResource TextBrush}" FlowDirection="RightToLeft"
  FontFamily="Segoe UI Variable Text, Segoe UI">
@@ -36,6 +37,8 @@
       <TextBlock x:Name="UiScaleLabel" Text="100%" FontSize="9" Foreground="#C7E7FF" VerticalAlignment="Center" Margin="6,0"/>
       <Button Content="+" Click="IncreaseUiScale_Click" MinWidth="30" Padding="5,5" ToolTip="تكبير الواجهة"/>
      </StackPanel>
+     <Button Content="{Binding LanguageToggleText}" Click="ToggleLanguage_Click"
+      MinWidth="78" Padding="10,8" Margin="0,0,12,0" ToolTip="تبديل العربية والإنجليزية"/>
      <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
       <TextBlock Text="المستخدم الحالي" FontSize="9" Foreground="#8199B5" HorizontalAlignment="Right"/>
       <TextBlock Text="{Binding CurrentUserDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#C7E7FF" HorizontalAlignment="Right"/>
@@ -46,7 +49,7 @@
   </Border>
 
   <Grid Grid.Row="1" Margin="0,14,0,10">
-   <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/><ColumnDefinition Width="360"/></Grid.ColumnDefinitions>
+   <Grid.ColumnDefinitions><ColumnDefinition Width="1.0*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="2.15*"/><ColumnDefinition Width="1.4*"/></Grid.ColumnDefinitions>
 
    <!-- Master navigation: 36 modules in the same order as the SoftBox specification. -->
    <Border Grid.Column="0" Background="#0D1C2E" BorderBrush="#263D58" BorderThickness="1" CornerRadius="14" Padding="10" Margin="0,0,12,0">

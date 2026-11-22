@@ -67,6 +67,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public ObservableCollection<ComponentViewModel> Components { get; } = [];
     public ObservableCollection<PropertyLine> DeviceFacts { get; } = [];
     public string CurrentUserDisplay => $"{_currentUser.DisplayName} • {SoftBoxAccountService.RoleLabel(_currentUser.Role)}";
+    public string LanguageToggleText => _settings.UiLanguage == "ar" ? "English" : "العربية";
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -126,6 +127,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             try
             {
                 _settings = await _settingsService.LoadAsync();
+                SoftBoxLocalization.SetLanguage(_settings.UiLanguage);
+                SoftBoxLocalization.Apply(this);
+                Notify(nameof(LanguageToggleText));
                 ApplyUiScaleVisual(_settings.UiScale);
             }
             catch (Exception ex)
@@ -1344,6 +1348,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ApplyApplicationSettings(PhoneLabSettings settings)
     {
         _settings = PhoneLabSettingsService.Validate(settings);
+        SoftBoxLocalization.SetLanguage(_settings.UiLanguage);
+        SoftBoxLocalization.Apply(this);
+        Notify(nameof(LanguageToggleText));
         ApplyUiScaleVisual(_settings.UiScale);
         _timer.Interval = TimeSpan.FromSeconds(_settings.DiscoveryIntervalSeconds);
         if (_settings.AutoDiscoverDevices)
@@ -1361,16 +1368,34 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ApplyUiScaleVisual(double requestedScale)
     {
-        var screenFitScale = Math.Min(
-            SystemParameters.WorkArea.Width / 1640.0,
-            SystemParameters.WorkArea.Height / 1000.0);
-        var scale = Math.Clamp(Math.Min(requestedScale, screenFitScale), 0.70, 1.05);
+        // Window sizing is controlled by WPF and the active monitor. This preference
+        // changes content scale only; it must never force a fixed window size.
+        var scale = Math.Clamp(requestedScale, 0.70, 1.05);
         MainLayoutRoot.LayoutTransform = new ScaleTransform(scale, scale);
         UiScaleLabel.Text = scale.ToString("P0", System.Globalization.CultureInfo.InvariantCulture);
-        Width = 1640 * scale;
-        Height = 1000 * scale;
-        MinWidth = 1320 * scale;
-        MinHeight = 820 * scale;
+    }
+
+    private async void ToggleLanguage_Click(object sender, RoutedEventArgs e)
+        => await SetUiLanguageAsync(_settings.UiLanguage == "ar" ? "en" : "ar");
+
+    private async Task SetUiLanguageAsync(string language)
+    {
+        try
+        {
+            var updated = PhoneLabSettingsService.Validate(_settings with { UiLanguage = language });
+            await _settingsService.SaveAsync(updated);
+            _settings = updated;
+            SoftBoxLocalization.SetLanguage(_settings.UiLanguage);
+            SoftBoxLocalization.Apply(this);
+            Notify(nameof(LanguageToggleText));
+            StatusMessage = language == "en" ? "Application language set to English." : "تم تغيير لغة التطبيق إلى العربية.";
+            Notify(nameof(StatusMessage));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تعذر حفظ لغة التطبيق: " + ex.Message,
+                "SoftBox", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void DecreaseUiScale_Click(object sender, RoutedEventArgs e)

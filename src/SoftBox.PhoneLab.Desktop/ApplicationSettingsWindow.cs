@@ -19,6 +19,7 @@ public sealed class ApplicationSettingsWindow : Window
     private readonly CheckBox _autoInspect = new();
     private readonly ComboBox _concurrency = new();
     private readonly ComboBox _uiScale = new();
+    private readonly ComboBox _language = new();
     private readonly TextBlock _status = new();
 
     public ApplicationSettingsWindow(
@@ -33,7 +34,8 @@ public sealed class ApplicationSettingsWindow : Window
         Width = 760;
         Height = 650;
         MinWidth = 620;
-        MinHeight = 540;
+        MinHeight = 480;
+        ResizeMode = ResizeMode.CanResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         FlowDirection = FlowDirection.RightToLeft;
         Background = Brush("#081321");
@@ -41,6 +43,7 @@ public sealed class ApplicationSettingsWindow : Window
 
         ConfigureControls(current);
         Content = BuildContent();
+        SoftBoxLocalization.Apply(this);
     }
 
     private void ConfigureControls(PhoneLabSettings settings)
@@ -68,6 +71,11 @@ public sealed class ApplicationSettingsWindow : Window
         _uiScale.ItemsSource = new[] { 0.70, 0.80, 0.90, 1.00, 1.05 };
         _uiScale.SelectedItem = settings.UiScale;
         if (_uiScale.SelectedItem is null) _uiScale.SelectedItem = 1.0;
+
+        _language.Items.Add(new ComboBoxItem { Content = "العربية", Tag = "ar" });
+        _language.Items.Add(new ComboBoxItem { Content = "English", Tag = "en" });
+        _language.SelectedValuePath = "Tag";
+        _language.SelectedValue = settings.UiLanguage;
     }
 
     private UIElement BuildContent()
@@ -100,6 +108,7 @@ public sealed class ApplicationSettingsWindow : Window
         AddCheck(content, _autoAgent);
         AddCombo(content, "الحد الأقصى للأجهزة المتزامنة في Batch", _concurrency);
         AddCombo(content, "تكبير / تصغير واجهة الكمبيوتر", _uiScale);
+        AddCombo(content, "لغة التطبيق", _language);
 
         var note = new Border
         {
@@ -127,7 +136,12 @@ public sealed class ApplicationSettingsWindow : Window
         _status.Margin = new Thickness(0, 10, 0, 0);
         content.Children.Add(_status);
 
-        root.Children.Add(content);
+        root.Children.Add(new ScrollViewer
+        {
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = content
+        });
         return root;
     }
 
@@ -168,11 +182,14 @@ public sealed class ApplicationSettingsWindow : Window
                 AutoInstallAgent: _autoAgent.IsChecked == true,
                 AutoInspectOnConnect: _autoInspect.IsChecked == true,
                 MaximumBatchConcurrency: _concurrency.SelectedItem is int limit ? limit : 3,
-                UiScale: _uiScale.SelectedItem is double scale ? scale : 1.0);
+                UiScale: _uiScale.SelectedItem is double scale ? scale : 1.0,
+                UiLanguage: _language.SelectedValue?.ToString() ?? "ar");
 
             await _service.SaveAsync(settings);
             _apply(settings);
-            _status.Text = "تم حفظ الإعدادات وتطبيقها.";
+            SoftBoxLocalization.SetLanguage(settings.UiLanguage);
+            SoftBoxLocalization.Apply(this);
+            _status.Text = SoftBoxLocalization.Translate("تم حفظ الإعدادات وتطبيقها.");
         }
         catch (Exception ex)
         {

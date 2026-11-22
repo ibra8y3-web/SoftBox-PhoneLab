@@ -9,6 +9,7 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        SoftBoxLocalization.Install();
         SoftBoxDesktopTelemetry.Initialize(this);
     }
 
