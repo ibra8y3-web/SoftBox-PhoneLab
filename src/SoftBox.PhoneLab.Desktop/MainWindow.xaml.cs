@@ -126,6 +126,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             try
             {
                 _settings = await _settingsService.LoadAsync();
+                ApplyUiScaleVisual(_settings.UiScale);
             }
             catch (Exception ex)
             {
@@ -1340,6 +1341,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ApplyApplicationSettings(PhoneLabSettings settings)
     {
         _settings = PhoneLabSettingsService.Validate(settings);
+        ApplyUiScaleVisual(_settings.UiScale);
         _timer.Interval = TimeSpan.FromSeconds(_settings.DiscoveryIntervalSeconds);
         if (_settings.AutoDiscoverDevices)
         {
@@ -1352,6 +1354,44 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         StatusMessage = "تم تطبيق إعدادات اكتشاف الأجهزة وعمليات الاتصال. التغييرات محفوظة للمرة القادمة.";
         Notify(nameof(StatusMessage));
+    }
+
+    private void ApplyUiScaleVisual(double requestedScale)
+    {
+        var screenFitScale = Math.Min(
+            SystemParameters.WorkArea.Width / 1640.0,
+            SystemParameters.WorkArea.Height / 1000.0);
+        var scale = Math.Clamp(Math.Min(requestedScale, screenFitScale), 0.70, 1.05);
+        MainLayoutRoot.LayoutTransform = new ScaleTransform(scale, scale);
+        UiScaleLabel.Text = scale.ToString("P0", System.Globalization.CultureInfo.InvariantCulture);
+        Width = 1640 * scale;
+        Height = 1000 * scale;
+        MinWidth = 1320 * scale;
+        MinHeight = 820 * scale;
+    }
+
+    private async void DecreaseUiScale_Click(object sender, RoutedEventArgs e)
+        => await SetUiScaleAsync(Math.Max(0.70, Math.Round(_settings.UiScale - 0.05, 2)));
+
+    private async void IncreaseUiScale_Click(object sender, RoutedEventArgs e)
+        => await SetUiScaleAsync(Math.Min(1.05, Math.Round(_settings.UiScale + 0.05, 2)));
+
+    private async Task SetUiScaleAsync(double scale)
+    {
+        try
+        {
+            var updated = PhoneLabSettingsService.Validate(_settings with { UiScale = scale });
+            await _settingsService.SaveAsync(updated);
+            _settings = updated;
+            ApplyUiScaleVisual(_settings.UiScale);
+            StatusMessage = "تم حفظ حجم واجهة الكمبيوتر.";
+            Notify(nameof(StatusMessage));
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تعذر حفظ حجم الواجهة: " + ex.Message,
+                "SoftBox", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void OpenActivityCenter(int initialTab, bool filterToSelectedDevice)
