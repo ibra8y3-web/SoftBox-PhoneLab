@@ -31,9 +31,11 @@ internal static class Program
         string? responsePath = null;
         try
         {
+            var stagingRoot = GetStagingRoot();
             if (args.Length == 2 && args[0] == "--self-test")
             {
                 responsePath = Path.GetFullPath(args[1]);
+                Under(stagingRoot, responsePath);
                 await WriteAsync(responsePath, new(true, ApiVersion,
                     JsonSerializer.Serialize(new { appContainer = true, apiVersion = ApiVersion }), null, DateTimeOffset.UtcNow));
                 return 0;
@@ -43,9 +45,8 @@ internal static class Program
                 throw new InvalidDataException("Invalid PluginHost command line.");
             var requestPath = Path.GetFullPath(args[1]);
             responsePath = Path.GetFullPath(args[3]);
-            var root = Path.GetFullPath(AppContext.BaseDirectory);
-            Under(root, requestPath);
-            Under(root, responsePath);
+            Under(stagingRoot, requestPath);
+            Under(stagingRoot, responsePath);
 
             var info = new FileInfo(requestPath);
             if (!info.Exists || info.Length is <= 0 or > MaxRequest)
@@ -53,7 +54,7 @@ internal static class Program
             var request = JsonSerializer.Deserialize<Request>(await File.ReadAllTextAsync(requestPath))
                 ?? throw new InvalidDataException("Host request JSON is invalid.");
             var plugin = Path.GetFullPath(request.PluginPath);
-            Under(root, plugin);
+            Under(stagingRoot, plugin);
             if (!File.Exists(plugin) || !plugin.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Native plugin DLL is missing.");
             if (Encoding.UTF8.GetByteCount(request.Json) > MaxRequest)
@@ -137,6 +138,15 @@ internal static class Program
             return result != 0;
         }
         finally { CloseHandle(token); }
+    }
+
+    private static string GetStagingRoot()
+    {
+        var runtimeDirectory = Path.GetFullPath(AppContext.BaseDirectory)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var parent = Directory.GetParent(runtimeDirectory)
+            ?? throw new InvalidDataException("PluginHost runtime is not inside a staging directory.");
+        return Path.GetFullPath(parent.FullName);
     }
 
     private static void Under(string root, string path)
