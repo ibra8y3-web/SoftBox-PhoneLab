@@ -1040,6 +1040,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenSupportBundle":
                 new SupportBundleWindow { Owner = this }.Show();
                 break;
+            case "OpenSupportCenter":
+                new SupportCenterWindow { Owner = this }.Show();
+                break;
             case "OpenUpdateCenter":
                 new UpdateCenterWindow { Owner = this }.Show();
                 break;
