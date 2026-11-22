@@ -392,6 +392,71 @@ public sealed class SoftBoxAccountService
     }
 
     /// <summary>
+    /// Applies a password recovery only after the support authorization service has verified
+    /// the signed owner approval and atomically consumed its grant and request identifiers.
+    /// Internal visibility prevents the desktop UI from bypassing signature verification.
+    /// </summary>
+    internal async Task<AuthenticatedSoftBoxUser> RecoverPasswordWithSignedSupportGrantAsync(
+        SoftBoxSupportApprovalPayload approval,
+        string userName,
+        string newPassword,
+        CancellationToken cancellationToken = default)
+    {
+        if (approval.Action != SoftBoxSupportAction.PasswordRecovery ||
+            approval.GrantId == Guid.Empty || approval.RequestId == Guid.Empty ||
+            approval.InstallationId == Guid.Empty)
+            throw new UnauthorizedAccessException("موافقة استرداد كلمة المرور غير صالحة.");
+        var normalized = NormalizeUserName(userName);
+        if (!normalized.Equals(approval.SubjectUserName, StringComparison.OrdinalIgnoreCase))
+            throw new UnauthorizedAccessException("الموافقة صادرة لمستخدم مختلف.");
+        ValidatePassword(newPassword);
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            var data = await LoadLockedAsync(cancellationToken);
+            var account = data.Accounts.FirstOrDefault(x =>
+                x.UserName.Equals(normalized, StringComparison.OrdinalIgnoreCase));
+            if (account is null || !account.IsEnabled)
+                throw new SoftBoxAuthenticationException("الحساب المطلوب غير موجود أو معطل.");
+            var now = DateTimeOffset.UtcNow;
+            SetPassword(account, newPassword);
+            account.FailedLoginAttempts = 0;
+            account.LockedUntilUtc = null;
+            account.LastLoginAtUtc = now;
+            account.UpdatedAtUtc = now;
+            AddAudit(data, null, account.Id, "PasswordRecoveredWithSignedSupportApproval", account.UserName,
+                "أعيد تعيين كلمة مرور الحساب بموافقة دعم موقعة ومقيدة بهذا التثبيت والطلب.");
+            await SaveLockedAsync(data, cancellationToken);
+            return ToAuthenticatedUser(account, now);
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
+    /// Deletes only users.json after the authorization service has consumed a valid signed
+    /// ResetLocalAccountDatabase grant. Support identity and replay state live outside this file.
+    /// </summary>
+    internal async Task ResetLocalAccountDatabaseWithSignedGrantAsync(
+        SoftBoxSupportApprovalPayload approval,
+        CancellationToken cancellationToken = default)
+    {
+        if (approval.Action != SoftBoxSupportAction.ResetLocalAccountDatabase ||
+            approval.GrantId == Guid.Empty || approval.RequestId == Guid.Empty ||
+            approval.InstallationId == Guid.Empty || !string.IsNullOrEmpty(approval.SubjectUserName))
+            throw new UnauthorizedAccessException("موافقة تصفير قاعدة الحسابات غير صالحة.");
+
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(_storePath))
+                File.Delete(_storePath);
+        }
+        finally { _gate.Release(); }
+    }
+
+    /// <summary>
     /// Resets only the named local account password when a valid, unused installation-bound
     /// support recovery code is supplied. Every accepted code is consumed atomically.
     /// </summary>
