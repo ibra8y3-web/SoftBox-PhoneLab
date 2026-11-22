@@ -8,7 +8,11 @@ public enum SoftBoxSupportAction { PasswordRecovery, ResetLocalAccountDatabase }
 
 public sealed record SoftBoxSupportRequest(
     int Version, Guid RequestId, Guid InstallationId, string Nonce,
-    SoftBoxSupportAction Action, string SubjectUserName, DateTimeOffset CreatedAtUtc, DateTimeOffset ExpiresAtUtc);
+    SoftBoxSupportAction Action, string SubjectUserName, DateTimeOffset CreatedAtUtc, DateTimeOffset ExpiresAtUtc)
+{
+    /// <summary>Informational workstation label; authorization remains bound to InstallationId.</summary>
+    public string DeviceLabel { get; init; } = string.Empty;
+}
 
 public sealed record SoftBoxSupportApprovalPayload(
     int Version, Guid GrantId, Guid RequestId, Guid InstallationId, string Nonce,
@@ -32,6 +36,9 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEmU3Toj3BJ0ngCqWpbNI/a9qll7ZF
 hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
 -----END PUBLIC KEY-----
 """;
+    // Provision this slot only with the PEM exported by the initialized owner Android app.
+    // Never put an Android private key in this repository.
+    private const string AndroidPinnedPublicKeyPem = "NOT_CONFIGURED_ANDROID_SUPPORT_PUBLIC_KEY";
     private static readonly TimeSpan RequestLifetime = TimeSpan.FromHours(24);
     private static readonly TimeSpan MaximumGrantLifetime = TimeSpan.FromHours(24);
     private static readonly System.Text.Json.JsonSerializerOptions JsonOptions = CreateJsonOptions();
@@ -40,43 +47,31 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
     private readonly string _pendingPath;
     private readonly string _ledgerPath;
     private readonly string _lockPath;
-    private readonly string _trustedPublicKeyPem;
+    private readonly IReadOnlyList<string> _trustedPublicKeyPems;
 
     public Guid InstallationId { get; }
-    public bool IsTrustedKeyConfigured
+    public bool IsTrustedKeyConfigured => _trustedPublicKeyPems.Count > 0;
+
+    /// <summary>Fingerprint of the first trusted key, retained for Windows-manager compatibility.</summary>
+    public string? TrustedPublicKeyFingerprint =>
+        _trustedPublicKeyPems.Count == 0 ? null : ComputeFingerprint(_trustedPublicKeyPems[0]);
+
+    /// <summary>Fingerprints for every trusted owner key (Windows and Android when provisioned).</summary>
+    public IReadOnlyList<string> TrustedPublicKeyFingerprints =>
+        _trustedPublicKeyPems.Select(ComputeFingerprint).ToArray();
+
+    private static string ComputeFingerprint(string pem)
     {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(_trustedPublicKeyPem) ||
-                _trustedPublicKeyPem.Contains("NOT_CONFIGURED", StringComparison.Ordinal))
-                return false;
-            try
-            {
-                using var key = ECDsa.Create();
-                key.ImportFromPem(_trustedPublicKeyPem);
-                return key.KeySize == 256;
-            }
-            catch (Exception ex) when (ex is ArgumentException or CryptographicException)
-            {
-                return false;
-            }
-        }
+        using var key = ECDsa.Create();
+        key.ImportFromPem(pem);
+        if (key.KeySize != 256) throw new CryptographicException("مفتاح دعم المالك يجب أن يكون P-256.");
+        var encoded = key.ExportSubjectPublicKeyInfo();
+        try { return Convert.ToHexString(SHA256.HashData(encoded)); }
+        finally { CryptographicOperations.ZeroMemory(encoded); }
     }
 
-    public string? TrustedPublicKeyFingerprint
-    {
-        get
-        {
-            if (!IsTrustedKeyConfigured) return null;
-            using var key = ECDsa.Create();
-            key.ImportFromPem(_trustedPublicKeyPem);
-            var encoded = key.ExportSubjectPublicKeyInfo();
-            try { return Convert.ToHexString(SHA256.HashData(encoded)); }
-            finally { CryptographicOperations.ZeroMemory(encoded); }
-        }
-    }
-
-    public SoftBoxSupportAuthorizationService(string? rootDirectory = null, string? trustedPublicKeyPem = null)
+    public SoftBoxSupportAuthorizationService(string? rootDirectory = null, string? trustedPublicKeyPem = null,
+        IEnumerable<string>? trustedPublicKeyPems = null)
     {
         _root = Path.GetFullPath(rootDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -85,7 +80,22 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
         _pendingPath = Path.Combine(_root, "pending-request.dpapi");
         _ledgerPath = Path.Combine(_root, "consumed-grants.dpapi");
         _lockPath = Path.Combine(_root, "authorization.lock");
-        _trustedPublicKeyPem = trustedPublicKeyPem ?? PinnedPublicKeyPem;
+        var configuredKeys = trustedPublicKeyPems?.ToArray()
+            ?? (trustedPublicKeyPem is not null
+                ? [trustedPublicKeyPem]
+                : new[] { PinnedPublicKeyPem, AndroidPinnedPublicKeyPem });
+        _trustedPublicKeyPems = configuredKeys
+            .Where(pem => !string.IsNullOrWhiteSpace(pem) &&
+                !pem.Contains("NOT_CONFIGURED", StringComparison.Ordinal))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        foreach (var pem in _trustedPublicKeyPems)
+        {
+            using var key = ECDsa.Create();
+            key.ImportFromPem(pem);
+            if (key.KeySize != 256)
+                throw new CryptographicException("كل مفاتيح دعم SoftBox الموثوقة يجب أن تكون P-256.");
+        }
         InstallationId = LoadOrCreateInstallationId();
     }
 
@@ -102,7 +112,10 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
         var request = new SoftBoxSupportRequest(
             ProtocolVersion, Guid.NewGuid(), InstallationId,
             Convert.ToHexString(RandomNumberGenerator.GetBytes(32)),
-            action, subjectUserName, now, now.Add(RequestLifetime));
+            action, subjectUserName, now, now.Add(RequestLifetime))
+        {
+            DeviceLabel = Environment.MachineName
+        };
         WriteProtectedJson(_pendingPath, request, PendingPurpose);
         return JsonSerializer.Serialize(request, JsonOptions);
     }
@@ -166,12 +179,8 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
             payload.ExpiresAtUtc > pending.ExpiresAtUtc)
             throw new UnauthorizedAccessException("الموافقة أو الطلب منتهٍ أو أن مدة الصلاحية غير مقبولة.");
 
-        using var publicKey = ECDsa.Create();
-        try { publicKey.ImportFromPem(_trustedPublicKeyPem); }
-        catch (Exception ex) when (ex is ArgumentException or CryptographicException)
-        { throw new CryptographicException("مفتاح التحقق العام المثبّت داخل SoftBox غير صالح.", ex); }
-        if (!VerifySignature(approval, publicKey))
-            throw new UnauthorizedAccessException("التوقيع الرقمي للموافقة غير صحيح أو تم تعديل محتواها.");
+        if (!VerifySignatureWithAnyTrustedKey(approval))
+            throw new UnauthorizedAccessException("التوقيع الرقمي للموافقة غير صحيح أو لم يصدر من أحد مفاتيح المالك الموثوقة المثبّتة داخل SoftBox.");
 
         var ledger = ReadProtectedJson<ConsumedGrantLedger>(_ledgerPath, LedgerPurpose) ?? new ConsumedGrantLedger();
         ledger.GrantIds ??= [];
@@ -224,6 +233,19 @@ hYXHXEg76q2htxnFXUcFNsba6NmyKv5X2Hpd19XaWrZm2OsE+46RFJeaWA==
         try { return new FileStream(_lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
         catch (IOException ex)
         { throw new InvalidOperationException("توجد عملية دعم أخرى تعمل على هذا التثبيت. أغلقها ثم أعد المحاولة.", ex); }
+    }
+
+    private bool VerifySignatureWithAnyTrustedKey(SoftBoxSupportApproval approval)
+    {
+        foreach (var pem in _trustedPublicKeyPems)
+        {
+            using var key = ECDsa.Create();
+            try { key.ImportFromPem(pem); }
+            catch (Exception ex) when (ex is ArgumentException or CryptographicException)
+            { throw new CryptographicException("أحد مفاتيح التحقق العامة المثبّتة داخل SoftBox غير صالح.", ex); }
+            if (key.KeySize == 256 && VerifySignature(approval, key)) return true;
+        }
+        return false;
     }
 
     private static bool VerifySignature(SoftBoxSupportApproval approval, ECDsa publicKey)
