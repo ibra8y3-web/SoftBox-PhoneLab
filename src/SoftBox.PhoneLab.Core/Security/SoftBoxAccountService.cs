@@ -71,7 +71,7 @@ public sealed class SoftBoxAccountService
     private const int SaltBytes = 16;
     private const int MaximumAccounts = 100;
     private const int MaximumAuditEntries = 5_000;
-    private const int MaximumStoreBytes = 2 * 1024 * 1024;
+    private const int MaximumStoreBytes = 8 * 1024 * 1024;
     private const int MaximumSupportRecoveryCodes = 10_000;
     private const int MaximumFailedAttempts = 5;
     private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
