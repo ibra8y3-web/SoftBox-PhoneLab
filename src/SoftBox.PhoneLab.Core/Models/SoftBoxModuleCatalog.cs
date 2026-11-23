@@ -201,6 +201,7 @@ public static class SoftBoxModuleCatalog
             ModuleImplementationStatus.InDevelopment,
             [
                 new("agent-tests", "اختبارات الشاشة واللمس والصوت والاهتزاز والحساسات", "Agent hardware screening tests", "اختبارات تتطلب موافقة المستخدم على الهاتف؛ النتائج لا تعادل قياسات معملية معايرة.", ModuleImplementationStatus.Implemented, "OpenPhoneTests"),
+                new("diagnostic-evidence-history", "سجل أدلة نتائج المكونات المشفر محليًا", "Encrypted local component diagnostic evidence history", "يحفظ نتائج DiagnosticEngine الفعلية مع الحالة والدليل ومصدر القراءة/الاختبار والتاريخ، ويستخدم بصمة SHA-256 ورقمًا تسلسليًا مقنّعًا وتشفير Windows DPAPI. الحالات المتطابقة المتكررة تُزال من التكرار؛ عدم الاختبار لا يتحول إلى نجاح.", ModuleImplementationStatus.InDevelopment, "OpenDiagnosticEvidenceHistory"),
                 new("camera-tests", "جرد Camera2 والتقاط صور وفحص AF", "Camera2 route tests", "المسارات التي يكشفها مصنع الجهاز فقط؛ لا يقيس جودة العدسة بصريًا. تُدار اختبارات Agent من نفس شاشة تشخيص العتاد.", ModuleImplementationStatus.Implemented),
                 new("screen-photo", "تحليل صورة فعلية للشاشة", "Physical screen photo analysis", "يعرض مرشحات بكسلات وتفاوت إضاءة، وليس إثباتًا نهائيًا لعيب الشاشة.", ModuleImplementationStatus.Implemented, "AnalyzeScreen"),
                 new("bench-measurements", "قراءات جهاز قياس خارجي متوافق", "External bench measurements", "بروتوكول Serial JSON-Lines للقراءات فقط؛ لا يصدر أوامر طاقة.", ModuleImplementationStatus.Implemented, "MeasurementRig"),
@@ -404,7 +405,7 @@ public static class SoftBoxModuleCatalog
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenAndroidServiceOperations", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenUsbDriverSignatureVerifier", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenDashboardAnalytics", "OpenSupportBundle", "OpenSupportCenter", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenSamsungOdinAssistant", "OpenSamsungServiceOperations", "OpenSamsungOfficialTools", "OpenXiaomiFastbootService", "OpenXiaomiOfficialTools", "OpenBrandOfficialTools", "OpenQualcommRecovery", "OpenMediaTekRecovery", "OpenAndroidLogAnalyzer", "OpenAndroidBackupScheduler", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenDeviceCapabilityCenter", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
-        "OpenUniversalDeviceDiscovery", "OpenAirPlayReceiver", "OpenLockRecoveryAssistant",
+        "OpenUniversalDeviceDiscovery", "OpenAirPlayReceiver", "OpenLockRecoveryAssistant", "OpenDiagnosticEvidenceHistory",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement", "OpenDeviceAccessRecoveryCenter"
     };
 
