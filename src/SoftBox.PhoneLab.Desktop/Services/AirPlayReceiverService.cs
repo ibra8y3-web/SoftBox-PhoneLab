@@ -7,29 +7,35 @@ using SoftBox.PhoneLab.Desktop.Interop;
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 /// <summary>
-/// Starts a separately installed GPL-3 AirPlay receiver and docks its native viewing window
+/// Starts a separately installed AirPlay-Windows receiver and docks its native viewing window
 /// into the existing SoftBox phone-screen host. SoftBox does not bundle or redistribute it.
+/// All start/stop operations are serialized so two UI actions cannot launch or tear down
+/// overlapping receiver processes.
 /// </summary>
 public sealed class AirPlayReceiverService : IAsyncDisposable
 {
     private const uint WmClose = 0x0010;
-    private static readonly TimeSpan WindowStartupTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan WindowStartupTimeout = TimeSpan.FromSeconds(20);
     private readonly ConcurrentQueue<string> _recentOutput = new();
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
     private Process? _process;
     private ScrcpyWindowHost? _host;
     private IntPtr _windowHandle;
 
     public event Action<string>? OutputReceived;
+
     public bool IsRunning
     {
         get
         {
-            try { return _process is { HasExited: false }; }
+            var process = Volatile.Read(ref _process);
+            try { return process is { HasExited: false }; }
             catch (ObjectDisposedException) { return false; }
             catch (InvalidOperationException) { return false; }
         }
     }
-    public int? ProcessId => IsRunning ? _process?.Id : null;
+
+    public int? ProcessId => IsRunning ? Volatile.Read(ref _process)?.Id : null;
     public string RecentOutput => string.Join(Environment.NewLine, _recentOutput.ToArray());
 
     public static string ValidateReceiverPath(string path)
@@ -52,12 +58,28 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(host);
+        await _lifecycleGate.WaitAsync(cancellationToken);
+        try
+        {
+            return await StartCoreAsync(executablePath, host, cancellationToken);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
+    private async Task<string> StartCoreAsync(
+        string executablePath,
+        ScrcpyWindowHost host,
+        CancellationToken cancellationToken)
+    {
         if (!host.IsLoaded || host.NativeHostHandle == IntPtr.Zero)
             throw new InvalidOperationException("مساحة شاشة SoftBox لم تجهز بعد. افتح Phone Link Studio ثم أعد المحاولة.");
         if (IsRunning)
             throw new InvalidOperationException("جلسة AirPlay تعمل بالفعل. أوقف الجلسة الحالية قبل تشغيل أخرى.");
 
-        await StopAsync();
+        await StopCoreAsync();
         var fullPath = ValidateReceiverPath(executablePath);
         while (_recentOutput.TryDequeue(out _)) { }
 
@@ -70,6 +92,7 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+        // Upstream AirPlay-Windows documents --log as its supported logging switch.
         start.ArgumentList.Add("--log");
 
         var process = new Process { StartInfo = start, EnableRaisingEvents = true };
@@ -86,7 +109,7 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         {
             if (!process.Start())
                 throw new InvalidOperationException("Windows did not start the AirPlay receiver process.");
-            _process = process;
+            Volatile.Write(ref _process, process);
             _host = host;
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
@@ -119,17 +142,29 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         }
         catch
         {
-            await StopAsync();
+            await StopCoreAsync();
             throw;
         }
     }
 
-    public async Task StopAsync()
+    public async Task StopAsync(CancellationToken cancellationToken = default)
     {
-        var process = _process;
+        await _lifecycleGate.WaitAsync(cancellationToken);
+        try
+        {
+            await StopCoreAsync();
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
+    private async Task StopCoreAsync()
+    {
+        var process = Interlocked.Exchange(ref _process, null);
         var host = _host;
         var window = _windowHandle;
-        _process = null;
         _host = null;
         _windowHandle = IntPtr.Zero;
 
@@ -139,6 +174,7 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
             {
                 if (window != IntPtr.Zero)
                     _ = PostMessage(window, WmClose, IntPtr.Zero, IntPtr.Zero);
+
                 var exited = await Task.Run(() => process.WaitForExit(3500));
                 if (!exited && !process.HasExited)
                 {
@@ -154,6 +190,7 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
             try { host?.DetachWindow(); } catch { }
             try { process?.Dispose(); } catch { }
         }
+
         if (process is not null)
             AddOutput("AirPlay receiver process stopped.");
     }
