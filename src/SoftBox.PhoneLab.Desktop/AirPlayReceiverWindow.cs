@@ -18,6 +18,7 @@ public sealed class AirPlayReceiverWindow : Window
 {
     private const string UpstreamUrl = "https://github.com/moieric11/AirPlay-Windows";
     private readonly PhoneLabSettingsService _settingsService;
+    private readonly AirPlayReceiverService _receiver;
     private readonly SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost _screenHost;
     private readonly Func<Task> _stopExistingScreenSession;
     private readonly TextBox _executablePath = new();
@@ -26,15 +27,16 @@ public sealed class AirPlayReceiverWindow : Window
     private readonly TextBlock _status = new();
     private readonly Button _start = new();
     private readonly Button _stop = new();
-    private readonly AirPlayReceiverService _receiver = new();
 
     public AirPlayReceiverWindow(
         PhoneLabSettings settings,
         PhoneLabSettingsService settingsService,
+        AirPlayReceiverService receiver,
         SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost screenHost,
         Func<Task> stopExistingScreenSession)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
         _screenHost = screenHost ?? throw new ArgumentNullException(nameof(screenHost));
         _stopExistingScreenSession = stopExistingScreenSession ?? throw new ArgumentNullException(nameof(stopExistingScreenSession));
         Title = "SoftBox | iPhone AirPlay Screen Receiver";
@@ -76,7 +78,11 @@ public sealed class AirPlayReceiverWindow : Window
 
         _receiver.OutputReceived += OnReceiverOutput;
         Content = BuildContent();
-        Closed += async (_, _) => await _receiver.DisposeAsync();
+        Closed += async (_, _) =>
+        {
+            _receiver.OutputReceived -= OnReceiverOutput;
+            await _receiver.StopAsync();
+        };
     }
 
     private UIElement BuildContent()
