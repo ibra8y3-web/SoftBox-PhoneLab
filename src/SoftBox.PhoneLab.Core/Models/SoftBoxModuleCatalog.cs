@@ -47,10 +47,11 @@ public static class SoftBoxModuleCatalog
                 new("dashboard-reports", "إحصائيات العمليات والتقارير", "Operations analytics", "نافذة تحليلات فعلية من سجل الأجهزة والإشعارات المحلي: عدد الأجهزة المسجلة، أحداث 24 ساعة و7 و30 يومًا، الإشعارات غير المقروءة، أكثر العمليات والفئات تكرارًا، واتجاه النشاط اليومي لآخر 14 يومًا. لا تدّعي وجود طابور مهام خلفي.", ModuleImplementationStatus.Tested, "OpenDashboardAnalytics")
             ]),
         new("device-center", 2, "مركز الأجهزة", "مركز الأجهزة", "Device Center",
-            "اكتشاف أجهزة Android المصرح بها وإظهار حالة اتصال كل جهاز.",
+            "اكتشاف الأجهزة المحمولة عبر Windows USB PnP وADB، وفصل هوية USB عن تصريح نظام الهاتف ومسار الشاشة المدعوم.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("adb-discovery", "اكتشاف ADB تلقائيًا", "Automatic ADB discovery", "فحص دوري كل 3 ثوانٍ مع التمييز بين الجهاز المصرح به وغير المصرح.", ModuleImplementationStatus.Implemented, "RefreshDevices"),
+                new("universal-usb-discovery", "اكتشاف أجهزة USB متعددة الأنظمة والشركات", "Cross-vendor USB device discovery", "يعرض Windows PnP وADB كقناتين منفصلتين، ويستدل على الشركة من Manufacturer/FriendlyName/VID دون ادعاء تحديد الموديل أو ربط USB بـADB بالتخمين. يعرض مسار النقل المعروف وحدود الشاشة والتحكم.", ModuleImplementationStatus.InDevelopment, "OpenUniversalDeviceDiscovery"),
                 new("multi-device-list", "عرض أكثر من جهاز", "Multi-device list", "يمكن عرض عدة أجهزة واختيار جهاز للفحص؛ التنفيذ الجماعي المتوازي لم يبدأ.", ModuleImplementationStatus.Implemented),
                 new("wireless-adb", "اتصال ADB لاسلكي", "Wireless ADB pairing", "ينفذ اقتران Android Wireless debugging برمز الهاتف عبر adb pair ثم الاتصال بمنفذ Wireless debugging عبر adb connect. يتطلب Android 11+ وشبكة Wi-Fi مشتركة؛ رمز الاقتران لا يُحفظ في إعدادات SoftBox أو تقاريره. منطق البروتوكول مغطى باختبارات آلية، ولم يُسجل بعد تحقق على هاتف فعلي.", ModuleImplementationStatus.Tested, "OpenWirelessAdbPairing")
             ]),
@@ -186,13 +187,14 @@ public static class SoftBoxModuleCatalog
                 new("backup-scheduler", "جدولة النسخ المشفر عند التوصيل أو يوميًا أو أسبوعيًا", "Scheduled automatic encrypted backups", "يحفظ الجداول وكلمات المرور في DPAPI، ويشغّل عامل Windows Task Scheduler كل 5 دقائق حتى بعد إغلاق واجهة SoftBox، بشرط بقاء حساب Windows الحالي مسجلًا واتصال الهاتف وتصريح ADB. يحجز الجداول بين العمليات لمنع التكرار وينفذ ملفات SBX مشفرة. لا يعمل عند تسجيل الخروج أو إيقاف الكمبيوتر، ولا ينسخ بيانات التطبيقات الخاصة أو النظام.", ModuleImplementationStatus.InDevelopment, "OpenAndroidBackupScheduler")
             ]),
         new("phone-link", 14, "الاتصال والتشخيص", "استوديو الهاتف", "Phone Link Studio",
-            "عرض وتحكم مباشر في شاشة Android عبر scrcpy مع تسجيل MP4/MKV إلى ملف محلي؛ إدارة عدة جلسات عرض مستقلة ما زالت غير مكتملة.",
+            "منظومة عرض متعددة المسارات: Android عبر ADB/scrcpy، وiPhone عبر مستقبل AirPlay مستقل للعرض فقط؛ التحكم منفصل عن العرض وتظل بروتوكولات الشركات الأخرى مرتبطة بدعم النظام والموديل.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("screen-mirror", "عرض والتحكم في شاشة هاتف مصرح به", "Authorized screen mirroring and control", "يستخدم scrcpy الرسمي؛ يحتاج اتصال ADB مصرحًا به.", ModuleImplementationStatus.Implemented, "MirrorScreen"),
                 new("screen-record", "تسجيل شاشة الهاتف الفعلية وحفظ MP4/MKV", "Android screen recording", "يشغّل scrcpy على الجهاز المحدد مع خيار --record إلى مسار يختاره المستخدم؛ عند الإيقاف يتم إرسال WM_CLOSE لإنهاء الحاوية والتحقق من وجود ملف غير فارغ.", ModuleImplementationStatus.Implemented, "OpenScreenRecording"),
                 new("multi-session", "إدارة عدة جلسات عرض مستقلة", "Multi-device screen sessions", "نافذة عرض متعددة حتى أربع جلسات scrcpy مستقلة؛ لكل جهاز عملية ونافذة مدمجة وإيقاف منفصل، مع مراقبة ADB والعملية والنافذة كل 5 ثوانٍ. أُضيف فحص get-state جديد مباشرة قبل إطلاق scrcpy بعد تجهيز الأداة؛ اختبار الهواتف المتعددة فعليًا ما زال مطلوبًا.", ModuleImplementationStatus.InDevelopment, "OpenMultiScreenSessions"),
-                new("session-live-adb-guard", "إعادة التحقق من تصريح ADB عند بدء كل جلسة", "Fresh ADB authorization before each screen session", "يعيد فحص get-state للـSerial المحدد بعد تنزيل/تجهيز scrcpy مباشرة قبل التشغيل؛ يمنع بدء جلسة عند unauthorized أو offline أو فقد الجهاز.", ModuleImplementationStatus.Tested)
+                new("session-live-adb-guard", "إعادة التحقق من تصريح ADB عند بدء كل جلسة", "Fresh ADB authorization before each screen session", "يعيد فحص get-state للـSerial المحدد بعد تنزيل/تجهيز scrcpy مباشرة قبل التشغيل؛ يمنع بدء جلسة عند unauthorized أو offline أو فقد الجهاز.", ModuleImplementationStatus.Tested),
+                new("ios-airplay-view", "عرض شاشة iPhone عبر AirPlay على Windows", "iPhone AirPlay screen viewing on Windows", "يشغّل مستقبل AirPlay-Windows مستقلًا اختاره المستخدم من ملفه الرسمي؛ يحتاج شبكة محلية مشتركة وتأكيد المستخدم من iPhone. مسار عرض فقط ولا يوفر تحكمًا باللمس أو تجاوز رمز القفل. لا يضمّن SoftBox برنامج GPL أو يعيد توزيعه.", ModuleImplementationStatus.InDevelopment, "OpenAirPlayReceiver")
             ]),
         new("hardware-diagnostics", 15, "الاتصال والتشخيص", "تشخيص العتاد", "Hardware Diagnostics",
             "توجد اختبارات Agent وCamera2 وقراءات النظام والقياس الخارجي؛ بعض الفحوص يدوية أو تتطلب معدات.",
@@ -235,7 +237,8 @@ public static class SoftBoxModuleCatalog
             [
                 new("firmware-precheck", "فحص أولي لبنية ملف Firmware وبصمته", "Firmware pre-inspection", "الفحص المحلي وSHA-256 متاحان في Firmware Center، ولا يثبتان توقيع الناشر أو التوافق.", ModuleImplementationStatus.Implemented),
                 new("recovery-gate", "بوابة فحص الشركة والموديل والتصريح وسلامة الملف والمخاطر", "Conservative recovery preflight", "يعيد حساب SHA-256 قبل التقييم، ويطلب Snapshot مطابقًا للجهاز المصرح به، ويعرض Passed/Failed/Unknown/Blocked مع الأدلة. CanProceed يبقى false لأن سلسلة ثقة الناشر والتوافق وAnti-Rollback وإثبات النسخة غير متاحة.", ModuleImplementationStatus.Implemented),
-                new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported)
+                new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported),
+                new("forgotten-lock-owner-guidance", "مساعد استرداد قفل الشاشة للمالك", "Owner-safe forgotten screen-lock recovery guidance", "يختار إرشادات الشركة الرسمية حسب النظام والموديل وإصدار One UI/OS وتوفر بيانات الحساب والنسخة الاحتياطية وإثبات الملكية. لا يخمن أو يقرأ PIN/Passcode، ولا يتجاوز FRP أو Activation Lock أو MDM، ولا ينفذ إعادة ضبط أو مسح.", ModuleImplementationStatus.InDevelopment, "OpenLockRecoveryAssistant")
             ]),
         new("workflow-automation", 20, "الأتمتة والإنتاجية", "أتمتة سير العمل", "Workflow Automation",
             "إنشاء وحفظ وتشغيل سلاسل فحص Android من خطوات قراءة فقط محددة مسبقًا مع تتبع النتائج والإلغاء.",
@@ -401,6 +404,7 @@ public static class SoftBoxModuleCatalog
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenAndroidServiceOperations", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenUsbDriverSignatureVerifier", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenDashboardAnalytics", "OpenSupportBundle", "OpenSupportCenter", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenSamsungOdinAssistant", "OpenSamsungServiceOperations", "OpenSamsungOfficialTools", "OpenXiaomiFastbootService", "OpenXiaomiOfficialTools", "OpenBrandOfficialTools", "OpenQualcommRecovery", "OpenMediaTekRecovery", "OpenAndroidLogAnalyzer", "OpenAndroidBackupScheduler", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenDeviceCapabilityCenter", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
+        "OpenUniversalDeviceDiscovery", "OpenAirPlayReceiver", "OpenLockRecoveryAssistant",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement", "OpenDeviceAccessRecoveryCenter"
     };
 
