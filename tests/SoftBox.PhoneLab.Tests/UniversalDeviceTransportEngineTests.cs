@@ -32,7 +32,7 @@ public sealed class UniversalDeviceTransportEngineTests
         var result = UniversalDeviceTransportEngine.Assess("OPPO", "Android Composite Device", "22D9", "0001", false);
 
         Assert.Contains("OPPO", result.DeviceFamily);
-        Assert.Contains("No screen stream", result.ScreenViewingRoute);
+        Assert.Contains("Miracast", result.ScreenViewingRoute);
         Assert.Contains("No control", result.RemoteControlRoute);
     }
 
