@@ -46,6 +46,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
     private readonly LocalActivityStore _activity = new();
+    private readonly DiagnosticEvidenceStore _diagnosticEvidenceStore = new();
     private readonly PhoneLabSettingsService _settingsService = new();
     private readonly SoftBoxAccountService _accountService;
     private AuthenticatedSoftBoxUser _currentUser;
@@ -709,6 +710,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ComponentsList.SelectedItem = Components.FirstOrDefault(x => x.Id == _selectedComponent?.Id)
             ?? Components.FirstOrDefault();
         BuildScene();
+
+        // Persist only evidence associated with the currently selected, authorized ADB device.
+        // The store masks the serial, uses a one-way fingerprint and protects the local file with DPAPI.
+        _ = PersistDiagnosticEvidenceAsync();
+    }
+
+    private async Task PersistDiagnosticEvidenceAsync()
+    {
+        var selected = SelectedDevice;
+        if (_snapshot is null || selected is not { IsAuthorized: true } ||
+            !_snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal) ||
+            Components.Count == 0)
+            return;
+
+        var source = _measurementSnapshot is not null && _agentSnapshot is not null
+            ? "ADB + PhoneLab Agent + external measurement rig"
+            : _agentSnapshot is not null
+                ? "ADB + PhoneLab Agent"
+                : _measurementSnapshot is not null
+                    ? "ADB + external measurement rig"
+                    : "ADB system information";
+
+        try
+        {
+            await _diagnosticEvidenceStore.RecordSnapshotAsync(
+                selected.Serial,
+                _snapshot.Manufacturer,
+                _snapshot.Model,
+                Components.Select(component => component.Diagnostic).ToArray(),
+                source);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "تعذر حفظ سجل أدلة التشخيص المحلي: " + ex.Message;
+            Notify(nameof(StatusMessage));
+        }
+    }
+
+    private void DiagnosticEvidenceHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireActionPermission("OpenDiagnosticEvidenceHistory", "فتح سجل أدلة الاختبارات")) return;
+        var serial = SelectedDevice is { IsAuthorized: true } device ? device.Serial : null;
+        new DiagnosticEvidenceHistoryWindow(_diagnosticEvidenceStore, serial)
+        { Owner = this }.ShowEmbedded(this);
     }
 
     private void Add(string label, string value) => DeviceFacts.Add(new PropertyLine(label, value));
@@ -1154,6 +1199,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new AirPlayReceiverWindow(_settings, _settingsService)
                 { Owner = this }.ShowEmbedded(this);
                 break;
+            case "OpenDiagnosticEvidenceHistory":
+            {
+                var evidenceSerial = SelectedDevice is { IsAuthorized: true } evidenceDevice ? evidenceDevice.Serial : null;
+                new DiagnosticEvidenceHistoryWindow(_diagnosticEvidenceStore, evidenceSerial)
+                { Owner = this }.ShowEmbedded(this);
+                break;
+            }
             case "OpenLockRecoveryAssistant":
                 new LockRecoveryAssistantWindow(
                     SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer,
