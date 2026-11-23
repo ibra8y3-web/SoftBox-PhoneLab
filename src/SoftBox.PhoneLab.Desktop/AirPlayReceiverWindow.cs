@@ -255,6 +255,12 @@ public sealed class AirPlayReceiverWindow : Window
                 _start.IsEnabled = false;
                 _stop.IsEnabled = true;
             }
+            else if (line.Contains("exited unexpectedly", StringComparison.OrdinalIgnoreCase))
+            {
+                _start.IsEnabled = true;
+                _stop.IsEnabled = false;
+                _status.Text = "توقفت عملية AirPlay بشكل غير متوقع. راجع سجل الأخطاء ثم أعد التشغيل بعد معالجة السبب.";
+            }
             else if (line.Contains("stopped", StringComparison.OrdinalIgnoreCase))
             {
                 _start.IsEnabled = true;
