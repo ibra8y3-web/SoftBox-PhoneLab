@@ -32,6 +32,10 @@ public sealed class SoftBoxAuthorizationPolicyTests
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidFileManager"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenWirelessAdbPairing"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "MirrorScreen"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneCenter"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhonePartsHistory"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneBatteryHealth"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneFunctionalTests"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidCommandCenter"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidWorkflow"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidBatchTools"));
@@ -44,6 +48,8 @@ public sealed class SoftBoxAuthorizationPolicyTests
     public void TechnicianCanRepairButCannotManageAccountsOrApplicationSecurity()
     {
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenAndroidAppManager"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenIPhoneFunctionalTests"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenAirPlayReceiver"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenWirelessAdbPairing"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenPartsInventory"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "OpenUserManagement"));
