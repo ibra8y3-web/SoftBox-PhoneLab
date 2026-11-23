@@ -41,6 +41,20 @@ public sealed class IPhoneDeviceInfoParserTests
     }
 
     [Fact]
+    public void AcceptsStandardApplePlistDoctypeWithoutResolvingExternalDtd()
+    {
+        const string xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0"><dict><key>ProductType</key><string>iPhone15,4</string></dict></plist>
+            """;
+
+        var result = IPhoneDeviceInfoParser.Parse(xml, "device-1234");
+
+        Assert.Equal("iPhone15,4", result.ProductType);
+    }
+
+    [Fact]
     public void DoesNotInterpretCurrentChargeAsBatteryHealth()
     {
         const string xml = """
