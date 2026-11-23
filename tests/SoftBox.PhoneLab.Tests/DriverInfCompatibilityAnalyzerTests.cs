@@ -42,7 +42,7 @@ public sealed class DriverInfCompatibilityAnalyzerTests
         Assert.Equal("11/20/2026,1.2.3.4", report.DriverVersion);
         Assert.Contains("PhoneModels.NTamd64.10.0...19041", report.MatchingModelSections);
         Assert.Contains("USB\\VID_1234&PID_5678", report.MatchedHardwareIds);
-        Assert.Contains("لا تثبت", report.Limitation);
+        Assert.Contains("توقيع CAT", report.Limitation);
     }
 
     [Fact]
@@ -122,12 +122,17 @@ public sealed class DriverInfCompatibilityAnalyzerTests
             %Phone%=Install,USB\VID_ABCD&PID_0001
             """;
 
-        var compatible = DriverInfCompatibilityAnalyzer.Analyze(
+        var x86Target = new WindowsDriverTarget(
+            new Version(10, 0, 19045), "x86", "Windows x86");
+        var x64Report = DriverInfCompatibilityAnalyzer.Analyze(
             inf, ["USB\\VID_ABCD&PID_0001"], Windows11X64);
+        var x86Compatible = DriverInfCompatibilityAnalyzer.Analyze(
+            inf, ["USB\\VID_ABCD&PID_0001"], x86Target);
         var mismatch = DriverInfCompatibilityAnalyzer.Analyze(
-            inf, ["USB\\VID_ABCD&PID_0002"], Windows11X64);
+            inf, ["USB\\VID_ABCD&PID_0002"], x86Target);
 
-        Assert.Equal(DriverInfMatchStatus.Compatible, compatible.Status);
+        Assert.Equal(DriverInfMatchStatus.ArchitectureMismatch, x64Report.Status);
+        Assert.Equal(DriverInfMatchStatus.Compatible, x86Compatible.Status);
         Assert.Equal(DriverInfMatchStatus.HardwareIdNotFound, mismatch.Status);
     }
 }
