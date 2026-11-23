@@ -209,7 +209,7 @@ public static class DriverInfCompatibilityAnalyzer
             deviceIds, versionMatches.Select(item => item.HardwareId).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             versionMatches.Select(item => item.SectionName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             "وُجد تطابق Hardware ID مطابق لمعمارية Windows وإصدارها في أقسام Models المشار إليها من [Manufacturer].",
-            "هذه مطابقة INF ثابتة فقط؛ لا تثبت توقيع CAT أو عضوية INF داخل CAT أو صلاحية الحزمة للتثبيت. تحقق من توقيع CAT وعضوية الملفات ومن تعليمات OEM قبل أي تثبيت.");
+            "هذه مطابقة INF مرشحة من النص الثابت. إذا كان الملف يعرّف عدة زخارف Models فقد يختار Windows قسمًا أكثر تخصيصًا؛ النتيجة لا تعادل قرار SetupAPI/Driver Store ولا تثبت توقيع CAT أو عضوية INF داخل CAT أو صلاحية الحزمة للتثبيت. تحقق من توقيع CAT وعضوية الملفات ومن اختيار Windows النهائي قبل أي تثبيت.");
     }
 
     private static Dictionary<string, List<string>> ParseSections(string content)
