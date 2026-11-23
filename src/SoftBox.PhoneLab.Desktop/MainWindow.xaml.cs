@@ -29,6 +29,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _processingBackupSchedules;
     private readonly PhoneDiscoveryService _discovery;
     private readonly WindowsUsbInventoryService _usbInventory = new();
+    private IReadOnlyList<WindowsUsbDevice> _lastUsbDevices = Array.Empty<WindowsUsbDevice>();
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
@@ -719,6 +720,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             var devices = await _usbInventory.EnumeratePresentDevicesAsync();
+            _lastUsbDevices = devices;
             var summary = UsbRecognitionSummary.Build(devices);
             if (string.Equals(summary, UsbRecognitionStatus, StringComparison.Ordinal)) return;
             UsbRecognitionStatus = summary;
@@ -726,6 +728,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            _lastUsbDevices = Array.Empty<WindowsUsbDevice>();
             var summary = "تعذر فحص Windows USB PnP: " + ex.Message;
             if (!string.Equals(summary, UsbRecognitionStatus, StringComparison.Ordinal))
             {
@@ -1112,11 +1115,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new UsbDoctorWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenUsbDriverCenter":
-                new UsbDriverCenterWindow(
-                    SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer,
-                    SelectedDevice?.Model ?? _snapshot?.Model)
+            {
+                var adbManufacturer = SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer;
+                var usbMatch = _lastUsbDevices
+                    .Select(device => new
+                    {
+                        Device = device,
+                        Resource = OemUsbDriverCatalog.FindForUsbIdentity(
+                            device.Manufacturer, device.FriendlyName, device.VendorId)
+                    })
+                    .FirstOrDefault(match => match.Resource is not null);
+
+                var adbResource = OemUsbDriverCatalog.FindForManufacturer(adbManufacturer);
+                var detectedResource = adbResource ?? usbMatch?.Resource;
+                var manufacturer = detectedResource?.Name ?? adbManufacturer;
+                var model = SelectedDevice?.Model ?? _snapshot?.Model;
+                var source = adbResource is not null ? "ADB" :
+                    usbMatch?.Resource is not null ? "Windows USB / VID" : "غير مؤكد";
+
+                new UsbDriverCenterWindow(manufacturer, model, source)
                 { Owner = this }.ShowEmbedded(this);
                 break;
+            }
             case "OpenQualcommUsbDiagnostics":
                 new UsbDoctorWindow("qualcomm") { Owner = this }.ShowEmbedded(this);
                 break;

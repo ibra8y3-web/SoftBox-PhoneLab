@@ -18,7 +18,7 @@ public sealed class UsbDriverCenterWindow : Window
     private readonly TextBlock _status = new();
     private OemUsbDriverResource? _selected;
 
-    public UsbDriverCenterWindow(string? manufacturer = null, string? model = null)
+    public UsbDriverCenterWindow(string? manufacturer = null, string? model = null, string detectionSource = "ADB")
     {
         Title = "SoftBox | Official OEM USB Driver Center";
         Width = 940;
@@ -40,11 +40,15 @@ public sealed class UsbDriverCenterWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         header.Children.Add(Text(
-            "موارد رسمية لأكثر من 15 شركة. اختر الشركة ثم افتح صفحة التنزيل الخاصة بها؛ قد تحتاج إلى تحديد رقم الموديل وإصدار Windows قبل تنزيل الحزمة.",
+            "موارد وروابط دعم رسمية لأكثر من 15 شركة. اختر الشركة ثم افتح صفحة التنزيل الخاصة بها؛ قد تحتاج إلى تحديد رقم الموديل وإصدار Windows قبل تنزيل الحزمة.",
             "#B7C9DE", 11));
         var detected = string.IsNullOrWhiteSpace(manufacturer)
-            ? "لم يتم تحديد شركة من الهاتف الحالي."
-            : $"هوية ADB الحالية: {manufacturer} {model}".Trim();
+            ? "لم يتم تحديد الشركة من ADB أو Windows USB."
+            : $"الشركة المقروءة من {detectionSource}: {manufacturer}";
+        if (!string.IsNullOrWhiteSpace(model) && model != "غير متاح")
+            detected += $" • الموديل: {model}";
+        else if (!string.IsNullOrWhiteSpace(manufacturer))
+            detected += " • الموديل الدقيق غير متاح من بيانات USB الحالية.";
         header.Children.Add(Text(detected, "#8FC7EA", 10));
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);

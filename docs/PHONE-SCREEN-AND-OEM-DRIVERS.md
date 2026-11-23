@@ -12,9 +12,9 @@ The component diagnostic list is initialized when the main window starts, includ
 
 ## OEM USB driver resources
 
-The driver center lists 20 OEM/Google resources referenced by the Android Developers OEM USB driver directory. These are HTTPS manufacturer support/download pages, not bundled installers. The exact package can depend on the model, region and Windows version. PhoneLab never silently installs an OEM driver, disables Windows signature enforcement, or treats a generic package as compatible with every model.
+The driver center lists 21 OEM/Google resources referenced by the Android Developers OEM USB driver directory. These are HTTPS manufacturer support/download pages, not bundled installers. The company is detected from ADB manufacturer properties where available, or from Windows PnP manufacturer/friendly-name and known USB vendor IDs when ADB authorization is not yet granted. A VID suggests a vendor only; it does not prove the exact phone model. The exact package can depend on the model, region and Windows version. PhoneLab never silently installs an OEM driver, disables Windows signature enforcement, or treats a generic package as compatible with every model.
 
-Google's USB driver is for Google devices; other manufacturers provide their own Windows drivers. For any OEM package selected by the technician, retain the vendor signature and verify the exact model/Windows compatibility before installation.
+Google's USB driver is for Google devices; other manufacturers provide their own Windows drivers. MediaTek is listed through its HTTPS MediaTek Online tool portal; the vendor may require account access and device-specific package selection. For any OEM package selected by the technician, retain the vendor signature and verify the exact model/Windows compatibility before installation.
 
 
 ## CI and permissions
@@ -22,3 +22,6 @@ The driver center is a read-only action and is explicitly assigned the DeviceRea
 
 
 Automatic screen retries run independently from the device-inventory change check. If ADB is still authorized but scrcpy has exited, PhoneLab retries the screen session with a 12-second per-device throttle; it does not repeat phone inspection or Agent installation. Direct screen and recording controls enforce the same role permissions as their module actions.
+
+
+USB vendor ID lookup is sourced from the Android Open Source Project ADB USB vendor table. It is a manufacturer hint, not an exact model identifier or driver compatibility check: https://android.googlesource.com/platform/system/core/+/fad6033/adb/usb_vendors.c

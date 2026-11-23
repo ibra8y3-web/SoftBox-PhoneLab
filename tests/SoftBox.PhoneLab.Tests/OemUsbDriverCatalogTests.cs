@@ -8,7 +8,7 @@ public sealed class OemUsbDriverCatalogTests
     [Fact]
     public void CatalogContainsMoreThanFifteenOfficialHttpsResources()
     {
-        Assert.Equal(20, OemUsbDriverCatalog.All.Count);
+        Assert.Equal(21, OemUsbDriverCatalog.All.Count);
         Assert.All(OemUsbDriverCatalog.All, item =>
         {
             Assert.False(string.IsNullOrWhiteSpace(item.Id));
@@ -36,10 +36,26 @@ public sealed class OemUsbDriverCatalogTests
         Assert.Equal(expectedId, result!.Id);
     }
 
+    [Theory]
+    [InlineData("", "Android Composite ADB Interface", "04E8", "samsung")]
+    [InlineData("Generic MTP", "USB Composite Device", "2717", "xiaomi")]
+    [InlineData("", "Unknown USB Device", "12D1", "huawei")]
+    [InlineData("Unknown", "USB Device", "0E8D", "mediatek")]
+    [InlineData("Unknown", "Sony Mobile", "FFFF", "sony")]
+    [InlineData("", "", "0FCE", "sony")]
+    public void MatchesManufacturerFromWindowsUsbPnPOrVendorId(
+        string manufacturer, string friendlyName, string vendorId, string expectedId)
+    {
+        var result = OemUsbDriverCatalog.FindForUsbIdentity(manufacturer, friendlyName, vendorId);
+        Assert.NotNull(result);
+        Assert.Equal(expectedId, result!.Id);
+    }
+
     [Fact]
     public void UnknownManufacturerDoesNotGuessADriver()
     {
         Assert.Null(OemUsbDriverCatalog.FindForManufacturer("Unknown Android OEM"));
         Assert.Null(OemUsbDriverCatalog.FindForManufacturer(null));
+        Assert.Null(OemUsbDriverCatalog.FindForUsbIdentity("Unknown", "Generic USB", "FFFF"));
     }
 }
