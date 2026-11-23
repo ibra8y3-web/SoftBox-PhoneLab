@@ -40,6 +40,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
     private bool _suppressDeviceSelection;
+    private bool _shutdownCleanupComplete;
     private DateTime _lastAutoMirrorAttemptUtc = DateTime.MinValue;
     private string? _lastAutoMirrorAttemptSerial;
     private readonly TraceBoardViewerService _traceBoardViewer = new();
@@ -184,19 +185,41 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
             _ = SyncDeviceCatalogQuietlyAsync();
         };
-        Closed += (_, _) =>
-        {
-            _timer.Stop();
-            _backupSchedulerTimer.Stop();
-            _screenMirror.Dispose();
-            _ = _airPlayReceiver.DisposeAsync();
-        };
+        Closing += MainWindow_Closing;
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
         Notify(nameof(CurrentUserDisplay));
         Notify(nameof(AdbInstallVisibility));
         BuildScene();
         RebuildDiagnostics();
+    }
+
+    private async void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_shutdownCleanupComplete)
+            return;
+
+        // Keep the dispatcher alive until the child receiver has exited cleanly.
+        e.Cancel = true;
+        _timer.Stop();
+        _backupSchedulerTimer.Stop();
+        _screenMirror.Dispose();
+
+        try
+        {
+            await _airPlayReceiver.DisposeAsync();
+            _shutdownCleanupComplete = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                "تعذر إيقاف مستقبل AirPlay بأمان، لذلك أبقى SoftBox مفتوحًا حتى لا يترك عملية خارجية معلّقة.\n\n" + ex.Message,
+                "إيقاف SoftBox",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private async void LockSession_Click(object sender, RoutedEventArgs e)
