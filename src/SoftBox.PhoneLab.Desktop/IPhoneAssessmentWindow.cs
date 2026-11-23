@@ -150,10 +150,10 @@ public sealed class IPhoneAssessmentWindow : Window
                 ("genuine", "Genuine — قطعة أصلية معترف بها من Apple"),
                 ("used", "Used — قطعة مستخدمة سابقًا"),
                 ("unknown", "Unknown — قطعة غير معروفة / غير متحققة"),
-                ("unverified", "Unverified — جزء/لوحة غير متحققة"),
+                ("unverified", "Unverified — لوحة منطقية سبق استبدالها ولم يتم التحقق منها"),
                 ("finish-repair", "Finish Repair — يلزم إكمال الإصلاح")
             ]);
-        root.Children.Add(Notice("تفسير الحالات: Genuine وUsed وUnknown وUnverified وFinish Repair تُحفظ كما قرأها الفني. لا نستنتج استبدالًا عند غياب السجل، ولا ندعي أن السجل يغطي كل تاريخ الصيانة."));
+        root.Children.Add(Notice("تفسير الحالات: Genuine وUsed وUnknown وUnverified وFinish Repair تُحفظ كما قرأها الفني. يخص Unverified اللوحة المنطقية وفق وصف Apple. العناصر المتاحة تختلف حسب طراز iPhone وتاريخه. لا نستنتج استبدالًا عند غياب السجل، ولا ندعي أن السجل يغطي كل تاريخ الصيانة."));
     }
 
     private void BuildBatteryHealth(Panel root)
@@ -185,7 +185,7 @@ public sealed class IPhoneAssessmentWindow : Window
             ("unable-to-verify", "Unable to Verify / تعذر التحقق من البطارية")
         ]);
         root.Children.Add(_batteryServiceState);
-        root.Children.Add(Notice("نسبة الشحن الحالية ليست صحة البطارية. تقدير GasGauge قراءة تشخيصية وقد يختلف مقياس FullChargeCapacity حسب إصدار iOS؛ نقارن القيم المتوافقة فقط ونُظهر أساس التقدير. أدخل القيمة الرسمية من الإعدادات عند توفرها."));
+        root.Children.Add(Notice("نسبة الشحن الحالية ليست صحة البطارية. تقدير GasGauge قراءة تشخيصية وقد يختلف مقياس FullChargeCapacity حسب إصدار iOS؛ نقارن القيم المتوافقة فقط ونُظهر أساس التقدير. عند 80% أو أقل تظهر حالة «مراجعة» كتنبيه فحص أولي فقط، وليست أمر استبدال أو حكمًا نهائيًا؛ مرجع دورة التصميم يختلف بين الطرازات. أدخل القيمة الرسمية من الإعدادات عند توفرها."));
     }
 
     private void BuildFunctionalTests(Panel root)
@@ -334,7 +334,7 @@ public sealed class IPhoneAssessmentWindow : Window
                 Name = "صحة البطارية ودورات الشحن",
                 Status = status,
                 Evidence = evidence,
-                Description = "بيانات رسمية أدخلها الفني من الجهاز. لم يتم تقدير صحة البطارية من نسبة الشحن الحالية."
+                Description = "قراءة GasGauge التشخيصية وقيم أدخلها الفني من شاشة iPhone. علامة المراجعة عند 80% أو أقل فحص أولي وليست قرار استبدال أو ضمانًا؛ حالة الخدمة تعتمد على رسالة iPhone والفحص الفني."
             }
         ];
     }
@@ -435,10 +435,7 @@ public sealed class IPhoneAssessmentWindow : Window
 
     private static string SafeNote(string value)
     {
-        var result = (value ?? string.Empty).Trim();
-        if (result.Length > 1000 || result.Any(char.IsControl) && result.Contains('\0'))
-            throw new ArgumentException("الملاحظة أطول من الحد المسموح أو تحتوي محارف غير صالحة.");
-        return result;
+        return IPhoneAssessmentInputValidator.NormalizeNote(value);
     }
 
     private static string SelectedValue(ComboBox combo)
