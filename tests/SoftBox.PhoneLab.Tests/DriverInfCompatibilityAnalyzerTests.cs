@@ -65,8 +65,7 @@ public sealed class DriverInfCompatibilityAnalyzerTests
     {
         var inf = MatchingInf
             .Replace("NTamd64.10.0...19041", "NTamd64.10.0...26100", StringComparison.Ordinal)
-            .Replace("NTx86.10.0...19041", "NTx86.10.0...26100", StringComparison.Ordinal)
-            .Replace("[PhoneModels.NTamd64.10.0...26100]", "[PhoneModels.NTamd64.10.0...26100]", StringComparison.Ordinal);
+            .Replace("NTx86.10.0...19041", "NTx86.10.0...26100", StringComparison.Ordinal);
         var report = DriverInfCompatibilityAnalyzer.Analyze(
             inf,
             ["USB\\VID_1234&PID_5678"],
@@ -108,6 +107,28 @@ public sealed class DriverInfCompatibilityAnalyzerTests
             Windows11X64);
 
         Assert.Equal(DriverInfMatchStatus.UnsupportedInf, report.Status);
+    }
+
+
+    [Fact]
+    public void ProductTypeAndSuiteMaskDecorationIsReportedAsUnresolvedRatherThanCompatible()
+    {
+        const string inf = """
+            [Version]
+            Signature="$Windows NT$"
+            [Manufacturer]
+            %Mfg%=Models,NTamd64.10.0.1.0.19041
+            [Models.NTamd64.10.0.1.0.19041]
+            %Phone%=Install,USB\VID_1234&PID_5678
+            """;
+
+        var report = DriverInfCompatibilityAnalyzer.Analyze(
+            inf,
+            ["USB\\VID_1234&PID_5678"],
+            Windows11X64);
+
+        Assert.Equal(DriverInfMatchStatus.UnsupportedTargetDecoration, report.Status);
+        Assert.Contains("ProductType/SuiteMask", report.Explanation);
     }
 
     [Fact]
