@@ -155,6 +155,19 @@
        <TextBlock Text="مكونات الهاتف" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="اختر القطعة لرؤية الأدلة" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,9"/>
       </StackPanel>
+      <Border DockPanel.Dock="Bottom" Background="#10243A" BorderBrush="#2D4A68" BorderThickness="1" CornerRadius="10" Padding="9" Margin="0,8,0,0" MaxHeight="156">
+       <StackPanel>
+        <Grid Margin="0,0,0,5">
+         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+         <TextBlock Text="{Binding SelectedPartName}" FontSize="11" FontWeight="Bold" Foreground="#EAF3FF" TextWrapping="Wrap" MaxHeight="34" ToolTip="{Binding SelectedPartName}"/>
+         <TextBlock Grid.Column="1" Text="{Binding SelectedPartStatus}" FontSize="8.5" FontWeight="SemiBold" Foreground="{Binding SelectedPartBrush}" Margin="8,1,0,0" VerticalAlignment="Top"/>
+        </Grid>
+        <TextBlock Text="{Binding SelectedPartDescription}" FontSize="8.5" Foreground="#B6C9DE" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="31" ToolTip="{Binding SelectedPartDescription}"/>
+        <TextBlock Text="{Binding SelectedPartEvidence}" FontSize="8" Foreground="#83A1BF" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="29" Margin="0,4,0,5" ToolTip="{Binding SelectedPartEvidence}"/>
+        <Button Content="فتح اختبارات الهاتف المتاحة" Click="PhoneTests_Click" Padding="7,5" FontSize="8.5" HorizontalAlignment="Stretch" Background="#14517A"
+         ToolTip="يفتح اختبارات Android التي يدعمها PhoneLab Agent بعد تصريح ADB وموافقة التطبيق على الهاتف."/>
+       </StackPanel>
+      </Border>
       <ListBox x:Name="ComponentsList" ItemsSource="{Binding Components}" SelectionChanged="Components_SelectionChanged">
        <ListBox.ItemTemplate>
         <DataTemplate>
@@ -178,8 +191,8 @@
      <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel VerticalAlignment="Center">
-       <TextBlock Text="{Binding DeviceTitle}" FontSize="18" FontWeight="Bold"/>
-       <TextBlock Text="{Binding DeviceSubtitle}" FontSize="9.5" Foreground="#8EABC8" Margin="0,5,0,0"/>
+       <TextBlock Text="{Binding DeviceTitle}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="46" ToolTip="{Binding DeviceTitle}"/>
+       <TextBlock Text="{Binding DeviceSubtitle}" FontSize="9.5" Foreground="#8EABC8" Margin="0,5,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32" ToolTip="{Binding DeviceSubtitle}"/>
       </StackPanel>
       <Border Grid.Column="1" Background="#142E46" BorderBrush="#2D607C" BorderThickness="1" CornerRadius="9" Padding="12,7" VerticalAlignment="Center">
        <TextBlock Text="{Binding ScanStatus}" Foreground="#9DDEFB" FontSize="9.5" FontWeight="SemiBold"/>
