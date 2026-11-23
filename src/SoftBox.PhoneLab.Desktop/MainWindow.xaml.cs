@@ -35,6 +35,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly BoardMapCatalog _maps = new();
     private readonly DeviceProfileCatalog _deviceProfiles = new();
     private readonly ScreenMirrorService _screenMirror;
+    private readonly AirPlayReceiverService _airPlayReceiver = new();
     private readonly PhoneLabAgentInstaller _agentInstaller;
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
@@ -183,7 +184,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
             _ = SyncDeviceCatalogQuietlyAsync();
         };
-        Closed += (_, _) => { _timer.Stop(); _backupSchedulerTimer.Stop(); _screenMirror.Dispose(); };
+        Closed += (_, _) =>
+        {
+            _timer.Stop();
+            _backupSchedulerTimer.Stop();
+            _screenMirror.Dispose();
+            _ = _airPlayReceiver.DisposeAsync();
+        };
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
         Notify(nameof(CurrentUserDisplay));
@@ -1199,6 +1206,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new AirPlayReceiverWindow(
                     _settings,
                     _settingsService,
+                    _airPlayReceiver,
                     PhoneScreenHost,
                     async () =>
                     {
@@ -1789,6 +1797,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         try
         {
+            await _airPlayReceiver.StopAsync();
             StatusMessage = "جارٍ فتح شاشة الهاتف داخل مساحة العمل...";
             Notify(nameof(StatusMessage));
             await OpenEmbeddedMirrorAsync(selected);
@@ -1817,8 +1826,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _screenMirror.Stop();
+        await _airPlayReceiver.StopAsync();
         PhoneScreenHost.DetachWindow();
-        MirrorStatus = "تم إيقاف عرض الشاشة. الجهاز ما زال متصلًا؛ اضغط تشغيل / تحديث الشاشة لإعادة الاتصال.";
+        MirrorStatus = "تم إيقاف جلسة عرض الشاشة. الجهاز ما زال متصلًا؛ اضغط تشغيل / تحديث الشاشة لإعادة الاتصال.";
         StatusMessage = "تم إيقاف جلسة عرض الشاشة فقط؛ لم يتم فصل الهاتف أو تغيير بياناته.";
         Notify(nameof(MirrorStatus));
         Notify(nameof(StatusMessage));
