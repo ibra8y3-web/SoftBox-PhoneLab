@@ -252,7 +252,10 @@ public sealed class IPhoneCenterWindow : Window
             "دليل الهوية: استجابت خدمة Apple Lockdown لطلب معلومات الجهاز. هذا دليل اتصال وهوية بروتوكولية، وليس شهادة بأن كل مكونات الهاتف أصلية أو لم تُستبدل.";
         _status.Text = "تمت قراءة بيانات فعلية من الجهاز. تم جلب بيانات GasGauge تلقائيًا عند توفر idevicediagnostics.exe؛ ويمكنك فتح سجل القطع أو صحة البطارية أو الفحص الفيزيائي.";
 
-        if (_recordedEvidence.Add(snapshot.MaskedDeviceIdentifier))
+        // Deduplicate by the one-way device fingerprint, not the masked suffix: two devices can share
+        // the same final four serial characters and must still receive separate evidence histories.
+        var evidenceFingerprint = LocalActivityStore.CreateDeviceFingerprint(snapshot.EvidenceIdentity);
+        if (_recordedEvidence.Add(evidenceFingerprint))
         {
             try
             {
