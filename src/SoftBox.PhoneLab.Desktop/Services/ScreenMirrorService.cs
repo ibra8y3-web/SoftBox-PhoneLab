@@ -112,6 +112,21 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         var adbState = await adb.RunForDeviceAsync(serial, ["get-state"], cancellationToken, TimeSpan.FromSeconds(6));
         if (!MultiScreenSessionsPolicy.IsAuthorizedAdbState(adbState))
             throw new UnauthorizedAccessException("الجهاز المحدد لم يعد مصرحًا به عبر ADB؛ تم منع تشغيل scrcpy.");
+
+        // Best-effort wake-up for a sleeping Android display after fresh ADB authorization.
+        // This does not unlock the device or bypass its lock screen.
+        try
+        {
+            _ = await adb.RunForDeviceAsync(
+                serial,
+                ["shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+                cancellationToken,
+                TimeSpan.FromSeconds(5));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or TimeoutException)
+        {
+            // Some OEM builds restrict key injection. Continue to scrcpy without claiming success.
+        }
         var exeDir = Path.GetDirectoryName(exe)!;
         var adbDir = Path.GetDirectoryName(adb.Executable) ?? "";
         var start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = exeDir };

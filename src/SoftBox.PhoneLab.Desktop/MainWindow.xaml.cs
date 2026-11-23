@@ -29,6 +29,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _processingBackupSchedules;
     private readonly PhoneDiscoveryService _discovery;
     private readonly WindowsUsbInventoryService _usbInventory = new();
+    private IReadOnlyList<WindowsUsbDevice> _lastUsbDevices = Array.Empty<WindowsUsbDevice>();
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
@@ -38,6 +39,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
     private bool _suppressDeviceSelection;
+    private DateTime _lastAutoMirrorAttemptUtc = DateTime.MinValue;
+    private string? _lastAutoMirrorAttemptSerial;
     private readonly TraceBoardViewerService _traceBoardViewer = new();
     private ExternalMeasurementSample? _measurementSnapshot;
     private readonly RepairKnowledgeService _repairKnowledge = new();
@@ -163,6 +166,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _boardMap = await _maps.LoadBestMapAsync(new DeviceSnapshot(), null);
             Notify(nameof(BoardMapNotice));
             BuildScene();
+            RebuildDiagnostics(); // Show the full Not tested component list before any phone/ADB connection.
             await RefreshDevicesAsync();
             if (_settings.AutoDiscoverDevices)
                 _timer.Start();
@@ -184,6 +188,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(CurrentUserDisplay));
         Notify(nameof(AdbInstallVisibility));
         BuildScene();
+        RebuildDiagnostics();
     }
 
     private async void LockSession_Click(object sender, RoutedEventArgs e)
@@ -233,12 +238,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (!_adb.IsAvailable)
             {
                 StatusMessage = "أدوات ADB غير موجودة. " + UsbRecognitionStatus;
+                MirrorStatus = "تم فحص USB، لكن عرض الشاشة يحتاج Android يعمل وتصريح ADB. ثبّت Platform-Tools وتعريف الشركة ثم فعّل USB debugging ووافق على الكمبيوتر.";
+                Notify(nameof(MirrorStatus));
                 Notify(nameof(StatusMessage));
                 return;
             }
             var list = await _discovery.DiscoverAsync();
             var signature = string.Join("|", list.Select(d => d.Serial + ":" + d.State));
-            if (signature == _deviceSignature) return;
+            if (signature == _deviceSignature)
+            {
+                // Device inventory is unchanged, but scrcpy may have exited or failed to start.
+                // Retry only the screen session; never repeat inspection or Agent installation.
+                if (SelectedDevice is { IsAuthorized: true } stableDevice &&
+                    _settings.AutoOpenScreenMirror &&
+                    SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen") &&
+                    (_screenMirror.ActiveSerial != stableDevice.Serial || !_screenMirror.IsRunning))
+                {
+                    await RetryAutoScreenMirrorAsync(stableDevice);
+                }
+                return;
+            }
             _deviceSignature = signature;
             var previousDevices = Devices.ToDictionary(device => device.Serial, StringComparer.Ordinal);
             var previous = SelectedDevice?.Serial;
@@ -326,6 +345,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (Devices.Count == 0)
             {
                 ClearDevice("لا يوجد جهاز ADB متصل.");
+                MirrorStatus = "بانتظار هاتف Android. سيظهر بث الشاشة بعد تشغيل النظام وتفعيل USB debugging والموافقة على هذا الكمبيوتر.";
+                Notify(nameof(MirrorStatus));
                 StatusMessage = "لم يتم رصد قناة ADB. " + UsbRecognitionStatus +
                     " ظهور الهاتف في مستكشف الملفات عبر MTP لا يمنح تصريح تشخيص ADB.";
                 AgentStatus = "بانتظار اتصال ADB مصرح به.";
@@ -335,6 +356,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (selected is null || !selected.IsAuthorized)
             {
                 ClearDevice("الهاتف ظاهر لكن لم يمنح تصريح ADB بعد.");
+                MirrorStatus = "تم رصد الهاتف عبر USB، لكن Android لم يمنح تصريح ADB. افتح قفل الهاتف ووافق على رسالة USB debugging؛ لا يمكن عرض الشاشة قبل الموافقة.";
+                Notify(nameof(MirrorStatus));
                 var waiting = Devices.FirstOrDefault(d => d.State.Equals("unauthorized", StringComparison.OrdinalIgnoreCase));
                 StatusMessage = waiting is not null
                     ? "افتح قفل الشاشة ووافق على «السماح بتصحيح أخطاء USB»، واختر السماح دائمًا لهذا الكمبيوتر."
@@ -361,15 +384,51 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             await InspectSelectedAsync();
     }
 
+    private async Task RetryAutoScreenMirrorAsync(DeviceListItem selected)
+    {
+        if (!selected.IsAuthorized ||
+            !_settings.AutoOpenScreenMirror ||
+            !SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen") ||
+            (_screenMirror.ActiveSerial == selected.Serial && _screenMirror.IsRunning))
+            return;
+
+        if (string.Equals(_lastAutoMirrorAttemptSerial, selected.Serial, StringComparison.Ordinal) &&
+            DateTime.UtcNow - _lastAutoMirrorAttemptUtc < TimeSpan.FromSeconds(12))
+            return;
+
+        _lastAutoMirrorAttemptSerial = selected.Serial;
+        _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
+        try
+        {
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            var deadline = DateTime.UtcNow.AddSeconds(6);
+            while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
+                await Task.Delay(100);
+            if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero)
+                throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف الجانبية.");
+            await _screenMirror.StartEmbeddedAsync(
+                selected.Serial,
+                selected.Model ?? selected.DisplayName,
+                PhoneScreenHost);
+            MirrorStatus = "متصل الآن: " + selected.DisplayName + " — تم استرجاع بث الشاشة تلقائيًا.";
+        }
+        catch (Exception ex)
+        {
+            MirrorStatus = "تعذر استرجاع بث الشاشة تلقائيًا: " + ex.Message;
+        }
+        Notify(nameof(MirrorStatus));
+    }
+
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
         var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
             SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
         if (_settings.AutoOpenScreenMirror && canControlDevice)
         {
+            _lastAutoMirrorAttemptSerial = selected.Serial;
+            _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
             try
             {
-                WorkspaceTabs.SelectedIndex = 1;
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
                 var deadline = DateTime.UtcNow.AddSeconds(6);
                 while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
@@ -448,7 +507,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task OpenEmbeddedMirrorAsync(DeviceListItem selected)
     {
-        WorkspaceTabs.SelectedIndex = 1;
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
         var deadline = DateTime.UtcNow.AddSeconds(6);
         while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
@@ -662,6 +720,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             var devices = await _usbInventory.EnumeratePresentDevicesAsync();
+            _lastUsbDevices = devices;
             var summary = UsbRecognitionSummary.Build(devices);
             if (string.Equals(summary, UsbRecognitionStatus, StringComparison.Ordinal)) return;
             UsbRecognitionStatus = summary;
@@ -669,6 +728,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            _lastUsbDevices = Array.Empty<WindowsUsbDevice>();
             var summary = "تعذر فحص Windows USB PnP: " + ex.Message;
             if (!string.Equals(summary, UsbRecognitionStatus, StringComparison.Ordinal))
             {
@@ -752,6 +812,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (sender is not FrameworkElement element || element.Tag is not string moduleId)
             return;
+
+        // Phone Link is a persistent dock, not a full-page overlay.
+        if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))
+        {
+            MirrorScreen_Click(this, new RoutedEventArgs());
+            return;
+        }
 
         var module = SoftBoxModuleCatalog.Find(moduleId);
         if (module is null)
@@ -1047,6 +1114,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenUsbDoctor":
                 new UsbDoctorWindow { Owner = this }.ShowEmbedded(this);
                 break;
+            case "OpenUsbDriverCenter":
+            {
+                var adbManufacturer = SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer;
+                var usbMatch = _lastUsbDevices
+                    .Select(device => new
+                    {
+                        Device = device,
+                        Resource = OemUsbDriverCatalog.FindForUsbIdentity(
+                            device.Manufacturer, device.FriendlyName, device.VendorId)
+                    })
+                    .FirstOrDefault(match => match.Resource is not null);
+
+                var adbResource = OemUsbDriverCatalog.FindForManufacturer(adbManufacturer);
+                var detectedResource = adbResource ?? usbMatch?.Resource;
+                var manufacturer = detectedResource?.Name ?? adbManufacturer;
+                var model = SelectedDevice?.Model ?? _snapshot?.Model;
+                var source = adbResource is not null ? "ADB" :
+                    usbMatch?.Resource is not null ? "Windows USB / VID" : "غير مؤكد";
+
+                new UsbDriverCenterWindow(manufacturer, model, source)
+                { Owner = this }.ShowEmbedded(this);
+                break;
+            }
             case "OpenQualcommUsbDiagnostics":
                 new UsbDoctorWindow("qualcomm") { Owner = this }.ShowEmbedded(this);
                 break;
@@ -1561,6 +1651,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OpenScreenRecordingWindow()
     {
+        if (!RequireActionPermission("OpenScreenRecording", "تسجيل شاشة الهاتف")) return;
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
@@ -1603,6 +1694,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
     {
+        if (!RequireActionPermission("MirrorScreen", "عرض شاشة الهاتف")) return;
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
@@ -1620,6 +1712,36 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(StatusMessage));
     }
 
+
+    private void StopMirror_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireActionPermission("MirrorScreen", "إيقاف عرض شاشة الهاتف")) return;
+        if (_screenMirror.IsRecording)
+        {
+            StatusMessage = "يوجد تسجيل شاشة نشط. أوقف التسجيل واحفظ ملفه من نافذة التسجيل قبل إيقاف جلسة العرض.";
+            Notify(nameof(StatusMessage));
+            return;
+        }
+
+        _screenMirror.Stop();
+        PhoneScreenHost.DetachWindow();
+        MirrorStatus = "تم إيقاف عرض الشاشة. الجهاز ما زال متصلًا؛ اضغط تشغيل / تحديث الشاشة لإعادة الاتصال.";
+        StatusMessage = "تم إيقاف جلسة عرض الشاشة فقط؛ لم يتم فصل الهاتف أو تغيير بياناته.";
+        Notify(nameof(MirrorStatus));
+        Notify(nameof(StatusMessage));
+    }
+
+    private void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
+        => OpenScreenRecordingWindow();
+
+    private bool RequireActionPermission(string actionId, string actionName)
+    {
+        if (SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId)) return true;
+        MessageBox.Show(this,
+            "حساب القراءة فقط لا يملك صلاحية " + actionName + ". لم يتم إرسال أي أمر إلى الهاتف.",
+            "صلاحيات SoftBox", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return false;
+    }
 
     private async void AnalyzeScreen_Click(object sender, RoutedEventArgs e)
     {
