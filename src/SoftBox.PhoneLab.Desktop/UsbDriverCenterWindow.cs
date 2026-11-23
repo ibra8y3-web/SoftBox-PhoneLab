@@ -171,8 +171,8 @@ public sealed class UsbDriverCenterWindow : Window
                 : " (متاحة للتحقق من ملف INF)");
 
         _selectedUrl.Text = resource.OfficialUrl;
-        _status.Text = "الحزمة لم تُنزّل بعد. نظام التشغيل الحالي: " + Environment.OSVersion.VersionString +
-            " • التوافق: غير مؤكد حتى اختيار حزمة مطابقة للموديل وإصدار Windows.";
+        _status.Text = "صفحة المصدر لم تُفحص بعد. Windows: " + Environment.OSVersion.VersionString +
+            " • توفر حزمة للموديل وتوافقها: غير محسوم حتى اختيار INF/CAT من حزمة OEM وفحصها مقابل Hardware IDs.";
     }
 
     private async Task CheckSelectedAvailabilityAsync()
