@@ -59,7 +59,7 @@ public sealed class LockRecoveryDecisionEngineTests
         Assert.Equal(LockRecoveryRoute.OfficialEraseAndRestore, advice.Route);
         Assert.True(advice.DataLossPossible);
         Assert.Contains("7663172", advice.OfficialUrl);
-        Assert.Contains("FRP", advice.Explanation);
+        Assert.Contains("حسابًا سبق مزامنته", advice.Explanation);
     }
 
     [Fact]
