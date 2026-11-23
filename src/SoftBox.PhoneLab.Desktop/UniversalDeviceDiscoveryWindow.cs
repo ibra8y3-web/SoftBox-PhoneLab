@@ -14,17 +14,17 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class UniversalDeviceDiscoveryWindow : Window
 {
     private readonly WindowsUsbInventoryService _inventory;
-    private readonly IReadOnlyList<DeviceListItem> _adbDevices;
+    private readonly Func<IReadOnlyList<DeviceListItem>> _adbDevicesProvider;
     private readonly StackPanel _usbResults = new();
     private readonly StackPanel _adbResults = new();
     private readonly TextBlock _status = new();
 
     public UniversalDeviceDiscoveryWindow(
         WindowsUsbInventoryService inventory,
-        IReadOnlyList<DeviceListItem> adbDevices)
+        Func<IReadOnlyList<DeviceListItem>> adbDevicesProvider)
     {
         _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
-        _adbDevices = adbDevices ?? Array.Empty<DeviceListItem>();
+        _adbDevicesProvider = adbDevicesProvider ?? throw new ArgumentNullException(nameof(adbDevicesProvider));
         Title = "SoftBox | Universal Device Discovery";
         Width = 1040;
         Height = 780;
@@ -187,7 +187,7 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
                 _adbResults.Children.Add(card);
             }
 
-            _status.Text = $"اكتمل الفحص: {devices.Count} عنصر USB و{_adbDevices.Count} جهاز/حالة ADB. لا يعني وجودهما أن لكل USB جهاز ADB مطابقًا؛ لم يتم الربط بالتخمين.";
+            _status.Text = $"اكتمل الفحص: {devices.Count} عنصر USB و{adbDevices.Count} جهاز/حالة ADB. لا يعني وجودهما أن لكل USB جهاز ADB مطابقًا؛ لم يتم الربط بالتخمين.";
         }
         catch (Exception ex)
         {
