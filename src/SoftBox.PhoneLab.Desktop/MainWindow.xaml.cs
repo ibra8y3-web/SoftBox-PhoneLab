@@ -408,6 +408,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
         try
         {
+            await _airPlayReceiver.StopAsync();
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
             var deadline = DateTime.UtcNow.AddSeconds(6);
             while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
@@ -436,6 +437,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
         if (_settings.AutoOpenScreenMirror && canControlDevice)
         {
+            await _airPlayReceiver.StopAsync();
             _lastAutoMirrorAttemptSerial = selected.Serial;
             _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
             try
@@ -973,9 +975,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 MirrorScreen_Click(this, new RoutedEventArgs());
                 break;
             case "OpenMultiScreenSessions":
+                await _airPlayReceiver.StopAsync();
                 new MultiScreenSessionsWindow(_adb) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenScreenRecording":
+                await _airPlayReceiver.StopAsync();
                 OpenScreenRecordingWindow();
                 break;
             case "AnalyzeScreen":
@@ -1815,7 +1819,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
 
-    private void StopMirror_Click(object sender, RoutedEventArgs e)
+    private async void StopMirror_Click(object sender, RoutedEventArgs e)
     {
         if (!RequireActionPermission("MirrorScreen", "إيقاف عرض شاشة الهاتف")) return;
         if (_screenMirror.IsRecording)
@@ -1834,8 +1838,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(StatusMessage));
     }
 
-    private void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
-        => OpenScreenRecordingWindow();
+    private async void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
+    {
+        await _airPlayReceiver.StopAsync();
+        OpenScreenRecordingWindow();
+    }
 
     private bool RequireActionPermission(string actionId, string actionName)
     {
