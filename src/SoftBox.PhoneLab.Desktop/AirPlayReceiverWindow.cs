@@ -77,6 +77,13 @@ public sealed class AirPlayReceiverWindow : Window
         _stop.Click += async (_, _) => await StopReceiverAsync();
 
         _receiver.OutputReceived += OnReceiverOutput;
+        if (_receiver.IsRunning)
+        {
+            _start.IsEnabled = false;
+            _stop.IsEnabled = true;
+            _status.Text = "مستقبل AirPlay يعمل بالفعل داخل لوحة الشاشة.";
+            _log.Text = _receiver.RecentOutput;
+        }
         Content = BuildContent();
         Closed += async (_, _) =>
         {
@@ -184,8 +191,18 @@ public sealed class AirPlayReceiverWindow : Window
     {
         try
         {
+            // Validate the selected file before stopping any active Android screen session.
+            var receiverPath = AirPlayReceiverService.ValidateReceiverPath(_executablePath.Text);
+            if (_receiver.IsRunning)
+            {
+                _status.Text = "مستقبل AirPlay يعمل بالفعل؛ لم يتم إيقافه أو فصل نافذته. استخدم زر الإيقاف أولًا إذا أردت إعادة التشغيل.";
+                _start.IsEnabled = false;
+                _stop.IsEnabled = true;
+                return;
+            }
+
             await _stopExistingScreenSession();
-            var startedPath = await _receiver.StartAsync(_executablePath.Text, _screenHost);
+            var startedPath = await _receiver.StartAsync(receiverPath, _screenHost);
             _start.IsEnabled = false;
             _stop.IsEnabled = true;
             _status.Text = "تم تشغيل مستقبل AirPlay ودمج نافذته في شاشة SoftBox الجانبية. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
