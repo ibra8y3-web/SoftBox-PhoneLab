@@ -45,6 +45,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenIPhonePartsHistory"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenIPhoneBatteryHealth"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenIPhoneFunctionalTests"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenIPhoneAuthenticityEvidence"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenMiracastSetup"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenLockRecoveryAssistant"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenDiagnosticEvidenceHistory"] = SoftBoxAccountPermission.DeviceRead,
