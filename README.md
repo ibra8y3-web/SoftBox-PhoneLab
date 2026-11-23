@@ -30,8 +30,12 @@ The curated catalog is a starter set. The additional community model-code databa
 - Imports model-specific board-map JSON files only when they identify an exact model/codename and include HTTPS source, reviewer and verification timestamp.
 - The only shipped map is a generic educational fallback. No fake IC coordinates are generated for unknown devices.
 
-### Screen and cameras
-- Automatically opens the authorized phone screen inside the PhoneLab workspace using the official scrcpy Windows client. The bundled scrcpy archive is SHA-256 checked during CI packaging.
+### Multi-platform screen viewing and control
+- **Android phones from supported OEMs:** the right-side screen dock uses the official scrcpy Windows client after the selected device is independently confirmed as ADB-authorized. It can display and control the Android UI within the permissions granted by Android and the OEM. The bundled scrcpy archive is SHA-256 checked during CI packaging.
+- **iPhone/iPad:** an optional, separately installed AirPlay-Windows receiver can be started and its native receiver window is docked into the same right-side screen panel. The PC and Apple device must be on the same local network and the owner must choose the receiver from Control Center. This path is **view-only**; it does not transmit touch input or passcodes to iOS.
+- SoftBox does not bundle, copy or redistribute the GPL-3 AirPlay-Windows executable. The user selects their own independently downloaded `airplay-windows.exe`; SoftBox displays its SHA-256 fingerprint as a file identifier, not as proof of publisher identity. Review the upstream licence and release before use.
+- MTP/USB file-transfer visibility is not screen mirroring or device-control permission. Windows PnP/VID/PID detection identifies a likely USB manufacturer, not necessarily the exact handset model, OS state or a usable screen protocol.
+- Mirroring remains protocol-specific: ADB/scrcpy for Android devices that expose and authorize ADB; AirPlay for compatible Apple devices; proprietary vendor/cast modes are not assumed to work just because a vendor is recognized.
 - Agent displays uniform color test patterns. A camera photograph of the physical screen can be analyzed for candidate pixel outliers and luminance non-uniformity. This is a screening aid, not a calibrated optical inspection.
 - Android Camera2 enumerates logical camera IDs and exposed physical camera routes, reads lens and autofocus metadata, captures a JPEG for each route, and records the autofocus state separately. This verifies reported AF state, not chart sharpness, stabilization or optical quality.
 
@@ -108,10 +112,12 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 ## Requirements
 
 - Windows 10/11 x64.
-- Official Android SDK Platform-Tools (adb.exe).
-- Android phone with a data USB cable and USB debugging authorization.
-- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the official Samsung USB driver installer in one download. The Samsung driver is optional and intended only for Samsung phones.
-- The bundled ADB/Fastboot Platform-Tools, scrcpy, TRACE Boardviewer, QR generation library and Agent work offline after downloading this Windows artifact. Internet is needed only for optional model-catalog refreshes and online repair-guide search. USB debugging approval and any required OEM ADB driver remain local setup requirements.
+- Windows 10/11 x64 for the current desktop application.
+- Android Platform-Tools (ADB) for Android device inspection and scrcpy mirroring. An Android handset must expose ADB and the owner must authorize this PC; some vendors require a model/Windows-specific USB driver.
+- iPhone/iPad AirPlay viewing is optional and requires the independently downloaded AirPlay-Windows receiver, a compatible Windows build, the same local network and owner-initiated Screen Mirroring. It does not provide remote iOS control.
+- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the optional official Samsung USB driver installer. The Samsung installer is for Samsung only; the expanded OEM center lists 33 official vendor resources, not 33 bundled driver installers.
+- AirPlay-Windows is a separate GPL-3 project and is not bundled or redistributed by SoftBox. Select the separately downloaded `airplay-windows.exe` in the AirPlay receiver window.
+- The bundled ADB/Fastboot Platform-Tools, scrcpy, TRACE Boardviewer, QR generation library and Agent work offline after downloading this Windows artifact. Internet is needed for optional model-catalog refreshes, online repair-guide search and the initial AirPlay receiver download. USB debugging approval and any required OEM driver remain local setup requirements.
 
 ## Build Windows
 
@@ -129,15 +135,17 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 
 ## Typical workflow
 
-1. Extract the single Windows package and start PhoneLab; ADB, scrcpy, Boardviewer and the Agent APK are included.
-2. Enable USB debugging, unlock the phone and approve the Android system USB debugging trust prompt for this PC. MTP/file-transfer visibility alone is not an ADB diagnostic connection. Some phone brands require their Windows ADB driver.
-3. PhoneLab detects the authorized device, opens the live screen inside its workspace, installs Agent and asks for a second confirmation on the phone. Tap Allow to enable the remote test bridge.
-4. PhoneLab reads the identifiers and offers display, Camera2, touch, audio, flashlight, vibration, sensor and hardware-inventory tests.
-5. Use the physical display photo analyzer with a real camera photo of the screen during a uniform test pattern.
-6. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
-7. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records. Open Global Workshop for searchable operations, warranty tracking, technician history, international center settings and HTML/CSV exports.
-8. Use سجلات Android to save private logs for review, or فحص حزمة Firmware to calculate SHA-256 and inspect OTA metadata without flashing.
-9. Review every component's evidence and export a JSON report.
+1. Extract the Windows package and start PhoneLab. Windows USB PnP inventory and ADB discovery are presented as separate evidence sources.
+2. For Android, enable USB debugging, unlock the phone and approve the Android system trust prompt. MTP visibility alone is not ADB authorization; install only a model-matched official OEM driver when Windows reports a driver problem.
+3. For iPhone/iPad screen viewing, download the independent GPL-3 AirPlay-Windows release from its upstream project, review its licence, select `airplay-windows.exe` in PhoneLab, and start the receiver. Connect the Apple device and PC to the same network, then choose AirPlay-Windows from Control Center > Screen Mirroring on the phone.
+4. PhoneLab detects Android ADB authorization and may open scrcpy with interactive control. For AirPlay, it docks the receiver window for viewing only; control remains on the Apple device.
+5. If Android mirroring fails, inspect the classified diagnostic (unauthorized, offline, missing device, ADB server conflict, missing runtime, integrity mismatch or startup timeout) and the bounded scrcpy output included in the message.
+6. Open Hardware Diagnostics and run only the tests the selected device/Agent exposes. The evidence history saves actual states and evidence locally with Windows DPAPI protection; unsupported board-level tests remain untested until external instruments/manual inspection are recorded.
+7. Use the universal OEM resource directory to identify a likely manufacturer resource. Verify exact model, region, Windows edition/architecture and package type before downloading. Use the Windows driver-signature verifier on the specific downloaded package; a valid signature alone does not prove model compatibility.
+8. If the owner forgot their lock credential, use the owner recovery assistant for official previous-credential/account recovery guidance. It never accepts a PIN, bypasses FRP/Activation Lock/MDM or sends reset commands.
+9. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
+10. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records. Open Global Workshop for searchable operations, warranty tracking, technician history, international center settings and HTML/CSV exports.
+11. Use Android logs or firmware inspection for read-only evidence. Review component history and export a JSON diagnostic report.
 
 ## Diagnostic color contract
 
@@ -230,3 +238,12 @@ The Device Access & Recovery screen now shows bounded Device Policy Manager comp
 ## Owner support approvals
 
 See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline Windows/Android Support Key Manager workflow, WhatsApp exchange, protocol verification, and Android public-key provisioning. The Android owner key is not trusted by released clients until it has been exported from the owner's physical phone and pinned in a subsequent client build.
+
+
+## Universal device and owner recovery update — 23 November 2026
+
+- Universal Device Discovery presents Windows USB PnP inventory and Android ADB inventory separately. It uses manufacturer, friendly-name and VID/PID as evidence hints; it does not infer an exact handset model or assume that a USB device and ADB serial are the same phone without independent evidence.
+- The OEM resource center currently contains **33 official vendor resources**. Each entry states whether it is a dedicated driver, an OEM Windows companion/tool, a regional MTP driver or a support portal. Exact installer availability and model/Windows compatibility remain unconfirmed until the technician selects and verifies a package.
+- The owner lock recovery assistant provides official, evidence-based guidance for Apple and Android scenarios, including eligible previous-credential windows and account/backup checks. It collects no credentials and does not bypass screen locks, FRP, Apple Activation Lock, MDM or manufacturer activation services. Factory reset is only described as a possible official route with a clear data-loss warning; SoftBox does not issue a reset command.
+- The component evidence history is retained in a local DPAPI-protected database under the current Windows user. Entries store a masked serial and one-way device fingerprint, component ID/name, status, evidence source and timestamp. Identical repeated snapshots are deduplicated.
+- These additions are code/test work, not a claim of universal hardware certification. Physical validation on target Samsung, Huawei, OPPO, iPhone and other models remains necessary.
