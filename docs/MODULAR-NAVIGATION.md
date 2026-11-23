@@ -31,7 +31,7 @@ The current catalog enforces a single canonical executable action for each exist
 1. Sections 01–03: Dashboard, Device Center, Device Intelligence.
 2. Sections 04–05: Android Service Center, APK Lab.
 3. Sections 06–10: Samsung, Xiaomi, Android Brands, Qualcomm, MediaTek.
-4. Sections 11–14: Firmware Center, USB Doctor (including 33 OEM resources), Smart Backup, Phone Link Studio (Android ADB/scrcpy and optional iPhone AirPlay viewing).
+4. Sections 11–14: Firmware Center, USB Doctor (including 33 OEM resources), Smart Backup, Phone Link Studio (Android ADB/scrcpy, optional iPhone AirPlay viewing and Windows-native Miracast setup handoff).
 5. Sections 15–19: Hardware Diagnostics (with encrypted evidence history), Network Diagnostics, Smart Repair AI, One-Click Diagnostic, Safe Recovery (including owner-safe forgotten-lock guidance).
 6. Sections 20–25: Workflow Automation, Batch Operations, Repair History, Workshop Manager, Parts Inventory, Service Reports.
 7. Sections 26–28: Plugin Store, Plugin SDK, Offline Center.
