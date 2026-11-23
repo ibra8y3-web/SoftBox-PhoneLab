@@ -85,13 +85,13 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.15, GridUnitType.Star) });
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(0.85, GridUnitType.Star) });
 
-        var usbPanel = Panel("أجهزة Windows USB المكتشفة");
-        usbPanel.Children.Add(_usbResults);
+        var usbPanel = Panel("أجهزة Windows USB المكتشفة", out var usbContent);
+        usbContent.Children.Add(_usbResults);
         Grid.SetColumn(usbPanel, 0);
         body.Children.Add(usbPanel);
 
-        var adbPanel = Panel("أجهزة ADB التي أعلنها Android Platform-Tools");
-        adbPanel.Children.Add(_adbResults);
+        var adbPanel = Panel("أجهزة ADB التي أعلنها Android Platform-Tools", out var adbContent);
+        adbContent.Children.Add(_adbResults);
         Grid.SetColumn(adbPanel, 1);
         body.Children.Add(adbPanel);
 
@@ -193,22 +193,26 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
         }
     }
 
-    private static StackPanel Panel(string title)
+    private static Border Panel(string title, out StackPanel content)
     {
-        var border = new Border
+        content = new StackPanel();
+        content.Children.Add(Text(title, "#7DD3FC", 13));
+        var scroll = new ScrollViewer
+        {
+            Content = content,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
+        return new Border
         {
             Background = Brush("#0D1C2E"),
             BorderBrush = Brush("#263D58"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(10),
             Padding = new Thickness(10),
-            Margin = new Thickness(0, 0, 8, 0)
+            Margin = new Thickness(0, 0, 8, 0),
+            Child = scroll
         };
-        var stack = new StackPanel();
-        stack.Children.Add(Text(title, "#7DD3FC", 13));
-        border.Child = stack;
-        // The panel content is returned so callers can append rows after its title.
-        return stack;
     }
 
     private static string Fallback(string? value)
