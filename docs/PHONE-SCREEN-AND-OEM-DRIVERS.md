@@ -82,6 +82,21 @@ The owner recovery assistant provides documented official guidance based on plat
 - It does not bypass PIN/Pattern, FRP, Google Device Protection, Samsung/Mi/Apple activation locks, MDM, carrier locks or enterprise ownership controls.
 - Factory reset may erase local data and can still require the previously linked account during setup. The assistant does not issue a reset command.
 
+## OEM source availability and INF matching
+
+The OEM resource center now has a live source-page check:
+- Uses HTTPS HEAD and falls back to GET only when HEAD is unsupported.
+- Follows at most five HTTPS redirects and blocks a redirect downgrade to HTTP.
+- Reports HTTP status, request method, redirect count and the final URL where applicable.
+- Does not read/download the driver payload, install anything or claim that a package for the exact model exists. A reachable support page is only a reachable source page.
+
+The per-device INF matcher starts from the exact Windows PnP Hardware IDs read through SetupAPI:
+- Parses `[Manufacturer]` and the referenced `Models` rows.
+- Checks exact ID matches and Windows architecture / minimum major-minor-build decorations.
+- Keeps unresolved ProductType/SuiteMask decorations as Unknown rather than guessing.
+- A match is a **candidate INF match**. When multiple decorated model sections exist, the checker does not claim it has reproduced SetupAPI's final selection or driver-store ranking.
+- The next required checks are the source package's CAT signature and membership for INF/SYS members using the existing Microsoft SignTool path. A valid signature still does not prove the driver is correct for the device.
+
 ## Verification status
 
 Automated tests cover resource counts/aliases, USB transport classification, lock-recovery decision rules, screen failure classification, settings persistence and encrypted diagnostic-history behavior. Hosted CI does not certify a physical handset.
