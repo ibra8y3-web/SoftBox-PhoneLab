@@ -147,6 +147,7 @@ public sealed class IPhoneCenterWindow : Window
         actions.Children.Add(Button("سجل القطع والإصلاحات", "#203B58", (_, _) => _openAction("OpenIPhonePartsHistory")));
         actions.Children.Add(Button("صحة البطارية ودوراتها", "#203B58", (_, _) => _openAction("OpenIPhoneBatteryHealth")));
         actions.Children.Add(Button("الفحص الوظيفي والفيزيائي", "#203B58", (_, _) => _openAction("OpenIPhoneFunctionalTests")));
+        actions.Children.Add(Button("أدلة الأصالة وتطابق الهوية", "#203B58", (_, _) => _openAction("OpenIPhoneAuthenticityEvidence")));
         actions.Children.Add(Button("عرض شاشة iPhone عبر AirPlay", "#14517A", (_, _) => _openAction("OpenAirPlayReceiver")));
         actions.Children.Add(Button("سجل أدلة الجهاز", "#203B58", (_, _) => OpenEvidenceHistory()));
         actions.Children.Add(Button("فحص تغطية Apple الرسمي", "#203B58", (_, _) => OpenAppleCoverage()));
