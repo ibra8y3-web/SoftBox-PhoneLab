@@ -8,7 +8,9 @@ namespace SoftBox.PhoneLab.Desktop.Services;
 public sealed record IPhoneDeviceScanResult(
     string MaskedIdentifier,
     IPhoneDeviceInfoSnapshot? Snapshot,
-    string? Error)
+    string? Error,
+    IPhoneBatteryDiagnosticsSnapshot? BatteryDiagnostics = null,
+    string? BatteryDiagnosticsError = null)
 {
     public string DisplayName => Snapshot is null
         ? $"iPhone / iPad • {MaskedIdentifier}"
@@ -25,6 +27,7 @@ public sealed class IPhoneDeviceDiagnosticsService
     private const int MaximumDevices = 8;
     private const int MaximumListOutput = 128 * 1024;
     private const int MaximumInfoOutput = 1024 * 1024;
+    private const int MaximumBatteryDiagnosticsOutput = 256 * 1024;
 
     public static string? ResolveToolsDirectory(string? configuredDirectory)
     {
@@ -98,7 +101,38 @@ public sealed class IPhoneDeviceDiagnosticsService
                     MaximumInfoOutput,
                     cancellationToken);
                 var snapshot = IPhoneDeviceInfoParser.Parse(info.StandardOutput, identifier);
-                results.Add(new IPhoneDeviceScanResult(masked, snapshot, null));
+                IPhoneBatteryDiagnosticsSnapshot? batteryDiagnostics = null;
+                string? batteryDiagnosticsError = null;
+                var diagnosticsPath = Path.Combine(directory, "idevicediagnostics.exe");
+                if (File.Exists(diagnosticsPath))
+                {
+                    try
+                    {
+                        var batteryOutput = await RunAsync(
+                            diagnosticsPath,
+                            ["-u", identifier, "diagnostics", "GasGauge"],
+                            TimeSpan.FromSeconds(15),
+                            MaximumBatteryDiagnosticsOutput,
+                            cancellationToken);
+                        batteryDiagnostics = IPhoneBatteryDiagnosticsParser.Parse(
+                            batteryOutput.StandardOutput, snapshot.ProductVersion);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        batteryDiagnosticsError = SafeError(ex);
+                    }
+                }
+                else
+                {
+                    batteryDiagnosticsError = "أداة idevicediagnostics.exe غير موجودة؛ قراءة دورات الشحن والسعة الآلية غير متاحة.";
+                }
+
+                results.Add(new IPhoneDeviceScanResult(
+                    masked, snapshot, null, batteryDiagnostics, batteryDiagnosticsError));
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
