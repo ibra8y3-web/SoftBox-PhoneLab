@@ -325,7 +325,7 @@ public sealed class IPhoneAssessmentWindow : Window
             $"FullChargeCapacityRaw={_batteryDiagnostics?.FullChargeCapacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}; " +
             $"GasGaugeStatus={_batteryDiagnostics?.Status ?? "Unavailable"}; " +
             $"ManufactureDate={SafeNote(_manufactureDate.Text)}; FirstUse={SafeNote(_firstUseDate.Text)}; " +
-            $"ServiceState={state}. Diagnostic values came from the read-only Apple GasGauge relay; Settings values were entered by the technician.");
+            $"ServiceState={state}. Diagnostic values came from the read-only Apple GasGauge relay; Settings values were entered by the technician.";
         return
         [
             new ComponentDiagnostic
