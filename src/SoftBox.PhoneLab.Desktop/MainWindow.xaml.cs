@@ -1197,7 +1197,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             }
             case "OpenUniversalDeviceDiscovery":
-                new UniversalDeviceDiscoveryWindow(_usbInventory, Devices.ToArray())
+                new UniversalDeviceDiscoveryWindow(_usbInventory, () => Devices.ToArray())
                 { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenMiracastSetup":
