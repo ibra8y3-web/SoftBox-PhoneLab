@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Net;
 using SoftBox.PhoneLab.Desktop.Services;
 using Xunit;
