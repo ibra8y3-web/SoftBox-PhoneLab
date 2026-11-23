@@ -6,7 +6,7 @@ namespace SoftBox.PhoneLab.Tests;
 public sealed class SoftBoxModuleCatalogTests
 {
     [Fact]
-    public void MasterCatalogContainsAllThirtySixSectionsInSpecificationOrder()
+    public void MasterCatalogContainsAllThirtySevenSectionsInSpecificationOrder()
     {
         Assert.Equal(SoftBoxModuleCatalog.ExpectedModuleCount, SoftBoxModuleCatalog.All.Count);
         Assert.Equal(Enumerable.Range(1, SoftBoxModuleCatalog.ExpectedModuleCount),

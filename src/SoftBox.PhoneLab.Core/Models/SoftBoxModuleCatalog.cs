@@ -34,7 +34,7 @@ public sealed record SoftBoxModule(
 /// </summary>
 public static class SoftBoxModuleCatalog
 {
-    public const int ExpectedModuleCount = 36;
+    public const int ExpectedModuleCount = 37;
 
     public static IReadOnlyList<SoftBoxModule> All { get; } =
     [
@@ -395,6 +395,17 @@ public static class SoftBoxModuleCatalog
             [
                 new("version-info", "عرض الإصدار وبيئة التشغيل", "Version and runtime information", "يقرأ إصدار Assembly و.NET وWindows ومعمارية التطبيق مباشرة من النظام.", ModuleImplementationStatus.Implemented, "OpenAbout"),
                 new("third-party-notices", "عرض إشعارات ومراجع مكونات الطرف الثالث", "Third-party notices", "يعرض ملف THIRD-PARTY-NOTICES المحلي عند تضمينه مع الحزمة، أو يوضح أنه غير موجود في التثبيت الحالي.", ModuleImplementationStatus.Implemented)
+            ]),
+        new("iphone-center", 37, "أجهزة Apple", "مركز iPhone وiPad", "iPhone & iPad Center",
+            "قسم مستقل لأجهزة Apple: قراءة هوية الجهاز عبر Lockdown، سجل القطع الرسمي، بيانات البطارية والفحوص الفيزيائية المسجلة بواسطة الفني. لا يخلط جلسات العرض مع Android.",
+            ModuleImplementationStatus.InDevelopment,
+            [
+                new("iphone-identity", "اكتشاف iPhone وقراءة معلوماته", "iPhone discovery and device information", "يقرأ معلومات plist الفعلية عبر أدوات Apple Lockdown بعد توصيل الجهاز وفتحه والموافقة على الوثوق بالكمبيوتر. لا يقرأ كلمات المرور ولا ينفذ Pair/Restore.", ModuleImplementationStatus.Implemented, "OpenIPhoneCenter"),
+                new("iphone-parts-history", "سجل القطع والإصلاحات", "Parts and Service History", "يسجل الحالة التي يراها الفني في الإعدادات > عام > حول مثل Genuine أو Used أو Unknown أو Unverified؛ غياب السجل لا يثبت أن القطع أصلية.", ModuleImplementationStatus.Implemented, "OpenIPhonePartsHistory"),
+                new("iphone-battery-health", "صحة البطارية ودورات الشحن", "Battery health and cycle count", "يسجل السعة القصوى وعدد الدورات ورسالة الخدمة من إعدادات iPhone الرسمية عند توفرها. نسبة الشحن الحالية لا تستخدم كبديل لصحة البطارية.", ModuleImplementationStatus.Implemented, "OpenIPhoneBatteryHealth"),
+                new("iphone-functional-checks", "اختبارات الشاشة واللمس والكاميرا والحساسات", "Physical component checks", "يسجل نتائج فحص فعلي يجريه الفني للشاشة واللمس والكاميرات وFace ID والصوت والميكروفون والحساسات ومنفذ الشحن. لا تُملأ النتائج تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenIPhoneFunctionalTests"),
+                new("iphone-airplay", "عرض شاشة iPhone عبر AirPlay", "iPhone AirPlay screen viewing", "يفتح مستقبل AirPlay في نافذة مستقلة ذات مساحة عرض مستقلة عن Android/scrcpy. عرض فقط، ولا يرسل لمسًا أو رمز قفل إلى iPhone.", ModuleImplementationStatus.Implemented),
+                new("iphone-authenticity", "تقييم أدلة هوية الجهاز والأصالة", "Device identity evidence assessment", "يجمع أدلة اتصال Apple والطراز والسجل الرسمي، لكنه لا يصدر حكم أصالة مطلقًا اعتمادًا على USB أو الرقم التسلسلي وحدهما.", ModuleImplementationStatus.InDevelopment)
             ])
     ];
 
@@ -407,6 +418,7 @@ public static class SoftBoxModuleCatalog
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
         "OpenUniversalDeviceDiscovery", "OpenAirPlayReceiver", "OpenMiracastSetup", "OpenLockRecoveryAssistant", "OpenDiagnosticEvidenceHistory",
+        "OpenIPhoneCenter", "OpenIPhonePartsHistory", "OpenIPhoneBatteryHealth", "OpenIPhoneFunctionalTests",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement", "OpenDeviceAccessRecoveryCenter"
     };
 

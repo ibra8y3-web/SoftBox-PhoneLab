@@ -13,7 +13,8 @@ public sealed record PhoneLabSettings(
     int MaximumBatchConcurrency = 3,
     double UiScale = 1.0,
     string UiLanguage = "ar",
-    string AirPlayReceiverExecutablePath = "");
+    string AirPlayReceiverExecutablePath = "",
+    string IPhoneToolsDirectory = "");
 
 /// <summary>
 /// Local user preferences for connection automation and batch limits.
@@ -105,6 +106,12 @@ public sealed class PhoneLabSettingsService
             settings = settings with { AirPlayReceiverExecutablePath = settings.AirPlayReceiverExecutablePath.Trim() };
         if (settings.AirPlayReceiverExecutablePath.Length > 2048)
             throw new ArgumentOutOfRangeException(nameof(settings.AirPlayReceiverExecutablePath), "مسار مستقبل AirPlay أطول من الحد المسموح.");
+        if (settings.IPhoneToolsDirectory is null)
+            settings = settings with { IPhoneToolsDirectory = string.Empty };
+        else
+            settings = settings with { IPhoneToolsDirectory = settings.IPhoneToolsDirectory.Trim() };
+        if (settings.IPhoneToolsDirectory.Length > 2048)
+            throw new ArgumentOutOfRangeException(nameof(settings.IPhoneToolsDirectory), "مسار أدوات iPhone أطول من الحد المسموح.");
         return settings;
     }
 }
