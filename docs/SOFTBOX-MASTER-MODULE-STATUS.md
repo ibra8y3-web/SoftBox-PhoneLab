@@ -408,3 +408,53 @@ See [OEM service and recovery workflows](OEM-RECOVERY-WORKFLOWS.md) for implemen
 - The UI calls these observed strings, not verified effective restrictions. No MDM enrollment, admin role, policy or account is changed or removed.
 - The parser returns empty evidence collections on unavailable/permission-denied dumps. Automated tests cover owner/profile/active-admin components, observed token parsing and collection bounds.
 - Android OEM output and user-specific enforcement still require physical validation.
+
+
+## Cross-platform implementation checkpoint — 23 November 2026
+
+This checkpoint supersedes earlier feature-count snapshots in this document for the current branch. Historical entries above are retained as dated audit history.
+
+### Current catalog inventory
+
+- **36 master sections** retained in the original specification order.
+- **177 child features** across the 36 sections.
+- Child-feature statuses: **102 Implemented, 47 Tested, 18 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
+- **78 unique canonical ActionIds** are listed in the master catalog. The current feature-action references are unique and all are present in the catalog's supported-action set.
+- A Hosted CI pass can establish that a software build/test path works in the runner; it does not certify a physical device. No new phone, USB chipset, OEM driver, AirPlay receiver or board-level hardware feature is marked Verified by this change.
+
+### Changes in this implementation wave
+
+| Section | Addition | Current implementation boundary |
+|---|---|---|
+| 02 Device Center | Universal Device Discovery workspace | Displays Windows USB PnP and ADB inventories separately; manufacturer/friendly-name/VID/PID are hints, not exact model proof. It intentionally does not join a USB instance to an ADB serial by guessing. |
+| 12 USB Doctor | Expanded OEM resource directory, now 33 entries | Mixes dedicated USB driver sources, regional MTP downloads, OEM companion utilities and official support portals. A resource entry is not necessarily a direct driver installer. |
+| 12 USB Doctor | Driver package signature entrypoint | Opens the existing Windows driver signature verifier for a technician-selected local package. Signature validity is not a hardware/model compatibility result. |
+| 14 Phone Link Studio | AirPlay-Windows view adapter in the existing screen dock | Starts a separately installed GPL-3 receiver and docks its native window in the shared screen host. It is view-only, needs a same-LAN owner-selected AirPlay session, and is not bundled by SoftBox. |
+| 14 Phone Link Studio | Actionable scrcpy startup diagnostics | Captures bounded stdout/stderr and distinguishes common ADB authorization/offline/missing/server conflicts, runtime/download/integrity failures and screen-window startup failures. |
+| 15 Hardware Diagnostics | Persistent component evidence history | Stores actual DiagnosticEngine snapshots locally with DPAPI CurrentUser protection, a one-way device fingerprint, masked serial, component status/evidence/source and timestamp; identical consecutive snapshots are deduplicated. |
+| 19 Safe Recovery | Owner-safe forgotten lock assistant | Offers official previous-credential/account/support/erase guidance only when relevant evidence is supplied. It collects no lock credentials and exposes no unlock, FRP, Activation Lock, MDM or factory-reset command. |
+
+### Multi-vendor and OS compatibility contract
+
+- Android models from Samsung, Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO, Infinix and other vendors may use the Android ADB/scrcpy adapter **only when that model's firmware exposes ADB and the owner authorizes this computer**. Vendor recognition by itself does not make ADB available.
+- iPhone/iPad uses the independent AirPlay receiver for screen viewing. AirPlay does not provide touch control, passcode entry or a generic iOS diagnostic agent.
+- MTP, Fastboot, Qualcomm EDL and MediaTek Preloader/BROM are separate transports/modes. Their presence is not a screen stream and does not imply permission to control the Android UI.
+- Proprietary vendor servicing, HarmonyOS projection/service modes and other OEM protocols remain model- and version-specific. Unsupported protocols are not emulated or guessed.
+- The 33 OEM resource entries are not 33 bundled or universally compatible installers. Exact package availability and compatibility must be checked for the model, hardware ID, region, Windows edition/version and architecture. Windows signature verification and hardware compatibility are independent checks.
+
+### Component test and evidence contract
+
+- `Pass` and `Failed` require a named test result from the Agent/approved source, not a simple property read.
+- `DataRead` means the system exposed a value or capability; it is not a hardware-health verdict.
+- `Review`, `Unavailable` and `NotTested` remain distinct states.
+- Board-level PMIC, charging-IC, trace, solder, connector and electrical rail verification still requires the correct model-specific schematic, safe fixture/probes, calibrated measurements or manual inspection.
+- The local evidence store is DPAPI-protected for the current Windows user and is not a portable cross-account backup.
+
+### Remaining work / physical verification
+
+1. Perform real cable/ADB/scrcpy tests on the target Samsung SM-A315G, including unauthorized, offline, cable replug, screen lock/wake, display rotation, audio and screen recording.
+2. Test the AirPlay adapter with an actual iPhone/iPad and PC on the same network; verify the receiver release, discovery, stream lifecycle, audio, Wi-Fi firewall and clean shutdown.
+3. Test representative Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO and Infinix models. A generic Android route is expected only where ADB is actually exposed and authorized.
+4. Validate downloaded driver packages against the target model's actual hardware IDs, Windows edition/architecture, signature and catalog membership before recommending installation.
+5. Expand hardware-specific Agent tests only when the Android API, OEM firmware, user consent and evidence semantics are known. Keep external-only board tests unsupported until a real compatible fixture is available.
+6. Continue auditing every one of the 36 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
