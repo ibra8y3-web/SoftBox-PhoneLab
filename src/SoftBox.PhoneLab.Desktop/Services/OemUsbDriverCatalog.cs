@@ -5,7 +5,8 @@ public sealed record OemUsbDriverResource(
     string Name,
     string OfficialUrl,
     string CoverageNote,
-    string[] Aliases);
+    string[] Aliases,
+    string ResourceKind = "Official support portal");
 
 /// <summary>
 /// Official OEM USB-driver entry points listed by Android Developers.
@@ -26,7 +27,7 @@ public static class OemUsbDriverCatalog
             new("blackberry", "BlackBerry", "https://swdownloads.blackberry.com/Downloads/entry.do?code=4EE0932F46276313B51570F46266A608", "بوابة تنزيل BlackBerry الرسمية؛ تحقق من توافق الحزمة مع موديلك.", ["blackberry"]),
             new("fcnt", "FCNT", "https://www.fcnt.com/support/develop/#anc-03", "موارد المطورين وتعريفات أجهزة FCNT المدعومة.", ["fcnt", "fujitsu"]),
             new("htc", "HTC", "https://www.htc.com/support/", "بوابة دعم HTC؛ قد تختلف ملفات USB حسب طراز الهاتف.", ["htc"]),
-            new("huawei", "Huawei", "https://consumer.huawei.com/en/support/", "صفحة دعم Huawei؛ استخدم موديل الهاتف لاختيار HiSuite أو برنامج USB المناسب.", ["huawei", "honor"]),
+            new("huawei", "Huawei", "https://consumer.huawei.com/en/support/", "صفحة دعم Huawei؛ استخدم موديل الهاتف لاختيار HiSuite أو برنامج USB المناسب.", ["huawei"], "Official support portal / HiSuite tools"),
             new("kyocera", "Kyocera", "https://kyoceramobile.com/support/drivers/", "صفحة تعريفات Kyocera الرسمية؛ تحقق من الطراز والمنطقة.", ["kyocera"]),
             new("lenovo", "Lenovo", "https://support.lenovo.com/us/en/GlobalProductSelector", "اختر منتج Lenovo أو Motorola المدعوم ثم افتح Drivers & Software.", ["lenovo"]),
             new("lg", "LG", "https://www.lg.com/us/support/software-firmware", "صفحة دعم البرامج والـFirmware الرسمية؛ بعض موديلات الهواتف القديمة قد لا تتوفر لها حزم حديثة.", ["lg", "lge"]),
@@ -38,13 +39,26 @@ public static class OemUsbDriverCatalog
             new("toshiba", "Toshiba", "https://support.toshiba.com/sscontent?docId=4001814", "بوابة دعم Toshiba؛ تحقق من توفر دعم للطراز قبل التنزيل.", ["toshiba"]),
             new("xiaomi", "Xiaomi / Redmi / POCO", "https://web.vip.miui.com/page/info/mio/mio/detail?postId=18464849&app_version=dev.20051", "صفحة Xiaomi المشار إليها من دليل Android OEM؛ يلزم التأكد من انطباق الحزمة على الموديل وإصدار Windows.", ["xiaomi", "redmi", "poco", "mi "]),
             new("zte", "ZTE", "https://www.zte.com.cn/global/support", "بوابة ZTE الرسمية؛ تحقق من توفر برنامج USB لموديلك ومنطقتك.", ["zte"]),
-            new("google", "Google USB Driver", "https://developer.android.com/studio/run/win-usb", "تعريف Google USB مخصص لأجهزة Google/Nexus/Pixel؛ لا يُستخدم كبديل عام لتعريفات بقية الشركات.", ["google", "pixel", "nexus"])
+            new("google", "Google USB Driver", "https://developer.android.com/studio/run/win-usb", "تعريف Google USB مخصص لأجهزة Google/Nexus/Pixel؛ لا يُستخدم كبديل عام لتعريفات بقية الشركات.", ["google", "pixel", "nexus"], "Dedicated Windows USB driver"),
+            new("apple", "Apple Devices for Windows", "https://support.apple.com/en-lamr/guide/devices-windows/mchl5ded2763/windows", "تثبيت Apple Devices عبر Microsoft Store يوفّر تكامل Apple مع Windows؛ هذا ليس تعريف Android ولا يتيح التحكم في iPhone.", ["apple", "iphone", "ipad"], "Apple Windows companion / USB support"),
+            new("oneplus", "OnePlus", "https://service.oneplus.com/global", "بوابة OnePlus الرسمية؛ اختر المنتج والمنطقة للتحقق من أداة الكمبيوتر أو ملفات الدعم المتاحة.", ["oneplus"], "Official support portal"),
+            new("oppo", "OPPO", "https://www.oppo.com/en/rom/", "صفحة OPPO الرسمية لبرامج وتحديثات الأجهزة؛ لا تعتبر رابطًا عامًا لتعريف ADB لكل موديلات OPPO.", ["oppo"], "Official Windows utility / software portal"),
+            new("realme", "realme", "https://www.realme.com/eg/support/software-update", "صفحة realme الإقليمية لأدوات تحديث النظام؛ تحقق من الموديل والمنطقة قبل الاستخدام.", ["realme"], "Regional Windows update utility"),
+            new("vivo", "vivo", "https://www.vivo.com/in/support/upgradePackageData?id=57", "صفحة vivo الرسمية لحزمة MTP Driver على Windows في السوق الهندي؛ لا تثبت أنها تعريف ADB لكل موديلات vivo.", ["vivo", "iqoo"], "Official MTP driver download (regional)"),
+            new("honor", "HONOR", "https://www.honor.com/global/tech/honor-suite/", "HONOR Suite أداة كمبيوتر رسمية؛ اختيار الأدوات والتوافق مرتبط بالطراز والمنطقة.", ["honor"], "Official Windows companion utility"),
+            new("tecno", "TECNO", "https://www.tecno-mobile.com/support/", "بوابة TECNO الرسمية للدعم والتنزيلات؛ راجع الموديل والسوق قبل تنزيل أي أداة.", ["tecno"], "Official support portal"),
+            new("infinix", "Infinix", "https://battery.infinixmobility.com/care/support", "بوابة Infinix الرسمية للدعم؛ توفر تعريف أو أداة يعتمد على الموديل والمنطقة.", ["infinix"], "Official support portal"),
+            new("nothing", "Nothing", "https://support.nothing.tech/hc/en-us", "مركز دعم Nothing الرسمي؛ لا تُفترض حزمة USB عامة لكل الهواتف.", ["nothing"], "Official support portal"),
+            new("hmd", "HMD / Nokia", "https://www.hmd.com/en_eg/support/", "بوابة HMD الرسمية للدعم في مصر؛ اختر موديل Nokia/HMD لعرض الملفات المتاحة.", ["hmd", "nokia"], "Official support portal"),
+            new("tcl", "TCL Mobile", "https://support.tcl.com/en_US/us-mobile-product-downloads", "بوابة تنزيلات TCL Mobile؛ التوفر مقيد بالموديل والسوق.", ["tcl", "alcatel tcl"], "Official mobile downloads portal"),
+            new("fairphone", "Fairphone", "https://support.fairphone.com/hc/en-us/articles/18896094650513-How-to-manually-install-Android-on-your-Fairphone", "تعليمات Fairphone الرسمية لحزم النظام والتثبيت اليدوي؛ ليست تعريف USB عامًا.", ["fairphone"], "Official OS / software package guidance")
         });
 
     private static readonly IReadOnlyDictionary<string, string> VendorIdToResourceId =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["0502"] = "acer",
+            ["05AC"] = "apple",
             ["1914"] = "alcatel",
             ["0B05"] = "asus",
             ["413C"] = "dell",
