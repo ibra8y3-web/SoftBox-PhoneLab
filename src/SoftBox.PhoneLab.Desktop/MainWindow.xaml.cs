@@ -1196,7 +1196,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenAirPlayReceiver":
-                new AirPlayReceiverWindow(_settings, _settingsService)
+                new AirPlayReceiverWindow(
+                    _settings,
+                    _settingsService,
+                    PhoneScreenHost,
+                    async () =>
+                    {
+                        if (_screenMirror.IsRecording)
+                            throw new InvalidOperationException("أوقف التسجيل الحالي واحفظ ملفه قبل تبديل مسار الشاشة إلى AirPlay.");
+                        _screenMirror.Stop();
+                        PhoneScreenHost.DetachWindow();
+                        await Task.CompletedTask;
+                    })
                 { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenDiagnosticEvidenceHistory":
