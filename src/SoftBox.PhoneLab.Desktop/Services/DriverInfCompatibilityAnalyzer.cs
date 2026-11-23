@@ -24,9 +24,9 @@ public sealed record WindowsDriverTarget(
         {
             var architecture = RuntimeInformation.OSArchitecture switch
             {
-                Architecture.X64 => "amd64",
-                Architecture.X86 => "x86",
-                Architecture.Arm64 => "arm64",
+                System.Runtime.InteropServices.Architecture.X64 => "amd64",
+                System.Runtime.InteropServices.Architecture.X86 => "x86",
+                System.Runtime.InteropServices.Architecture.Arm64 => "arm64",
                 _ => "unknown"
             };
             return new WindowsDriverTarget(
@@ -234,9 +234,7 @@ public static class DriverInfCompatibilityAnalyzer
             var completed = pending.ToString().Trim();
             pending.Clear();
 
-            if (completed.StartsWith('[', StringComparison.Ordinal) &&
-                completed.EndsWith(']', StringComparison.Ordinal) &&
-                completed.Length > 2)
+            if (completed.Length > 2 && completed[0] == '[' && completed[^1] == ']')
             {
                 currentSection = completed[1..^1].Trim();
                 if (!sections.ContainsKey(currentSection))
