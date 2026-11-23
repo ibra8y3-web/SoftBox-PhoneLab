@@ -25,8 +25,8 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         get
         {
             try { return _process is { HasExited: false }; }
-            catch (InvalidOperationException) { return false; }
             catch (ObjectDisposedException) { return false; }
+            catch (InvalidOperationException) { return false; }
         }
     }
     public int? ProcessId => IsRunning ? _process?.Id : null;
