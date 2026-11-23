@@ -60,7 +60,7 @@ public static class ScreenMirrorFailureAnalyzer
         if (error is InvalidDataException)
             return Report("SCRCPY_INTEGRITY_FAILED", "فشل التحقق من سلامة حزمة العرض",
                 "The downloaded archive or extracted runtime did not pass the expected integrity checks.",
-                "احذف النسخة غير السليمة وأعد التنزيل من المصدر الرسمي. لا تشغّل نسخة معدّلة أو غير موثوقة.",
+                "احذف النسخة غير السليمة وأعد تنزيل الحزمة الرسمية بعد إعادة التحقق من SHA-256. لا تشغّل نسخة معدّلة أو غير موثوقة.",
                 true, detail);
 
         if (error is FileNotFoundException or DirectoryNotFoundException)
