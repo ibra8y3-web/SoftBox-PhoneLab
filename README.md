@@ -264,7 +264,7 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 ## iPhone diagnostics and transport separation — 23 November 2026
 
 - Added a dedicated **37th section: iPhone & iPad Center**, separated from Android modules.
-- Apple device identity is read from XML plist responses returned by user-selected `ideviceinfo.exe`; output is bounded, DTD/external entities are rejected, identifiers are masked and the evidence store retains only masked serial plus one-way fingerprint.
+- Apple device identity is read from XML plist responses returned by user-selected `ideviceinfo.exe`; output is bounded, Apple's standard plist DOCTYPE is ignored without resolving any external entity, identifiers are masked and the evidence store retains only masked serial plus one-way fingerprint. When the optional `idevicediagnostics.exe` is available, SoftBox also reads GasGauge cycle count/design/full-charge capacity and displays a cautiously estimated capacity percentage with its estimation basis.
 - Added separate workflows for Apple Parts & Service History, Battery Health/cycle count, technician-run physical checks and evidence-based originality review.
 - The originality review does not treat a serial, USB VID or Lockdown response as proof of a genuine handset. Apple coverage is opened for the operator to check directly; SoftBox does not send the serial.
 - AirPlay now owns a separate window and native display host. Android scrcpy remains attached to the Android host only; manual AirPlay still stops an active Android mirror and blocks auto-scrcpy retries while AirPlay runs.
