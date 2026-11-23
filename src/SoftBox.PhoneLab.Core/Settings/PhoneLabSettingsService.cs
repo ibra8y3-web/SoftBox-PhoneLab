@@ -12,7 +12,8 @@ public sealed record PhoneLabSettings(
     bool AutoInspectOnConnect = true,
     int MaximumBatchConcurrency = 3,
     double UiScale = 1.0,
-    string UiLanguage = "ar");
+    string UiLanguage = "ar",
+    string AirPlayReceiverExecutablePath = "");
 
 /// <summary>
 /// Local user preferences for connection automation and batch limits.
@@ -98,6 +99,12 @@ public sealed class PhoneLabSettingsService
             settings = settings with { UiLanguage = "ar" }; // Legacy settings files predate language selection.
         if (settings.UiLanguage is not ("ar" or "en"))
             throw new ArgumentOutOfRangeException(nameof(settings.UiLanguage), "لغة SoftBox المدعومة هي العربية أو الإنجليزية.");
+        if (settings.AirPlayReceiverExecutablePath is null)
+            settings = settings with { AirPlayReceiverExecutablePath = string.Empty };
+        else
+            settings = settings with { AirPlayReceiverExecutablePath = settings.AirPlayReceiverExecutablePath.Trim() };
+        if (settings.AirPlayReceiverExecutablePath.Length > 2048)
+            throw new ArgumentOutOfRangeException(nameof(settings.AirPlayReceiverExecutablePath), "مسار مستقبل AirPlay أطول من الحد المسموح.");
         return settings;
     }
 }
