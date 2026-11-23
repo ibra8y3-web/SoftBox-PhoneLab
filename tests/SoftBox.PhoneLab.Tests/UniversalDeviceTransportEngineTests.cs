@@ -33,7 +33,7 @@ public sealed class UniversalDeviceTransportEngineTests
 
         Assert.Contains("OPPO", result.DeviceFamily);
         Assert.Contains("Miracast", result.ScreenViewingRoute);
-        Assert.Contains("No control", result.RemoteControlRoute);
+        Assert.Contains("No ADB control", result.RemoteControlRoute);
     }
 
     [Fact]
