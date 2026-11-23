@@ -417,9 +417,9 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 ### Current catalog inventory
 
 - **36 master sections** retained in the original specification order.
-- **177 child features** across the 36 sections.
-- Child-feature statuses: **102 Implemented, 47 Tested, 18 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
-- **78 unique canonical ActionIds** are listed in the master catalog. The current feature-action references are unique and all are present in the catalog's supported-action set.
+- **178 child features** across the 36 sections.
+- Child-feature statuses: **103 Implemented, 47 Tested, 18 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
+- **79 unique canonical ActionIds** are listed in the master catalog. The current feature-action references are unique and all are present in the catalog's supported-action set.
 - A Hosted CI pass can establish that a software build/test path works in the runner; it does not certify a physical device. No new phone, USB chipset, OEM driver, AirPlay receiver or board-level hardware feature is marked Verified by this change.
 
 ### Changes in this implementation wave
@@ -430,6 +430,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 | 12 USB Doctor | Expanded OEM resource directory, now 33 entries | Mixes dedicated USB driver sources, regional MTP downloads, OEM companion utilities and official support portals. A resource entry is not necessarily a direct driver installer. |
 | 12 USB Doctor | Driver package signature entrypoint | Opens the existing Windows driver signature verifier for a technician-selected local package. Signature validity is not a hardware/model compatibility result. |
 | 14 Phone Link Studio | AirPlay-Windows view adapter in the existing screen dock | Starts a separately installed GPL-3 receiver and docks its native window in the shared screen host. It is view-only, needs a same-LAN owner-selected AirPlay session, and is not bundled by SoftBox. |
+| 14 Phone Link Studio | Windows-native Miracast setup handoff | Opens the Windows Projecting to this PC and Optional Features pages. The actual Wireless Display/Connect receiver runs outside SoftBox and requires Miracast support on both devices. |
 | 14 Phone Link Studio | Actionable scrcpy startup diagnostics | Captures bounded stdout/stderr and distinguishes common ADB authorization/offline/missing/server conflicts, runtime/download/integrity failures and screen-window startup failures. |
 | 15 Hardware Diagnostics | Persistent component evidence history | Stores actual DiagnosticEngine snapshots locally with DPAPI CurrentUser protection, a one-way device fingerprint, masked serial, component status/evidence/source and timestamp; identical consecutive snapshots are deduplicated. |
 | 19 Safe Recovery | Owner-safe forgotten lock assistant | Offers official previous-credential/account/support/erase guidance only when relevant evidence is supplied. It collects no lock credentials and exposes no unlock, FRP, Activation Lock, MDM or factory-reset command. |
@@ -438,6 +439,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 
 - Android models from Samsung, Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO, Infinix and other vendors may use the Android ADB/scrcpy adapter **only when that model's firmware exposes ADB and the owner authorizes this computer**. Vendor recognition by itself does not make ADB available.
 - iPhone/iPad uses the independent AirPlay receiver for screen viewing. AirPlay does not provide touch control, passcode entry or a generic iOS diagnostic agent.
+- Miracast-capable phones may use Microsoft's optional Wireless Display/Connect receiver on Windows. This is an OS-level viewing route outside the SoftBox screen dock; it requires Miracast support on the PC and phone.
 - MTP, Fastboot, Qualcomm EDL and MediaTek Preloader/BROM are separate transports/modes. Their presence is not a screen stream and does not imply permission to control the Android UI.
 - Proprietary vendor servicing, HarmonyOS projection/service modes and other OEM protocols remain model- and version-specific. Unsupported protocols are not emulated or guessed.
 - The 33 OEM resource entries are not 33 bundled or universally compatible installers. Exact package availability and compatibility must be checked for the model, hardware ID, region, Windows edition/version and architecture. Windows signature verification and hardware compatibility are independent checks.
