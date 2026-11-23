@@ -1,4 +1,5 @@
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -77,6 +78,13 @@ public sealed class OemResourceAvailabilityService : IDisposable
             {
                 using var request = new HttpRequestMessage(method, uri);
                 request.Headers.UserAgent.ParseAdd("SoftBox-PhoneLab-ResourceCheck/1.0");
+                if (method == HttpMethod.Get)
+                {
+                    // Some OEM servers reject HEAD. Ask for at most one byte and use
+                    // ResponseHeadersRead so SoftBox never buffers a driver payload.
+                    request.Headers.Range = new RangeHeaderValue(0, 0);
+                    request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,*/*;q=0.1");
+                }
                 using var response = await _httpClient.SendAsync(
                     request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
 
