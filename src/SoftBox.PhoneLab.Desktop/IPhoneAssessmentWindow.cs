@@ -12,7 +12,8 @@ public enum IPhoneAssessmentMode
 {
     PartsHistory,
     BatteryHealth,
-    FunctionalTests
+    FunctionalTests,
+    AuthenticityEvidence
 }
 
 /// <summary>
@@ -31,6 +32,8 @@ public sealed class IPhoneAssessmentWindow : Window
     private readonly TextBox _manufactureDate = new();
     private readonly TextBox _firstUseDate = new();
     private ComboBox _batteryServiceState = new();
+    private ComboBox _coverageResult = new();
+    private ComboBox _partsResult = new();
     private readonly TextBlock _status = new();
     private readonly Button _save = new();
 
@@ -94,6 +97,8 @@ public sealed class IPhoneAssessmentWindow : Window
                 "اقرأ الحالة مباشرة من iPhone: الإعدادات > عام > حول > سجل القطع والخدمة. قد لا يظهر السجل في كل الطرازات. عدم ظهور قطعة في القائمة لا يعني أنها أصلية أو لم تُستبدل.",
             IPhoneAssessmentMode.BatteryHealth =>
                 "اقرأ القيم من إعدادات iPhone > البطارية > صحة البطارية. تختلف الحقول حسب الطراز وإصدار iOS. نسبة الشحن الحالية التي قرأها الاتصال ليست السعة القصوى ولا صحة البطارية.",
+            IPhoneAssessmentMode.AuthenticityEvidence =>
+                "هذه أداة تقييم قرائن وليست فاحصًا سحريًا للأصالة: استجابة Lockdown، وما يعرضه موقع Apple عند إدخال الرقم يدويًا، وسجل القطع الرسمي. قد يقلّد جهاز مقلد بعض بيانات النظام، لذلك لا تصدر حكمًا مطلقًا.",
             _ =>
                 "هذه اختبارات ينفذها الفني على الهاتف نفسه. لا يوجد فحص تلقائي يضغط الشاشة أو يشغّل Face ID أو يقيس المنفذ من الكمبيوتر؛ لا تسجل نجاحًا قبل تنفيذ الفحص فعليًا."
         };
@@ -107,6 +112,8 @@ public sealed class IPhoneAssessmentWindow : Window
             BuildPartsHistory(content);
         else if (_mode == IPhoneAssessmentMode.BatteryHealth)
             BuildBatteryHealth(content);
+        else if (_mode == IPhoneAssessmentMode.AuthenticityEvidence)
+            BuildAuthenticityEvidence(content);
         else
             BuildFunctionalTests(content);
         scroll.Content = content;
@@ -225,6 +232,7 @@ public sealed class IPhoneAssessmentWindow : Window
             {
                 IPhoneAssessmentMode.PartsHistory => BuildPartEvidence(),
                 IPhoneAssessmentMode.BatteryHealth => BuildBatteryEvidence(),
+                IPhoneAssessmentMode.AuthenticityEvidence => BuildAuthenticityEvidenceSnapshot(),
                 _ => BuildFunctionalEvidence()
             };
             if (components.Count == 0)
@@ -233,6 +241,7 @@ public sealed class IPhoneAssessmentWindow : Window
             {
                 IPhoneAssessmentMode.PartsHistory => "Technician read iPhone Settings > General > About > Parts & Service History",
                 IPhoneAssessmentMode.BatteryHealth => "Technician read iPhone Settings > Battery > Battery Health",
+                IPhoneAssessmentMode.AuthenticityEvidence => "Technician-reviewed Apple Lockdown identity, Apple coverage result and Parts & Service History",
                 _ => "Technician-performed physical iPhone component checks"
             };
             var added = await _store.RecordSnapshotAsync(
@@ -299,6 +308,61 @@ public sealed class IPhoneAssessmentWindow : Window
                 Status = status,
                 Evidence = evidence,
                 Description = "بيانات رسمية أدخلها الفني من الجهاز. لم يتم تقدير صحة البطارية من نسبة الشحن الحالية."
+            }
+        ];
+    }
+
+
+    private void BuildAuthenticityEvidence(Panel root)
+    {
+        root.Children.Add(Text("قرينة الاتصال الحالية", "#7DD3FC", 11, FontWeights.SemiBold));
+        root.Children.Add(Text(
+            $"تمت قراءة ProductType={_device.ProductType} وiOS={_device.ProductVersion} عبر Apple Lockdown، والرقم التسلسلي محجوب {_device.MaskedSerialNumber}. هذه تثبت استجابة بروتوكول الجهاز ولا تثبت أن كل مكون أصلي.",
+            "#B7C9DE", 10));
+        root.Children.Add(Text("نتيجة فحص الرقم التسلسلي على موقع Apple (بعد إدخاله يدويًا)", "#7DD3FC", 11, FontWeights.SemiBold));
+        _coverageResult = Choice(
+        [
+            ("not-checked", "لم يتم الفحص"),
+            ("recognized", "موقع Apple قبل الرقم وعرض بيانات/تغطية متوافقة"),
+            ("expired", "موقع Apple تعرّف على الرقم لكن التغطية منتهية"),
+            ("mismatch", "الموقع رفض الرقم أو ظهرت بيانات لا تطابق الجهاز")
+        ]);
+        root.Children.Add(_coverageResult);
+        root.Children.Add(Text("الخلاصة التي قرأها الفني من سجل القطع والخدمة", "#7DD3FC", 11, FontWeights.SemiBold));
+        _partsResult = Choice(
+        [
+            ("not-checked", "لم يتم فحص سجل القطع"),
+            ("genuine", "القطع الظاهرة تحمل Genuine"),
+            ("used", "يوجد جزء بحالة Used"),
+            ("unknown", "يوجد Unknown أو Unverified أو Finish Repair"),
+            ("not-listed", "لا يظهر سجل قطع لهذا الجهاز")
+        ]);
+        root.Children.Add(_partsResult);
+        root.Children.Add(Notice("التفسير: الرقم الذي يقبله موقع Apple قرينة وليس إثباتًا ماديًا؛ قد تُنسخ أرقام صحيحة. وغياب Parts & Service History لا يعني أن الجهاز لم يُفتح أو لم تُبدّل قطعه. التقرير يحفظ مصدر كل قرينة ودرجة الثقة المحدودة."));
+    }
+
+    private List<ComponentDiagnostic> BuildAuthenticityEvidenceSnapshot()
+    {
+        var coverage = SelectedValue(_coverageResult);
+        var parts = SelectedValue(_partsResult);
+        if (coverage == "not-checked" && parts == "not-checked")
+            return [];
+
+        var review = coverage == "mismatch" || parts is "used" or "unknown";
+        var summary = review
+            ? "توجد قرينة تستدعي مراجعة فنية؛ لا تعني وحدها أن الهاتف مقلد."
+            : coverage == "recognized" && parts == "genuine"
+                ? "القرائن المدخلة متوافقة مع بيانات Apple الظاهرة؛ لا تمثل شهادة أصالة مطلقة ولا فحصًا ماديًا للوحة."
+                : "الأدلة الحالية غير كافية لإصدار حكم نهائي.";
+        return
+        [
+            new ComponentDiagnostic
+            {
+                Id = "iphone-authenticity-evidence",
+                Name = "تقييم قرائن هوية وأصالة الجهاز",
+                Status = review ? DiagnosticStatus.Review : DiagnosticStatus.DataRead,
+                Evidence = $"Apple Lockdown ProductType={_device.ProductType}; iOS={_device.ProductVersion}; Apple coverage result={coverage}; Parts & Service History summary={parts}. {summary}",
+                Description = "قرائن قرأها الفني. لا تثبت هذه المعلومات وحدها سلامة اللوحة أو الشاشة أو جميع القطع ولا تمنح حكم أصالة مطلقًا."
             }
         ];
     }
