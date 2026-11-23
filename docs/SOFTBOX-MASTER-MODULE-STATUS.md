@@ -418,7 +418,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 
 - **36 master sections** retained in the original specification order.
 - **178 child features** across the 36 sections.
-- Child-feature statuses: **103 Implemented, 47 Tested, 18 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
+- Child-feature statuses: **103 Implemented, 46 Tested, 19 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
 - **79 unique canonical ActionIds** are listed in the master catalog. The current feature-action references are unique and all are present in the catalog's supported-action set.
 - A Hosted CI pass can establish that a software build/test path works in the runner; it does not certify a physical device. No new phone, USB chipset, OEM driver, AirPlay receiver or board-level hardware feature is marked Verified by this change.
 
@@ -428,6 +428,8 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 |---|---|---|
 | 02 Device Center | Universal Device Discovery workspace | Displays Windows USB PnP and ADB inventories separately; manufacturer/friendly-name/VID/PID are hints, not exact model proof. It intentionally does not join a USB instance to an ADB serial by guessing. |
 | 12 USB Doctor | Expanded OEM resource directory, now 33 entries | Mixes dedicated USB driver sources, regional MTP downloads, OEM companion utilities and official support portals. A resource entry is not necessarily a direct driver installer. |
+| 12 USB Doctor | Live OEM source-page reachability check | Performs bounded HTTPS HEAD/GET checks, tracks up to five redirects, rejects HTTP downgrade and reports the HTTP response; does not download the driver payload or claim model compatibility. |
+| 12 USB Doctor | Windows PnP Hardware ID → INF candidate matcher | Reads SPDRP_HARDWAREID from the selected PnP device and compares exact IDs against Manufacturer/Models INF rows with architecture and minimum build decorations; unresolved ProductType/SuiteMask remains Unknown. The result is a candidate INF match, not SetupAPI's final driver-package selection. |
 | 12 USB Doctor | Driver package signature entrypoint | Opens the existing Windows driver signature verifier for a technician-selected local package. Signature validity is not a hardware/model compatibility result. |
 | 14 Phone Link Studio | AirPlay-Windows view adapter in the existing screen dock | Starts a separately installed GPL-3 receiver and docks its native window in the shared screen host. It is view-only, needs a same-LAN owner-selected AirPlay session, and is not bundled by SoftBox. |
 | 14 Phone Link Studio | Windows-native Miracast setup handoff | Opens the Windows Projecting to this PC and Optional Features pages. The actual Wireless Display/Connect receiver runs outside SoftBox and requires Miracast support on both devices. |
@@ -442,7 +444,9 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 - Miracast-capable phones may use Microsoft's optional Wireless Display/Connect receiver on Windows. This is an OS-level viewing route outside the SoftBox screen dock; it requires Miracast support on the PC and phone.
 - MTP, Fastboot, Qualcomm EDL and MediaTek Preloader/BROM are separate transports/modes. Their presence is not a screen stream and does not imply permission to control the Android UI.
 - Proprietary vendor servicing, HarmonyOS projection/service modes and other OEM protocols remain model- and version-specific. Unsupported protocols are not emulated or guessed.
-- The 33 OEM resource entries are not 33 bundled or universally compatible installers. Exact package availability and compatibility must be checked for the model, hardware ID, region, Windows edition/version and architecture. Windows signature verification and hardware compatibility are independent checks.
+- The 33 OEM resource entries are not 33 bundled or universally compatible installers. The live HTTP check only proves that the source page responded; it does not prove a direct package exists or that it targets the current phone.
+- The INF analyzer compares actual PnP Hardware IDs against INF model rows and architecture/minimum Windows build decorations. ProductType/SuiteMask decorations it cannot resolve are Unknown. When multiple decorated model sections exist, the result is a candidate match, not a claim about the exact section SetupAPI/Driver Store will select.
+- Exact package compatibility and final driver selection must be confirmed for the model, hardware ID, region, Windows edition/version and architecture. Windows signature verification and hardware compatibility are independent checks.
 
 ### Component test and evidence contract
 
