@@ -18,6 +18,7 @@ public sealed class AirPlayReceiverWindow : Window
     private const string UpstreamUrl = "https://github.com/moieric11/AirPlay-Windows";
     private readonly PhoneLabSettingsService _settingsService;
     private readonly SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost _screenHost;
+    private readonly Func<Task> _stopExistingScreenSession;
     private readonly TextBox _executablePath = new();
     private readonly TextBox _fingerprint = new();
     private readonly TextBox _log = new();
@@ -29,10 +30,12 @@ public sealed class AirPlayReceiverWindow : Window
     public AirPlayReceiverWindow(
         PhoneLabSettings settings,
         PhoneLabSettingsService settingsService,
-        SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost screenHost)
+        SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost screenHost,
+        Func<Task> stopExistingScreenSession)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _screenHost = screenHost ?? throw new ArgumentNullException(nameof(screenHost));
+        _stopExistingScreenSession = stopExistingScreenSession ?? throw new ArgumentNullException(nameof(stopExistingScreenSession));
         Title = "SoftBox | iPhone AirPlay Screen Receiver";
         Width = 900;
         Height = 720;
@@ -174,6 +177,7 @@ public sealed class AirPlayReceiverWindow : Window
     {
         try
         {
+            await _stopExistingScreenSession();
             var startedPath = await _receiver.StartAsync(_executablePath.Text, _screenHost);
             _start.IsEnabled = false;
             _stop.IsEnabled = true;
