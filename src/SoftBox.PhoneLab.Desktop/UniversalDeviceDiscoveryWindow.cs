@@ -140,7 +140,7 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
                 stack.Children.Add(Text(
                     displayedIds.Length == 0
                         ? "Hardware IDs: غير متاحة من Windows"
-                        : "Hardware IDs:\\n" + string.Join("\\n", displayedIds),
+                        : "Hardware IDs:\n" + string.Join("\n", displayedIds),
                     displayedIds.Length == 0 ? "#F0C9A5" : "#8FC7EA", 8));
                 stack.Children.Add(Button(
                     "مطابقة ملف INF مع Hardware IDs لهذا الجهاز",
