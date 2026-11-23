@@ -110,6 +110,48 @@ public sealed class DriverInfCompatibilityAnalyzerTests
     }
 
 
+
+    [Fact]
+    public async Task AnalyzeFileAsyncReadsExtractedInfAndReturnsCanonicalPath()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "softbox-inf-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "oem-device.inf");
+        try
+        {
+            await File.WriteAllTextAsync(path, MatchingInf);
+            var report = await DriverInfCompatibilityAnalyzer.AnalyzeFileAsync(
+                path, ["USB\\VID_1234&PID_5678"], Windows11X64);
+
+            Assert.Equal(Path.GetFullPath(path), report.InfPath);
+            Assert.Equal(DriverInfMatchStatus.Compatible, report.Status);
+            Assert.Equal("amd64", report.Architecture);
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task AnalyzeFileAsyncRejectsNonInfInputBeforeParsing()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "softbox-inf-extension-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var path = Path.Combine(root, "driver.exe");
+        try
+        {
+            await File.WriteAllTextAsync(path, "not an INF");
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                DriverInfCompatibilityAnalyzer.AnalyzeFileAsync(
+                    path, ["USB\\VID_1234&PID_5678"], Windows11X64));
+        }
+        finally
+        {
+            if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Fact]
     public void ProductTypeAndSuiteMaskDecorationIsReportedAsUnresolvedRatherThanCompatible()
     {
