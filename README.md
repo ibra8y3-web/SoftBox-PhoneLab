@@ -32,7 +32,7 @@ The curated catalog is a starter set. The additional community model-code databa
 
 ### Multi-platform screen viewing and control
 - **Android phones from supported OEMs:** the right-side screen dock uses the official scrcpy Windows client after the selected device is independently confirmed as ADB-authorized. It can display and control the Android UI within the permissions granted by Android and the OEM. The bundled scrcpy archive is SHA-256 checked during CI packaging.
-- **iPhone/iPad:** an optional, separately installed AirPlay-Windows receiver can be started and its native receiver window is docked into the same right-side screen panel. The PC and Apple device must be on the same local network and the owner must choose the receiver from Control Center. This path is **view-only**; it does not transmit touch input or passcodes to iOS.
+- **iPhone/iPad:** Section 37 is a dedicated Apple workspace for Lockdown identity reads, Parts & Service History, Battery Health, technician-recorded physical tests and evidence review. AirPlay opens in a separate window with its own native screen host; it never shares the Android/scrcpy display panel. This path is **view-only**.
 - SoftBox does not bundle, copy or redistribute the GPL-3 AirPlay-Windows executable. The user selects their own independently downloaded `airplay-windows.exe`; SoftBox displays its SHA-256 fingerprint as a file identifier, not as proof of publisher identity. Review the upstream licence and release before use.
 - MTP/USB file-transfer visibility is not screen mirroring or device-control permission. Windows PnP/VID/PID detection identifies a likely USB manufacturer, not necessarily the exact handset model, OS state or a usable screen protocol.
 - Mirroring remains protocol-specific: ADB/scrcpy for Android devices that expose and authorize ADB; AirPlay for compatible Apple devices; the Windows-native Miracast receiver as an optional external viewing fallback; proprietary vendor/cast modes are not assumed to work just because a vendor is recognized.
@@ -90,9 +90,9 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - International workshop administration adds per-business locale/currency settings, warranty tracking, technician notes, printable HTML and UTF-8 CSV exports.
 
 
-## SoftBox 36-section product architecture
+## SoftBox 37-section product architecture
 
-- The left navigation follows all 36 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
+- The left navigation follows all 37 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
 - Existing services are shared and linked from the correct section instead of being cloned. Planned features are listed without fake executable buttons.
 - The detailed audit, missing-feature matrix, module ownership and staged implementation order are in [docs/SOFTBOX-MASTER-MODULE-STATUS.md](docs/SOFTBOX-MASTER-MODULE-STATUS.md).
 - Navigation and module addition rules are in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
@@ -114,7 +114,8 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - Windows 10/11 x64.
 - Windows 10/11 x64 for the current desktop application.
 - Android Platform-Tools (ADB) for Android device inspection and scrcpy mirroring. An Android handset must expose ADB and the owner must authorize this PC; some vendors require a model/Windows-specific USB driver.
-- iPhone/iPad AirPlay viewing is optional and requires the independently downloaded AirPlay-Windows receiver, a compatible Windows build, the same local network and owner-initiated Screen Mirroring. It does not provide remote iOS control.
+- iPhone/iPad diagnostics require a trusted, separately selected Windows libimobiledevice toolset containing `idevice_id.exe` and `ideviceinfo.exe`, a USB data connection, an unlocked iPhone and the owner's Trust This Computer approval. Only read-only Lockdown identity fields are queried; no passcodes, pairing changes, backup, restore or device changes are issued.
+- iPhone/iPad AirPlay viewing is optional and requires the independently downloaded AirPlay-Windows receiver, a compatible Windows build, the same local network and owner-initiated Screen Mirroring. It opens in a separate top-level window with an independent native display host; it does not provide remote iOS control.
 - The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the optional official Samsung USB driver installer. The Samsung installer is for Samsung only; the expanded OEM center lists 33 official vendor resources, not 33 bundled driver installers.
 - AirPlay-Windows is a separate GPL-3 project and is not bundled or redistributed by SoftBox. Select the separately downloaded `airplay-windows.exe` in the AirPlay receiver window.
 - The bundled ADB/Fastboot Platform-Tools, scrcpy, TRACE Boardviewer, QR generation library and Agent work offline after downloading this Windows artifact. Internet is needed for optional model-catalog refreshes, online repair-guide search and the initial AirPlay receiver download. USB debugging approval and any required OEM driver remain local setup requirements.
@@ -138,7 +139,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 1. Extract the Windows package and start PhoneLab. Windows USB PnP inventory and ADB discovery are presented as separate evidence sources.
 2. For Android, enable USB debugging, unlock the phone and approve the Android system trust prompt. MTP visibility alone is not ADB authorization; install only a model-matched official OEM driver when Windows reports a driver problem.
 3. For iPhone/iPad screen viewing, download the independent GPL-3 AirPlay-Windows release from its upstream project, review its licence, select `airplay-windows.exe` in PhoneLab, and start the receiver. Connect the Apple device and PC to the same network, then choose AirPlay-Windows from Control Center > Screen Mirroring on the phone.
-4. PhoneLab detects Android ADB authorization and may open scrcpy with interactive control. For AirPlay, it docks the receiver window for viewing only; control remains on the Apple device.
+4. Android uses its own ADB/scrcpy pane with interactive control after authorization. iPhone AirPlay opens a separate receiver window and does not use the Android pane; control remains on the Apple device.
 5. If Android mirroring fails, inspect the classified diagnostic (unauthorized, offline, missing device, ADB server conflict, missing runtime, integrity mismatch or startup timeout) and the bounded scrcpy output included in the message.
 6. Open Hardware Diagnostics and run only the tests the selected device/Agent exposes. The evidence history saves actual states and evidence locally with Windows DPAPI protection; unsupported board-level tests remain untested until external instruments/manual inspection are recorded.
 7. Use the universal OEM resource directory to identify a likely manufacturer resource. Verify exact model, region, Windows edition/architecture and package type before downloading. Use the Windows driver-signature verifier on the specific downloaded package; a valid signature alone does not prove model compatibility.
@@ -168,7 +169,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - The QR ticket contains only a repair identifier. It is not a cloud lookup link.
 - Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
 - Firmware tools verify local SHA-256, inspect OTA ZIP metadata and Samsung TAR/TAR.MD5 structure, and compare available device/region/board/rollback evidence through a fail-closed compatibility gate. Hashes and appended TAR.MD5 checks do not authenticate the publisher; missing board, region, signature or Anti-Rollback evidence remains unknown and blocks the gate. No automatic flashing, bootloader unlocking or data wipe is implemented.
-- Generic iPhone diagnosis is not implemented.
+- iPhone diagnostics are limited to Apple Lockdown identity fields, technician-entered Parts & Service History and Battery Health values, and manually performed physical checks. Successful Lockdown or serial recognition is not proof of a genuine complete handset; the originality tool reports evidence limits rather than an absolute verdict.
 
 See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
 
@@ -205,7 +206,7 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - **MediaTek:** scatter/image validation and DA/Auth hashing are implemented, with a recheck before launching the technician-supplied SP Flash Tool. BROM programming, DA signature verification, SLA/DAA authorization and automatic Download are not implemented without a model-specific signed OEM package.
 - **Samsung:** Odin Start uses guarded Windows UI Automation only; no public supported Samsung Odin service API is claimed. Start is blocked if accessibility evidence is incomplete.
 - **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
-- The catalogue contains **36 master sections / 156 child features / 192 total entries**. Child statuses: **99 Implemented, 46 Tested, 6 In Development, 3 Planned, 2 Unsupported, 0 Verified**. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
+- The catalogue contains **37 master sections / 156 child features / 192 total entries**. Child statuses: **99 Implemented, 46 Tested, 6 In Development, 3 Planned, 2 Unsupported, 0 Verified**. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
 
 
 ## OEM service implementation addendum — 21 November 2026
@@ -258,3 +259,13 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 - The 33-entry OEM resource center can check whether an official HTTPS source page responds. It follows at most five HTTPS redirects, blocks HTTPS-to-HTTP downgrade and reports the HTTP response. It never downloads the driver payload or claims a reachable page contains a package for the selected phone.
 - Windows PnP discovery captures the selected device's Hardware IDs. The INF analyzer compares those IDs with OEM Models sections and checks architecture/minimum Windows build decorations. ProductType/SuiteMask it cannot resolve remains unknown.
 - An INF match is a candidate match, not proof of the final package that SetupAPI/Windows Driver Store will select. CAT signature and INF/SYS catalog membership are separate checks; neither alone proves model compatibility.
+
+
+## iPhone diagnostics and transport separation — 23 November 2026
+
+- Added a dedicated **37th section: iPhone & iPad Center**, separated from Android modules.
+- Apple device identity is read from XML plist responses returned by user-selected `ideviceinfo.exe`; output is bounded, DTD/external entities are rejected, identifiers are masked and the evidence store retains only masked serial plus one-way fingerprint.
+- Added separate workflows for Apple Parts & Service History, Battery Health/cycle count, technician-run physical checks and evidence-based originality review.
+- The originality review does not treat a serial, USB VID or Lockdown response as proof of a genuine handset. Apple coverage is opened for the operator to check directly; SoftBox does not send the serial.
+- AirPlay now owns a separate window and native display host. Android scrcpy remains attached to the Android host only; manual AirPlay still stops an active Android mirror and blocks auto-scrcpy retries while AirPlay runs.
+- The new code requires CI and real iPhone/iPad validation before any feature can be marked Tested or Verified. The toolset and Apple hardware are not bundled or simulated.
