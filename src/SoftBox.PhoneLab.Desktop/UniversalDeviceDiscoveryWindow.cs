@@ -55,9 +55,9 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
         var actions = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         actions.Children.Add(Button("إعادة فحص USB", "#14517A", async (_, _) => await RefreshAsync()));
         actions.Children.Add(Button("فتح مركز تعريفات الشركات", "#20364F", (_, _) =>
-            new UsbDriverCenterWindow { Owner = this }.ShowDialog()));
+            new UsbDriverCenterWindow { Owner = Owner ?? this }.ShowDialog()));
         actions.Children.Add(Button("إعداد Miracast في Windows", "#20364F", (_, _) =>
-            new MiracastSetupWindow { Owner = this }.ShowDialog()));
+            new MiracastSetupWindow { Owner = Owner ?? this }.ShowDialog()));
         header.Children.Add(actions);
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
