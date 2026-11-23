@@ -16,6 +16,7 @@ public sealed class UsbDriverCenterWindow : Window
     private readonly TextBlock _selectedCoverage = new();
     private readonly TextBlock _selectedUrl = new();
     private readonly TextBlock _status = new();
+    private readonly OemResourceAvailabilityService _availabilityService = new();
     private OemUsbDriverResource? _selected;
     private readonly string[] _deviceHardwareIds;
     private readonly string? _deviceManufacturer;
@@ -133,6 +134,7 @@ public sealed class UsbDriverCenterWindow : Window
 
         var actions = new WrapPanel();
         actions.Children.Add(ButtonControl("فتح صفحة الشركة", "#14517A", (_, _) => OpenSelected()));
+        actions.Children.Add(ButtonControl("فحص توفر صفحة المصدر", "#14517A", async (_, _) => await CheckSelectedAvailabilityAsync()));
         actions.Children.Add(ButtonControl("نسخ الرابط", "#20364F", (_, _) => CopySelected()));
         actions.Children.Add(ButtonControl("دليل Android OEM", "#20364F", (_, _) => OpenReference()));
         actions.Children.Add(ButtonControl("فحص توقيع حزمة تم تنزيلها", "#20364F", (_, _) => OpenSignatureVerifier()));
@@ -149,6 +151,7 @@ public sealed class UsbDriverCenterWindow : Window
 
         root.Children.Add(body);
         Content = root;
+        Closed += (_, _) => _availabilityService.Dispose();
 
         var preferred = OemUsbDriverCatalog.FindForManufacturer(manufacturer);
         var preferredItem = _resources.Items.Cast<ListBoxItem>()
@@ -170,6 +173,46 @@ public sealed class UsbDriverCenterWindow : Window
         _selectedUrl.Text = resource.OfficialUrl;
         _status.Text = "الحزمة لم تُنزّل بعد. نظام التشغيل الحالي: " + Environment.OSVersion.VersionString +
             " • التوافق: غير مؤكد حتى اختيار حزمة مطابقة للموديل وإصدار Windows.";
+    }
+
+    private async Task CheckSelectedAvailabilityAsync()
+    {
+        if (_selected is null)
+        {
+            _status.Text = "اختر مصدر شركة من القائمة أولًا.";
+            return;
+        }
+
+        var selected = _selected;
+        _status.Text = "جارٍ فحص صفحة المصدر الرسمي عبر HTTPS؛ لن يتم تنزيل أو تثبيت تعريف.";
+        _status.Foreground = Brush("#9FC7E8");
+        try
+        {
+            var result = await _availabilityService.CheckAsync(selected.OfficialUrl);
+            var color = result.Status switch
+            {
+                OemResourceAvailabilityStatus.Reachable => "#7DDBAA",
+                OemResourceAvailabilityStatus.AccessRestricted => "#F0C9A5",
+                _ => "#FFB4A6"
+            };
+            _status.Foreground = Brush(color);
+            _status.Text =
+                "حالة صفحة المصدر: " + result.Status +
+                " • HTTP: " + (result.HttpStatusCode is null ? "غير متاح" : ((int)result.HttpStatusCode.Value).ToString()) +
+                " • Method: " + result.MethodUsed +
+                " • Redirects: " + result.RedirectCount + Environment.NewLine +
+                result.Explanation + Environment.NewLine +
+                result.Limitation +
+                (result.FinalUrl.Equals(result.OriginalUrl, StringComparison.OrdinalIgnoreCase)
+                    ? string.Empty
+                    : Environment.NewLine + "Final URL: " + result.FinalUrl);
+        }
+        catch (Exception ex)
+        {
+            _status.Foreground = Brush("#FFB4A6");
+            _status.Text = "تعذر فحص صفحة المصدر الرسمي: " + ex.Message +
+                Environment.NewLine + "هذا لا يثبت عدم وجود تعريف؛ افتح الصفحة يدويًا من المتصفح.";
+        }
     }
 
     private void OpenSelected()
