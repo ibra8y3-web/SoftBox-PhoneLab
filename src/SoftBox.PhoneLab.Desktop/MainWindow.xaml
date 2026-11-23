@@ -256,7 +256,7 @@
       <Border Grid.Row="1" Background="#02060C" BorderBrush="#1D344D" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
        <interop:ScrcpyWindowHost x:Name="PhoneScreenHost"/>
       </Border>
-      <TextBlock Grid.Row="2" Text="عرض وتحكم مباشر عبر ADB + scrcpy • يتطلب أن يعمل Android وأن يوافق المستخدم على USB debugging." FontSize="8" Foreground="#7D94AE" TextWrapping="Wrap" Margin="3,8,3,1"/>
+      <TextBlock Grid.Row="2" Text="Android: ADB + scrcpy (عرض وتحكم بموافقة المستخدم) • iPhone: AirPlay (عرض فقط) • كل مسار يخضع لدعم النظام والموديل." FontSize="8" Foreground="#7D94AE" TextWrapping="Wrap" Margin="3,8,3,1"/>
      </Grid>
     </Border>
    </Grid>
