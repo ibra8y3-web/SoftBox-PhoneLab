@@ -21,6 +21,8 @@ public static class OemUsbDriverCatalog
             new("acer", "Acer", "https://www.acer.com/worldwide/support/", "اختر موديل الجهاز ونظام Windows من صفحة دعم Acer.", ["acer"]),
             new("alcatel", "Alcatel Mobile", "https://www.alcatelmobile.com/support/", "صفحة دعم الشركة؛ قد يتطلب البحث برقم الموديل.", ["alcatel"]),
             new("asus", "ASUS", "https://www.asus.com/support/Download-Center/", "اختر موديل ASUS ثم Drivers & Tools.", ["asus"]),
+            new("dell", "Dell", "https://www.dell.com/support/home/en-us", "بوابة دعم Dell الرسمية؛ اختر موديل الهاتف/الجهاز قبل تنزيل أي برنامج.", ["dell"]),
+            new("intel", "Intel Android resources", "https://www.intel.com/software/android", "موارد Intel الخاصة بأجهزة Android المدعومة؛ ليست تعريفًا عامًا لكل الهواتف.", ["intel"]),
             new("blackberry", "BlackBerry", "https://swdownloads.blackberry.com/Downloads/entry.do?code=4EE0932F46276313B51570F46266A608", "بوابة تنزيل BlackBerry الرسمية؛ تحقق من توافق الحزمة مع موديلك.", ["blackberry"]),
             new("fcnt", "FCNT", "https://www.fcnt.com/support/develop/#anc-03", "موارد المطورين وتعريفات أجهزة FCNT المدعومة.", ["fcnt", "fujitsu"]),
             new("htc", "HTC", "https://www.htc.com/support/", "بوابة دعم HTC؛ قد تختلف ملفات USB حسب طراز الهاتف.", ["htc"]),
@@ -29,10 +31,12 @@ public static class OemUsbDriverCatalog
             new("lenovo", "Lenovo", "https://support.lenovo.com/us/en/GlobalProductSelector", "اختر منتج Lenovo أو Motorola المدعوم ثم افتح Drivers & Software.", ["lenovo"]),
             new("lg", "LG", "https://www.lg.com/us/support/software-firmware", "صفحة دعم البرامج والـFirmware الرسمية؛ بعض موديلات الهواتف القديمة قد لا تتوفر لها حزم حديثة.", ["lg", "lge"]),
             new("motorola", "Motorola", "https://motorola-global-portal.custhelp.com/app/answers/detail/a_id/88481/", "صفحة Motorola الرسمية لتعريف USB/أدوات توصيل Windows.", ["motorola", "moto"]),
+            new("sharp", "Sharp", "https://k-tai.sharp.co.jp/support/", "بوابة Sharp اليابانية الرسمية؛ قد تكون معلومات الدعم باللغة اليابانية ومحددة للسوق.", ["sharp", "aquos"]),
             new("samsung", "Samsung", "https://developer.samsung.com/galaxy/others/android-usb-driver-for-windows", "صفحة تنزيل Samsung Android USB Driver for Windows؛ مثبت الحزمة موجود أيضًا في بناء Windows عند توفره.", ["samsung"]),
             new("sony", "Sony Mobile", "https://developer.sonymobile.com/downloads/drivers/", "مورد تعريفات Sony Mobile؛ قد تعتمد بعض الإصدارات على Sony Companion.", ["sony", "xperia"]),
             new("toshiba", "Toshiba", "https://support.toshiba.com/sscontent?docId=4001814", "بوابة دعم Toshiba؛ تحقق من توفر دعم للطراز قبل التنزيل.", ["toshiba"]),
             new("xiaomi", "Xiaomi / Redmi / POCO", "https://web.vip.miui.com/page/info/mio/mio/detail?postId=18464849&app_version=dev.20051", "صفحة Xiaomi المشار إليها من دليل Android OEM؛ يلزم التأكد من انطباق الحزمة على الموديل وإصدار Windows.", ["xiaomi", "redmi", "poco", "mi "]),
+            new("zte", "ZTE", "https://www.zte.com.cn/global/support", "بوابة ZTE الرسمية؛ تحقق من توفر برنامج USB لموديلك ومنطقتك.", ["zte"]),
             new("google", "Google USB Driver", "https://developer.android.com/studio/run/win-usb", "تعريف Google USB مخصص لأجهزة Google/Nexus/Pixel؛ لا يُستخدم كبديل عام لتعريفات بقية الشركات.", ["google", "pixel", "nexus"])
         });
 

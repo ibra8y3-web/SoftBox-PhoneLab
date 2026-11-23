@@ -151,9 +151,10 @@ public partial class MainWindow
 
         // Hide the three workspace columns (this also hides the HwndHost used for phone mirroring,
         // which would otherwise be drawn on top of the embedded page).
-        DevicesColumn.Visibility = Visibility.Collapsed;
+        DevicesColumn.Visibility = Visibility.Visible; // Keep connected phones and component tools visible.
         ViewerColumn.Visibility = Visibility.Collapsed;
         DetailsColumn.Visibility = Visibility.Collapsed;
+        PhoneScreenColumn.Visibility = Visibility.Visible;
         EmbeddedHostPanel.Visibility = Visibility.Visible;
     }
 
@@ -169,6 +170,7 @@ public partial class MainWindow
         EmbeddedHostPanel.Visibility = Visibility.Collapsed;
         DevicesColumn.Visibility = Visibility.Visible;
         ViewerColumn.Visibility = Visibility.Visible;
+        PhoneScreenColumn.Visibility = Visibility.Visible;
         DetailsColumn.Visibility = Visibility.Visible;
     }
 

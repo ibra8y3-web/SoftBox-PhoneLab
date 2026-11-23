@@ -163,6 +163,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _boardMap = await _maps.LoadBestMapAsync(new DeviceSnapshot(), null);
             Notify(nameof(BoardMapNotice));
             BuildScene();
+            RebuildDiagnostics(); // Show the full Not tested component list before any phone/ADB connection.
             await RefreshDevicesAsync();
             if (_settings.AutoDiscoverDevices)
                 _timer.Start();
@@ -234,6 +235,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (!_adb.IsAvailable)
             {
                 StatusMessage = "أدوات ADB غير موجودة. " + UsbRecognitionStatus;
+                MirrorStatus = "تم فحص USB، لكن عرض الشاشة يحتاج Android يعمل وتصريح ADB. ثبّت Platform-Tools وتعريف الشركة ثم فعّل USB debugging ووافق على الكمبيوتر.";
+                Notify(nameof(MirrorStatus));
                 Notify(nameof(StatusMessage));
                 return;
             }
@@ -327,6 +330,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (Devices.Count == 0)
             {
                 ClearDevice("لا يوجد جهاز ADB متصل.");
+                MirrorStatus = "بانتظار هاتف Android. سيظهر بث الشاشة بعد تشغيل النظام وتفعيل USB debugging والموافقة على هذا الكمبيوتر.";
+                Notify(nameof(MirrorStatus));
                 StatusMessage = "لم يتم رصد قناة ADB. " + UsbRecognitionStatus +
                     " ظهور الهاتف في مستكشف الملفات عبر MTP لا يمنح تصريح تشخيص ADB.";
                 AgentStatus = "بانتظار اتصال ADB مصرح به.";
@@ -336,6 +341,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (selected is null || !selected.IsAuthorized)
             {
                 ClearDevice("الهاتف ظاهر لكن لم يمنح تصريح ADB بعد.");
+                MirrorStatus = "تم رصد الهاتف عبر USB، لكن Android لم يمنح تصريح ADB. افتح قفل الهاتف ووافق على رسالة USB debugging؛ لا يمكن عرض الشاشة قبل الموافقة.";
+                Notify(nameof(MirrorStatus));
                 var waiting = Devices.FirstOrDefault(d => d.State.Equals("unauthorized", StringComparison.OrdinalIgnoreCase));
                 StatusMessage = waiting is not null
                     ? "افتح قفل الشاشة ووافق على «السماح بتصحيح أخطاء USB»، واختر السماح دائمًا لهذا الكمبيوتر."
@@ -751,13 +758,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (sender is not FrameworkElement element || element.Tag is not string moduleId)
             return;
-
-        // Phone Link is a persistent dock, not a full-page overlay.
-        if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))
-        {
-            MirrorScreen_Click(this, new RoutedEventArgs());
-            return;
-        }
 
         // Phone Link is a persistent dock, not a full-page overlay.
         if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))

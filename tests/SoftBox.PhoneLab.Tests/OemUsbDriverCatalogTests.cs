@@ -8,7 +8,7 @@ public sealed class OemUsbDriverCatalogTests
     [Fact]
     public void CatalogContainsMoreThanFifteenOfficialHttpsResources()
     {
-        Assert.True(OemUsbDriverCatalog.All.Count > 15);
+        Assert.True(OemUsbDriverCatalog.All.Count >= 19);
         Assert.All(OemUsbDriverCatalog.All, item =>
         {
             Assert.False(string.IsNullOrWhiteSpace(item.Id));
@@ -26,6 +26,9 @@ public sealed class OemUsbDriverCatalogTests
     [InlineData("Google", "google")]
     [InlineData("Sony Xperia", "sony")]
     [InlineData("HUAWEI", "huawei")]
+    [InlineData("Dell Inc.", "dell")]
+    [InlineData("Sharp Corporation", "sharp")]
+    [InlineData("ZTE Corporation", "zte")]
     public void FindsTheMatchingManufacturerResource(string manufacturer, string expectedId)
     {
         var result = OemUsbDriverCatalog.FindForManufacturer(manufacturer);

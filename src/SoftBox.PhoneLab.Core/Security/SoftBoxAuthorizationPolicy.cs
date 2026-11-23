@@ -38,6 +38,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenDeviceCapabilityCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenDeviceAccessRecoveryCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDoctor"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenUsbDriverCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDriverSignatureVerifier"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenQualcommUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenMediaTekUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
