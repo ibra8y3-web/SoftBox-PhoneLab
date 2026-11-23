@@ -1040,6 +1040,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenIPhoneFunctionalTests":
                 OpenIPhoneAssessment(IPhoneAssessmentMode.FunctionalTests);
                 break;
+            case "OpenIPhoneAuthenticityEvidence":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.AuthenticityEvidence);
+                break;
             case "RefreshDevices":
                 _ = RefreshDevicesAsync();
                 break;
