@@ -8,6 +8,7 @@ PhoneLab uses separate transport adapters rather than claiming that every phone 
 |---|---|---|---|---|
 | Supported Android OEM phone | Windows PnP plus independently authorized ADB serial | scrcpy docked in PhoneLab | Yes, within Android/OEM permissions and user authorization | Requires booted Android, ADB interface, USB debugging authorization and supported scrcpy behavior |
 | iPhone / iPad | Apple USB VID/Windows Apple device identity, or owner-selected AirPlay receiver | Separate AirPlay-Windows receiver window docked in the same SoftBox screen host | No; viewing only | Same local network, owner must select receiver from Control Center; no passcode/touch injection |
+| Miracast-capable Android / OEM phone | Owner opens Cast/Screen Mirroring on phone; Windows receiver discovery is handled by Wireless Display | Native Windows Wireless Display app / Connect app | No control from SoftBox | Requires Miracast on both devices and Windows optional feature; this native session is outside the SoftBox dock |
 | Android MTP-only device | Windows USB PnP/MTP device | None from MTP alone | None | File-transfer visibility is not screen capture or ADB authorization |
 | Fastboot / Qualcomm EDL / MediaTek Preloader | Windows PnP/VID/PID or relevant service tools | No ordinary live screen | No ordinary Android UI control | These are boot/service modes, not screen protocols |
 | Unknown USB device | Windows PnP identity only | No route is guessed | No route is guessed | Exact device identity and supported transport remain unknown |
@@ -27,6 +28,7 @@ PhoneLab uses separate transport adapters rather than claiming that every phone 
 - SoftBox does not bundle or redistribute the GPL-3 receiver. The operator must independently download and review the upstream release/licence, then select the executable in SoftBox.
 - SoftBox records the selected path in local preferences and displays a SHA-256 file fingerprint. A file hash is not publisher authentication; use the upstream release and normal Windows security checks.
 - The receiver creates its own native display window and SoftBox docks that window into the persistent right-side screen host.
+- SoftBox can also open the Windows Miracast setup pages as a separate fallback. Microsoft requires the Wireless Display optional feature and the native Wireless Display/Connect app; both the PC and the phone must support Miracast. This OS-level session is not embedded in SoftBox.
 - The iPhone and Windows PC must be on the same LAN. On iPhone/iPad, the owner opens Control Center, chooses Screen Mirroring and selects the receiver name.
 - This adapter provides screen viewing only. SoftBox does not inject touch, enter a passcode, unlock iOS, or defeat Activation Lock.
 - DRM-protected streaming apps can refuse screen mirroring. AirPlay is not a substitute for Apple Devices USB support or an iOS diagnostic agent.
@@ -89,3 +91,8 @@ The following still require physical verification on target hardware:
 - A supported iPhone/iPad and Windows PC on the same LAN with the independently installed AirPlay receiver.
 - Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO, Infinix and other representative Android models to confirm their individual USB identity, ADB availability and model-specific driver state.
 - Specific downloaded OEM driver packages against their real Windows hardware IDs and signer/catalog metadata.
+
+
+## Windows Miracast fallback
+
+The Miracast setup window opens the native Windows Projecting to this PC settings and Optional Features pages, then provides the official Microsoft steps. It does not silently install Windows optional features, change discoverability/privacy settings, start a receiver session, or claim to embed the native receiver inside SoftBox. A supported PC and Miracast-capable phone are both required. See <https://support.microsoft.com/en-us/windows/hardware/display-graphics/screen-mirroring-and-projecting-to-your-pc-or-wireless-display>.
