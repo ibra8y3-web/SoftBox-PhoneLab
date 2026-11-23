@@ -75,9 +75,9 @@ public static class UniversalDeviceTransportEngine
                 resource.Name,
                 "Manufacturer/USB hint; exact model and active Android state are not proven",
                 "USB / MTP or OEM USB interface; inspect the Windows PnP status",
-                "No screen stream until an actual supported mirroring transport is available",
-                "No control until ADB is separately detected and authorized",
-                "Install only the model-matched official package if Windows reports a driver problem. MTP/file transfer does not grant ADB access.");
+                "No embedded stream until ADB is authorized; try native Windows Wireless Display/Miracast only if both devices support it",
+                "No ADB control until the device is separately authorized; Miracast remains Windows-native viewing only",
+                "Install only the model-matched official package if Windows reports a driver problem. MTP/file transfer does not grant ADB access. Miracast is an optional OS-level fallback and is not embedded in SoftBox.");
         }
 
         return new DeviceTransportAssessment(
