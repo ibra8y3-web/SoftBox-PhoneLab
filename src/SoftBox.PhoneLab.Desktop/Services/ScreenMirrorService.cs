@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -17,6 +18,7 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
     private string BundledDirectory => Path.Combine(AppContext.BaseDirectory, "Tools", "scrcpy");
     private string InstallDirectory => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "SoftBox", "PhoneLab", "tools", $"scrcpy-{Version}");
+    private readonly ConcurrentQueue<string> _recentOutput = new();
     private Process? _process;
     private ScrcpyWindowHost? _host;
     private IntPtr _windowHandle;
@@ -129,7 +131,14 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         }
         var exeDir = Path.GetDirectoryName(exe)!;
         var adbDir = Path.GetDirectoryName(adb.Executable) ?? "";
-        var start = new ProcessStartInfo(exe) { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = exeDir };
+        var start = new ProcessStartInfo(exe)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WorkingDirectory = exeDir,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
         start.Environment["PATH"] = string.Join(Path.PathSeparator.ToString(),
             new[] { adbDir, exeDir, path }.Where(x => !string.IsNullOrWhiteSpace(x)));
@@ -143,11 +152,27 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
             start.ArgumentList.Add(recordingPath);
         }
 
-        _process = Process.Start(start) ?? throw new InvalidOperationException("Could not launch scrcpy.");
+        while (_recentOutput.TryDequeue(out _)) { }
+        var process = new Process { StartInfo = start, EnableRaisingEvents = true };
+        process.OutputDataReceived += (_, args) =>
+        {
+            if (!string.IsNullOrWhiteSpace(args.Data)) CaptureOutput(args.Data);
+        };
+        process.ErrorDataReceived += (_, args) =>
+        {
+            if (!string.IsNullOrWhiteSpace(args.Data)) CaptureOutput("ERR: " + args.Data);
+        };
+        if (!process.Start())
+        {
+            process.Dispose();
+            throw new InvalidOperationException("Could not launch scrcpy.");
+        }
+        _process = process;
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
         _host = host;
         ActiveSerial = serial;
         ActiveRecordingPath = recordingPath;
-        var process = _process;
         var end = DateTime.UtcNow.AddSeconds(18);
         try
         {
@@ -155,7 +180,12 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (process.HasExited)
-                    throw new InvalidOperationException("scrcpy exited with code " + process.ExitCode + ". Check ADB authorization and driver.");
+                {
+                    try { process.WaitForExit(); } catch { }
+                    throw new InvalidOperationException(
+                        "scrcpy exited with code " + process.ExitCode +
+                        ". Recent scrcpy output: " + RecentOutput());
+                }
                 var hwnd = ScrcpyWindowHost.FindTopLevelWindow(process.Id);
                 if (hwnd != IntPtr.Zero)
                 {
@@ -166,7 +196,7 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
                 }
                 await Task.Delay(120, cancellationToken);
             }
-            throw new TimeoutException("No scrcpy window appeared. Check USB debugging authorization.");
+            throw new TimeoutException("No scrcpy window appeared before the startup timeout. Recent scrcpy output: " + RecentOutput());
         }
         catch { Stop(); throw; }
     }
@@ -252,6 +282,17 @@ public sealed class ScreenMirrorService(AdbClient adb) : IDisposable
         ActiveSerial = null;
         ActiveRecordingPath = null;
     }
+
+    private void CaptureOutput(string line)
+    {
+        var normalized = line.Trim();
+        if (normalized.Length > 1200) normalized = normalized[..1200] + "…";
+        _recentOutput.Enqueue(normalized);
+        while (_recentOutput.Count > 80 && _recentOutput.TryDequeue(out _)) { }
+    }
+
+    private string RecentOutput()
+        => string.Join(" | ", _recentOutput.ToArray().TakeLast(30));
 
     private const uint WmClose = 0x0010;
     [DllImport("user32.dll", SetLastError = true)]
