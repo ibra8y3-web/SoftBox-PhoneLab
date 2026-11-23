@@ -71,7 +71,7 @@ public sealed class LockRecoveryAssistantWindow : Window
         AddField(root, "الشركة المصنّعة", _manufacturer, "Samsung / Huawei / OPPO / Xiaomi...");
         AddField(root, "الموديل", _model, "رقم الموديل إن كان معروفًا");
         root.Children.Add(Text("نظام التشغيل", "#7DD3FC", 10));
-        Style(_platform);
+        StyleComboBox(_platform);
         root.Children.Add(_platform);
         AddField(root, "إصدار النظام", _osVersion, "مثال: 14 أو 17.4");
         AddField(root, "إصدار One UI (لأجهزة Samsung)", _oneUiVersion, "مثال: 6.1");
@@ -179,7 +179,7 @@ public sealed class LockRecoveryAssistantWindow : Window
         parent.Children.Add(field);
     }
 
-    private static void Style(ComboBox combo)
+    private static void StyleComboBox(ComboBox combo)
     {
         combo.Background = Brush("#0F1E32");
         combo.Foreground = Brush("#EAF3FF");
