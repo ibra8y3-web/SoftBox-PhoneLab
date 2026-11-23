@@ -434,19 +434,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
         // A user-selected AirPlay session owns the shared screen dock. Automatic ADB setup
-        // must not steal the panel on the next USB discovery tick.
+        // must not steal the panel on the next USB discovery tick, but Agent preparation may continue.
+        var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
+            SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
         if (_airPlayReceiver.IsRunning)
         {
             MirrorStatus = "جلسة AirPlay يدوية نشطة؛ تم إيقاف الفتح التلقائي لـscrcpy حتى يختار المستخدم مسار Android يدويًا.";
-            Notify(nameof(MirrorStatus));
-            return;
         }
-
-        var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
-            SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
-        if (_settings.AutoOpenScreenMirror && canControlDevice)
+        else if (_settings.AutoOpenScreenMirror && canControlDevice)
         {
-            await _airPlayReceiver.StopAsync();
             _lastAutoMirrorAttemptSerial = selected.Serial;
             _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
             try
