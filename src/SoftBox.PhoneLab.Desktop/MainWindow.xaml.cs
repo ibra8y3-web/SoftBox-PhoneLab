@@ -1181,23 +1181,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenUsbDriverCenter":
             {
                 var adbManufacturer = SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer;
-                var usbMatch = _lastUsbDevices
+                var adbResource = OemUsbDriverCatalog.FindForManufacturer(adbManufacturer);
+                var usbMatches = _lastUsbDevices
                     .Select(device => new
                     {
                         Device = device,
                         Resource = OemUsbDriverCatalog.FindForUsbIdentity(
                             device.Manufacturer, device.FriendlyName, device.VendorId)
                     })
-                    .FirstOrDefault(match => match.Resource is not null);
+                    .Where(match => match.Resource is not null &&
+                        (adbResource is null || match.Resource.Id.Equals(adbResource.Id, StringComparison.OrdinalIgnoreCase)))
+                    .ToArray();
 
-                var adbResource = OemUsbDriverCatalog.FindForManufacturer(adbManufacturer);
+                // Only pass PnP IDs into the ADB-selected device context when there is exactly
+                // one manufacturer-matching USB record. Multiple same-OEM phones are ambiguous.
+                var usbMatch = usbMatches.Length == 1 ? usbMatches[0] : null;
                 var detectedResource = adbResource ?? usbMatch?.Resource;
                 var manufacturer = detectedResource?.Name ?? adbManufacturer;
                 var model = SelectedDevice?.Model ?? _snapshot?.Model;
                 var source = adbResource is not null ? "ADB" :
-                    usbMatch?.Resource is not null ? "Windows USB / VID" : "غير مؤكد";
+                    usbMatch is not null ? "Windows USB / VID" : "غير مؤكد";
+                var hardwareIds = usbMatch?.Device.HardwareIds ?? Array.Empty<string>();
 
-                new UsbDriverCenterWindow(manufacturer, model, source)
+                new UsbDriverCenterWindow(manufacturer, model, source, hardwareIds)
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }
