@@ -1,4 +1,3 @@
-using System.Text;
 using SoftBox.PhoneLab.Core.Activity;
 using SoftBox.PhoneLab.Core.Models;
 using SoftBox.PhoneLab.Core.Security;
@@ -34,7 +33,7 @@ public sealed class DiagnosticEvidenceStoreTests
 
             var raw = await File.ReadAllBytesAsync(store.DatabasePath);
             Assert.True(WindowsUserDataProtection.IsProtected(raw));
-            Assert.DoesNotContain(Encoding.UTF8.GetBytes(serial), raw);
+            Assert.DoesNotContain(serial, System.Text.Encoding.UTF8.GetString(raw));
 
             var records = await store.GetRecentAsync(serial);
             var record = Assert.Single(records);
