@@ -195,7 +195,7 @@ public sealed class UsbDriverCenterWindow : Window
     {
         try
         {
-            var verifier = new UsbDriverSignatureVerifierWindow { Owner = this };
+            var verifier = new UsbDriverSignatureVerifierWindow { Owner = Owner ?? this };
             verifier.ShowDialog();
         }
         catch (Exception ex)
