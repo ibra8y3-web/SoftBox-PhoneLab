@@ -464,3 +464,14 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 4. Validate downloaded driver packages against the target model's actual hardware IDs, Windows edition/architecture, signature and catalog membership before recommending installation.
 5. Expand hardware-specific Agent tests only when the Android API, OEM firmware, user consent and evidence semantics are known. Keep external-only board tests unsupported until a real compatible fixture is available.
 6. Continue auditing every one of the 36 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
+
+
+## Dedicated Apple diagnostics workspace — 23 November 2026
+
+- The navigation catalog now contains **37 sections**, adding Section 37: iPhone & iPad Center. Existing 36 sections and their ActionIds are retained.
+- New child tools: Lockdown identity discovery, Parts & Service History recording, Battery Health/cycle-count recording, physical component checks, independent AirPlay viewing and evidence-based originality review.
+- The Lockdown parser accepts bounded XML plist only, rejects DTD/external entities, masks serials and tests that current charge is not misclassified as battery health.
+- Apple diagnostic utilities must be selected by the operator from a trusted Windows libimobiledevice distribution. No binaries are downloaded or installed automatically.
+- Component evidence uses the existing DPAPI-protected store. Parts/battery values are read by the technician from the iPhone's official settings; the physical test checklist requires actual observation and written evidence.
+- AirPlay now has a dedicated independent native host in its own top-level window. It no longer attaches to the Android `PhoneScreenHost`. The existing Android recording guard, manual priority and MainWindow process shutdown cleanup remain in place.
+- Status: implementation committed for CI review; **not yet physically verified on an iPhone or iPad**. No absolute genuine/copy claim is produced.
