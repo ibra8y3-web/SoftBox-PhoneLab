@@ -192,7 +192,7 @@ public sealed class AirPlayReceiverWindow : Window
 
     private void OnReceiverOutput(string line)
     {
-        _ = Dispatcher.BeginInvoke(() => AppendLog(line));
+        _ = Dispatcher.InvokeAsync(() => AppendLog(line));
     }
 
     private void AppendLog(string line)
