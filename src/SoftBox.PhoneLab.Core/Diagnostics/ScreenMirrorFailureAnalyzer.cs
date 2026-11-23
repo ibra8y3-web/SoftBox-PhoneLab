@@ -21,6 +21,30 @@ public static class ScreenMirrorFailureAnalyzer
         ArgumentNullException.ThrowIfNull(error);
         var detail = Limit(error.Message, 600);
 
+        if (ContainsAny(detail, "device unauthorized", "unauthorized", "not authorized"))
+            return Report("ADB_UNAUTHORIZED", "الهاتف لم يمنح تصريح ADB",
+                "Android has not authorized this Windows computer for the selected ADB device.",
+                "افتح قفل الهاتف، وفعّل USB debugging، ثم وافق على رسالة السماح لهذا الكمبيوتر. لا يمكن لـSoftBox تخطي موافقة الهاتف.",
+                true, detail);
+
+        if (ContainsAny(detail, "device offline", "offline"))
+            return Report("ADB_OFFLINE", "قناة ADB للجهاز غير مستقرة",
+                "ADB sees the selected device but reports it as offline.",
+                "افصل كابل البيانات وأعد توصيله، ثم أعد تشغيل اتصال ADB من SoftBox. لا تحذف بيانات الهاتف ولا تغيّر وضع الإقلاع.",
+                true, detail);
+
+        if (ContainsAny(detail, "no devices/emulators found", "device not found", "no device with serial"))
+            return Report("ADB_DEVICE_MISSING", "الجهاز غير موجود في قناة ADB",
+                "The selected serial is no longer present in the ADB device inventory.",
+                "أعد فحص الأجهزة، وتأكد من اختيار الهاتف الصحيح وأن كابل البيانات وتعريف USB يعملان.",
+                true, detail);
+
+        if (ContainsAny(detail, "adb server is out of date", "server version", "cannot bind", "failed to start daemon"))
+            return Report("ADB_SERVER_CONFLICT", "يوجد تعارض في خادم ADB",
+                "The ADB client/server versions differ or another process owns the ADB server port.",
+                "أغلق أدوات Android الأخرى التي تشغّل ADB، ثم أعد فحص الاتصال باستخدام Platform-Tools المرفقة مع SoftBox.",
+                true, detail);
+
         if (error is UnauthorizedAccessException)
             return Report("ADB_UNAUTHORIZED", "الهاتف لم يمنح تصريح ADB",
                 "Windows may see the USB device, but Android has not authorized this computer for ADB.",
@@ -77,6 +101,9 @@ public static class ScreenMirrorFailureAnalyzer
             "احتفظ بالتفاصيل الفنية، وافحص حالة ADB وملفات Offline ثم أعد المحاولة بعد معالجة السبب.",
             true, detail);
     }
+
+    private static bool ContainsAny(string value, params string[] candidates)
+        => candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
 
     private static ScreenMirrorFailureReport Report(
         string code, string title, string cause, string action, bool retryable, string detail)
