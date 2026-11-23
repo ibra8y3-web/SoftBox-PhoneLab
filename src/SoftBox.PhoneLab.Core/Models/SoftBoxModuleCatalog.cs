@@ -405,7 +405,7 @@ public static class SoftBoxModuleCatalog
                 new("iphone-battery-health", "صحة البطارية ودورات الشحن", "Battery health and cycle count", "يسجل السعة القصوى وعدد الدورات ورسالة الخدمة من إعدادات iPhone الرسمية عند توفرها. نسبة الشحن الحالية لا تستخدم كبديل لصحة البطارية.", ModuleImplementationStatus.Implemented, "OpenIPhoneBatteryHealth"),
                 new("iphone-functional-checks", "اختبارات الشاشة واللمس والكاميرا والحساسات", "Physical component checks", "يسجل نتائج فحص فعلي يجريه الفني للشاشة واللمس والكاميرات وFace ID والصوت والميكروفون والحساسات ومنفذ الشحن. لا تُملأ النتائج تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenIPhoneFunctionalTests"),
                 new("iphone-airplay", "عرض شاشة iPhone عبر AirPlay", "iPhone AirPlay screen viewing", "يفتح مستقبل AirPlay في نافذة مستقلة ذات مساحة عرض مستقلة عن Android/scrcpy. عرض فقط، ولا يرسل لمسًا أو رمز قفل إلى iPhone.", ModuleImplementationStatus.Implemented),
-                new("iphone-authenticity", "تقييم أدلة هوية الجهاز والأصالة", "Device identity evidence assessment", "يجمع أدلة اتصال Apple والطراز والسجل الرسمي، لكنه لا يصدر حكم أصالة مطلقًا اعتمادًا على USB أو الرقم التسلسلي وحدهما.", ModuleImplementationStatus.InDevelopment)
+                new("iphone-authenticity", "تقييم أدلة هوية الجهاز والأصالة", "Device identity evidence assessment", "يجمع استجابة Apple Lockdown ونتيجة فحص التغطية التي أدخلها الفني وسجل القطع؛ يصدر حالة أدلة متوافقة أو تحتاج مراجعة أو غير كافية، ولا يزعم إثبات أصالة مطلقًا.", ModuleImplementationStatus.InDevelopment, "OpenIPhoneAuthenticityEvidence")
             ])
     ];
 
@@ -418,7 +418,7 @@ public static class SoftBoxModuleCatalog
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
         "OpenUniversalDeviceDiscovery", "OpenAirPlayReceiver", "OpenMiracastSetup", "OpenLockRecoveryAssistant", "OpenDiagnosticEvidenceHistory",
-        "OpenIPhoneCenter", "OpenIPhonePartsHistory", "OpenIPhoneBatteryHealth", "OpenIPhoneFunctionalTests",
+        "OpenIPhoneCenter", "OpenIPhonePartsHistory", "OpenIPhoneBatteryHealth", "OpenIPhoneFunctionalTests", "OpenIPhoneAuthenticityEvidence",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement", "OpenDeviceAccessRecoveryCenter"
     };
 
