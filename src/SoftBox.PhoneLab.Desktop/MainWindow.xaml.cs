@@ -929,7 +929,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         new IPhoneAssessmentWindow(snapshot, _diagnosticEvidenceStore, mode, _iphoneCenterWindow.SelectedBatteryDiagnostics)
-        { Owner = _iphoneCenterWindow ?? this }.ShowDialog();
+        { Owner = (Window?)_iphoneCenterWindow ?? this }.ShowDialog();
     }
 
     private void OpenAirPlayReceiverWindow()
