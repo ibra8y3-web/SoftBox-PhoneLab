@@ -110,7 +110,7 @@ public sealed class DriverInfCompatibilityWindow : Window
         root.Children.Add(_report);
 
         root.Children.Add(Text(
-            "حدود القرار: نتيجة INF Compatible تعني أن Hardware ID ظهر في قسم Models مناسب للمعمارية ونسخة Windows وفق تحليل INF ثابت. لا تثبت وحدها توقيع الحزمة أو عضوية INF داخل CAT أو جودة المصدر أو اعتماد OEM. تحقق من CAT وعضوية الملفات قبل التفكير في أي تثبيت. SoftBox لا يثبّت التعريف من هذه النافذة.",
+            "حدود القرار: نتيجة INF Compatible تعني أن Hardware ID ظهر في قسم Models مرشح مناسب للمعمارية ونسخة Windows وفق تحليل نصي ثابت. قد يحتوي INF على زخارف متعددة ويختار Windows قسمًا أكثر تخصيصًا. النتيجة لا تثبت اختيار SetupAPI النهائي ولا توقيع الحزمة أو عضوية INF داخل CAT أو جودة المصدر أو اعتماد OEM. تحقق من CAT وعضوية الملفات قبل التفكير في أي تثبيت. SoftBox لا يثبّت التعريف من هذه النافذة.",
             "#EBCB9B", 10));
 
         return new ScrollViewer { Content = root, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
