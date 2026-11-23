@@ -8,7 +8,7 @@ public sealed class OemUsbDriverCatalogTests
     [Fact]
     public void CatalogContainsMoreThanFifteenOfficialHttpsResources()
     {
-        Assert.Equal(21, OemUsbDriverCatalog.All.Count);
+        Assert.Equal(33, OemUsbDriverCatalog.All.Count);
         Assert.All(OemUsbDriverCatalog.All, item =>
         {
             Assert.False(string.IsNullOrWhiteSpace(item.Id));
@@ -16,6 +16,7 @@ public sealed class OemUsbDriverCatalogTests
             Assert.True(Uri.TryCreate(item.OfficialUrl, UriKind.Absolute, out var uri));
             Assert.Equal(Uri.UriSchemeHttps, uri!.Scheme);
             Assert.NotEmpty(item.Aliases);
+            Assert.False(string.IsNullOrWhiteSpace(item.ResourceKind));
         });
     }
 
@@ -29,6 +30,18 @@ public sealed class OemUsbDriverCatalogTests
     [InlineData("Dell Inc.", "dell")]
     [InlineData("Sharp Corporation", "sharp")]
     [InlineData("ZTE Corporation", "zte")]
+    [InlineData("Apple Inc.", "apple")]
+    [InlineData("OnePlus Technology", "oneplus")]
+    [InlineData("OPPO", "oppo")]
+    [InlineData("realme", "realme")]
+    [InlineData("vivo Mobile", "vivo")]
+    [InlineData("HONOR Device Co.", "honor")]
+    [InlineData("TECNO Mobile", "tecno")]
+    [InlineData("Infinix Mobility", "infinix")]
+    [InlineData("Nothing Technology", "nothing")]
+    [InlineData("HMD Global", "hmd")]
+    [InlineData("TCL Communication", "tcl")]
+    [InlineData("Fairphone", "fairphone")]
     public void FindsTheMatchingManufacturerResource(string manufacturer, string expectedId)
     {
         var result = OemUsbDriverCatalog.FindForManufacturer(manufacturer);
@@ -43,6 +56,7 @@ public sealed class OemUsbDriverCatalogTests
     [InlineData("Unknown", "USB Device", "0E8D", "mediatek")]
     [InlineData("Unknown", "Sony Mobile", "FFFF", "sony")]
     [InlineData("", "", "0FCE", "sony")]
+    [InlineData("", "Apple Mobile Device USB Driver", "05AC", "apple")]
     public void MatchesManufacturerFromWindowsUsbPnPOrVendorId(
         string manufacturer, string friendlyName, string vendorId, string expectedId)
     {
