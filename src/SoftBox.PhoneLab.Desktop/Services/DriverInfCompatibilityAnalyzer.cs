@@ -359,15 +359,17 @@ public static class DriverInfCompatibilityAnalyzer
 
     private static bool IsArchitectureCompatible(string decoration, string architecture)
     {
+        // On current Windows releases, an undecorated or .NT model section is an x86
+        // fallback. Do not infer x64/ARM64 compatibility from an unqualified section.
         if (string.IsNullOrWhiteSpace(decoration))
-            return true; // Undecorated model section is architecture-neutral in the INF.
+            return architecture.Equals("x86", StringComparison.OrdinalIgnoreCase);
         var architectureToken = decoration.Split('.', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
         if (!architectureToken.StartsWith("NT", StringComparison.OrdinalIgnoreCase))
             return false;
 
         var declared = architectureToken[2..].ToLowerInvariant();
         if (declared.Length == 0)
-            return true;
+            return architecture.Equals("x86", StringComparison.OrdinalIgnoreCase);
         return declared switch
         {
             "amd64" => architecture.Equals("amd64", StringComparison.OrdinalIgnoreCase),
