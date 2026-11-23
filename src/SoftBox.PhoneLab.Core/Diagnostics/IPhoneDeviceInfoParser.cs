@@ -23,7 +23,7 @@ public static class IPhoneDeviceInfoParser
         {
             var settings = new XmlReaderSettings
             {
-                DtdProcessing = DtdProcessing.Prohibit,
+                DtdProcessing = DtdProcessing.Ignore,
                 XmlResolver = null,
                 MaxCharactersInDocument = MaximumPlistCharacters,
                 MaxCharactersFromEntities = 0
