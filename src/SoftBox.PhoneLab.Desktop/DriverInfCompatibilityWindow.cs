@@ -70,17 +70,20 @@ public sealed class DriverInfCompatibilityWindow : Window
 
         var infRow = new DockPanel { Margin = new Thickness(0, 8, 0, 5) };
         StylePathBox(_infPath);
-        DockPanel.SetDock(PathButton("اختيار ملف INF", BrowseInf), Dock.Left);
+        var browseInf = PathButton("اختيار ملف INF", BrowseInf);
+        DockPanel.SetDock(browseInf, Dock.Left);
+        infRow.Children.Add(browseInf);
         infRow.Children.Add(_infPath);
-        infRow.Children.Add(PathButton("اختيار ملف INF", BrowseInf));
         root.Children.Add(Text("ملف INF بعد فك حزمة الشركة المصنّعة", "#7DD3FC", 10));
         root.Children.Add(infRow);
         root.Children.Add(Button("تحليل Hardware IDs والمعمارية وWindows Build", "#14517A", async (_, _) => await AnalyzeInfAsync()));
 
         var catRow = new DockPanel { Margin = new Thickness(0, 10, 0, 5) };
         StylePathBox(_catalogPath);
+        var browseCatalog = PathButton("اختيار CAT", BrowseCatalog);
+        DockPanel.SetDock(browseCatalog, Dock.Left);
+        catRow.Children.Add(browseCatalog);
         catRow.Children.Add(_catalogPath);
-        catRow.Children.Add(PathButton("اختيار CAT", BrowseCatalog));
         root.Children.Add(Text("ملف CAT المرفق مع الحزمة (اختياري لكنه مطلوب للتحقق من عضوية التوقيع)", "#7DD3FC", 10));
         root.Children.Add(catRow);
         root.Children.Add(Button("تحقق توقيع CAT وعضوية INF عبر Microsoft SignTool", "#20364F", async (_, _) => await VerifyCatalogMembershipAsync()));
