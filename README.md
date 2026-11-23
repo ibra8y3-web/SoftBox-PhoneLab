@@ -251,3 +251,10 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 
 
 - Windows Wireless Display/Miracast setup guide: https://support.microsoft.com/en-us/windows/hardware/display-graphics/screen-mirroring-and-projecting-to-your-pc-or-wireless-display
+
+
+### OEM resource availability and model matching
+
+- The 33-entry OEM resource center can check whether an official HTTPS source page responds. It follows at most five HTTPS redirects, blocks HTTPS-to-HTTP downgrade and reports the HTTP response. It never downloads the driver payload or claims a reachable page contains a package for the selected phone.
+- Windows PnP discovery captures the selected device's Hardware IDs. The INF analyzer compares those IDs with OEM Models sections and checks architecture/minimum Windows build decorations. ProductType/SuiteMask it cannot resolve remains unknown.
+- An INF match is a candidate match, not proof of the final package that SetupAPI/Windows Driver Store will select. CAT signature and INF/SYS catalog membership are separate checks; neither alone proves model compatibility.
