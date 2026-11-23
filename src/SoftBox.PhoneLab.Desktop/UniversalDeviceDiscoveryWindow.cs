@@ -162,9 +162,10 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
             }
 
             _adbResults.Children.Clear();
-            if (_adbDevices.Count == 0)
+            var adbDevices = _adbDevicesProvider();
+            if (adbDevices.Count == 0)
                 _adbResults.Children.Add(Text("لم يعرض ADB أجهزة في هذه الجلسة. تحقق من Platform-Tools، أو استخدم مسار الشركة الرسمي.", "#AFC7DF", 10));
-            foreach (var device in _adbDevices)
+            foreach (var device in adbDevices)
             {
                 var card = new Border
                 {
