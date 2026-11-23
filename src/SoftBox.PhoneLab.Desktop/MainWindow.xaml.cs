@@ -383,7 +383,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task EnsureSelectedDeviceReadyAsync(DeviceListItem selected)
     {
         if (!selected.IsAuthorized) return;
-        if (_preparedSerials.Add(selected.Serial) || (_settings.AutoOpenScreenMirror && _screenMirror.ActiveSerial != selected.Serial))
+        if (_preparedSerials.Add(selected.Serial) || (_settings.AutoOpenScreenMirror && _screenMirror.ActiveSerial != selected.Serial && !_airPlayReceiver.IsRunning))
         {
             _preparedSerials.Add(selected.Serial);
             await PrepareConnectedDeviceAsync(selected);
@@ -394,7 +394,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task RetryAutoScreenMirrorAsync(DeviceListItem selected)
     {
-        if (!selected.IsAuthorized ||
+        if (_airPlayReceiver.IsRunning ||
+            !selected.IsAuthorized ||
             !_settings.AutoOpenScreenMirror ||
             !SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen") ||
             (_screenMirror.ActiveSerial == selected.Serial && _screenMirror.IsRunning))
@@ -408,7 +409,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
         try
         {
-            await _airPlayReceiver.StopAsync();
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
             var deadline = DateTime.UtcNow.AddSeconds(6);
             while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
@@ -433,6 +433,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
+        // A user-selected AirPlay session owns the shared screen dock. Automatic ADB setup
+        // must not steal the panel on the next USB discovery tick.
+        if (_airPlayReceiver.IsRunning)
+        {
+            MirrorStatus = "جلسة AirPlay يدوية نشطة؛ تم إيقاف الفتح التلقائي لـscrcpy حتى يختار المستخدم مسار Android يدويًا.";
+            Notify(nameof(MirrorStatus));
+            return;
+        }
+
         var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
             SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
         if (_settings.AutoOpenScreenMirror && canControlDevice)
