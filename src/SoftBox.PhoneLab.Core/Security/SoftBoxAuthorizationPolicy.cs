@@ -42,6 +42,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenUniversalDeviceDiscovery"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenAirPlayReceiver"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenLockRecoveryAssistant"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenDiagnosticEvidenceHistory"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDriverSignatureVerifier"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenQualcommUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenMediaTekUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
