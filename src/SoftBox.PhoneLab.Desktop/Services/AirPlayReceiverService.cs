@@ -113,6 +113,7 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         {
             if (!string.IsNullOrWhiteSpace(args.Data)) AddOutput("ERR: " + args.Data);
         };
+        process.Exited += (_, _) => _ = HandleUnexpectedExitAsync(process);
 
         try
         {
@@ -206,6 +207,47 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
 
         if (process is not null)
             AddOutput("AirPlay receiver process stopped.");
+    }
+
+
+    private async Task HandleUnexpectedExitAsync(Process exitedProcess)
+    {
+        var entered = false;
+        try
+        {
+            await _lifecycleGate.WaitAsync();
+            entered = true;
+
+            // StopCoreAsync clears the shared reference before asking Windows to close the process.
+            // An exit observed after that point belongs to an intentional stop and must not be logged
+            // as a crash or race with the next receiver session.
+            if (!ReferenceEquals(Volatile.Read(ref _process), exitedProcess))
+                return;
+
+            var exitCode = -1;
+            try { exitCode = exitedProcess.ExitCode; } catch (InvalidOperationException) { }
+
+            Interlocked.CompareExchange(ref _process, null, exitedProcess);
+            var host = _host;
+            _host = null;
+            _windowHandle = IntPtr.Zero;
+
+            // Drain asynchronous stdout/stderr callbacks before disposing the Process object.
+            try { await Task.Run(() => exitedProcess.WaitForExit()); } catch (InvalidOperationException) { }
+            try { host?.DetachWindow(); } catch { }
+            try { exitedProcess.Dispose(); } catch { }
+
+            AddOutput($"AirPlay receiver exited unexpectedly with code {exitCode}. The iPhone display was detached.");
+        }
+        catch (Exception ex)
+        {
+            AddOutput("AirPlay exit cleanup failed: " + Limit(ex.Message, 800));
+        }
+        finally
+        {
+            if (entered)
+                _lifecycleGate.Release();
+        }
     }
 
     private void AddOutput(string line)
