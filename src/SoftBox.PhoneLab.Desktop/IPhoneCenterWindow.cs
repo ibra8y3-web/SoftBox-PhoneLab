@@ -33,6 +33,9 @@ public sealed class IPhoneCenterWindow : Window
     public IPhoneDeviceInfoSnapshot? SelectedSnapshot
         => (_devices.SelectedItem as IPhoneDeviceScanResult)?.Snapshot;
 
+    public IPhoneBatteryDiagnosticsSnapshot? SelectedBatteryDiagnostics
+        => (_devices.SelectedItem as IPhoneDeviceScanResult)?.BatteryDiagnostics;
+
     public IPhoneCenterWindow(
         PhoneLabSettings settings,
         PhoneLabSettingsService settingsService,
@@ -240,7 +243,12 @@ public sealed class IPhoneCenterWindow : Window
             $"المساحة المتاحة: {FormatBytes(snapshot.AmountDataAvailableBytes)}\n" +
             $"نسبة الشحن الحالية: {FormatPercent(snapshot.CurrentChargePercent)} — ليست السعة القصوى للبطارية\n" +
             $"حالة الشحن: {snapshot.IsCharging switch { true => "يشحن", false => "لا يشحن", null => "غير متاحة" }}\n" +
-            $"وقت القراءة UTC: {snapshot.ReadAtUtc:O}\n\n" +
+            $"وقت القراءة UTC: {snapshot.ReadAtUtc:O}\n" +
+            $"دورات البطارية (Apple GasGauge): {FormatLong(result.BatteryDiagnostics?.CycleCount)}\n" +
+            $"تقدير السعة القصوى من GasGauge: {FormatPercent(result.BatteryDiagnostics?.EstimatedMaximumCapacityPercent)}\n" +
+            $"السعة التصميمية الخام: {FormatLong(result.BatteryDiagnostics?.DesignCapacity)}\n" +
+            $"سعة الشحن الكامل الخام: {FormatLong(result.BatteryDiagnostics?.FullChargeCapacity)}\n" +
+            $"حالة GasGauge: {result.BatteryDiagnostics?.Status ?? result.BatteryDiagnosticsError ?? "غير متاحة"}\n\n" +
             "دليل الهوية: استجابت خدمة Apple Lockdown لطلب معلومات الجهاز. هذا دليل اتصال وهوية بروتوكولية، وليس شهادة بأن كل مكونات الهاتف أصلية أو لم تُستبدل.";
         _status.Text = "تمت قراءة بيانات فعلية من الجهاز. افتح أدوات سجل القطع والبطارية والفحص الفيزيائي لإضافة الأدلة المنفصلة.";
 
@@ -259,7 +267,12 @@ public sealed class IPhoneCenterWindow : Window
                     Evidence("apple-current-charge", "نسبة الشحن الحالية", snapshot.CurrentChargePercent.HasValue ? DiagnosticStatus.DataRead : DiagnosticStatus.Unavailable,
                         snapshot.CurrentChargePercent.HasValue
                             ? $"Current charge {snapshot.CurrentChargePercent}% (not maximum capacity or battery health)."
-                            : "Apple Lockdown did not expose a usable current charge value.")
+                            : "Apple Lockdown did not expose a usable current charge value."),
+                    Evidence("apple-battery-gasgauge", "دورات البطارية وبيانات GasGauge",
+                        result.BatteryDiagnostics?.IsSuccessful == true ? DiagnosticStatus.DataRead : DiagnosticStatus.Unavailable,
+                        result.BatteryDiagnostics is { } gauge
+                            ? $"CycleCount={gauge.CycleCount}; DesignCapacity={gauge.DesignCapacity}; FullChargeCapacity={gauge.FullChargeCapacity}; EstimatedMaximumCapacityPercent={gauge.EstimatedMaximumCapacityPercent}; EstimateBasis={gauge.EstimateBasis}; Status={gauge.Status}."
+                            : result.BatteryDiagnosticsError ?? "Apple diagnostics relay did not return GasGauge data.")
                 };
                 await _evidenceStore.RecordSnapshotAsync(
                     snapshot.EvidenceIdentity, "Apple", snapshot.ProductType, components,
@@ -341,6 +354,9 @@ public sealed class IPhoneCenterWindow : Window
 
     private static string FormatPercent(int? percent)
         => percent is null ? "غير متاح" : percent.Value.ToString() + "%";
+
+    private static string FormatLong(long? value)
+        => value is null ? "غير متاح" : value.Value.ToString("N0");
 
     private static Border Notice(string text, string background, string border, string foreground)
         => new()
