@@ -1200,6 +1200,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new UniversalDeviceDiscoveryWindow(_usbInventory, Devices.ToArray())
                 { Owner = this }.ShowEmbedded(this);
                 break;
+            case "OpenMiracastSetup":
+                new MiracastSetupWindow { Owner = this }.ShowEmbedded(this);
+                break;
             case "OpenAirPlayReceiver":
                 new AirPlayReceiverWindow(
                     _settings,
