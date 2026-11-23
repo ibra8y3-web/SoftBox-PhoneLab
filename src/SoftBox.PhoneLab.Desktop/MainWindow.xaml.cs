@@ -921,7 +921,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        new IPhoneAssessmentWindow(snapshot, _diagnosticEvidenceStore, mode)
+        new IPhoneAssessmentWindow(snapshot, _diagnosticEvidenceStore, mode, _iphoneCenterWindow.SelectedBatteryDiagnostics)
         { Owner = this }.ShowDialog();
     }
 
