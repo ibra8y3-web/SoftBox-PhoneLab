@@ -25,6 +25,7 @@ public sealed class IPhoneAssessmentWindow : Window
     private readonly IPhoneDeviceInfoSnapshot _device;
     private readonly DiagnosticEvidenceStore _store;
     private readonly IPhoneAssessmentMode _mode;
+    private readonly IPhoneBatteryDiagnosticsSnapshot? _batteryDiagnostics;
     private readonly Dictionary<string, ComboBox> _choices = new(StringComparer.Ordinal);
     private readonly Dictionary<string, TextBox> _notes = new(StringComparer.Ordinal);
     private readonly TextBox _maximumCapacity = new();
@@ -63,15 +64,18 @@ public sealed class IPhoneAssessmentWindow : Window
     public IPhoneAssessmentWindow(
         IPhoneDeviceInfoSnapshot device,
         DiagnosticEvidenceStore store,
-        IPhoneAssessmentMode mode)
+        IPhoneAssessmentMode mode,
+        IPhoneBatteryDiagnosticsSnapshot? batteryDiagnostics = null)
     {
         _device = device ?? throw new ArgumentNullException(nameof(device));
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _mode = mode;
+        _batteryDiagnostics = batteryDiagnostics;
         Title = mode switch
         {
             IPhoneAssessmentMode.PartsHistory => "SoftBox | سجل قطع iPhone",
             IPhoneAssessmentMode.BatteryHealth => "SoftBox | صحة بطارية iPhone",
+            IPhoneAssessmentMode.AuthenticityEvidence => "SoftBox | أدلة أصالة iPhone",
             _ => "SoftBox | الفحص الوظيفي لـ iPhone"
         };
         Width = 920;
@@ -154,9 +158,22 @@ public sealed class IPhoneAssessmentWindow : Window
 
     private void BuildBatteryHealth(Panel root)
     {
-        root.Children.Add(Text("أدخل القيم الظاهرة على iPhone نفسه. الحقول الاختيارية تظل فارغة إذا لم يعرضها الطراز.", "#DCEBFA", 12, FontWeights.SemiBold));
-        AddInput(root, "السعة القصوى للبطارية (%)", _maximumCapacity, "مثال: 87");
-        AddInput(root, "عدد دورات الشحن", _cycleCount, "إذا كان ظاهرًا في الإعدادات");
+        root.Children.Add(Text("قراءة آلية من Apple Diagnostics Relay (GasGauge)", "#7DD3FC", 12, FontWeights.Bold));
+        if (_batteryDiagnostics is { } gauge)
+        {
+            root.Children.Add(Text(
+                $"الحالة: {gauge.Status} • دورات الشحن: {gauge.CycleCount?.ToString(CultureInfo.InvariantCulture) ?? "غير متاحة"} • تقدير السعة القصوى: {gauge.EstimatedMaximumCapacityPercent?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}%\n" +
+                $"DesignCapacity الخام: {gauge.DesignCapacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"} • FullChargeCapacity الخام: {gauge.FullChargeCapacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}\n" +
+                $"طريقة التقدير: {gauge.EstimateBasis} • وقت القراءة UTC: {gauge.ReadAtUtc:O}",
+                "#B7C9DE", 10));
+        }
+        else
+        {
+            root.Children.Add(Text("لم تتوفر قراءة GasGauge آلية. تأكد من وجود idevicediagnostics.exe أو سجّل القيم الظاهرة في إعدادات iPhone يدويًا.", "#F5D39E", 10));
+        }
+        root.Children.Add(Text("قيم إضافية من شاشة iPhone الرسمية (اختيارية)", "#7DD3FC", 11, FontWeights.SemiBold));
+        AddInput(root, "السعة القصوى الظاهرة في الإعدادات (%)", _maximumCapacity, "مثال: 87");
+        AddInput(root, "عدد دورات الشحن (تجاوز يدوي اختياري)", _cycleCount, "اتركه فارغًا لاستخدام قراءة GasGauge الآلية");
         AddInput(root, "تاريخ التصنيع", _manufactureDate, "اختياري");
         AddInput(root, "أول استخدام", _firstUseDate, "اختياري");
         root.Children.Add(Text("رسالة صحة البطارية / الخدمة", "#7DD3FC", 10, FontWeights.SemiBold));
@@ -168,7 +185,7 @@ public sealed class IPhoneAssessmentWindow : Window
             ("unable-to-verify", "Unable to Verify / تعذر التحقق من البطارية")
         ]);
         root.Children.Add(_batteryServiceState);
-        root.Children.Add(Notice("لن يتم حساب السعة القصوى من نسبة الشحن الحالية. قيمة السعة القصوى أو عدد الدورات يجب أن تُقرأ من إعدادات iPhone أو تقرير خدمة موثوق."));
+        root.Children.Add(Notice("نسبة الشحن الحالية ليست صحة البطارية. تقدير GasGauge قراءة تشخيصية وقد يختلف مقياس FullChargeCapacity حسب إصدار iOS؛ نقارن القيم المتوافقة فقط ونُظهر أساس التقدير. أدخل القيمة الرسمية من الإعدادات عند توفرها."));
     }
 
     private void BuildFunctionalTests(Panel root)
@@ -240,7 +257,9 @@ public sealed class IPhoneAssessmentWindow : Window
             var source = _mode switch
             {
                 IPhoneAssessmentMode.PartsHistory => "Technician read iPhone Settings > General > About > Parts & Service History",
-                IPhoneAssessmentMode.BatteryHealth => "Technician read iPhone Settings > Battery > Battery Health",
+                IPhoneAssessmentMode.BatteryHealth => _batteryDiagnostics is null
+                    ? "Apple iPhone Settings > Battery Health (technician-read values)"
+                    : "Apple diagnostics relay GasGauge plus technician-read iPhone Battery Health settings",
                 IPhoneAssessmentMode.AuthenticityEvidence => "Technician-reviewed Apple Lockdown identity, Apple coverage result and Parts & Service History",
                 _ => "Technician-performed physical iPhone component checks"
             };
@@ -285,20 +304,28 @@ public sealed class IPhoneAssessmentWindow : Window
     private List<ComponentDiagnostic> BuildBatteryEvidence()
     {
         int? capacity = ParseOptionalInteger(_maximumCapacity.Text, "السعة القصوى", 1, 100);
-        int? cycles = ParseOptionalInteger(_cycleCount.Text, "عدد الدورات", 0, 10000);
+        int? manualCycles = ParseOptionalInteger(_cycleCount.Text, "عدد الدورات", 0, 100000);
+        long? cycles = manualCycles ?? _batteryDiagnostics?.CycleCount;
+        int? diagnosticEstimate = _batteryDiagnostics?.EstimatedMaximumCapacityPercent;
         var state = SelectedValue(_batteryServiceState);
-        if (capacity is null && cycles is null && state == "not-recorded" &&
+        if (capacity is null && cycles is null && diagnosticEstimate is null && state == "not-recorded" &&
             string.IsNullOrWhiteSpace(_manufactureDate.Text) && string.IsNullOrWhiteSpace(_firstUseDate.Text))
             return [];
 
-        var status = state is "service" or "unable-to-verify" || capacity is <= 80
+        var effectiveCapacity = capacity ?? diagnosticEstimate;
+        var status = state is "service" or "unable-to-verify" || effectiveCapacity is <= 80
             ? DiagnosticStatus.Review
             : DiagnosticStatus.DataRead;
         var evidence =
-            $"MaximumCapacity={capacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}%; " +
+            $"SettingsMaximumCapacity={capacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}%; " +
+            $"GasGaugeEstimatedMaximumCapacity={diagnosticEstimate?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}%; " +
+            $"GasGaugeEstimateBasis={_batteryDiagnostics?.EstimateBasis ?? "Unavailable"}; " +
             $"CycleCount={cycles?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}; " +
+            $"DesignCapacityRaw={_batteryDiagnostics?.DesignCapacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}; " +
+            $"FullChargeCapacityRaw={_batteryDiagnostics?.FullChargeCapacity?.ToString(CultureInfo.InvariantCulture) ?? "غير متاح"}; " +
+            $"GasGaugeStatus={_batteryDiagnostics?.Status ?? "Unavailable"}; " +
             $"ManufactureDate={SafeNote(_manufactureDate.Text)}; FirstUse={SafeNote(_firstUseDate.Text)}; " +
-            $"ServiceState={state}. Values manually read from iPhone Settings.";
+            $"ServiceState={state}. Diagnostic values came from the read-only Apple GasGauge relay; Settings values were entered by the technician.");
         return
         [
             new ComponentDiagnostic
