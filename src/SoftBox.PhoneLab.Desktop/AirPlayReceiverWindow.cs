@@ -209,7 +209,21 @@ public sealed class AirPlayReceiverWindow : Window
 
     private void OnReceiverOutput(string line)
     {
-        _ = Dispatcher.InvokeAsync(() => AppendLog(line));
+        _ = Dispatcher.InvokeAsync(() =>
+        {
+            AppendLog(line);
+            if (_receiver.IsRunning)
+            {
+                _start.IsEnabled = false;
+                _stop.IsEnabled = true;
+            }
+            else if (line.Contains("stopped", StringComparison.OrdinalIgnoreCase))
+            {
+                _start.IsEnabled = true;
+                _stop.IsEnabled = false;
+                _status.Text = "تم إيقاف مستقبل AirPlay.";
+            }
+        });
     }
 
     private void AppendLog(string line)
