@@ -30,7 +30,7 @@ public sealed class IPhoneAssessmentWindow : Window
     private readonly TextBox _cycleCount = new();
     private readonly TextBox _manufactureDate = new();
     private readonly TextBox _firstUseDate = new();
-    private readonly ComboBox _batteryServiceState = new();
+    private ComboBox _batteryServiceState = new();
     private readonly TextBlock _status = new();
     private readonly Button _save = new();
 

@@ -36,6 +36,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DeviceProfileCatalog _deviceProfiles = new();
     private readonly ScreenMirrorService _screenMirror;
     private readonly AirPlayReceiverService _airPlayReceiver = new();
+    private IPhoneCenterWindow? _iphoneCenterWindow;
+    private AirPlayReceiverWindow? _airPlayReceiverWindow;
     private readonly PhoneLabAgentInstaller _agentInstaller;
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
@@ -893,12 +895,75 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var window = new WorkshopCenterWindow { Owner = this };
         window.ShowEmbedded(this);
     }
+
+    private void OpenIPhoneCenter()
+    {
+        // Close the current embedded page before switching to the dedicated Apple workspace.
+        CloseAllEmbeddedPages();
+        _iphoneCenterWindow = new IPhoneCenterWindow(
+            _settings,
+            _settingsService,
+            _usbInventory,
+            _diagnosticEvidenceStore,
+            OpenModuleAction)
+        { Owner = this };
+        _iphoneCenterWindow.Closed += (_, _) => _iphoneCenterWindow = null;
+        _iphoneCenterWindow.ShowEmbedded(this);
+    }
+
+    private void OpenIPhoneAssessment(IPhoneAssessmentMode mode)
+    {
+        if (_iphoneCenterWindow?.SelectedSnapshot is not { } snapshot)
+        {
+            MessageBox.Show(this,
+                "افتح قسم iPhone، نفّذ قراءة ناجحة لمعلومات الجهاز، ثم اختر أداة الفحص المطلوبة.",
+                "مركز iPhone", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new IPhoneAssessmentWindow(snapshot, _diagnosticEvidenceStore, mode)
+        { Owner = this }.ShowDialog();
+    }
+
+    private void OpenAirPlayReceiverWindow()
+    {
+        if (_airPlayReceiverWindow is { IsVisible: true })
+        {
+            _airPlayReceiverWindow.Activate();
+            return;
+        }
+
+        _airPlayReceiverWindow = new AirPlayReceiverWindow(
+            _settings,
+            _settingsService,
+            _airPlayReceiver,
+            async () =>
+            {
+                if (_screenMirror.IsRecording)
+                    throw new InvalidOperationException("أوقف التسجيل الحالي واحفظ ملفه قبل تبديل مسار الشاشة إلى AirPlay.");
+                _screenMirror.Stop();
+                PhoneScreenHost.DetachWindow();
+                MirrorStatus = "جلسة Android توقفت قبل بدء AirPlay اليدوي في نافذته المستقلة.";
+                Notify(nameof(MirrorStatus));
+                await Task.CompletedTask;
+            })
+        { Owner = this };
+        _airPlayReceiverWindow.Closed += (_, _) => _airPlayReceiverWindow = null;
+        _airPlayReceiverWindow.Show();
+    }
+
     private void ModuleNavigation_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement element || element.Tag is not string moduleId)
             return;
 
-        // Phone Link is a persistent dock, not a full-page overlay.
+        if (moduleId.Equals("iphone-center", StringComparison.OrdinalIgnoreCase))
+        {
+            OpenModuleAction("OpenIPhoneCenter");
+            return;
+        }
+
+        // Phone Link is a persistent Android dock, not a full-page overlay.
         if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))
         {
             MirrorScreen_Click(this, new RoutedEventArgs());
@@ -963,6 +1028,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         switch (actionId)
         {
+            case "OpenIPhoneCenter":
+                OpenIPhoneCenter();
+                break;
+            case "OpenIPhonePartsHistory":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.PartsHistory);
+                break;
+            case "OpenIPhoneBatteryHealth":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.BatteryHealth);
+                break;
+            case "OpenIPhoneFunctionalTests":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.FunctionalTests);
+                break;
             case "RefreshDevices":
                 _ = RefreshDevicesAsync();
                 break;
@@ -1238,20 +1315,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new MiracastSetupWindow { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenAirPlayReceiver":
-                new AirPlayReceiverWindow(
-                    _settings,
-                    _settingsService,
-                    _airPlayReceiver,
-                    PhoneScreenHost,
-                    async () =>
-                    {
-                        if (_screenMirror.IsRecording)
-                            throw new InvalidOperationException("أوقف التسجيل الحالي واحفظ ملفه قبل تبديل مسار الشاشة إلى AirPlay.");
-                        _screenMirror.Stop();
-                        PhoneScreenHost.DetachWindow();
-                        await Task.CompletedTask;
-                    })
-                { Owner = this }.ShowEmbedded(this);
+                OpenAirPlayReceiverWindow();
                 break;
             case "OpenDiagnosticEvidenceHistory":
             {

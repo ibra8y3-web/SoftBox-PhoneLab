@@ -19,7 +19,7 @@ public sealed class AirPlayReceiverWindow : Window
     private const string UpstreamUrl = "https://github.com/moieric11/AirPlay-Windows";
     private readonly PhoneLabSettingsService _settingsService;
     private readonly AirPlayReceiverService _receiver;
-    private readonly SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost _screenHost;
+    private readonly SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost _screenHost = new();
     private readonly Func<Task> _stopExistingScreenSession;
     private readonly TextBox _executablePath = new();
     private readonly TextBox _fingerprint = new();
@@ -33,12 +33,10 @@ public sealed class AirPlayReceiverWindow : Window
         PhoneLabSettings settings,
         PhoneLabSettingsService settingsService,
         AirPlayReceiverService receiver,
-        SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost screenHost,
         Func<Task> stopExistingScreenSession)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
-        _screenHost = screenHost ?? throw new ArgumentNullException(nameof(screenHost));
         _stopExistingScreenSession = stopExistingScreenSession ?? throw new ArgumentNullException(nameof(stopExistingScreenSession));
         Title = "SoftBox | iPhone AirPlay Screen Receiver";
         Width = 900;
@@ -82,7 +80,7 @@ public sealed class AirPlayReceiverWindow : Window
         {
             _start.IsEnabled = false;
             _stop.IsEnabled = true;
-            _status.Text = "مستقبل AirPlay يعمل بالفعل داخل لوحة الشاشة.";
+            _status.Text = "مستقبل AirPlay يعمل بالفعل داخل نافذة iPhone المستقلة.";
             _log.Text = _receiver.RecentOutput;
         }
         Content = BuildContent();
@@ -104,7 +102,7 @@ public sealed class AirPlayReceiverWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         root.Children.Add(Text(
-            "هذا مسار استقبال منفصل عن ADB/scrcpy. بعد تشغيل المستقبل تُدمج نافذته الأصلية في مساحة شاشة الهاتف الجانبية داخل SoftBox. AirPlay هنا للعرض فقط ولا يرسل لمسًا أو إدخال رمز القفل إلى iPhone.",
+            "هذا مسار استقبال منفصل تمامًا عن ADB/scrcpy. نافذة AirPlay هذه تملك مساحة عرض أصلية مستقلة ولا تستخدم لوحة Android أو مضيف شاشة scrcpy. AirPlay هنا للعرض فقط ولا يرسل لمسًا أو إدخال رمز القفل إلى iPhone.",
             "#B7C9DE", 11));
 
         var license = new Border
@@ -145,6 +143,20 @@ public sealed class AirPlayReceiverWindow : Window
         actions.Children.Add(Button("فتح المصدر والترخيص", (_, _) => OpenUpstream()));
         root.Children.Add(actions);
         root.Children.Add(_status);
+
+        root.Children.Add(Text("شاشة iPhone المستقلة", "#7DD3FC", 13));
+        root.Children.Add(new Border
+        {
+            Height = 360,
+            MinHeight = 260,
+            Background = Brush("#050B13"),
+            BorderBrush = Brush("#2B4764"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(5),
+            Margin = new Thickness(0, 5, 0, 12),
+            Child = _screenHost
+        });
 
         root.Children.Add(Text("خطوات الاتصال", "#7DD3FC", 12));
         root.Children.Add(Text(
@@ -209,7 +221,7 @@ public sealed class AirPlayReceiverWindow : Window
 
             await _stopExistingScreenSession();
             var startedPath = await _receiver.StartAsync(receiverPath, _screenHost);
-            _status.Text = "تم تشغيل مستقبل AirPlay ودمج نافذته في شاشة SoftBox الجانبية. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
+            _status.Text = "تم تشغيل مستقبل AirPlay داخل نافذة iPhone المستقلة. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
             AppendLog("Started: " + startedPath);
         }
         catch (Exception ex)

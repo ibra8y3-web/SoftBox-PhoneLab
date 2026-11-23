@@ -112,6 +112,8 @@
        <Button Content="34  الدعم والسجلات" Tag="support-logs" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
        <Button Content="35  الإعدادات" Tag="settings" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
        <Button Content="36  حول SoftBox" Tag="about" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <TextBlock Text="37 | Apple iPhone / iPad" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="37  مركز iPhone و iPad" Tag="iphone-center" Click="ModuleNavigation_Click" Margin="2" Padding="8,8" FontSize="10.5" HorizontalContentAlignment="Stretch" Background="#173B58"/>
       </StackPanel>
      </ScrollViewer>
     </DockPanel>
