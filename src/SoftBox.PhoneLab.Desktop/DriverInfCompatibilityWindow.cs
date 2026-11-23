@@ -70,7 +70,7 @@ public sealed class DriverInfCompatibilityWindow : Window
 
         var infRow = new DockPanel { Margin = new Thickness(0, 8, 0, 5) };
         StylePathBox(_infPath);
-        var browseInf = PathButton("اختيار ملف INF", BrowseInf);
+        var browseInf = PathButton("اختيار ملف INF", (_, _) => BrowseInf());
         DockPanel.SetDock(browseInf, Dock.Left);
         infRow.Children.Add(browseInf);
         infRow.Children.Add(_infPath);
@@ -80,7 +80,7 @@ public sealed class DriverInfCompatibilityWindow : Window
 
         var catRow = new DockPanel { Margin = new Thickness(0, 10, 0, 5) };
         StylePathBox(_catalogPath);
-        var browseCatalog = PathButton("اختيار CAT", BrowseCatalog);
+        var browseCatalog = PathButton("اختيار CAT", (_, _) => BrowseCatalog());
         DockPanel.SetDock(browseCatalog, Dock.Left);
         catRow.Children.Add(browseCatalog);
         catRow.Children.Add(_catalogPath);
@@ -289,14 +289,14 @@ public sealed class DriverInfCompatibilityWindow : Window
         return button;
     }
 
-    private static Button Button(string label, RoutedEventHandler handler)
+    private static Button Button(string label, string color, RoutedEventHandler handler)
     {
         var button = new Button
         {
             Content = label,
             Padding = new Thickness(12, 8, 12, 8),
             Margin = new Thickness(0, 5, 8, 5),
-            Background = Brush("#14517A"),
+            Background = Brush(color),
             Foreground = Brushes.White,
             BorderBrush = Brush("#3E7096")
         };
