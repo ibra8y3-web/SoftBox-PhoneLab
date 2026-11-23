@@ -62,6 +62,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private AgentSnapshot? _agentSnapshot;
     private BoardMap _boardMap = new();
     private DeviceProfileMatch _profileMatch = DeviceProfileMatch.Unknown;
+    private readonly DeviceComponentCatalog _componentCatalog = new();
+    private DeviceComponentProfile? _componentProfile;
     private ComponentViewModel? _selectedComponent;
     private readonly Dictionary<ModelVisual3D, string> _visualParts = new();
 
@@ -91,8 +93,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public string SelectedPartName => _selectedComponent?.Name ?? "اختر قطعة من المجسم";
     public string SelectedPartStatus => _selectedComponent?.StatusLabel ?? "لم تختبر";
     public Brush SelectedPartBrush => _selectedComponent?.StatusBrush ?? MakeBrush("#64748B");
-    public string SelectedPartDescription => _selectedComponent?.Description ?? "تظهر معلومات الجزء وسبب حالته هنا.";
-    public string SelectedPartEvidence => _selectedComponent?.Evidence ?? "لا توجد أدلة اختبار بعد.";
+    public string SelectedPartDescription => _selectedComponent is null
+        ? "تظهر معلومات الجزء وسبب حالته هنا."
+        : _selectedComponent.Description + ComponentKnowledgeText(_selectedComponent.Id);
+    public string SelectedPartEvidence => _selectedComponent is null
+        ? "لا توجد أدلة اختبار بعد."
+        : _selectedComponent.Evidence + ComponentSourcesText(_selectedComponent.Id);
 
     public ComponentViewModel? SelectedComponent
     {
@@ -541,6 +547,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ApplyDeviceFacts()
     {
         if (_snapshot is null) return;
+        _componentProfile = _componentCatalog.Find(_profileMatch.Profile, _snapshot);
         DeviceFacts.Clear();
         Add("الشركة", _snapshot.Manufacturer);
         Add("الموديل", _snapshot.Model);
@@ -555,6 +562,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Add("قاعدة الموديلات", _profileMatch.Profile is null ? "غير مدرج — تم استخدام معرفات النظام" : $"{_profileMatch.DisplayName} • {_profileMatch.Confidence} • Score {_profileMatch.Score}");
         if (_profileMatch.Profile is not null)
             Add("مصدر التعرف", _profileMatch.Profile.IdentitySource);
+        Add("قاعدة المكونات", _componentProfile is null
+            ? "لا توجد بيانات مكونات موثّقة لهذا الموديل بعد (راجع data/device-components/README.md)"
+            : $"{_componentProfile.DisplayName} • {_componentProfile.DocumentedCount} من {_componentProfile.Components.Count} مكوّن موثّق • {_componentProfile.Sources.Count} مصادر");
+        if (_componentProfile is not null)
+            foreach (var record in _componentProfile.Components.Where(c => !c.Confidence.Equals("unknown", StringComparison.OrdinalIgnoreCase)))
+                Add("▸ " + record.Name, record.Value + "  [" + record.ConfidenceLabel + "]");
         if (_profileMatch.Profile?.DesignBatteryCapacityMah is int designCapacity)
             Add("سعة البطارية الاسمية", $"{designCapacity} mAh (مواصفة ملف الموديل، ليست قياسًا حاليًا)");
         Add("SoC", _snapshot.Soc);
@@ -635,7 +648,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ClearDevice(string message)
     {
-        _snapshot = null; _agentSnapshot = null; _measurementSnapshot = null;
+        _snapshot = null; _agentSnapshot = null; _measurementSnapshot = null; _componentProfile = null;
         DeviceFacts.Clear();
         RebuildDiagnostics();
         ScanStatus = "بانتظار جهاز";
@@ -2087,6 +2100,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var c = ParseColor(hex);
         return Color.FromRgb((byte)Math.Min(255,c.R+42),(byte)Math.Min(255,c.G+42),(byte)Math.Min(255,c.B+42)).ToString();
     }
+    private string ComponentKnowledgeText(string partId)
+    {
+        if (_componentProfile is null)
+            return "\n\nقاعدة المكونات: لا توجد بيانات موثّقة لهذا الموديل بعد.";
+        var record = _componentProfile.Find(partId);
+        if (record is null || record.Confidence.Equals("unknown", StringComparison.OrdinalIgnoreCase))
+            return "\n\nقاعدة المكونات (" + _componentProfile.DisplayName + "): هذا الجزء غير موثّق — " +
+                   (record?.Details is { Length: > 0 } d ? d : "لن يعرض SoftBox رقم قطعة غير مؤكد.");
+        var text = "\n\nالمواصفات الموثقة (" + _componentProfile.DisplayName + "): " + record.Value;
+        if (!string.IsNullOrWhiteSpace(record.Details)) text += "\n" + record.Details;
+        return text + "\nدرجة التأكد: " + record.ConfidenceLabel;
+    }
+
+    private string ComponentSourcesText(string partId)
+    {
+        var record = _componentProfile?.Find(partId);
+        if (_componentProfile is null || record is null) return "";
+        var names = _componentProfile.SourcesFor(record).Select(source => source.Name).ToList();
+        return names.Count == 0 ? "" : "\nالمصادر: " + string.Join(" • ", names);
+    }
+
     private void NotifySelectedPart()
     {
         Notify(nameof(SelectedPartName)); Notify(nameof(SelectedPartStatus));

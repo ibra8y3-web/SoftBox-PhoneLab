@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "profileId": "samsung-galaxy-a31",
+  "displayName": "Samsung Galaxy A31",
+  "modelNumbers": ["SM-A315F", "SM-A315G", "SM-A315N"],
+  "deviceCodes": ["a31"],
+  "updatedUtc": "2026-11-23T00:00:00Z",
+  "notes": "Only facts that appear in published specification pages are recorded. IC part numbers (PMIC, charger, audio codec ...) and PCB coordinates are NOT published in spec pages, so they are left as 'unknown' instead of guessed. Add them from a teardown / schematic you hold the rights to (see README.md).",
+  "sources": [
+    {"id":"gsmarena","name":"GSMArena - Samsung Galaxy A31","url":"https://www.gsmarena.com/samsung_galaxy_a31-10149.php","license":"Facts only; text not copied"},
+    {"id":"phonemore","name":"PhoneMore - Galaxy A31 (SM-A315F)","url":"https://www.phonemore.com/specs/samsung/galaxy-a31/sm-a315f/","license":"Facts only; text not copied"},
+    {"id":"wikipedia","name":"Wikipedia - Samsung Galaxy A31","url":"https://wikipedia.com/wiki/SM-A315F","license":"CC BY-SA (facts only)"},
+    {"id":"kimovil","name":"Kimovil - Samsung Galaxy A31","url":"https://www.kimovil.com/en/samsung-galaxy-a31/price","license":"Facts only; text not copied"},
+    {"id":"phonearena","name":"PhoneArena - Samsung Galaxy A31","url":"https://www.phonearena.com/phones/Samsung-Galaxy-A31_id11371","license":"Facts only; text not copied"},
+    {"id":"vrm24","name":"VRM24 - tech review Galaxy A31","url":"https://vrm24.com/reviews/tech-review-of-samsung-galaxy-a31-sm-a315","license":"Facts only; text not copied"}
+  ],
+  "components": [
+    {"id":"processor","name":"المعالج (SoC)","value":"MediaTek Helio P65 (MT6768) — 12 nm","details":"8 أنوية: 2× Cortex-A75 بتردد 2.0 GHz + 6× Cortex-A55 بتردد 1.7 GHz • GPU: Mali-G52 MC2","confidence":"published","sources":["gsmarena","phonemore","wikipedia","kimovil","phonearena"]},
+    {"id":"ram","name":"الذاكرة العشوائية","value":"4 / 6 / 8 GB حسب النسخة","details":"تختلف السعة حسب النسخة والسوق؛ طابق السعة الفعلية مع قراءة الهاتف.","confidence":"published","sources":["gsmarena"]},
+    {"id":"storage","name":"التخزين","value":"64 / 128 GB eMMC 5.1 + microSDXC","details":"فتحة microSDXC مخصصة منفصلة عن شريحتي SIM.","confidence":"published","sources":["gsmarena"]},
+    {"id":"battery","name":"البطارية","value":"Li-Po 5000 mAh (غير قابلة للفك)","details":"شحن سلكي سريع 15W • لا يوجد شحن لاسلكي.","confidence":"published","sources":["gsmarena","phonemore"]},
+    {"id":"display","name":"الشاشة","value":"Super AMOLED 6.4 بوصة — 1080×2400 — 60Hz","details":"بصمة تحت الشاشة.","confidence":"published","sources":["gsmarena","phonemore","phonearena"]},
+    {"id":"rear-camera","name":"الكاميرا الخلفية","value":"كاميرا رئيسية 48 MP","details":"تفاصيل باقي العدسات غير مسجلة هنا.","confidence":"single-source","sources":["gsmarena"]},
+    {"id":"front-camera","name":"الكاميرا الأمامية","value":"20 MP","details":"","confidence":"single-source","sources":["phonemore"]},
+    {"id":"sensors","name":"الحساسات","value":"تسارع، إضاءة محيطة، بوصلة، جيروسكوب، اقتراب افتراضي، بصمة تحت الشاشة، فتح بالوجه 2D","details":"","confidence":"single-source","sources":["phonemore"]},
+    {"id":"rf","name":"الشبكات والملاحة","value":"GSM/HSPA/LTE • GPS مع A-GPS وGLONASS وBDS وGalileo","details":"نطاقات LTE للنسخة SM-A315F: 1, 2, 3, 5, 7, 8, 20, 38, 40, 41.","confidence":"published","sources":["gsmarena","vrm24"]},
+    {"id":"sim","name":"SIM وبطاقة الذاكرة","value":"نسخ Dual-SIM (DS) + فتحة microSDXC مخصصة","details":"","confidence":"published","sources":["gsmarena","phonemore"]},
+    {"id":"vibrator","name":"محرك الاهتزاز","value":"مدعوم","details":"لا يوجد نوع/رقم قطعة منشور.","confidence":"single-source","sources":["phonemore"]},
+    {"id":"mainboard","name":"اللوحة الأم","value":"غير موثّق","details":"لا يوجد مخطط PCB منشور؛ لا يعرض SoftBox أرقام لوحات غير مؤكدة.","confidence":"unknown","sources":[]},
+    {"id":"pmic","name":"آيسي إدارة الطاقة (PMIC)","value":"غير موثّق","details":"رقم الشريحة غير منشور في صفحات المواصفات. أضفه من تفكيك/مخطط موثّق.","confidence":"unknown","sources":[]},
+    {"id":"charge-ic","name":"آيسي الشحن","value":"غير موثّق","details":"رقم الشريحة غير منشور في صفحات المواصفات.","confidence":"unknown","sources":[]}
+  ]
+}
