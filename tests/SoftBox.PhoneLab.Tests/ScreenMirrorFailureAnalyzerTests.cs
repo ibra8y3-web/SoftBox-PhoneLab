@@ -39,6 +39,18 @@ public sealed class ScreenMirrorFailureAnalyzerTests
         Assert.Contains("كابل", report.RecommendedAction);
     }
 
+    [Theory]
+    [InlineData("device offline", "ADB_OFFLINE")]
+    [InlineData("device unauthorized", "ADB_UNAUTHORIZED")]
+    [InlineData("no devices/emulators found", "ADB_DEVICE_MISSING")]
+    [InlineData("ADB server is out of date", "ADB_SERVER_CONFLICT")]
+    public void ScrcpyOutputIsMappedToTheCorrectAdbFailure(string output, string expectedCode)
+    {
+        var report = ScreenMirrorFailureAnalyzer.Analyze(new InvalidOperationException(output));
+        Assert.Equal(expectedCode, report.Code);
+        Assert.Contains(output, report.TechnicalDetail);
+    }
+
     [Fact]
     public void UnknownFailuresKeepTheOriginalTechnicalDetail()
     {
