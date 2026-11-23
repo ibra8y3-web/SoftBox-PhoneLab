@@ -166,6 +166,8 @@
         <TextBlock Text="{Binding SelectedPartEvidence}" FontSize="8" Foreground="#83A1BF" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="29" Margin="0,4,0,5" ToolTip="{Binding SelectedPartEvidence}"/>
         <Button Content="فتح اختبارات الهاتف المتاحة" Click="PhoneTests_Click" Padding="7,5" FontSize="8.5" HorizontalAlignment="Stretch" Background="#14517A"
          ToolTip="يفتح اختبارات Android التي يدعمها PhoneLab Agent بعد تصريح ADB وموافقة التطبيق على الهاتف."/>
+        <Button Content="سجل نتائج وأدلة الاختبارات" Click="DiagnosticEvidenceHistory_Click" Padding="7,5" FontSize="8.5" HorizontalAlignment="Stretch" Margin="0,5,0,0"
+         ToolTip="يعرض النتائج السابقة المحفوظة محليًا بصورة مشفرة، مع بصمة الجهاز والرقم التسلسلي المقنّع ومصدر الدليل."/>
        </StackPanel>
       </Border>
       <ListBox x:Name="ComponentsList" ItemsSource="{Binding Components}" SelectionChanged="Components_SelectionChanged">
