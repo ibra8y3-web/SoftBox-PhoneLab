@@ -7,7 +7,7 @@ PhoneLab uses separate transport adapters rather than claiming that every phone 
 | Device / mode | Detection evidence | Screen route | Remote control | Current boundary |
 |---|---|---|---|---|
 | Supported Android OEM phone | Windows PnP plus independently authorized ADB serial | scrcpy docked in PhoneLab | Yes, within Android/OEM permissions and user authorization | Requires booted Android, ADB interface, USB debugging authorization and supported scrcpy behavior |
-| iPhone / iPad | Apple USB VID/Windows Apple device identity, or owner-selected AirPlay receiver | Separate AirPlay-Windows receiver window docked in the same SoftBox screen host | No; viewing only | Same local network, owner must select receiver from Control Center; no passcode/touch injection |
+| iPhone / iPad | Apple Lockdown device list from user-selected libimobiledevice tools; Windows Apple VID is only a USB hint | Dedicated AirPlay-Windows window with its own native screen host | No; viewing only | Same local network, owner must select receiver from Control Center; no passcode/touch injection; no shared Android host |
 | Miracast-capable Android / OEM phone | Owner opens Cast/Screen Mirroring on phone; Windows receiver discovery is handled by Wireless Display | Native Windows Wireless Display app / Connect app | No control from SoftBox | Requires Miracast on both devices and Windows optional feature; this native session is outside the SoftBox dock |
 | Android MTP-only device | Windows USB PnP/MTP device | None from MTP alone | None | File-transfer visibility is not screen capture or ADB authorization |
 | Fastboot / Qualcomm EDL / MediaTek Preloader | Windows PnP/VID/PID or relevant service tools | No ordinary live screen | No ordinary Android UI control | These are boot/service modes, not screen protocols |
@@ -27,12 +27,12 @@ PhoneLab uses separate transport adapters rather than claiming that every phone 
 - SoftBox manages a separately installed `airplay-windows.exe` from the upstream <https://github.com/moieric11/AirPlay-Windows> project.
 - SoftBox does not bundle or redistribute the GPL-3 receiver. The operator must independently download and review the upstream release/licence, then select the executable in SoftBox.
 - SoftBox records the selected path in local preferences and displays a SHA-256 file fingerprint. A file hash is not publisher authentication; use the upstream release and normal Windows security checks.
-- The receiver creates its own native display window and SoftBox docks that window into the persistent right-side screen host.
+- The receiver creates its own native display window and SoftBox docks it into a dedicated `ScrcpyWindowHost` inside the independent AirPlay receiver window. The Android `PhoneScreenHost` is never passed to the AirPlay service.
 - SoftBox can also open the Windows Miracast setup pages as a separate fallback. Microsoft requires the Wireless Display optional feature and the native Wireless Display/Connect app; both the PC and the phone must support Miracast. This OS-level session is not embedded in SoftBox.
 - The iPhone and Windows PC must be on the same LAN. On iPhone/iPad, the owner opens Control Center, chooses Screen Mirroring and selects the receiver name.
 - This adapter provides screen viewing only. SoftBox does not inject touch, enter a passcode, unlock iOS, or defeat Activation Lock.
 - DRM-protected streaming apps can refuse screen mirroring. AirPlay is not a substitute for Apple Devices USB support or an iOS diagnostic agent.
-- SoftBox stops an existing Android mirror before starting the AirPlay receiver in the shared screen dock. It refuses to switch while an Android screen recording is active.
+- SoftBox preserves manual AirPlay priority: before start it stops the Android mirror and detaches the Android host; it refuses to switch while an Android screen recording is active. The AirPlay image then appears only in the separate iPhone receiver window. Automatic scrcpy retry is suppressed while the AirPlay process is running.
 
 ## Universal Device Discovery
 
@@ -111,3 +111,32 @@ The following still require physical verification on target hardware:
 ## Windows Miracast fallback
 
 The Miracast setup window opens the native Windows Projecting to this PC settings and Optional Features pages, then provides the official Microsoft steps. It does not silently install Windows optional features, change discoverability/privacy settings, start a receiver session, or claim to embed the native receiver inside SoftBox. A supported PC and Miracast-capable phone are both required. See <https://support.microsoft.com/en-us/windows/hardware/display-graphics/screen-mirroring-and-projecting-to-your-pc-or-wireless-display>.
+
+
+## Dedicated iPhone & iPad diagnostics (Section 37)
+
+### Apple device identity and connection
+
+- The iPhone Center requires a user-selected folder containing both `idevice_id.exe` and `ideviceinfo.exe` from a trusted Windows build of libimobiledevice. The tools are not downloaded automatically or bundled without a reviewed source, version and licence.
+- Discovery runs `idevice_id -l` and reads each returned device with `ideviceinfo -u <device-id> -x`. The process uses argument arrays (not a shell), bounded timeouts/output, a bounded device count and validates device identifiers before use.
+- A successful XML plist read records ProductType, iOS version/build, model identifiers, available storage fields, current charge when exposed and a masked serial. Raw UDID/serial is used only in memory to make the one-way evidence fingerprint; the evidence store retains a masked serial and fingerprint, not the raw value.
+- `BatteryCurrentCapacity` is presented only as current charge if it is an integer from 0–100. It is never converted to battery maximum capacity or battery health.
+- A Windows Apple VID (05AC) entry without a Lockdown response is displayed as USB presence only. The technician should unlock the phone and accept Apple's Trust This Computer prompt; USB presence is not full model identification or an authenticity verdict.
+
+### Parts, battery and physical component checks
+
+- Parts & Service History: the technician records the status visible in Settings > General > About. The available part categories and history depend on the iPhone model/iOS release. No entry in the history is not proof that a part was never replaced.
+- Battery Health: the technician records Maximum Capacity, cycle count, manufacture/first-use dates and service messages only when the iPhone itself displays them. A current charge percentage is not maximum capacity.
+- Physical checks: the technician records separate outcomes for image/brightness/pixels, touch grid/edges, rear/front cameras, Face ID, speaker/earpiece, microphones, proximity/ambient/motion sensors, charging/data port and wireless charging. A pass/fail is not pre-filled and requires the technician's observation note.
+- The three workflows save component-specific evidence to the existing DPAPI-protected diagnostic evidence store. Each record includes its source and timestamp.
+
+### Device originality assessment
+
+- The assessment combines three independent clues: successful Apple Lockdown response, the technician's manually reviewed Apple Check Coverage page result, and the on-device Parts & Service History summary.
+- A recognized serial or successful Lockdown exchange is not proof that the complete handset is genuine; copied serials, replaced boards and modified devices can create inconsistent signals.
+- Results are therefore evidence states (compatible clues / review required / insufficient evidence), never a guaranteed “100% original” or “copy” classification. Physical inspection and official service diagnostics remain necessary for a high-confidence decision.
+
+### iPhone verification boundaries
+
+- Automated tests cover plist parsing, size limits, DTD rejection, masking, and the distinction between current charge and battery health.
+- A physical iPhone/iPad plus a real, trusted Windows libimobiledevice package is still required to validate actual Lockdown pairing, different iOS releases, multiple connected devices, AirPlay streaming and shutdown.
