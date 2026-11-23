@@ -117,10 +117,10 @@ The Miracast setup window opens the native Windows Projecting to this PC setting
 
 ### Apple device identity and connection
 
-- The iPhone Center requires a user-selected folder containing both `idevice_id.exe` and `ideviceinfo.exe` from a trusted Windows build of libimobiledevice. The tools are not downloaded automatically or bundled without a reviewed source, version and licence.
+- The iPhone Center requires a user-selected folder containing `idevice_id.exe` and `ideviceinfo.exe` from a trusted Windows build of libimobiledevice. `idevicediagnostics.exe` is optional but enables automatic GasGauge cycle/capacity reads. The tools are not downloaded automatically or bundled without a reviewed source, version and licence.
 - Discovery runs `idevice_id -l` and reads each returned device with `ideviceinfo -u <device-id> -x`. The process uses argument arrays (not a shell), bounded timeouts/output, a bounded device count and validates device identifiers before use.
-- A successful XML plist read records ProductType, iOS version/build, model identifiers, available storage fields, current charge when exposed and a masked serial. Raw UDID/serial is used only in memory to make the one-way evidence fingerprint; the evidence store retains a masked serial and fingerprint, not the raw value.
-- `BatteryCurrentCapacity` is presented only as current charge if it is an integer from 0–100. It is never converted to battery maximum capacity or battery health.
+- A successful XML plist read records ProductType, iOS version/build, model identifiers, available storage fields, current charge when exposed and a masked serial. When `idevicediagnostics.exe` is present, SoftBox runs the read-only `idevicediagnostics -u <UDID> diagnostics GasGauge` command and parses CycleCount, DesignCapacity, FullChargeCapacity and Status. Raw UDID/serial is used only in memory to make the one-way evidence fingerprint; the evidence store retains a masked serial and fingerprint, not the raw value.
+- `BatteryCurrentCapacity` is presented only as current charge if it is an integer from 0–100. It is never converted to battery maximum capacity or battery health. GasGauge cycle count and capacity values are separately identified; an estimated maximum-capacity percentage is shown only when the response status is Success and the values fit the documented scale heuristic. The raw capacities and estimation basis remain visible.
 - A Windows Apple VID (05AC) entry without a Lockdown response is displayed as USB presence only. The technician should unlock the phone and accept Apple's Trust This Computer prompt; USB presence is not full model identification or an authenticity verdict.
 
 ### Parts, battery and physical component checks
@@ -138,5 +138,5 @@ The Miracast setup window opens the native Windows Projecting to this PC setting
 
 ### iPhone verification boundaries
 
-- Automated tests cover plist parsing, size limits, DTD rejection, masking, and the distinction between current charge and battery health.
+- Automated tests cover Lockdown/GasGauge plist parsing, Apple's standard plist DOCTYPE without external resolution, malformed/oversized input rejection, identity masking, GasGauge cycle count/capacity interpretation and the distinction between current charge and battery health.
 - A physical iPhone/iPad plus a real, trusted Windows libimobiledevice package is still required to validate actual Lockdown pairing, different iOS releases, multiple connected devices, AirPlay streaming and shutdown.
