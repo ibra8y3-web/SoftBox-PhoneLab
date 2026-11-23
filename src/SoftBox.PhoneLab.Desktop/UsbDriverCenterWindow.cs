@@ -17,9 +17,23 @@ public sealed class UsbDriverCenterWindow : Window
     private readonly TextBlock _selectedUrl = new();
     private readonly TextBlock _status = new();
     private OemUsbDriverResource? _selected;
+    private readonly string[] _deviceHardwareIds;
+    private readonly string? _deviceManufacturer;
+    private readonly string? _deviceModel;
 
-    public UsbDriverCenterWindow(string? manufacturer = null, string? model = null, string detectionSource = "ADB")
+    public UsbDriverCenterWindow(
+        string? manufacturer = null,
+        string? model = null,
+        string detectionSource = "ADB",
+        IReadOnlyList<string>? hardwareIds = null)
     {
+        _deviceManufacturer = manufacturer;
+        _deviceModel = model;
+        _deviceHardwareIds = (hardwareIds ?? Array.Empty<string>())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(128)
+            .ToArray();
         Title = "SoftBox | OEM USB Drivers and Support Resources";
         Width = 940;
         Height = 690;
@@ -122,6 +136,7 @@ public sealed class UsbDriverCenterWindow : Window
         actions.Children.Add(ButtonControl("نسخ الرابط", "#20364F", (_, _) => CopySelected()));
         actions.Children.Add(ButtonControl("دليل Android OEM", "#20364F", (_, _) => OpenReference()));
         actions.Children.Add(ButtonControl("فحص توقيع حزمة تم تنزيلها", "#20364F", (_, _) => OpenSignatureVerifier()));
+        actions.Children.Add(ButtonControl("مطابقة INF مع Hardware IDs", "#20364F", (_, _) => OpenInfCompatibility()));
         details.Children.Add(actions);
 
         _status.TextWrapping = TextWrapping.Wrap;
@@ -145,8 +160,12 @@ public sealed class UsbDriverCenterWindow : Window
     {
         _selected = resource;
         _selectedName.Text = resource.Name;
-        _selectedCoverage.Text = "نوع المصدر: " + resource.ResourceKind + "\n" + resource.CoverageNote +
-            "\n\nحالة توفر الحزمة: لم يتم التحقق من ملف تنزيل مباشر لهذا الموديل. افتح المصدر الرسمي وتحقق من الموديل والمنطقة وإصدار Windows والمعمارية.";
+        _selectedCoverage.Text = "نوع المصدر: " + resource.ResourceKind + "\\n" + resource.CoverageNote +
+            "\\n\\nحالة توفر الحزمة: لم يتم التحقق من ملف تنزيل مباشر لهذا الموديل. افتح المصدر الرسمي وتحقق من الموديل والمنطقة وإصدار Windows والمعمارية." +
+            "\\n\\nHardware IDs المقروءة من الجهاز المحدد: " + _deviceHardwareIds.Length +
+            (_deviceHardwareIds.Length == 0
+                ? " (غير متاحة؛ لا يمكن إثبات مطابقة الطراز حتى قراءة Hardware IDs من Windows)"
+                : " (متاحة للتحقق من ملف INF)");
 
         _selectedUrl.Text = resource.OfficialUrl;
         _status.Text = "الحزمة لم تُنزّل بعد. نظام التشغيل الحالي: " + Environment.OSVersion.VersionString +
@@ -189,6 +208,20 @@ public sealed class UsbDriverCenterWindow : Window
         {
             _status.Text = "تعذر نسخ الرابط: " + ex.Message;
         }
+    }
+
+    private void OpenInfCompatibility()
+    {
+        if (_deviceHardwareIds.Length == 0)
+        {
+            _status.Text = "لا توجد Hardware IDs موثقة للجهاز المحدد. افتح Universal Device Discovery واختر بطاقة PnP لهذا الهاتف حتى تمرر هويته الحقيقية.";
+            return;
+        }
+
+        var window = new DriverInfCompatibilityWindow(
+            _deviceHardwareIds, _deviceManufacturer, _deviceModel)
+        { Owner = Owner ?? this };
+        window.ShowDialog();
     }
 
     private void OpenSignatureVerifier()
