@@ -17,6 +17,7 @@ public sealed class AirPlayReceiverWindow : Window
 {
     private const string UpstreamUrl = "https://github.com/moieric11/AirPlay-Windows";
     private readonly PhoneLabSettingsService _settingsService;
+    private readonly SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost _screenHost;
     private readonly TextBox _executablePath = new();
     private readonly TextBox _fingerprint = new();
     private readonly TextBox _log = new();
@@ -25,9 +26,13 @@ public sealed class AirPlayReceiverWindow : Window
     private readonly Button _stop = new();
     private readonly AirPlayReceiverService _receiver = new();
 
-    public AirPlayReceiverWindow(PhoneLabSettings settings, PhoneLabSettingsService settingsService)
+    public AirPlayReceiverWindow(
+        PhoneLabSettings settings,
+        PhoneLabSettingsService settingsService,
+        SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost screenHost)
     {
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
+        _screenHost = screenHost ?? throw new ArgumentNullException(nameof(screenHost));
         Title = "SoftBox | iPhone AirPlay Screen Receiver";
         Width = 900;
         Height = 720;
@@ -81,7 +86,7 @@ public sealed class AirPlayReceiverWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         root.Children.Add(Text(
-            "هذا مسار استقبال وعرض منفصل عن ADB/scrcpy. عند اتصال iPhone ستظهر صورته في نافذة مستقبل AirPlay الأصلية. لا يوفر AirPlay هنا التحكم باللمس أو إدخال رمز القفل من الكمبيوتر.",
+            "هذا مسار استقبال منفصل عن ADB/scrcpy. بعد تشغيل المستقبل تُدمج نافذته الأصلية في مساحة شاشة الهاتف الجانبية داخل SoftBox. AirPlay هنا للعرض فقط ولا يرسل لمسًا أو إدخال رمز القفل إلى iPhone.",
             "#B7C9DE", 11));
 
         var license = new Border
@@ -129,7 +134,8 @@ public sealed class AirPlayReceiverWindow : Window
             "2) اجعل iPhone والكمبيوتر على شبكة Wi-Fi المحلية نفسها.\n" +
             "3) شغّل المستقبل من هنا، ثم افتح Control Center على iPhone واختر Screen Mirroring ثم AirPlay-Windows.\n" +
             "4) نافذة المستقبل تعرض الصورة والصوت فقط؛ التحكم يظل من شاشة iPhone نفسها.\n" +
-            "5) لا تتوقع عرض تطبيقات البث التي تستخدم FairPlay DRM؛ دعمها خارج نطاق مستقبل الشاشة المذكور.",
+            "5) تظهر صورة iPhone في المساحة الجانبية الثابتة داخل SoftBox؛ تبقى الأوامر واللمس على الهاتف نفسه.\n" +
+            "6) لا تتوقع عرض تطبيقات البث التي تستخدم FairPlay DRM؛ دعمها خارج نطاق مستقبل الشاشة المذكور.",
             "#B7C9DE", 10));
 
         root.Children.Add(Text("سجل المستقبل", "#7DD3FC", 11));
@@ -168,10 +174,10 @@ public sealed class AirPlayReceiverWindow : Window
     {
         try
         {
-            var startedPath = await _receiver.StartAsync(_executablePath.Text);
+            var startedPath = await _receiver.StartAsync(_executablePath.Text, _screenHost);
             _start.IsEnabled = false;
             _stop.IsEnabled = true;
-            _status.Text = "بدأ مستقبل AirPlay في نافذته الأصلية. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
+            _status.Text = "تم تشغيل مستقبل AirPlay ودمج نافذته في شاشة SoftBox الجانبية. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
             AppendLog("Started: " + startedPath);
         }
         catch (Exception ex)
