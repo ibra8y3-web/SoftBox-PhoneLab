@@ -149,8 +149,8 @@ public partial class MainWindow
         EmbeddedBody.Child = page.Content;
         EmbeddedTitle.Text = SoftBoxLocalization.Translate(page.Title);
 
-        // Hide the three workspace columns (this also hides the HwndHost used for phone mirroring,
-        // which would otherwise be drawn on top of the embedded page).
+        // Keep the phone/device/component rail visible. The 3D viewport and device-facts panel
+        // yield their area to the selected tool; the live phone host has a higher Z-index and stays docked.
         DevicesColumn.Visibility = Visibility.Visible; // Keep connected phones and component tools visible.
         ViewerColumn.Visibility = Visibility.Collapsed;
         DetailsColumn.Visibility = Visibility.Collapsed;

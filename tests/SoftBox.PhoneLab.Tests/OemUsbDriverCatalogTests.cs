@@ -8,7 +8,7 @@ public sealed class OemUsbDriverCatalogTests
     [Fact]
     public void CatalogContainsMoreThanFifteenOfficialHttpsResources()
     {
-        Assert.True(OemUsbDriverCatalog.All.Count >= 19);
+        Assert.Equal(20, OemUsbDriverCatalog.All.Count);
         Assert.All(OemUsbDriverCatalog.All, item =>
         {
             Assert.False(string.IsNullOrWhiteSpace(item.Id));

@@ -12,10 +12,13 @@ The component diagnostic list is initialized when the main window starts, includ
 
 ## OEM USB driver resources
 
-The driver center lists 19 OEM/Google resources referenced by the Android Developers OEM USB driver directory. These are HTTPS manufacturer support/download pages, not bundled installers. The exact package can depend on the model, region and Windows version. PhoneLab never silently installs an OEM driver, disables Windows signature enforcement, or treats a generic package as compatible with every model.
+The driver center lists 20 OEM/Google resources referenced by the Android Developers OEM USB driver directory. These are HTTPS manufacturer support/download pages, not bundled installers. The exact package can depend on the model, region and Windows version. PhoneLab never silently installs an OEM driver, disables Windows signature enforcement, or treats a generic package as compatible with every model.
 
 Google's USB driver is for Google devices; other manufacturers provide their own Windows drivers. For any OEM package selected by the technician, retain the vendor signature and verify the exact model/Windows compatibility before installation.
 
 
 ## CI and permissions
 The driver center is a read-only action and is explicitly assigned the DeviceRead permission for every role that has device-read access. The component catalog is populated during initial window load even when ADB is unavailable. Opening an embedded module keeps the connected-device and component columns visible, and the live screen host is layered above the module surface.
+
+
+Automatic screen retries run independently from the device-inventory change check. If ADB is still authorized but scrcpy has exited, PhoneLab retries the screen session with a 12-second per-device throttle; it does not repeat phone inspection or Agent installation. Direct screen and recording controls enforce the same role permissions as their module actions.

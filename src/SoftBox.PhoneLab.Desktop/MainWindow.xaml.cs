@@ -38,6 +38,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
     private bool _suppressDeviceSelection;
+    private DateTime _lastAutoMirrorAttemptUtc = DateTime.MinValue;
+    private string? _lastAutoMirrorAttemptSerial;
     private readonly TraceBoardViewerService _traceBoardViewer = new();
     private ExternalMeasurementSample? _measurementSnapshot;
     private readonly RepairKnowledgeService _repairKnowledge = new();
@@ -242,7 +244,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
             var list = await _discovery.DiscoverAsync();
             var signature = string.Join("|", list.Select(d => d.Serial + ":" + d.State));
-            if (signature == _deviceSignature) return;
+            if (signature == _deviceSignature)
+            {
+                // Device inventory is unchanged, but scrcpy may have exited or failed to start.
+                // Retry only the screen session; never repeat inspection or Agent installation.
+                if (SelectedDevice is { IsAuthorized: true } stableDevice &&
+                    _settings.AutoOpenScreenMirror &&
+                    SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen") &&
+                    (_screenMirror.ActiveSerial != stableDevice.Serial || !_screenMirror.IsRunning))
+                {
+                    await RetryAutoScreenMirrorAsync(stableDevice);
+                }
+                return;
+            }
             _deviceSignature = signature;
             var previousDevices = Devices.ToDictionary(device => device.Serial, StringComparer.Ordinal);
             var previous = SelectedDevice?.Serial;
@@ -369,12 +383,49 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             await InspectSelectedAsync();
     }
 
+    private async Task RetryAutoScreenMirrorAsync(DeviceListItem selected)
+    {
+        if (!selected.IsAuthorized ||
+            !_settings.AutoOpenScreenMirror ||
+            !SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen") ||
+            (_screenMirror.ActiveSerial == selected.Serial && _screenMirror.IsRunning))
+            return;
+
+        if (string.Equals(_lastAutoMirrorAttemptSerial, selected.Serial, StringComparison.Ordinal) &&
+            DateTime.UtcNow - _lastAutoMirrorAttemptUtc < TimeSpan.FromSeconds(12))
+            return;
+
+        _lastAutoMirrorAttemptSerial = selected.Serial;
+        _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
+        try
+        {
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+            var deadline = DateTime.UtcNow.AddSeconds(6);
+            while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
+                await Task.Delay(100);
+            if (PhoneScreenHost.NativeHostHandle == IntPtr.Zero)
+                throw new TimeoutException("لم يتم إنشاء مساحة عرض الهاتف الجانبية.");
+            await _screenMirror.StartEmbeddedAsync(
+                selected.Serial,
+                selected.Model ?? selected.DisplayName,
+                PhoneScreenHost);
+            MirrorStatus = "متصل الآن: " + selected.DisplayName + " — تم استرجاع بث الشاشة تلقائيًا.";
+        }
+        catch (Exception ex)
+        {
+            MirrorStatus = "تعذر استرجاع بث الشاشة تلقائيًا: " + ex.Message;
+        }
+        Notify(nameof(MirrorStatus));
+    }
+
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
         var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
             SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
         if (_settings.AutoOpenScreenMirror && canControlDevice)
         {
+            _lastAutoMirrorAttemptSerial = selected.Serial;
+            _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
             try
             {
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
@@ -1580,6 +1631,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OpenScreenRecordingWindow()
     {
+        if (!RequireActionPermission("OpenScreenRecording", "تسجيل شاشة الهاتف")) return;
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
@@ -1622,6 +1674,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void MirrorScreen_Click(object sender, RoutedEventArgs e)
     {
+        if (!RequireActionPermission("MirrorScreen", "عرض شاشة الهاتف")) return;
         var selected = SelectedDevice;
         if (selected is null || !selected.IsAuthorized)
         {
@@ -1642,6 +1695,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void StopMirror_Click(object sender, RoutedEventArgs e)
     {
+        if (!RequireActionPermission("MirrorScreen", "إيقاف عرض شاشة الهاتف")) return;
         if (_screenMirror.IsRecording)
         {
             StatusMessage = "يوجد تسجيل شاشة نشط. أوقف التسجيل واحفظ ملفه من نافذة التسجيل قبل إيقاف جلسة العرض.";
@@ -1659,6 +1713,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
         => OpenScreenRecordingWindow();
+
+    private bool RequireActionPermission(string actionId, string actionName)
+    {
+        if (SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId)) return true;
+        MessageBox.Show(this,
+            "حساب القراءة فقط لا يملك صلاحية " + actionName + ". لم يتم إرسال أي أمر إلى الهاتف.",
+            "صلاحيات SoftBox", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return false;
+    }
 
     private async void AnalyzeScreen_Click(object sender, RoutedEventArgs e)
     {
