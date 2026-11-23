@@ -40,7 +40,7 @@ public sealed class UsbDriverCenterWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         header.Children.Add(Text(
-            "موارد وروابط دعم رسمية لأكثر من 15 شركة. اختر الشركة ثم افتح صفحة التنزيل الخاصة بها؛ قد تحتاج إلى تحديد رقم الموديل وإصدار Windows قبل تنزيل الحزمة.",
+            "كتالوج عالمي يضم 33 مصدرًا رسميًا للشركات ومنصات الأجهزة. ليس كل مصدر تعريف USB مستقلًا: بعضه أداة Windows أو صفحة دعم. اختر الموديل والمنطقة وإصدار Windows قبل التنزيل.",
             "#B7C9DE", 11));
         var detected = string.IsNullOrWhiteSpace(manufacturer)
             ? "لم يتم تحديد الشركة من ADB أو Windows USB."
@@ -87,6 +87,7 @@ public sealed class UsbDriverCenterWindow : Window
             var item = new ListBoxItem { Tag = resource, Padding = new Thickness(10, 8, 10, 8), Margin = new Thickness(4, 2, 4, 2) };
             var card = new StackPanel();
             card.Children.Add(Text(resource.Name, "#EAF3FF", 12, true));
+            card.Children.Add(Text(resource.ResourceKind, "#7DD3FC", 8, true));
             card.Children.Add(Text(resource.CoverageNote, "#8FA8C3", 9));
             item.Content = card;
             _resources.Items.Add(item);
@@ -120,6 +121,7 @@ public sealed class UsbDriverCenterWindow : Window
         actions.Children.Add(ButtonControl("فتح صفحة الشركة", "#14517A", (_, _) => OpenSelected()));
         actions.Children.Add(ButtonControl("نسخ الرابط", "#20364F", (_, _) => CopySelected()));
         actions.Children.Add(ButtonControl("دليل Android OEM", "#20364F", (_, _) => OpenReference()));
+        actions.Children.Add(ButtonControl("فحص توقيع حزمة تم تنزيلها", "#20364F", (_, _) => OpenSignatureVerifier()));
         details.Children.Add(actions);
 
         _status.TextWrapping = TextWrapping.Wrap;
@@ -143,10 +145,12 @@ public sealed class UsbDriverCenterWindow : Window
     {
         _selected = resource;
         _selectedName.Text = resource.Name;
-        _selectedCoverage.Text = resource.CoverageNote +
-            "\n\nتغطية الموديلات: راجع صفحة الشركة؛ لا يفترض SoftBox أن حزمة واحدة تناسب جميع الأجهزة.";
+        _selectedCoverage.Text = "نوع المصدر: " + resource.ResourceKind + "\n" + resource.CoverageNote +
+            "\n\nحالة توفر الحزمة: لم يتم التحقق من ملف تنزيل مباشر لهذا الموديل. افتح المصدر الرسمي وتحقق من الموديل والمنطقة وإصدار Windows والمعمارية.";
+
         _selectedUrl.Text = resource.OfficialUrl;
-        _status.Text = "لم يبدأ أي تنزيل أو تثبيت. استخدم صفحة الشركة لاختيار الحزمة الصحيحة.";
+        _status.Text = "الحزمة لم تُنزّل بعد. نظام التشغيل الحالي: " + Environment.OSVersion.VersionString +
+            " • التوافق: غير مؤكد حتى اختيار حزمة مطابقة للموديل وإصدار Windows.";
     }
 
     private void OpenSelected()
@@ -184,6 +188,19 @@ public sealed class UsbDriverCenterWindow : Window
         catch (Exception ex)
         {
             _status.Text = "تعذر نسخ الرابط: " + ex.Message;
+        }
+    }
+
+    private void OpenSignatureVerifier()
+    {
+        try
+        {
+            var verifier = new UsbDriverSignatureVerifierWindow { Owner = this };
+            verifier.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر فتح مدقق التوقيع: " + ex.Message;
         }
     }
 
