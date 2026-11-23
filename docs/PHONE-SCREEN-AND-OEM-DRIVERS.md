@@ -8,7 +8,7 @@ Before launching scrcpy, PhoneLab rechecks the selected device's ADB state and m
 
 ## Components
 
-The component diagnostic list is initialized when the main window starts, including when no device is connected. Every component remains visible as `Not tested` until an actual read or user-approved test supplies evidence.
+The component diagnostic list is initialized when the main window starts, including when no device is connected. Every component remains visible as `Not tested` until an actual read or user-approved test supplies evidence. Selecting a component displays its description, current status and available evidence in a compact card below the component list; this card remains visible while an embedded section/tool is open. The card's test-center button opens the existing Android Agent test window. It does not claim that every physical component has an ADB test: unsupported board-level parts remain `Not tested` until suitable external measurements or manual inspection are recorded.
 
 ## OEM USB driver resources
 
