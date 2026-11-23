@@ -184,6 +184,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(CurrentUserDisplay));
         Notify(nameof(AdbInstallVisibility));
         BuildScene();
+        RebuildDiagnostics();
     }
 
     private async void LockSession_Click(object sender, RoutedEventArgs e)
@@ -369,7 +370,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             try
             {
-                WorkspaceTabs.SelectedIndex = 1;
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
                 var deadline = DateTime.UtcNow.AddSeconds(6);
                 while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
@@ -448,7 +448,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task OpenEmbeddedMirrorAsync(DeviceListItem selected)
     {
-        WorkspaceTabs.SelectedIndex = 1;
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
         var deadline = DateTime.UtcNow.AddSeconds(6);
         while (PhoneScreenHost.NativeHostHandle == IntPtr.Zero && DateTime.UtcNow < deadline)
@@ -752,6 +751,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (sender is not FrameworkElement element || element.Tag is not string moduleId)
             return;
+
+        // Phone Link is a persistent dock, not a full-page overlay.
+        if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))
+        {
+            MirrorScreen_Click(this, new RoutedEventArgs());
+            return;
+        }
 
         var module = SoftBoxModuleCatalog.Find(moduleId);
         if (module is null)
@@ -1620,6 +1626,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(StatusMessage));
     }
 
+
+    private void StopMirror_Click(object sender, RoutedEventArgs e)
+    {
+        if (_screenMirror.IsRecording)
+        {
+            StatusMessage = "يوجد تسجيل شاشة نشط. أوقف التسجيل واحفظ ملفه من نافذة التسجيل قبل إيقاف جلسة العرض.";
+            Notify(nameof(StatusMessage));
+            return;
+        }
+
+        _screenMirror.Stop();
+        PhoneScreenHost.DetachWindow();
+        MirrorStatus = "تم إيقاف عرض الشاشة. الجهاز ما زال متصلًا؛ اضغط تشغيل / تحديث الشاشة لإعادة الاتصال.";
+        StatusMessage = "تم إيقاف جلسة عرض الشاشة فقط؛ لم يتم فصل الهاتف أو تغيير بياناته.";
+        Notify(nameof(MirrorStatus));
+        Notify(nameof(StatusMessage));
+    }
+
+    private void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
+        => OpenScreenRecordingWindow();
 
     private async void AnalyzeScreen_Click(object sender, RoutedEventArgs e)
     {
