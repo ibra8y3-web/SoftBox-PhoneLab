@@ -10,6 +10,7 @@ public enum DriverInfMatchStatus
     HardwareIdNotFound,
     ArchitectureMismatch,
     WindowsVersionMismatch,
+    UnsupportedTargetDecoration,
     UnsupportedInf
 }
 
@@ -187,12 +188,20 @@ public static class DriverInfCompatibilityAnalyzer
             .ToArray();
         if (versionMatches.Length == 0)
         {
+            var needsProductSuiteContext = architectureMatches.Any(match =>
+                HasUnsupportedProductOrSuiteDecoration(match.Decoration));
             return Report(
-                infPath, DriverInfMatchStatus.WindowsVersionMismatch, provider, driverVersion, target,
+                infPath,
+                needsProductSuiteContext
+                    ? DriverInfMatchStatus.UnsupportedTargetDecoration
+                    : DriverInfMatchStatus.WindowsVersionMismatch,
+                provider, driverVersion, target,
                 deviceIds, architectureMatches.Select(item => item.HardwareId).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
                 architectureMatches.Select(item => item.SectionName).Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
-                "Hardware ID ومعمارية Windows متطابقان، لكن أقسام INF المتاحة تشترط إصدارًا/Build أحدث من إصدار Windows الحالي.",
-                "قد توجد أقسام أخرى داخل حزمة مختلفة؛ لم يتم إجراء أي تثبيت أو تجاوز لقيود نظام التشغيل.");
+                needsProductSuiteContext
+                    ? "Hardware ID والمعمارية متطابقان، لكن زخرفة INF تعتمد على ProductType/SuiteMask لم يثبتها هذا الفحص؛ لذلك لا يمكن إصدار حكم توافق."
+                    : "Hardware ID ومعمارية Windows متطابقان، لكن أقسام INF المتاحة تشترط إصدارًا/Build أحدث من إصدار Windows الحالي.",
+                "لم يتم تثبيت التعريف. استخدم SetupAPI/Windows Driver Store أو أدوات الشركة للتحقق النهائي من اختيار قسم INF، ولا تتجاوز قيود النظام.");
         }
 
         return Report(
@@ -379,30 +388,39 @@ public static class DriverInfCompatibilityAnalyzer
         };
     }
 
+    private static bool HasUnsupportedProductOrSuiteDecoration(string decoration)
+    {
+        if (string.IsNullOrWhiteSpace(decoration))
+            return false;
+
+        var parts = decoration.Split('.', StringSplitOptions.None);
+        // TargetOSVersion fields after architecture are: major, minor, product type,
+        // suite mask, build number. Product/suite-specific targets need OS metadata that
+        // this read-only analyzer has not collected, so it must not guess.
+        return (parts.Length > 3 && !string.IsNullOrWhiteSpace(parts[3])) ||
+               (parts.Length > 4 && !string.IsNullOrWhiteSpace(parts[4]));
+    }
+
     private static bool IsWindowsVersionCompatible(string decoration, Version targetVersion)
     {
+        if (HasUnsupportedProductOrSuiteDecoration(decoration))
+            return false;
+
         var parts = decoration.Split('.', StringSplitOptions.None);
         if (parts.Length <= 1)
             return true;
 
-        var numeric = parts.Skip(1)
-            .Where(part => part.Length > 0 && part.All(char.IsDigit))
-            .Select(part => int.TryParse(part, out var value) ? value : -1)
-            .ToArray();
-        if (numeric.Length < 2)
-            return true;
-
-        var minMajor = numeric[0];
-        var minMinor = numeric[1];
-        var minBuild = numeric.Length >= 3 ? numeric[2] : 0;
-        if (minMajor < 0 || minMinor < 0 || minBuild < 0)
+        var minimumMajor = parts.Length > 1 && int.TryParse(parts[1], out var major) ? major : 0;
+        var minimumMinor = parts.Length > 2 && int.TryParse(parts[2], out var minor) ? minor : 0;
+        var minimumBuild = parts.Length > 5 && int.TryParse(parts[5], out var build) ? build : 0;
+        if (minimumMajor < 0 || minimumMinor < 0 || minimumBuild < 0)
             return false;
 
-        if (targetVersion.Major != minMajor)
-            return targetVersion.Major > minMajor;
-        if (targetVersion.Minor != minMinor)
-            return targetVersion.Minor > minMinor;
-        return targetVersion.Build >= minBuild;
+        if (targetVersion.Major != minimumMajor)
+            return targetVersion.Major > minimumMajor;
+        if (targetVersion.Minor != minimumMinor)
+            return targetVersion.Minor > minimumMinor;
+        return targetVersion.Build >= minimumBuild;
     }
 
     private static DriverInfCompatibilityReport Report(
