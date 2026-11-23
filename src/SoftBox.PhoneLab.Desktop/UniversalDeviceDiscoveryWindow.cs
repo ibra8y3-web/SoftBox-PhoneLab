@@ -136,6 +136,19 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
                 stack.Children.Add(Text(
                     $"PnP: {device.PnpStatus} • Problem Code: {device.ProblemCode} • Service: {Fallback(device.Service)}",
                     device.ProblemCode == 0 ? "#9FC7E8" : "#FFB4A6", 9));
+                var displayedIds = device.HardwareIds.Take(8).ToArray();
+                stack.Children.Add(Text(
+                    displayedIds.Length == 0
+                        ? "Hardware IDs: غير متاحة من Windows"
+                        : "Hardware IDs:\\n" + string.Join("\\n", displayedIds),
+                    displayedIds.Length == 0 ? "#F0C9A5" : "#8FC7EA", 8));
+                stack.Children.Add(Button(
+                    "مطابقة ملف INF مع Hardware IDs لهذا الجهاز",
+                    "#14517A",
+                    (_, _) => new DriverInfCompatibilityWindow(
+                        device.HardwareIds, device.Manufacturer, device.FriendlyName)
+                    { Owner = this }.ShowDialog()));
+
                 stack.Children.Add(Text(
                     $"{transport.DeviceFamily} — {transport.UsbTransport}\nالعرض: {transport.ScreenViewingRoute}\nالتحكم: {transport.RemoteControlRoute}\nالحدود: {transport.Limitation}",
                     "#B7C9DE", 9));
