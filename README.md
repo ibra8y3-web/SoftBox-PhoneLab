@@ -35,7 +35,7 @@ The curated catalog is a starter set. The additional community model-code databa
 - **iPhone/iPad:** an optional, separately installed AirPlay-Windows receiver can be started and its native receiver window is docked into the same right-side screen panel. The PC and Apple device must be on the same local network and the owner must choose the receiver from Control Center. This path is **view-only**; it does not transmit touch input or passcodes to iOS.
 - SoftBox does not bundle, copy or redistribute the GPL-3 AirPlay-Windows executable. The user selects their own independently downloaded `airplay-windows.exe`; SoftBox displays its SHA-256 fingerprint as a file identifier, not as proof of publisher identity. Review the upstream licence and release before use.
 - MTP/USB file-transfer visibility is not screen mirroring or device-control permission. Windows PnP/VID/PID detection identifies a likely USB manufacturer, not necessarily the exact handset model, OS state or a usable screen protocol.
-- Mirroring remains protocol-specific: ADB/scrcpy for Android devices that expose and authorize ADB; AirPlay for compatible Apple devices; proprietary vendor/cast modes are not assumed to work just because a vendor is recognized.
+- Mirroring remains protocol-specific: ADB/scrcpy for Android devices that expose and authorize ADB; AirPlay for compatible Apple devices; the Windows-native Miracast receiver as an optional external viewing fallback; proprietary vendor/cast modes are not assumed to work just because a vendor is recognized.
 - Agent displays uniform color test patterns. A camera photograph of the physical screen can be analyzed for candidate pixel outliers and luminance non-uniformity. This is a screening aid, not a calibrated optical inspection.
 - Android Camera2 enumerates logical camera IDs and exposed physical camera routes, reads lens and autofocus metadata, captures a JPEG for each route, and records the autofocus state separately. This verifies reported AF state, not chart sharpness, stabilization or optical quality.
 
@@ -146,6 +146,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 9. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
 10. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records. Open Global Workshop for searchable operations, warranty tracking, technician history, international center settings and HTML/CSV exports.
 11. Use Android logs or firmware inspection for read-only evidence. Review component history and export a JSON diagnostic report.
+12. For a phone without authorized ADB but with Miracast support, open the Miracast setup guide and configure Windows Wireless Display separately. This native Windows session is outside the SoftBox screen dock.
 
 ## Diagnostic color contract
 
@@ -247,3 +248,6 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 - The owner lock recovery assistant provides official, evidence-based guidance for Apple and Android scenarios, including eligible previous-credential windows and account/backup checks. It collects no credentials and does not bypass screen locks, FRP, Apple Activation Lock, MDM or manufacturer activation services. Factory reset is only described as a possible official route with a clear data-loss warning; SoftBox does not issue a reset command.
 - The component evidence history is retained in a local DPAPI-protected database under the current Windows user. Entries store a masked serial and one-way device fingerprint, component ID/name, status, evidence source and timestamp. Identical repeated snapshots are deduplicated.
 - These additions are code/test work, not a claim of universal hardware certification. Physical validation on target Samsung, Huawei, OPPO, iPhone and other models remains necessary.
+
+
+- Windows Wireless Display/Miracast setup guide: https://support.microsoft.com/en-us/windows/hardware/display-graphics/screen-mirroring-and-projecting-to-your-pc-or-wireless-display
