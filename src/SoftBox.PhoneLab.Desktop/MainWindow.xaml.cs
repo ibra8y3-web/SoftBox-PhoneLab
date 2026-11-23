@@ -759,6 +759,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
+        // Phone Link is a persistent dock, not a full-page overlay.
+        if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))
+        {
+            MirrorScreen_Click(this, new RoutedEventArgs());
+            return;
+        }
+
         var module = SoftBoxModuleCatalog.Find(moduleId);
         if (module is null)
         {
@@ -1052,6 +1059,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
             case "OpenUsbDoctor":
                 new UsbDoctorWindow { Owner = this }.ShowEmbedded(this);
+                break;
+            case "OpenUsbDriverCenter":
+                new UsbDriverCenterWindow(
+                    SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer,
+                    SelectedDevice?.Model ?? _snapshot?.Model)
+                { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenQualcommUsbDiagnostics":
                 new UsbDoctorWindow("qualcomm") { Owner = this }.ShowEmbedded(this);

@@ -1,0 +1,17 @@
+# Phone screen dock and OEM USB driver center
+
+## Live phone screen
+
+The home workspace keeps the Android scrcpy host visible in its own right-side panel beside the 3D assembly. The phone list, component list and navigation remain in separate columns. Selecting an authorized ADB device can start its screen session automatically when the existing preference `AutoOpenScreenMirror` is enabled. The screen panel also provides explicit start/refresh, stop and recording actions.
+
+Before launching scrcpy, PhoneLab rechecks the selected device's ADB state and makes a best-effort `KEYCODE_WAKEUP` request. That can wake a sleeping display; it does not unlock the device or bypass a lock screen. The Android operating system must be booted, USB debugging must be enabled, and the user must approve this computer. A powered-off phone, bootloader-only screen, unsupported OEM transport or an unauthorized ADB device cannot be mirrored through scrcpy.
+
+## Components
+
+The component diagnostic list is initialized when the main window starts, including when no device is connected. Every component remains visible as `Not tested` until an actual read or user-approved test supplies evidence.
+
+## OEM USB driver resources
+
+The driver center lists 16 OEM/Google resources referenced by the Android Developers OEM USB driver directory. These are HTTPS manufacturer support/download pages, not bundled installers. The exact package can depend on the model, region and Windows version. PhoneLab never silently installs an OEM driver, disables Windows signature enforcement, or treats a generic package as compatible with every model.
+
+Google's USB driver is for Google devices; other manufacturers provide their own Windows drivers. For any OEM package selected by the technician, retain the vendor signature and verify the exact model/Windows compatibility before installation.
