@@ -733,13 +733,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Components.Count == 0)
             return;
 
-        var source = _measurementSnapshot is not null && _agentSnapshot is not null
-            ? "ADB + PhoneLab Agent + external measurement rig"
-            : _agentSnapshot is not null
-                ? "ADB + PhoneLab Agent"
-                : _measurementSnapshot is not null
-                    ? "ADB + external measurement rig"
-                    : "ADB system information";
+        const string source = "DiagnosticEngine composite snapshot; each component evidence field identifies its own source";
 
         try
         {
