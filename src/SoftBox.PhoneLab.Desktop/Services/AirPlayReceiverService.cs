@@ -35,7 +35,16 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         }
     }
 
-    public int? ProcessId => IsRunning ? Volatile.Read(ref _process)?.Id : null;
+    public int? ProcessId
+    {
+        get
+        {
+            var process = Volatile.Read(ref _process);
+            try { return process is { HasExited: false } ? process.Id : null; }
+            catch (ObjectDisposedException) { return null; }
+            catch (InvalidOperationException) { return null; }
+        }
+    }
     public string RecentOutput => string.Join(Environment.NewLine, _recentOutput.ToArray());
 
     public static string ValidateReceiverPath(string path)
@@ -142,6 +151,10 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
         }
         catch
         {
+            if (!ReferenceEquals(Volatile.Read(ref _process), process))
+            {
+                try { process.Dispose(); } catch { }
+            }
             await StopCoreAsync();
             throw;
         }
