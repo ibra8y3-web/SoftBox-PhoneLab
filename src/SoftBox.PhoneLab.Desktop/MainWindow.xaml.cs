@@ -898,7 +898,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void OpenIPhoneCenter()
     {
-        // Close the current embedded page before switching to the dedicated Apple workspace.
+        if (_iphoneCenterWindow is { IsVisible: true })
+        {
+            _iphoneCenterWindow.Activate();
+            return;
+        }
+
+        // Apple is a separate top-level workspace. It must not share the Android device rail,
+        // Android screen panel, 3D viewer or embedded Android module surface.
         CloseAllEmbeddedPages();
         _iphoneCenterWindow = new IPhoneCenterWindow(
             _settings,
@@ -908,7 +915,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             OpenModuleAction)
         { Owner = this };
         _iphoneCenterWindow.Closed += (_, _) => _iphoneCenterWindow = null;
-        _iphoneCenterWindow.ShowEmbedded(this);
+        _iphoneCenterWindow.Show();
     }
 
     private void OpenIPhoneAssessment(IPhoneAssessmentMode mode)
@@ -922,7 +929,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         new IPhoneAssessmentWindow(snapshot, _diagnosticEvidenceStore, mode, _iphoneCenterWindow.SelectedBatteryDiagnostics)
-        { Owner = this }.ShowDialog();
+        { Owner = _iphoneCenterWindow ?? this }.ShowDialog();
     }
 
     private void OpenAirPlayReceiverWindow()
@@ -947,7 +954,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(MirrorStatus));
                 await Task.CompletedTask;
             })
-        { Owner = this };
+        { Owner = _iphoneCenterWindow is { IsVisible: true } appleWindow ? appleWindow : this };
         _airPlayReceiverWindow.Closed += (_, _) => _airPlayReceiverWindow = null;
         _airPlayReceiverWindow.Show();
     }
