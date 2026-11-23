@@ -31,8 +31,8 @@ The current catalog enforces a single canonical executable action for each exist
 1. Sections 01–03: Dashboard, Device Center, Device Intelligence.
 2. Sections 04–05: Android Service Center, APK Lab.
 3. Sections 06–10: Samsung, Xiaomi, Android Brands, Qualcomm, MediaTek.
-4. Sections 11–14: Firmware Center, USB Doctor, Smart Backup, Phone Link Studio.
-5. Sections 15–19: Hardware Diagnostics, Network Diagnostics, Smart Repair AI, One-Click Diagnostic, Safe Recovery.
+4. Sections 11–14: Firmware Center, USB Doctor (including 33 OEM resources), Smart Backup, Phone Link Studio (Android ADB/scrcpy and optional iPhone AirPlay viewing).
+5. Sections 15–19: Hardware Diagnostics (with encrypted evidence history), Network Diagnostics, Smart Repair AI, One-Click Diagnostic, Safe Recovery (including owner-safe forgotten-lock guidance).
 6. Sections 20–25: Workflow Automation, Batch Operations, Repair History, Workshop Manager, Parts Inventory, Service Reports.
 7. Sections 26–28: Plugin Store, Plugin SDK, Offline Center.
 8. Sections 29–36: Security & Privacy, User & Technician Management, Update Center, Notification Center, Help Center, Support & Logs, Settings, About.
@@ -40,3 +40,12 @@ The current catalog enforces a single canonical executable action for each exist
 ## Safety and truthfulness
 
 A model profile is not proof of board compatibility. A data read is not a functional test. Firmware SHA-256 is not publisher authentication. ADF/Fastboot generic discovery is not vendor Download/EDL/Preloader support. No section may be marked Tested or Verified solely because the WPF screen opens or CI builds successfully.
+
+
+## Cross-platform transport ownership
+
+- Section 02 owns the universal PnP/ADB discovery workspace. Windows USB PnP and Android ADB inventories remain separate evidence sources unless an explicit supported identity mapping exists.
+- Section 12 owns OEM resource discovery and the existing local driver-signature verifier. Resource links are not treated as installed drivers or universal model compatibility.
+- Section 14 owns the shared screen dock. Android uses the authorized ADB/scrcpy path; iPhone/iPad uses the optional independent AirPlay receiver for viewing only. The two adapters share the display host, not a control protocol.
+- Section 15 owns the DPAPI-protected component evidence history. The existing Agent test center remains the canonical entrypoint for real Android Agent tests.
+- Section 19 owns owner-safe forgotten-lock recovery guidance. It does not provide lock, FRP, Activation Lock, MDM or account bypass actions.
