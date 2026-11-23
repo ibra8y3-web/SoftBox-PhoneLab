@@ -414,7 +414,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MirrorStatus = "تعذر استرجاع بث الشاشة تلقائيًا: " + ex.Message;
+            var report = ScreenMirrorFailureAnalyzer.Analyze(ex);
+            MirrorStatus = string.Join(Environment.NewLine,
+                "فشل الاسترجاع التلقائي: " + report.Title,
+                report.Cause, report.RecommendedAction, report.TechnicalDetail);
         }
         Notify(nameof(MirrorStatus));
     }
@@ -437,7 +440,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
                 MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
             }
-            catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
+            catch (Exception ex)
+            {
+                var report = ScreenMirrorFailureAnalyzer.Analyze(ex);
+                MirrorStatus = string.Join(Environment.NewLine,
+                    "تعذر فتح العرض داخل البرنامج: " + report.Title,
+                    report.Cause, report.RecommendedAction, report.TechnicalDetail);
+            }
         }
         else if (!canControlDevice)
         {
@@ -1137,6 +1146,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }
+            case "OpenUniversalDeviceDiscovery":
+                new UniversalDeviceDiscoveryWindow(_usbInventory, Devices.ToArray())
+                { Owner = this }.ShowEmbedded(this);
+                break;
+            case "OpenAirPlayReceiver":
+                new AirPlayReceiverWindow(_settings, _settingsService)
+                { Owner = this }.ShowEmbedded(this);
+                break;
+            case "OpenLockRecoveryAssistant":
+                new LockRecoveryAssistantWindow(
+                    SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer,
+                    SelectedDevice?.Model ?? _snapshot?.Model)
+                { Owner = this }.ShowEmbedded(this);
+                break;
             case "OpenQualcommUsbDiagnostics":
                 new UsbDoctorWindow("qualcomm") { Owner = this }.ShowEmbedded(this);
                 break;
@@ -1708,7 +1731,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             await OpenEmbeddedMirrorAsync(selected);
             StatusMessage = "تم دمج شاشة الهاتف الحقيقية داخل PhoneLab.";
         }
-        catch (Exception ex) { StatusMessage = "تعذر تشغيل عرض الشاشة: " + ex.Message; }
+        catch (Exception ex)
+        {
+            var report = ScreenMirrorFailureAnalyzer.Analyze(ex);
+            MirrorStatus = string.Join(Environment.NewLine,
+                report.Title, report.Cause, report.RecommendedAction, report.TechnicalDetail);
+            StatusMessage = "تعذر تشغيل عرض الشاشة: " + report.Title + " — " + report.RecommendedAction;
+            Notify(nameof(MirrorStatus));
+        }
         Notify(nameof(StatusMessage));
     }
 
