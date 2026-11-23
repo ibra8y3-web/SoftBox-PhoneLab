@@ -38,6 +38,7 @@ public sealed class OemResourceAvailabilityServiceTests
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.MethodNotAllowed));
             }
             Assert.Equal(HttpMethod.Get, request.Method);
+            Assert.Equal("bytes=0-0", request.Headers.Range?.ToString());
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
         });
         using var client = new HttpClient(handler);
@@ -116,7 +117,7 @@ public sealed class OemResourceAvailabilityServiceTests
         var report = await service.CheckAsync("https://vendor.example.com/account");
 
         Assert.Equal(OemResourceAvailabilityStatus.AccessRestricted, report.Status);
-        Assert.Contains("منع الوصول", report.Explanation);
+        Assert.Contains("رفض المصدر الوصول", report.Explanation);
     }
 
     [Fact]
