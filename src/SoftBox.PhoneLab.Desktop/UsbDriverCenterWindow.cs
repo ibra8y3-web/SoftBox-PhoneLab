@@ -20,7 +20,7 @@ public sealed class UsbDriverCenterWindow : Window
 
     public UsbDriverCenterWindow(string? manufacturer = null, string? model = null, string detectionSource = "ADB")
     {
-        Title = "SoftBox | Official OEM USB Driver Center";
+        Title = "SoftBox | OEM USB Drivers and Support Resources";
         Width = 940;
         Height = 690;
         MinWidth = 760;
@@ -34,7 +34,7 @@ public sealed class UsbDriverCenterWindow : Window
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         header.Children.Add(new TextBlock
         {
-            Text = "مركز تعريفات USB الرسمية",
+            Text = "مركز تعريفات USB وموارد الشركات الرسمية",
             FontSize = 24,
             FontWeight = FontWeights.Bold,
             Foreground = Brush("#7DD3FC")
