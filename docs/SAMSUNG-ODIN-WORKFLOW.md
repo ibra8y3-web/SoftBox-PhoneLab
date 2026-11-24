@@ -28,3 +28,9 @@ A normal CSC package may erase user data. HOME_CSC is intended to preserve user 
 If Windows does not expose the COM port on the selected Samsung USB record, or Odin does not expose one unique Start control and the selected package names, SoftBox blocks Start. It does not replace missing evidence with a guess.
 
 No FRP, account-lock, bootloader-security or device-owner protection bypass is provided. No IMEI/serial mutation or EFS identity rewrite is performed.
+## Permission and audit gate
+
+- Opening the Download Mode Center or Odin Assistant does not grant permission to start a flash. The Start handler independently checks the dedicated `ExecuteSamsungOdinFlash` action, which requires `DeviceOperations`.
+- The authorization check runs after the technician's final confirmation and immediately before Start is invoked. The action must also be written to the local security audit store; if permission is denied, the audit write fails, or the audit callback is missing, SoftBox does not invoke Start.
+- The audit event records an authorized Start invocation attempt. It does not mean that Odin completed the flash, that every partition was written, or that Android booted successfully. Those outcomes remain limited to the visible Odin UI evidence described above.
+- A short-lived in-process guard rejects concurrent Start clicks so one confirmation sequence cannot dispatch duplicate UI Automation invocations.
