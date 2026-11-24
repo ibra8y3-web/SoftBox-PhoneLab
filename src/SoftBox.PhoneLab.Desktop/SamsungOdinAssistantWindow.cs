@@ -63,9 +63,11 @@ public sealed class SamsungOdinAssistantWindow : Window
         _deviceSerial = AdbClient.IsSafeSerial(deviceSerial ?? "") ? deviceSerial : null;
         _deviceManufacturer = deviceManufacturer;
         _deviceModel = deviceModel;
+        var pnpInstancePath = pnpInstanceSuffix is null
+            ? string.Empty
+            : $"USB\\\\VID_04E8&PID_0000\\\\{pnpInstanceSuffix}";
         _pnpInstanceSuffix = WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(
-            pnpInstanceSuffix is null ? string.Empty : @"USB\\VID_04E8&PID_0000\\" + pnpInstanceSuffix,
-            out var parsedPnpSuffix)
+            pnpInstancePath, out var parsedPnpSuffix)
             ? parsedPnpSuffix
             : null;
         if (_deviceSerial is not null &&
