@@ -190,12 +190,13 @@ public sealed class IPhoneCenterWindow : Window
         actions.Children.Add(Button("صحة البطارية ودوراتها", "#203B58", (_, _) => _openAction("OpenIPhoneBatteryHealth")));
         actions.Children.Add(Button("الفحص الوظيفي والفيزيائي", "#203B58", (_, _) => _openAction("OpenIPhoneFunctionalTests")));
         actions.Children.Add(Button("أدلة الأصالة وتطابق الهوية", "#203B58", (_, _) => _openAction("OpenIPhoneAuthenticityEvidence")));
-        actions.Children.Add(Button("عرض شاشة iPhone عبر AirPlay", "#14517A", (_, _) => _openAction("OpenAirPlayReceiver")));
+        actions.Children.Add(Button("عرض سلكي عبر HDMI Capture", "#176044", (_, _) => _openAction("OpenIPhoneHdmiCapture")));
+        actions.Children.Add(Button("استقبال شاشة iPhone عبر AirPlay", "#14517A", (_, _) => _openAction("OpenAirPlayReceiver")));
         actions.Children.Add(Button("سجل أدلة الجهاز", "#203B58", (_, _) => OpenEvidenceHistory()));
         actions.Children.Add(Button("فحص تغطية Apple الرسمي", "#203B58", (_, _) => OpenAppleCoverage()));
         bottom.Children.Add(actions);
         bottom.Children.Add(Text(
-            "AirPlay يفتح نافذة عرض مستقلة بمضيف شاشة خاص به. لا يستخدم لوحة Android ولا يشارك جلسة scrcpy.",
+            "مسارا العرض مستقلان: AirPlay عبر الشبكة، أو HDMI عبر كارت التقاط UVC موصول بالكمبيوتر. HDMI لا يحتاج اختيار Screen Mirroring، لكنه يتطلب أن يدعم موديل iPhone إخراج الفيديو السلكي ومحولًا مناسبًا. لا يفتح أي مسار قفل الهاتف أو يتجاوز رمز الحماية.",
             "#8FB0CE", 10));
         DockPanel.SetDock(bottom, Dock.Bottom);
         root.Children.Add(bottom);

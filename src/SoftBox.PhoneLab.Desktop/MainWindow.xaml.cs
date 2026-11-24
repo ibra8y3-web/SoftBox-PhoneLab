@@ -194,6 +194,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             BuildScene();
             RebuildDiagnostics(); // Show the full Not tested component list before any phone/ADB connection.
             await RefreshDevicesAsync();
+            if (_settings.AutoStartAirPlayReceiver &&
+                File.Exists(_settings.AirPlayReceiverExecutablePath) &&
+                SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen"))
+            {
+                OpenAirPlayReceiverWindow(startImmediately: true);
+            }
             if (_settings.AutoDiscoverDevices)
                 _timer.Start();
 
@@ -1059,11 +1065,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         { Owner = (Window?)_iphoneCenterWindow ?? this }.ShowDialog();
     }
 
-    private void OpenAirPlayReceiverWindow()
+    private void OpenAirPlayReceiverWindow(bool startImmediately = false)
     {
         if (_airPlayReceiverWindow is { IsVisible: true })
         {
             _airPlayReceiverWindow.Activate();
+            if (startImmediately)
+                _ = _airPlayReceiverWindow.StartReceiverFromStartupAsync();
             return;
         }
 
@@ -1084,6 +1092,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         { Owner = _iphoneCenterWindow is { IsVisible: true } appleWindow ? appleWindow : this };
         _airPlayReceiverWindow.Closed += (_, _) => _airPlayReceiverWindow = null;
         _airPlayReceiverWindow.Show();
+        if (startImmediately)
+            _ = _airPlayReceiverWindow.StartReceiverFromStartupAsync();
     }
 
     private void ModuleNavigation_Click(object sender, RoutedEventArgs e)
@@ -1466,6 +1476,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             case "OpenAirPlayReceiver":
                 OpenAirPlayReceiverWindow();
+                break;
+            case "OpenIPhoneHdmiCapture":
+                new IPhoneHdmiCaptureWindow(_settings, _settingsService) { Owner = this }.Show();
                 break;
             case "OpenDiagnosticEvidenceHistory":
             {

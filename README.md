@@ -271,3 +271,8 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 - The originality review does not treat a serial, USB VID or Lockdown response as proof of a genuine handset. Apple coverage is opened for the operator to check directly; SoftBox does not send the serial.
 - AirPlay now owns a separate window and native display host. Android scrcpy remains attached to the Android host only; manual AirPlay still stops an active Android mirror and blocks auto-scrcpy retries while AirPlay runs.
 - The new code requires CI and real iPhone/iPad validation before any feature can be marked Tested or Verified. The toolset and Apple hardware are not bundled or simulated.
+
+
+## iPhone screen recovery and wired HDMI capture
+
+SoftBox provides separate iPhone viewing paths for its AirPlay receiver and optional UVC HDMI capture workflow. See [docs/IPHONE-SCREEN-RECOVERY.md](docs/IPHONE-SCREEN-RECOVERY.md) for connector/model limitations, setup, diagnostics and physical validation. AirPlay can auto-start on Windows after its executable path is saved; the iPhone must still initiate AirPlay itself. Wired capture works only when the iPhone model supports external video output and a compatible AV adapter is used.

@@ -200,7 +200,10 @@ public sealed class AirPlayReceiverWindow : Window
         }
     }
 
-    private async Task StartReceiverAsync()
+    /// <summary>Starts the saved receiver during SoftBox startup without opening a file picker.</summary>
+    public Task StartReceiverFromStartupAsync() => StartReceiverAsync(automatic: true);
+
+    private async Task StartReceiverAsync(bool automatic = false)
     {
         if (_starting)
             return;
@@ -208,7 +211,9 @@ public sealed class AirPlayReceiverWindow : Window
         _starting = true;
         _start.IsEnabled = false;
         _stop.IsEnabled = _receiver.IsRunning;
-        _status.Text = "جارٍ التحقق من ملف المستقبل وتجهيز مسار العرض...";
+        _status.Text = automatic
+            ? "تشغيل مستقبل AirPlay المحفوظ تلقائيًا وتجهيز نافذة العرض..."
+            : "جارٍ التحقق من ملف المستقبل وتجهيز مسار العرض...";
         try
         {
             // Validate the selected file before stopping any active Android screen session.
@@ -221,7 +226,9 @@ public sealed class AirPlayReceiverWindow : Window
 
             await _stopExistingScreenSession();
             var startedPath = await _receiver.StartAsync(receiverPath, _screenHost);
-            _status.Text = "تم تشغيل مستقبل AirPlay داخل نافذة iPhone المستقلة. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
+            _status.Text = automatic
+                ? "تم تشغيل مستقبل AirPlay تلقائيًا على الكمبيوتر. لم يبدأ بث iPhone بعد؛ يبدأ العرض عند وصول بث AirPlay من الهاتف."
+                : "تم تشغيل مستقبل AirPlay داخل نافذة iPhone المستقلة. لم يتم تأكيد اتصال iPhone بعد؛ اختر AirPlay-Windows من قائمة Screen Mirroring على الهاتف.";
             AppendLog("Started: " + startedPath);
         }
         catch (Exception ex)

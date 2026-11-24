@@ -15,6 +15,8 @@ public sealed class ApplicationSettingsWindow : Window
     private readonly CheckBox _autoDiscover = new();
     private readonly ComboBox _interval = new();
     private readonly CheckBox _autoMirror = new();
+    private readonly CheckBox _autoStartAirPlay = new();
+    private PhoneLabSettings _currentSettings;
     private readonly CheckBox _autoAgent = new();
     private readonly CheckBox _autoInspect = new();
     private readonly ComboBox _concurrency = new();
@@ -28,6 +30,7 @@ public sealed class ApplicationSettingsWindow : Window
         Action<PhoneLabSettings> apply)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
+        _currentSettings = current ?? throw new ArgumentNullException(nameof(current));
         _apply = apply ?? throw new ArgumentNullException(nameof(apply));
 
         Title = "SoftBox | إعدادات التطبيق";
@@ -58,6 +61,8 @@ public sealed class ApplicationSettingsWindow : Window
 
         _autoMirror.Content = "فتح عرض شاشة الهاتف تلقائيًا عند الاتصال";
         _autoMirror.IsChecked = settings.AutoOpenScreenMirror;
+        _autoStartAirPlay.Content = "تشغيل مستقبل AirPlay تلقائيًا عند فتح SoftBox (بعد حفظ مساره)";
+        _autoStartAirPlay.IsChecked = settings.AutoStartAirPlayReceiver;
 
         _autoAgent.Content = "تثبيت / تجهيز PhoneLab Agent تلقائيًا بعد تصريح ADB";
         _autoAgent.IsChecked = settings.AutoInstallAgent;
@@ -105,6 +110,7 @@ public sealed class ApplicationSettingsWindow : Window
         AddCombo(content, "فترة اكتشاف الأجهزة (ثانية)", _interval);
         AddCheck(content, _autoInspect);
         AddCheck(content, _autoMirror);
+        AddCheck(content, _autoStartAirPlay);
         AddCheck(content, _autoAgent);
         AddCombo(content, "الحد الأقصى للأجهزة المتزامنة في Batch", _concurrency);
         AddCombo(content, "تكبير / تصغير واجهة الكمبيوتر", _uiScale);
@@ -120,7 +126,7 @@ public sealed class ApplicationSettingsWindow : Window
             Margin = new Thickness(0, 10, 0, 14),
             Child = new TextBlock
             {
-                Text = "هذه الإعدادات تتحكم في سلوك SoftBox المحلي فقط. إيقاف تثبيت Agent تلقائيًا لا يمنع التثبيت اليدوي عند طلبك، وإيقاف الاكتشاف التلقائي لا يمنع استخدام زر تحديث الأجهزة. لا يتم تخزين كلمات مرور أو مفاتيح.",
+                Text = "هذه الإعدادات تتحكم في سلوك SoftBox المحلي فقط. تشغيل مستقبل AirPlay تلقائيًا يبدأ المستقبل على الكمبيوتر بعد حفظ مساره؛ ولا يبدأ بث iPhone من الهاتف أو يتجاوز موافقة مالكه. مسارات الأدوات المحفوظة لا تُحذف عند حفظ هذه الصفحة.",
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = Brush("#F0C9A5"),
                 FontSize = 11
@@ -175,17 +181,21 @@ public sealed class ApplicationSettingsWindow : Window
     {
         try
         {
-            var settings = new PhoneLabSettings(
-                AutoDiscoverDevices: _autoDiscover.IsChecked == true,
-                DiscoveryIntervalSeconds: _interval.SelectedItem is int interval ? interval : 3,
-                AutoOpenScreenMirror: _autoMirror.IsChecked == true,
-                AutoInstallAgent: _autoAgent.IsChecked == true,
-                AutoInspectOnConnect: _autoInspect.IsChecked == true,
-                MaximumBatchConcurrency: _concurrency.SelectedItem is int limit ? limit : 3,
-                UiScale: _uiScale.SelectedItem is double scale ? scale : 1.0,
-                UiLanguage: _language.SelectedValue?.ToString() ?? "ar");
+            var settings = PhoneLabSettingsService.Validate(_currentSettings with
+            {
+                AutoDiscoverDevices = _autoDiscover.IsChecked == true,
+                DiscoveryIntervalSeconds = _interval.SelectedItem is int interval ? interval : 3,
+                AutoOpenScreenMirror = _autoMirror.IsChecked == true,
+                AutoStartAirPlayReceiver = _autoStartAirPlay.IsChecked == true,
+                AutoInstallAgent = _autoAgent.IsChecked == true,
+                AutoInspectOnConnect = _autoInspect.IsChecked == true,
+                MaximumBatchConcurrency = _concurrency.SelectedItem is int limit ? limit : 3,
+                UiScale = _uiScale.SelectedItem is double scale ? scale : 1.0,
+                UiLanguage = _language.SelectedValue?.ToString() ?? "ar"
+            });
 
             await _service.SaveAsync(settings);
+            _currentSettings = settings;
             _apply(settings);
             SoftBoxLocalization.SetLanguage(settings.UiLanguage);
             SoftBoxLocalization.Apply(this);
