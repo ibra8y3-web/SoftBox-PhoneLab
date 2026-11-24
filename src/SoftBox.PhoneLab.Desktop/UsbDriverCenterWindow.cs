@@ -139,6 +139,7 @@ public sealed class UsbDriverCenterWindow : Window
         actions.Children.Add(ButtonControl("دليل Android OEM", "#20364F", (_, _) => OpenReference()));
         actions.Children.Add(ButtonControl("فحص توقيع حزمة تم تنزيلها", "#20364F", (_, _) => OpenSignatureVerifier()));
         actions.Children.Add(ButtonControl("مطابقة INF مع Hardware IDs", "#20364F", (_, _) => OpenInfCompatibility()));
+        actions.Children.Add(ButtonControl("إدارة تثبيت/نسخ/إزالة التعريفات", "#176044", (_, _) => OpenPackageManager()));
         details.Children.Add(actions);
 
         _status.TextWrapping = TextWrapping.Wrap;
@@ -263,6 +264,13 @@ public sealed class UsbDriverCenterWindow : Window
 
         var window = new DriverInfCompatibilityWindow(
             _deviceHardwareIds, _deviceManufacturer, _deviceModel)
+        { Owner = Owner ?? this };
+        window.ShowDialog();
+    }
+
+    private void OpenPackageManager()
+    {
+        var window = new DriverPackageManagerWindow(_deviceHardwareIds, _deviceManufacturer, _deviceModel)
         { Owner = Owner ?? this };
         window.ShowDialog();
     }
