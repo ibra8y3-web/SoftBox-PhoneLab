@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Security;
 using System.Text.RegularExpressions;
 
 namespace SoftBox.PhoneLab.Desktop.Services;
@@ -41,7 +40,6 @@ public sealed class WindowsDriverPackageManagerService
         @"^oem[0-9]{1,6}\.inf$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-    private readonly DriverInfCompatibilityAnalyzer _unusedAnalyzer = new();
     private readonly WindowsDriverSignatureVerificationService _signatureService;
 
     public WindowsDriverPackageManagerService(WindowsDriverSignatureVerificationService? signatureService = null)
@@ -209,7 +207,9 @@ public sealed class WindowsDriverPackageManagerService
             DateTimeOffset.UtcNow);
     }
 
-    private static async Task<(int ExitCode)> RunElevatedAsync(
+    private sealed record ElevatedCommandResult(int ExitCode);
+
+    private static async Task<ElevatedCommandResult> RunElevatedAsync(
         IReadOnlyList<string> arguments,
         CancellationToken cancellationToken)
     {
@@ -229,7 +229,7 @@ public sealed class WindowsDriverPackageManagerService
             using var process = Process.Start(start) ??
                 throw new InvalidOperationException("Windows PnPUtil did not start.");
             await process.WaitForExitAsync(cancellationToken);
-            return (process.ExitCode);
+            return new ElevatedCommandResult(process.ExitCode);
         }
         catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
         {
