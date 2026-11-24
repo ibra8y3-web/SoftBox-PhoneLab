@@ -1,3 +1,4 @@
+using SoftBox.PhoneLab.Core.Diagnostics;
 using Microsoft.Win32;
 using SoftBox.PhoneLab.Core.Firmware;
 using System.Diagnostics;
