@@ -426,8 +426,7 @@ public static class SoftBoxModuleCatalog
                 new("smart-device-field-fill", "تعبئة حقول الشركة والموديل والوضع والمعرّف تلقائيًا", "Smart device-field population", "تُملأ حقول مركز الهوية من القراءة الفعلية المختارة مع إخفاء المعرّف افتراضيًا، ويمكن نسخ القيمة الدقيقة صراحةً. في Odin تُملأ عبارة FLASH من آخر أحرف Serial عبر ADB المصرّح فقط؛ تظل موافقات التوافق والنسخة الاحتياطية وCOM والتأكيد النهائي يدوية.", ModuleImplementationStatus.Implemented),
                 new("identity-evidence-report", "تقرير أدلة الهوية المقنّع", "Masked identity evidence report", "ينسخ تقريرًا بمعلومات المصدر والوضع ودرجة الثقة والحالة مع إخفاء المعرّفات. لا يحفظ أرقامًا خامًا أو يرسلها إلى الشبكة.", ModuleImplementationStatus.Implemented),
                 new("imei-serial-mutation", "تغيير أو تزوير IMEI أو الرقم التسلسلي", "IMEI or serial mutation", "غير مدعوم: لا توجد كتابة IMEI/Serial أو تعديل NVRAM/EFS/مناطق الخدمة أو تغيير هوية الجهاز. إصلاح الهوية المسموح به يكون عبر الشركة المصنّعة أو مركز خدمة معتمد.", ModuleImplementationStatus.Unsupported)
-            ])
-
+            ]),
         new("qualcomm-edl-lab", 39, "منصات المعالجات", "مختبر Qualcomm EDL وDiag", "Qualcomm EDL & Diag Lab",
             "قسم متخصص لأجهزة Qualcomm: تمييز 9008/EDL وقراءة بيانات الخدمة وفحص ملفات Firehose وXML وخطط النسخ والاستعادة. جميع الوظائف الجديدة مخططة وليست أدوات تنفيذ متاحة بعد.",
             ModuleImplementationStatus.Planned,
