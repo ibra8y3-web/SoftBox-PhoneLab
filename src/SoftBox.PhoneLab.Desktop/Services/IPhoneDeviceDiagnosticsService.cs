@@ -63,7 +63,8 @@ public sealed class IPhoneDeviceDiagnosticsService
 
     public async Task<IReadOnlyList<IPhoneDeviceScanResult>> ScanAsync(
         string? configuredToolsDirectory,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool includeBatteryDiagnostics = true)
     {
         var directory = ResolveToolsDirectory(configuredToolsDirectory);
         if (directory is null)
@@ -103,32 +104,35 @@ public sealed class IPhoneDeviceDiagnosticsService
                 var snapshot = IPhoneDeviceInfoParser.Parse(info.StandardOutput, identifier);
                 IPhoneBatteryDiagnosticsSnapshot? batteryDiagnostics = null;
                 string? batteryDiagnosticsError = null;
-                var diagnosticsPath = Path.Combine(directory, "idevicediagnostics.exe");
-                if (File.Exists(diagnosticsPath))
+                if (includeBatteryDiagnostics)
                 {
-                    try
+                    var diagnosticsPath = Path.Combine(directory, "idevicediagnostics.exe");
+                    if (File.Exists(diagnosticsPath))
                     {
-                        var batteryOutput = await RunAsync(
-                            diagnosticsPath,
-                            ["-u", identifier, "diagnostics", "GasGauge"],
-                            TimeSpan.FromSeconds(15),
-                            MaximumBatteryDiagnosticsOutput,
-                            cancellationToken);
-                        batteryDiagnostics = IPhoneBatteryDiagnosticsParser.Parse(
-                            batteryOutput.StandardOutput, snapshot.ProductVersion);
+                        try
+                        {
+                            var batteryOutput = await RunAsync(
+                                diagnosticsPath,
+                                ["-u", identifier, "diagnostics", "GasGauge"],
+                                TimeSpan.FromSeconds(15),
+                                MaximumBatteryDiagnosticsOutput,
+                                cancellationToken);
+                            batteryDiagnostics = IPhoneBatteryDiagnosticsParser.Parse(
+                                batteryOutput.StandardOutput, snapshot.ProductVersion);
+                        }
+                        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch (Exception ex)
+                        {
+                            batteryDiagnosticsError = SafeError(ex);
+                        }
                     }
-                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    else
                     {
-                        throw;
+                        batteryDiagnosticsError = "أداة idevicediagnostics.exe غير موجودة؛ قراءة دورات الشحن والسعة الآلية غير متاحة.";
                     }
-                    catch (Exception ex)
-                    {
-                        batteryDiagnosticsError = SafeError(ex);
-                    }
-                }
-                else
-                {
-                    batteryDiagnosticsError = "أداة idevicediagnostics.exe غير موجودة؛ قراءة دورات الشحن والسعة الآلية غير متاحة.";
                 }
 
                 results.Add(new IPhoneDeviceScanResult(
