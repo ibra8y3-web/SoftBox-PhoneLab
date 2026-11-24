@@ -6,11 +6,29 @@ namespace SoftBox.PhoneLab.Tests;
 public sealed class SoftBoxModuleCatalogTests
 {
     [Fact]
-    public void MasterCatalogContainsAllThirtySevenSectionsInSpecificationOrder()
+    public void MasterCatalogContainsAllFiftyOneSectionsInSpecificationOrder()
     {
         Assert.Equal(SoftBoxModuleCatalog.ExpectedModuleCount, SoftBoxModuleCatalog.All.Count);
         Assert.Equal(Enumerable.Range(1, SoftBoxModuleCatalog.ExpectedModuleCount),
             SoftBoxModuleCatalog.All.Select(x => x.Order));
+    }
+
+    [Fact]
+    public void ProfessionalServiceExpansionAddsThirteenPlannedSectionsWithoutFakeActions()
+    {
+        var expansion = SoftBoxModuleCatalog.All.Where(module => module.Order is >= 39 and <= 51).ToArray();
+
+        Assert.Equal(13, expansion.Length);
+        Assert.All(expansion, module =>
+        {
+            Assert.Equal(ModuleImplementationStatus.Planned, module.Status);
+            Assert.NotEmpty(module.Features);
+            Assert.All(module.Features, feature =>
+            {
+                Assert.Equal(ModuleImplementationStatus.Planned, feature.Status);
+                Assert.Null(feature.ActionId);
+            });
+        });
     }
 
     [Fact]
