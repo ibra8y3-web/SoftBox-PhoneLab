@@ -43,12 +43,18 @@ public sealed class SamsungOdinAssistantWindow : Window
         Content = "أؤكد أن منفذ COM الظاهر في Odin يخص نفس الهاتف المحدد في SoftBox"
     };
     private readonly TextBox _flashConfirmation = new();
+    private readonly TextBox _targetComPortInput = new();
+    private readonly TextBox _targetModelInput = new();
     private readonly SamsungOdinUiAutomationService _odinAutomation = new();
     private readonly AdbClient? _adb;
     private readonly string? _deviceSerial;
     private readonly string? _deviceManufacturer;
     private readonly string? _deviceModel;
     private readonly string? _pnpInstanceSuffix;
+    private readonly string? _downloadModeComPort;
+    private readonly string? _downloadModeInstanceId;
+    private readonly string? _downloadModeHardwareId;
+    private readonly string? _downloadModeModeEvidence;
     private bool _packagesInspected;
     private int? _inspectedOdinProcessId;
     private string? _inspectedComPort;
@@ -58,19 +64,30 @@ public sealed class SamsungOdinAssistantWindow : Window
         string? deviceSerial = null,
         string? deviceManufacturer = null,
         string? deviceModel = null,
-        string? pnpInstanceSuffix = null)
+        string? pnpInstanceSuffix = null,
+        string? downloadModeComPort = null,
+        string? downloadModeInstanceId = null,
+        string? downloadModeHardwareId = null,
+        string? downloadModeModeEvidence = null)
     {
         _adb = adb;
         _deviceSerial = AdbClient.IsSafeSerial(deviceSerial ?? "") ? deviceSerial : null;
         _deviceManufacturer = deviceManufacturer;
         _deviceModel = deviceModel;
-        var pnpInstancePath = pnpInstanceSuffix is null
-            ? string.Empty
-            : $"USB\\\\VID_04E8&PID_0000\\\\{pnpInstanceSuffix}";
-        _pnpInstanceSuffix = WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(
-            pnpInstancePath, out var parsedPnpSuffix)
-            ? parsedPnpSuffix
+        _pnpInstanceSuffix = !string.IsNullOrWhiteSpace(pnpInstanceSuffix) &&
+            pnpInstanceSuffix.Length <= 128 && !pnpInstanceSuffix.Any(char.IsControl)
+            ? pnpInstanceSuffix.Trim()
             : null;
+        _downloadModeComPort = SamsungOdinAutomationPolicy.NormalizeComPort(downloadModeComPort);
+        _downloadModeInstanceId = !string.IsNullOrWhiteSpace(downloadModeInstanceId) &&
+            downloadModeInstanceId.Length <= 512 &&
+            downloadModeInstanceId.StartsWith(@"USB\VID_04E8&", StringComparison.OrdinalIgnoreCase)
+            ? downloadModeInstanceId
+            : null;
+        _downloadModeHardwareId = downloadModeHardwareId?.Trim().StartsWith("04E8:", StringComparison.OrdinalIgnoreCase) == true
+            ? downloadModeHardwareId.Trim().ToUpperInvariant()
+            : null;
+        _downloadModeModeEvidence = downloadModeModeEvidence;
         if (_deviceSerial is not null &&
             AndroidDeviceToolsService.NormalizeVendor(_deviceManufacturer) != AndroidVendorKind.Samsung)
             throw new UnauthorizedAccessException("تم رفض ربط Odin بجهاز لم يتم تأكيد أنه Samsung.");
@@ -96,6 +113,16 @@ public sealed class SamsungOdinAssistantWindow : Window
         _startOdinButton.IsEnabled = false;
         _monitorOdinButton.IsEnabled = false;
         _downloadModeButton.IsEnabled = _adb is not null && _deviceSerial is not null;
+        _targetComPortInput.Text = _downloadModeComPort ?? string.Empty;
+        _targetModelInput.Text = _deviceModel ?? string.Empty;
+        _targetComPortInput.TextChanged += (_, _) =>
+        {
+            if (_deviceSerial is null)
+            {
+                var port = ResolveTargetComPort();
+                _flashConfirmation.Text = port is null ? string.Empty : "FLASH " + port;
+            }
+        };
         Content = BuildContent();
     }
 
@@ -119,8 +146,11 @@ public sealed class SamsungOdinAssistantWindow : Window
         var pnpIdentity = _pnpInstanceSuffix is null
             ? "Samsung USB PnP suffix: غير متاح"
             : $"Samsung USB PnP suffix: {MaskSerialForDisplay(_pnpInstanceSuffix)} (مرشح غير موثّق، وليس Serial مؤكدًا)";
-        _deviceIdentitySummary.Text = adbIdentity + Environment.NewLine + pnpIdentity +
-            Environment.NewLine + "عبارة FLASH تُملأ فقط من Serial المقروء عبر ADB المصرّح؛ لا يُستخدم PnP suffix كبديل ولا يتم ربطه بمنفذ COM.";
+        var modeEvidence = HasDownloadModeEvidence
+            ? "Download Mode PnP: " + _downloadModeHardwareId + " • " + MaskSerialForDisplay(_downloadModeInstanceId!)
+            : "دليل Download Mode: غير مكتمل";
+        _deviceIdentitySummary.Text = adbIdentity + Environment.NewLine + pnpIdentity + Environment.NewLine + modeEvidence +
+            Environment.NewLine + "لا يحول SoftBox لاحقة PnP إلى Serial. عند اختفاء ADB يعتمد الربط على سجل USB المحدد ورقم COM المرصود/المدخل وموافقة الفني؛ هذا لا يثبت توافق Firmware وحده.";
         _deviceIdentitySummary.Foreground = Brush("#9BD3F5");
         _deviceIdentitySummary.Background = Brush("#10283B");
         _deviceIdentitySummary.Padding = new Thickness(9);
@@ -165,6 +195,22 @@ public sealed class SamsungOdinAssistantWindow : Window
         _confirmBackup.Margin = new Thickness(4);
         _confirmComPort.Foreground = Brush("#F0C9A5");
         _confirmComPort.Margin = new Thickness(4);
+        content.Children.Add(TextBlock("موديل Samsung المستهدف (إدخاله مطلوب عند عدم توفر ADB):", 10, "#9FC7E8"));
+        _targetModelInput.Margin = new Thickness(4);
+        _targetModelInput.Padding = new Thickness(8);
+        _targetModelInput.Background = Brush("#071625");
+        _targetModelInput.Foreground = Brush("#DCEBFA");
+        _targetModelInput.BorderBrush = Brush("#263D58");
+        _targetModelInput.IsReadOnly = _deviceModel is not null;
+        content.Children.Add(_targetModelInput);
+        content.Children.Add(TextBlock("منفذ COM المستهدف من Windows PnP/Device Manager؛ يجب أن يطابق COM الظاهر داخل Odin:", 10, "#9FC7E8"));
+        _targetComPortInput.Margin = new Thickness(4);
+        _targetComPortInput.Padding = new Thickness(8);
+        _targetComPortInput.Background = Brush("#071625");
+        _targetComPortInput.Foreground = Brush("#DCEBFA");
+        _targetComPortInput.BorderBrush = Brush("#263D58");
+        _targetComPortInput.MaxLength = 8;
+        content.Children.Add(_targetComPortInput);
         content.Children.Add(_confirmCompatibility);
         content.Children.Add(_confirmBackup);
         content.Children.Add(_confirmComPort);
@@ -184,12 +230,14 @@ public sealed class SamsungOdinAssistantWindow : Window
         }
         else
         {
-            _flashConfirmation.ToolTip = "غير متاح: يلزم Serial من اتصال ADB مُصرّح؛ لا يُستخدم PnP suffix كبديل.";
+            var targetPort = ResolveTargetComPort();
+            _flashConfirmation.Text = targetPort is null ? string.Empty : "FLASH " + targetPort;
+            _flashConfirmation.ToolTip = "في Download Mode لا يتوفر ADB Serial؛ تستخدم العبارة COM الذي رصده Windows أو أدخله الفني، وليس Serial للهاتف.";
         }
         content.Children.Add(TextBlock(
             _deviceSerial is null
-                ? "عبارة تأكيد FLASH: غير متاحة لأن Serial من ADB المصرّح غير متوفر. لن يستخدم البرنامج PnP suffix كبديل."
-                : "عبارة تأكيد FLASH مُعبأة تلقائيًا من آخر أربعة أحرف لرقم ADB المقروء. راجع هوية الجهاز ولا تعتمد على التعبئة وحدها.",
+                ? "في Download Mode: عبارة FLASH COM إقرار بالمنفذ المستهدف فقط؛ أدخل موديل الهاتف وتأكد أن COM يخص الجهاز نفسه."
+                : "عبارة تأكيد FLASH مُعبأة من آخر أربعة أحرف لرقم ADB المصرّح. راجع هوية الجهاز ولا تعتمد على التعبئة وحدها.",
             10, "#9FC7E8"));
         content.Children.Add(_flashConfirmation);
         content.Children.Add(TextBlock(
@@ -286,7 +334,7 @@ public sealed class SamsungOdinAssistantWindow : Window
             _inspectedOdinProcessId = null;
             _inspectedComPort = null;
             _startOdinButton.IsEnabled = false;
-            _inspectOdinUiButton.IsEnabled = _packagesInspected && _deviceSerial is not null;
+            _inspectOdinUiButton.IsEnabled = _packagesInspected && CanInspectOdinSession;
             _startOdinButton.IsEnabled = false;
             _status.Text = "تم اختيار ملف Odin. لم يتم تشغيله أو التحقق من ناشره.";
         }
@@ -374,7 +422,7 @@ public sealed class SamsungOdinAssistantWindow : Window
             _packagesInspected = true;
             _launchButton.IsEnabled = true;
             _inspectOdinUiButton.IsEnabled = !string.IsNullOrWhiteSpace(_odinExecutable.Text) &&
-                File.Exists(_odinExecutable.Text) && _deviceSerial is not null;
+                File.Exists(_odinExecutable.Text) && CanInspectOdinSession;
             _status.Text = $"تم فحص {plan.Count} ملف/ملفات وحساب SHA-256 من البايتات الحالية. أعد فحص واجهة Odin بعد تحميل الملفات يدويًا داخلها.";
         }
         catch (Exception ex)
@@ -483,14 +531,32 @@ public sealed class SamsungOdinAssistantWindow : Window
         {
             if (!_packagesInspected)
                 throw new InvalidOperationException("افحص حزم Firmware أولًا.");
-            if (_deviceSerial is null)
-                throw new InvalidOperationException("فحص واجهة Odin قبل Start يتطلب هاتف Samsung مصرحًا ومحددًا في SoftBox.");
+            if (!CanInspectOdinSession)
+                throw new InvalidOperationException("يلزم Samsung ADB مصرحًا أو سجل USB Download Mode من الواجهة المعروفة.");
+            var expectedCom = ResolveTargetComPort();
+            if (expectedCom is null)
+                throw new InvalidOperationException("لم يتحدد COM صالح. أدخل COM الظاهر في Windows Device Manager أو استخدم COM المرصود مع الواجهة.");
+            if (_deviceSerial is null && string.IsNullOrWhiteSpace(_targetModelInput.Text.Trim()))
+                throw new InvalidOperationException("أدخل موديل Samsung الدقيق قبل فحص Odin عند غياب ADB.");
+
             var report = _odinAutomation.Inspect(
                 _odinExecutable.Text,
                 SelectedPackagePaths(),
                 _confirmCompatibility.IsChecked == true,
                 _confirmBackup.IsChecked == true,
                 _confirmComPort.IsChecked == true);
+            if (!SamsungOdinAutomationPolicy.IsExpectedComPortMatch(expectedCom, report.ComPort))
+            {
+                report = report with
+                {
+                    Decision = report.Decision with
+                    {
+                        CanInvokeStart = false,
+                        Blockers = report.Decision.Blockers.Append("منفذ COM الظاهر في Odin لا يطابق COM المستهدف المحدد في جلسة Download Mode.").ToArray()
+                    }
+                };
+            }
+
             _startOdinButton.IsEnabled = report.Decision.CanInvokeStart;
             _inspectedOdinProcessId = report.Decision.CanInvokeStart ? report.ProcessId : null;
             _inspectedComPort = report.Decision.CanInvokeStart ? report.ComPort : null;
@@ -499,14 +565,15 @@ public sealed class SamsungOdinAssistantWindow : Window
                 "Window: " + (report.WindowTitle ?? "Not detected") + Environment.NewLine +
                 "Process ID: " + (report.ProcessId?.ToString() ?? "Not detected") + Environment.NewLine +
                 "COM Port: " + (report.ComPort ?? "Not detected") + Environment.NewLine +
+                "Target COM: " + expectedCom + Environment.NewLine +
                 "Start allowed: " + report.Decision.CanInvokeStart + Environment.NewLine +
                 "Verified evidence:" + Environment.NewLine +
                 string.Join(Environment.NewLine, report.Decision.VerifiedEvidence.Select(x => "  + " + x)) +
                 Environment.NewLine + "Blockers:" + Environment.NewLine +
                 string.Join(Environment.NewLine, report.Decision.Blockers.Select(x => "  - " + x)));
             _status.Text = report.Decision.CanInvokeStart
-                ? "اكتملت أدلة واجهة Odin. تمت تعبئة عبارة التأكيد من ADB. لا يبدأ التفليش إلا بعد مراجعة الجهاز وتأكيد زر Start النهائي يدويًا."
-                : "تم منع Start بسبب عدم اكتمال أدلة Windows UI Automation. راجع أسباب المنع.";
+                ? "اكتملت أدلة Odin وتطابق COM مع المنفذ المستهدف. لا يبدأ التفليش إلا بعد مراجعة الملفات والجهاز والتأكيد النهائي."
+                : "تم منع Start بسبب نقص الأدلة أو اختلاف COM. راجع أسباب المنع.";
         }
         catch (Exception ex)
         {
@@ -559,13 +626,24 @@ public sealed class SamsungOdinAssistantWindow : Window
     {
         try
         {
-            if (_deviceSerial is null)
-                throw new InvalidOperationException("تنفيذ Start يتطلب هاتف Samsung مصرحًا ومحددًا.");
+            if (!CanInspectOdinSession)
+                throw new InvalidOperationException("تنفيذ Start يتطلب Samsung ADB مصرحًا أو سجل Download Mode موثقًا من Windows PnP.");
+            var expectedComPort = ResolveTargetComPort();
+            if (expectedComPort is null)
+                throw new InvalidOperationException("COM المستهدف غير صالح أو غير محدد.");
+            var targetModel = _deviceSerial is not null
+                ? (_deviceModel ?? _targetModelInput.Text.Trim())
+                : _targetModelInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(targetModel))
+                throw new InvalidOperationException("موديل الهاتف المستهدف مطلوب قبل تنفيذ Start.");
             if (!_packagesInspected)
                 throw new InvalidOperationException("أعد فحص حزم Firmware قبل Start.");
-            var suffix = _deviceSerial.Length > 4 ? _deviceSerial[^4..] : _deviceSerial;
-            if (!string.Equals(_flashConfirmation.Text.Trim(), "FLASH " + suffix, StringComparison.Ordinal))
-                throw new InvalidOperationException("اكتب FLASH ثم مسافة وآخر أربعة أحرف من Serial لتأكيد الجهاز المستهدف.");
+
+            var confirmationPhrase = _deviceSerial is not null
+                ? "FLASH " + (_deviceSerial.Length > 4 ? _deviceSerial[^4..] : _deviceSerial)
+                : "FLASH " + expectedComPort;
+            if (!string.Equals(_flashConfirmation.Text.Trim(), confirmationPhrase, StringComparison.Ordinal))
+                throw new InvalidOperationException("عبارة التأكيد لا تطابق وسيلة النقل الحالية: آخر أربعة أحرف من ADB Serial أو FLASH متبوعة برقم COM المحدد.");
 
             if (_confirmCompatibility.IsChecked != true || _confirmBackup.IsChecked != true ||
                 _confirmComPort.IsChecked != true)
@@ -587,6 +665,8 @@ public sealed class SamsungOdinAssistantWindow : Window
                 _confirmCompatibility.IsChecked == true,
                 _confirmBackup.IsChecked == true,
                 _confirmComPort.IsChecked == true);
+            if (!SamsungOdinAutomationPolicy.IsExpectedComPortMatch(expectedComPort, report.ComPort))
+                throw new InvalidOperationException("منفذ COM الظاهر في Odin لا يطابق COM المستهدف. تم منع Start.");
             if (!report.Decision.CanInvokeStart)
             {
                 _startOdinButton.IsEnabled = false;
@@ -595,11 +675,14 @@ public sealed class SamsungOdinAssistantWindow : Window
             }
             if (_inspectedOdinProcessId is null || _inspectedComPort is null ||
                 report.ProcessId != _inspectedOdinProcessId ||
-                !string.Equals(report.ComPort, _inspectedComPort, StringComparison.OrdinalIgnoreCase))
+                !SamsungOdinAutomationPolicy.IsExpectedComPortMatch(report.ComPort, _inspectedComPort))
                 throw new InvalidOperationException("تغيرت عملية Odin أو منفذ COM بعد آخر فحص. أعد الفحص وتأكد من نفس الهاتف.");
 
+            var targetEvidence = _deviceSerial is not null
+                ? "ADB Serial: " + _deviceSerial
+                : "Download Mode PnP: " + _downloadModeHardwareId + " / " + (_downloadModeInstanceId ?? "غير متاح");
             var confirmation = MessageBox.Show(this,
-                $"سيتم إرسال Invoke واحد إلى زر Start في Odin عبر Windows UI Automation.\n\nالجهاز: {_deviceManufacturer} {_deviceModel}\nSerial: {_deviceSerial}\nCOM: {report.ComPort}\nالحزم:\n{string.Join("\n", paths.Select(Path.GetFileName))}\n\nتأكد أن معلومات الجهاز وCSC وBinary وAnti-Rollback صحيحة. هذا الإجراء يبدأ التفليش ولا يمكن التراجع عنه بأمان. هل تريد الاستمرار؟",
+                $"سيتم إرسال Invoke واحد إلى زر Start في Odin عبر Windows UI Automation.\n\nالجهاز: {_deviceManufacturer} {targetModel}\n{targetEvidence}\nCOM: {report.ComPort}\nالحزم:\n{string.Join("\n", paths.Select(Path.GetFileName))}\n\nتأكد أن معلومات الجهاز وCSC وBinary وAnti-Rollback صحيحة وأن COM يخص نفس الهاتف فعليًا. هذا الإجراء يبدأ التفليش ولا يمكن التراجع عنه بأمان. هل تريد الاستمرار؟",
                 "تأكيد نهائي لتفليش Samsung عبر Odin", MessageBoxButton.YesNo, MessageBoxImage.Stop);
             if (confirmation != MessageBoxResult.Yes)
                 return;
@@ -628,6 +711,23 @@ public sealed class SamsungOdinAssistantWindow : Window
             _status.Text = "تم منع أو تعذر بدء تفليش Odin: " + ex.Message;
             MessageBox.Show(this, ex.Message, "Samsung Odin Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    private bool HasSamsungAdbIdentity => _deviceSerial is not null &&
+        AndroidDeviceToolsService.NormalizeVendor(_deviceManufacturer) == AndroidVendorKind.Samsung;
+
+    private bool HasDownloadModeEvidence => _downloadModeHardwareId is not null &&
+        _downloadModeHardwareId.StartsWith("04E8:", StringComparison.OrdinalIgnoreCase) &&
+        _downloadModeInstanceId is not null &&
+        _downloadModeModeEvidence?.Contains("Samsung Download Mode", StringComparison.OrdinalIgnoreCase) == true;
+
+    private bool CanInspectOdinSession => HasSamsungAdbIdentity || HasDownloadModeEvidence;
+
+    private string? ResolveTargetComPort()
+    {
+        if (!string.IsNullOrWhiteSpace(_targetComPortInput.Text))
+            return SamsungOdinAutomationPolicy.NormalizeComPort(_targetComPortInput.Text);
+        return _downloadModeComPort;
     }
 
     private string[] SelectedPackagePaths()

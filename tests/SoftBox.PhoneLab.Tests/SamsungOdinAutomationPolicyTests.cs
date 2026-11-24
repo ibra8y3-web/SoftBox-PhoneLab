@@ -87,6 +87,15 @@ public sealed class SamsungOdinAutomationPolicyTests
         Assert.Contains(decision.Blockers, item => item.Contains("لا توجد أسماء حزم"));
     }
 
+    [Theory]
+    [InlineData("COM7", "com7", true)]
+    [InlineData("COM7", "COM8", false)]
+    [InlineData("COM0", "COM0", false)]
+    [InlineData("COMX", "COMX", false)]
+    [InlineData("COM7;shutdown", "COM7", false)]
+    public void DownloadModeComBindingRequiresAnExactValidPort(string expected, string observed, bool matches)
+        => Assert.Equal(matches, SamsungOdinAutomationPolicy.IsExpectedComPortMatch(expected, observed));
+
     private static SamsungOdinAutomationEvidence ValidEvidence()
         => new(
             @"C:\Tools\Odin\Odin.exe",
