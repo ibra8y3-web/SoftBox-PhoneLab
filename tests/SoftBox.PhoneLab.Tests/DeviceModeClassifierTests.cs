@@ -37,6 +37,17 @@ public sealed class DeviceModeClassifierTests
     }
 
     [Fact]
+    public void ClassifiesSamsungModemDescriptorAsServiceHintNotConfirmedDownloadMode()
+    {
+        var result = DeviceModeClassifier.ClassifyUsb(
+            CreateUsb("04E8", "685D", "Samsung", "Samsung Mobile USB Modem"));
+
+        Assert.Contains("service interface", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("unconfirmed", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("hint", result.Confidence, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void DoesNotGuessDownloadModeFromSamsungVendorIdAlone()
     {
         var result = DeviceModeClassifier.ClassifyUsb(
