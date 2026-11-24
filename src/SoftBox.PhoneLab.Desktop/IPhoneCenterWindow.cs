@@ -40,6 +40,27 @@ public sealed class IPhoneCenterWindow : Window
     public IPhoneBatteryDiagnosticsSnapshot? SelectedBatteryDiagnostics
         => (_devices.SelectedItem as IPhoneDeviceScanResult)?.BatteryDiagnostics;
 
+    /// <summary>
+    /// Applies a background Lockdown scan without sharing the iPhone device list with Android UI.
+    /// </summary>
+    public void ApplyBackgroundScanResults(IReadOnlyList<IPhoneDeviceScanResult> results)
+    {
+        ArgumentNullException.ThrowIfNull(results);
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.InvokeAsync(() => ApplyBackgroundScanResults(results));
+            return;
+        }
+
+        _lastResults = results.ToArray();
+        _devices.ItemsSource = _lastResults;
+        if (_devices.Items.Count > 0 && _devices.SelectedIndex < 0)
+            _devices.SelectedIndex = 0;
+
+        var readable = _lastResults.Count(item => item.IsConnectedAndReadable);
+        _status.Text = $"اكتشاف تلقائي: {readable} جهاز Apple تمت قراءة معلوماته عبر Lockdown من آخر فحص.";
+    }
+
     public IPhoneCenterWindow(
         PhoneLabSettings settings,
         PhoneLabSettingsService settingsService,
@@ -217,17 +238,26 @@ public sealed class IPhoneCenterWindow : Window
                 includeBatteryDiagnostics: includeBatteryDiagnostics);
             if (!includeBatteryDiagnostics && _lastResults.Count > 0)
             {
-                var previous = _lastResults.ToDictionary(
-                    item => item.MaskedIdentifier,
-                    StringComparer.OrdinalIgnoreCase);
+                // The masked suffix is not a unique device key; preserve GasGauge data only by
+                // the one-way fingerprint of the exact Lockdown identity.
+                var previous = _lastResults
+                    .Where(item => item.Snapshot is not null)
+                    .ToDictionary(
+                        item => LocalActivityStore.CreateDeviceFingerprint(item.Snapshot!.EvidenceIdentity),
+                        StringComparer.Ordinal);
                 results = results.Select(item =>
-                    previous.TryGetValue(item.MaskedIdentifier, out var prior)
+                {
+                    if (item.Snapshot is null)
+                        return item;
+                    var key = LocalActivityStore.CreateDeviceFingerprint(item.Snapshot.EvidenceIdentity);
+                    return previous.TryGetValue(key, out var prior)
                         ? item with
                         {
                             BatteryDiagnostics = item.BatteryDiagnostics ?? prior.BatteryDiagnostics,
                             BatteryDiagnosticsError = item.BatteryDiagnosticsError ?? prior.BatteryDiagnosticsError
                         }
-                        : item).ToArray();
+                        : item;
+                }).ToArray();
             }
             _lastResults = results;
             _devices.ItemsSource = results;
