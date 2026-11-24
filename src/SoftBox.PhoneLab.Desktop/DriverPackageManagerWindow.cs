@@ -208,11 +208,11 @@ public sealed class DriverPackageManagerWindow : Window
             _status.Text = "يجب فحص الحزمة بنجاح قبل التثبيت.";
             return;
         }
-        if (!await _authorizeAndAudit("InstallUsbDriverPackage")) return;
         var answer = MessageBox.Show(this,
             "سيطلب Windows صلاحيات المسؤول لإضافة التعريف وتثبيته على الأجهزة المطابقة. تأكد من المصدر والنسخة الاحتياطية. هل تتابع؟",
             "تأكيد تثبيت تعريف Windows", MessageBoxButton.YesNo, MessageBoxImage.Warning);
         if (answer != MessageBoxResult.Yes) return;
+        if (!await _authorizeAndAudit("InstallUsbDriverPackage")) return;
 
         try
         {
