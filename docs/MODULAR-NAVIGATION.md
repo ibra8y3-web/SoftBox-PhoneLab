@@ -2,16 +2,16 @@
 
 ## Product rule
 
-The product name remains **SoftBox**. The master navigation follows the 37 sections in the official SoftBox development specification and keeps their numeric order. The sidebar is scrollable; selecting a section opens a dedicated section window with its audited features and implementation states.
+The product name remains **SoftBox**. The master navigation follows the 38 sections in the official SoftBox development specification and keeps their numeric order. The sidebar is scrollable; selecting a section opens a dedicated section window with its audited features and implementation states.
 
 ## Implementation
 
-- \`SoftBox.PhoneLab.Core/Models/SoftBoxModuleCatalog.cs\` is the single source of truth for all 37 modules and their feature metadata.
+- \`SoftBox.PhoneLab.Core/Models/SoftBoxModuleCatalog.cs\` is the single source of truth for all 38 modules and their feature metadata.
 - Each module has a stable ID, specification order, group, Arabic/English names, description, section state and feature-level states.
 - \`MainWindow.xaml\` contains the sidebar navigation entries; each item uses the corresponding stable module ID as its Tag.
 - \`MainWindow.xaml.cs\` routes navigation to \`ModuleSectionWindow\` and maps only declared action IDs to existing commands/windows.
 - \`ModuleSectionWindow\` is a shared page host. It only renders an actionable button when a real existing action is wired. Planned/unsupported entries are status information, not fake controls.
-- \`tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs\` checks the 37-module count/order, unique IDs, feature metadata, valid and unique canonical action identifiers and the absence of actions for Planned/Unsupported features.
+- \`tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs\` checks the 38-module count/order, unique IDs, feature metadata, valid and unique canonical action identifiers and the absence of actions for Planned/Unsupported features.
 - \`docs/SOFTBOX-MASTER-MODULE-STATUS.md\` is the audited feature matrix and phase roadmap.
 
 ## Add a section or tool without duplication
@@ -37,6 +37,7 @@ The current catalog enforces a single canonical executable action for each exist
 7. Sections 26–28: Plugin Store, Plugin SDK, Offline Center.
 8. Sections 29–36: Security & Privacy, User & Technician Management, Update Center, Notification Center, Help Center, Support & Logs, Settings, About.
 9. Section 37: dedicated iPhone & iPad Center (Apple Lockdown identity, Parts & Service History capture, battery-health capture, physical technician checks and evidence review).
+10. Section 38: Device Identity Integrity & Smart Auto-Fill (USB/ADB/Fastboot/Apple evidence correlation, mode detection, conflict review and explicitly copied identifier fields).
 
 ## Safety and truthfulness
 
@@ -60,3 +61,13 @@ A model profile is not proof of board compatibility. A data read is not a functi
 - Apple coverage is opened in the browser; the operator enters the serial directly on Apple. SoftBox does not transmit the serial or scrape a coverage verdict.
 - An authenticity evidence summary reports only compatible clues, review flags or insufficient evidence. It does not claim an absolute original/copy verdict.
 - AirPlay has its own window and native host. Android scrcpy remains in the Android panel; opening or stopping AirPlay cannot embed its window in that panel.
+
+
+## Device Identity Integrity & Smart Auto-Fill (Section 38)
+
+- The section is a separate top-level workspace; it does not replace the Android screen dock, iPhone center or AirPlay receiver window.
+- It reads Windows USB PnP/VID-PID, the current ADB inventory, Fastboot device identifiers and Apple Lockdown identity as separate evidence channels.
+- It classifies only modes supported by the actual descriptor or transport state. An unknown mode, unavailable serial, locked/untrusted Apple session or unauthorized ADB channel remains unknown/pending rather than being inferred.
+- Device Identity Integrity groups only exact identifiers with the same platform and identifier type. It never merges devices by the final four characters, vendor name or timing. Conflicting model/manufacturer claims require review.
+- Manufacturer/model/mode/identifier fields in the workspace are filled from the selected read. Serial/UDID is masked by default; copying the exact value is an explicit action.
+- The module does not provide IMEI/serial mutation, EFS/NVRAM writing or confirmation-phrase automation. Flash confirmation remains an independent technician action.
