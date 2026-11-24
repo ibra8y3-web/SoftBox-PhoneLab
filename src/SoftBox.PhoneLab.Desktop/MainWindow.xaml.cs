@@ -1279,11 +1279,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 var samsungDevice = SelectedDevice;
                 var hasAuthorizedSamsung = samsungDevice is not null && samsungDevice.IsAuthorized &&
                     AndroidDeviceToolsService.NormalizeVendor(samsungDevice.Manufacturer) == AndroidVendorKind.Samsung;
+                var pnpSuffixes = _lastUsbDevices
+                    .Where(device => device.VendorId.Equals("04E8", StringComparison.OrdinalIgnoreCase))
+                    .Select(device => WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(device.InstanceId, out var suffix)
+                        ? suffix
+                        : null)
+                    .Where(suffix => !string.IsNullOrWhiteSpace(suffix))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                var singlePnpSuffix = pnpSuffixes.Length == 1 ? pnpSuffixes[0] : null;
                 new SamsungOdinAssistantWindow(
                     hasAuthorizedSamsung ? _adb : null,
                     hasAuthorizedSamsung ? samsungDevice!.Serial : null,
                     hasAuthorizedSamsung ? samsungDevice!.Manufacturer : null,
-                    hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null)
+                    hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null,
+                    singlePnpSuffix)
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }
