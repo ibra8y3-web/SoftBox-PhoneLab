@@ -37,6 +37,7 @@ public sealed class SoftBoxAuthorizationPolicyTests
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneBatteryHealth"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenMaintenanceModeCenter"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneHdmiCapture"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenDriverPackageManager"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "ListUsbDriverPackages"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "InstallUsbDriverPackage"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "RemoveUsbDriverPackage"));

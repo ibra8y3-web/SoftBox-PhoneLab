@@ -53,7 +53,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenLockRecoveryAssistant"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenDiagnosticEvidenceHistory"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDriverSignatureVerifier"] = SoftBoxAccountPermission.DeviceRead,
-            ["OpenDriverPackageManager"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenDriverPackageManager"] = SoftBoxAccountPermission.DeviceRead,
             ["InspectUsbDriverPackage"] = SoftBoxAccountPermission.DeviceRead,
             ["ListUsbDriverPackages"] = SoftBoxAccountPermission.DeviceRead,
             ["InstallUsbDriverPackage"] = SoftBoxAccountPermission.DeviceOperations,
