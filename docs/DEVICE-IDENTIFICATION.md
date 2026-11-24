@@ -28,3 +28,19 @@ PhoneLab can query iFixit's public repair search on demand and open the original
 - License: Apache License 2.0 (see upstream repository).
 - PhoneLab downloads and caches the JSON at runtime; it does not copy the whole upstream file into this repository.
 - This data improves names/model-code matching only. It does not include per-variant motherboard component coordinates, PCB layers, IC positions or connector locations.
+
+
+## Section 38 — Device Identity Integrity & Smart Auto-Fill
+
+The separate identity workspace combines read-only observations from four independently sourced channels:
+
+- **Windows USB PnP:** VID/PID, hardware IDs, friendly name, manufacturer and Windows problem code. VID/PID is an interface identifier, not a handset serial or proof of exact model.
+- **Android ADB:** transport serial and authorization state from the current ADB inventory. An unauthorized state is shown as pending; it is not elevated into an authorized OS read.
+- **Android Fastboot:** transport serial plus optional read-only `fastboot getvar all` product/variant/hardware-revision fields. These are Bootloader-reported values, not a cryptographic hardware authenticity result.
+- **Apple Lockdown:** serial or UDID returned from the selected libimobiledevice toolset after the device has established a trusted Lockdown session. Recovery/DFU or USB-only presence is not treated as a full Lockdown identity read.
+
+The Device Identity Integrity engine groups only exact identifiers of the same platform and declared identifier type. It marks single-source reads as insufficient evidence, vendor/VID hints for review, and conflicting manufacturer/model claims as a conflict. It does not assume that ADB and Fastboot serials are identical or that the same USB port/device at a nearby time proves one physical handset.
+
+The selected read fills the section's manufacturer, model, mode and masked identifier fields automatically. The exact value is copied only after the technician explicitly presses Copy. Reports use masked values. No raw identifier is persisted by this section.
+
+**Not implemented by design:** changing or spoofing IMEI/serial, writing EFS/NVRAM/service partitions, defeating a block or changing a handset's identity. The module does not auto-type Odin's FLASH confirmation or press Start. Official board/identity replacement remains an OEM-authorized service procedure.
