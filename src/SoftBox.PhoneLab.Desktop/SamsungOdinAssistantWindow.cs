@@ -11,8 +11,9 @@ using SoftBox.PhoneLab.Desktop.Services;
 namespace SoftBox.PhoneLab.Desktop;
 
 /// <summary>
-/// Safe hand-off workspace for a user-provided Samsung Odin executable and local firmware slots.
-/// SoftBox does not inject firmware into Odin or automate the Start/flash button.
+/// Evidence-gated hand-off workspace for Samsung Odin and local firmware slots.
+/// SoftBox never injects coordinates or starts flashing automatically; after all independent checks
+/// and an explicit final user confirmation, it may invoke the uniquely identified Start control once via UI Automation.
 /// </summary>
 public sealed class SamsungOdinAssistantWindow : Window
 {
@@ -184,6 +185,11 @@ public sealed class SamsungOdinAssistantWindow : Window
         {
             _flashConfirmation.ToolTip = "غير متاح: يلزم Serial من اتصال ADB مُصرّح؛ لا يُستخدم PnP suffix كبديل.";
         }
+        content.Children.Add(TextBlock(
+            _deviceSerial is null
+                ? "عبارة تأكيد FLASH: غير متاحة لأن Serial من ADB المصرّح غير متوفر. لن يستخدم البرنامج PnP suffix كبديل."
+                : "عبارة تأكيد FLASH مُعبأة تلقائيًا من آخر أربعة أحرف لرقم ADB المقروء. راجع هوية الجهاز ولا تعتمد على التعبئة وحدها.",
+            10, "#9FC7E8"));
         content.Children.Add(_flashConfirmation);
         content.Children.Add(TextBlock(
             "زر Start لن يتفعّل إلا إذا استطاع Windows قراءة نافذة Odin وزر Start الوحيد وأسماء كل الحزم ومنفذ COM. عند غياب أي دليل ستُرفض الأتمتة. الضغط على Start لا يثبت نجاح التفليش.",
@@ -674,7 +680,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         var normalized = new string(value.Where(char.IsLetterOrDigit).ToArray());
         if (normalized.Length == 0)
             return "غير متاح";
-        return "••••" + normalized[^Math.Min(4, normalized.Length)..];
+        var visible = normalized.Length > 4 ? normalized[^4..] : normalized;
+        return "••••" + visible;
     }
 
     private static SolidColorBrush Brush(string color)
