@@ -4,27 +4,44 @@ using System.Text.RegularExpressions;
 
 namespace SoftBox.PluginSdk;
 
+/// <summary>Describes the public protocol and size limits supported by this Plugin SDK build.</summary>
 public static class SoftBoxPluginSdkInfo
 {
+    /// <summary>Version of the public SDK API contract.</summary>
     public const string ApiVersion = "1.0.0";
+    /// <summary>Supported JSON plugin manifest schema version.</summary>
     public const int ManifestVersion = 1;
+    /// <summary>Supported isolated native plugin ABI version.</summary>
     public const int NativeAbiVersion = 1;
+    /// <summary>Canonical filename for a plugin manifest.</summary>
     public const string ManifestFileName = "softbox-plugin.json";
+    /// <summary>Maximum request size accepted by a plugin host message.</summary>
     public const int MaximumRequestBytes = 64 * 1024;
+    /// <summary>Maximum response size accepted by a plugin host message.</summary>
     public const int MaximumResponseBytes = 1024 * 1024;
+    /// <summary>Maximum supported native plugin package size.</summary>
     public const int MaximumNativePackageBytes = 100 * 1024 * 1024;
 }
 
+/// <summary>Permission identifiers recognized by the SoftBox plugin host.</summary>
 public static class SoftBoxPluginPermissions
 {
+    /// <summary>Allows read-only access to approved device identity fields.</summary>
     public const string DeviceRead = "device.read";
+    /// <summary>Allows approved read-only diagnostic operations.</summary>
     public const string DeviceDiagnostics = "device.diagnostics";
+    /// <summary>Allows read-only access to shared storage exposed by the host.</summary>
     public const string SharedStorageRead = "storage.shared.read";
+    /// <summary>Allows writes only to host-designated shared storage locations.</summary>
     public const string SharedStorageWrite = "storage.shared.write";
+    /// <summary>Allows reading reports that the host exposes to plugins.</summary>
     public const string ReportsRead = "reports.read";
+    /// <summary>Allows creating reports through host-approved APIs.</summary>
     public const string ReportsCreate = "reports.create";
+    /// <summary>Allows creating notifications through host-approved APIs.</summary>
     public const string NotificationsCreate = "notifications.create";
 
+    /// <summary>Gets the immutable set of permission identifiers supported by this SDK.</summary>
     public static IReadOnlySet<string> Allowed { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         DeviceRead, DeviceDiagnostics, SharedStorageRead, SharedStorageWrite,
@@ -32,6 +49,18 @@ public static class SoftBoxPluginPermissions
     };
 }
 
+/// <summary>Represents the version 1 JSON manifest consumed by SoftBox Plugin Store.</summary>
+/// <param name="ManifestVersion">Schema version. This SDK currently accepts version 1.</param>
+/// <param name="Id">Stable lowercase reverse-domain-like plugin identifier.</param>
+/// <param name="Name">Human-readable plugin name.</param>
+/// <param name="Version">Plugin semantic version.</param>
+/// <param name="ApiVersion">Plugin API contract version.</param>
+/// <param name="MinimumSoftBoxVersion">Minimum compatible SoftBox host version.</param>
+/// <param name="EntryAssembly">Root-level DLL for native mode, or workflow.json for read-only workflow mode.</param>
+/// <param name="Publisher">Publisher identity shown by the host.</param>
+/// <param name="Description">Human-readable plugin description.</param>
+/// <param name="RequestedPermissions">Permission identifiers requested by the plugin manifest.</param>
+/// <param name="ExecutionMode">Supported execution mode: native-assembly or read-only-workflow.</param>
 public sealed record SoftBoxPluginManifestV1(
     int ManifestVersion,
     string Id,
@@ -45,6 +74,7 @@ public sealed record SoftBoxPluginManifestV1(
     IReadOnlyList<string> RequestedPermissions,
     string ExecutionMode = "native-assembly");
 
+/// <summary>Validates and serializes version 1 SoftBox plugin manifests.</summary>
 public static class SoftBoxPluginManifestWriter
 {
     private static readonly Regex IdPattern = new(
@@ -59,6 +89,9 @@ public static class SoftBoxPluginManifestWriter
         DefaultIgnoreCondition = JsonIgnoreCondition.Never
     };
 
+    /// <summary>Validates a manifest against the SDK schema, size limits and permission policy.</summary>
+    /// <param name="manifest">Manifest to validate; null is reported as an error.</param>
+    /// <returns>A list of validation errors. An empty list means the manifest passes local schema validation.</returns>
     public static IReadOnlyList<string> Validate(SoftBoxPluginManifestV1? manifest)
     {
         var errors = new List<string>();
@@ -116,6 +149,10 @@ public static class SoftBoxPluginManifestWriter
         return errors;
     }
 
+    /// <summary>Serializes a manifest after successful validation.</summary>
+    /// <param name="manifest">Manifest to validate and serialize.</param>
+    /// <returns>Indented UTF-8-compatible JSON text for the manifest.</returns>
+    /// <exception cref="ArgumentException">The manifest is null or fails validation.</exception>
     public static string Serialize(SoftBoxPluginManifestV1 manifest)
     {
         var errors = Validate(manifest);

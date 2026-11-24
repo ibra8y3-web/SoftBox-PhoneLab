@@ -57,7 +57,8 @@ public sealed class DriverInfCompatibilityAnalyzerTests
             armTarget);
 
         Assert.Equal(DriverInfMatchStatus.ArchitectureMismatch, report.Status);
-        Assert.Empty(report.MatchingModelSections.Where(x => x.Contains("arm64", StringComparison.OrdinalIgnoreCase)));
+        Assert.DoesNotContain(report.MatchingModelSections,
+            section => section.Contains("arm64", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
