@@ -23,6 +23,21 @@ public sealed class UsbHardwareIdentityCatalogTests
         Assert.NotEmpty(result.Limitation);
     }
 
+    [Theory]
+    [InlineData("05AC", "Apple")]
+    [InlineData("12D1", "Huawei")]
+    [InlineData("22D9", "OPPO")]
+    [InlineData("2717", "Xiaomi")]
+    [InlineData("05C6", "Qualcomm")]
+    [InlineData("0E8D", "MediaTek")]
+    public void RecognizesManufacturerVendorIdsWithoutGuessingDeviceMode(string vendorId, string expectedVendor)
+    {
+        var identity = UsbHardwareIdentityCatalog.Classify(vendorId, "FFFF");
+        Assert.Equal(expectedVendor, identity.Category);
+        Assert.Equal("Vendor identified; USB mode not determined", identity.ModeHint);
+        Assert.Contains("VID is a vendor hint only", identity.Limitation, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void UnknownOrMalformedIdsDoNotGuessAChipset()
     {

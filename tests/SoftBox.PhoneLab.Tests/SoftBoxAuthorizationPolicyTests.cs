@@ -35,6 +35,8 @@ public sealed class SoftBoxAuthorizationPolicyTests
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneCenter"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhonePartsHistory"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneBatteryHealth"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenMaintenanceModeCenter"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneHdmiCapture"));
         Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenIPhoneFunctionalTests"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidCommandCenter"));
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "OpenAndroidWorkflow"));

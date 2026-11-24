@@ -66,6 +66,15 @@ public sealed class OemUsbDriverCatalogTests
     }
 
     [Fact]
+    public void OppoUsbVendorIdResolvesToOfficialOppoSupportPortal()
+    {
+        var resource = OemUsbDriverCatalog.FindForUsbIdentity(null, null, "22D9");
+        Assert.NotNull(resource);
+        Assert.Equal("oppo", resource.Id);
+        Assert.Equal(Uri.UriSchemeHttps, new Uri(resource.OfficialUrl).Scheme);
+    }
+
+    [Fact]
     public void UnknownManufacturerDoesNotGuessADriver()
     {
         Assert.Null(OemUsbDriverCatalog.FindForManufacturer("Unknown Android OEM"));

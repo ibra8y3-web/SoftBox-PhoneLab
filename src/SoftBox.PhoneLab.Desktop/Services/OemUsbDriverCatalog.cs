@@ -78,6 +78,7 @@ public static class OemUsbDriverCatalog
             ["0FCE"] = "sony",
             ["0930"] = "toshiba",
             ["2717"] = "xiaomi",
+            ["22D9"] = "oppo",
             ["19D2"] = "zte",
             ["18D1"] = "google"
         };
