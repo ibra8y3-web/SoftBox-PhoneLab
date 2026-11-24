@@ -149,6 +149,10 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
                         device.HardwareIds, device.Manufacturer, device.FriendlyName)
                     { Owner = this }.ShowDialog()));
 
+                var mode = DeviceModeClassifier.ClassifyUsb(device);
+                stack.Children.Add(Text(
+                    $"الوضع المرصود: {mode.Mode} • الثقة: {mode.Confidence} • المصدر: {mode.Source}\nالحدود: {mode.Limitation}",
+                    "#F0C9A5", 9));
                 stack.Children.Add(Text(
                     $"{transport.DeviceFamily} — {transport.UsbTransport}\nالعرض: {transport.ScreenViewingRoute}\nالتحكم: {transport.RemoteControlRoute}\nالحدود: {transport.Limitation}",
                     "#B7C9DE", 9));
