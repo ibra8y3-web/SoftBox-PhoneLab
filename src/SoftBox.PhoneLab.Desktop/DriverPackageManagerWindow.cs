@@ -13,6 +13,7 @@ public sealed class DriverPackageManagerWindow : Window
     private readonly string? _manufacturer;
     private readonly string? _model;
     private readonly WindowsDriverPackageManagerService _service = new();
+    private readonly Func<string, Task<bool>> _authorizeAndAudit;
     private readonly TextBox _infPath = new();
     private readonly TextBox _catPath = new();
     private readonly TextBox _publishedName = new();
@@ -26,13 +27,15 @@ public sealed class DriverPackageManagerWindow : Window
     public DriverPackageManagerWindow(
         IReadOnlyList<string> hardwareIds,
         string? manufacturer,
-        string? model)
+        string? model,
+        Func<string, Task<bool>> authorizeAndAudit)
     {
         _hardwareIds = hardwareIds?.Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.OrdinalIgnoreCase).Take(128).ToArray()
             ?? Array.Empty<string>();
         _manufacturer = manufacturer;
         _model = model;
+        _authorizeAndAudit = authorizeAndAudit ?? throw new ArgumentNullException(nameof(authorizeAndAudit));
 
         Title = "SoftBox | Windows Driver Package Manager";
         Width = 1040;
@@ -176,6 +179,7 @@ public sealed class DriverPackageManagerWindow : Window
     {
         try
         {
+            if (!await _authorizeAndAudit("InspectUsbDriverPackage")) return;
             _verifyButton.IsEnabled = false;
             _installButton.IsEnabled = false;
             _status.Text = "جارٍ فحص Hardware IDs وإصدار Windows وتوقيع CAT وعضوية INF...";
@@ -204,6 +208,7 @@ public sealed class DriverPackageManagerWindow : Window
             _status.Text = "يجب فحص الحزمة بنجاح قبل التثبيت.";
             return;
         }
+        if (!await _authorizeAndAudit("InstallUsbDriverPackage")) return;
         var answer = MessageBox.Show(this,
             "سيطلب Windows صلاحيات المسؤول لإضافة التعريف وتثبيته على الأجهزة المطابقة. تأكد من المصدر والنسخة الاحتياطية. هل تتابع؟",
             "تأكيد تثبيت تعريف Windows", MessageBoxButton.YesNo, MessageBoxImage.Warning);
@@ -230,6 +235,7 @@ public sealed class DriverPackageManagerWindow : Window
     {
         try
         {
+            if (!await _authorizeAndAudit("ListUsbDriverPackages")) return;
             _status.Text = "جارٍ قراءة قائمة تعريفات Windows بواسطة pnputil /enum-drivers...";
             var result = await _service.ListInstalledPackagesAsync();
             _report.Text = "EXECUTABLE: " + result.ExecutablePath +
@@ -250,6 +256,7 @@ public sealed class DriverPackageManagerWindow : Window
     {
         try
         {
+            if (!await _authorizeAndAudit("ExportUsbDriverPackage")) return;
             var result = await _service.ExportInstalledPackageAsync(_publishedName.Text, _backupFolder.Text);
             _status.Text = result.Message + " • Exit code: " + (result.ExitCode?.ToString() ?? "غير متاح");
         }
@@ -273,6 +280,7 @@ public sealed class DriverPackageManagerWindow : Window
 
         try
         {
+            if (!await _authorizeAndAudit("RemoveUsbDriverPackage")) return;
             var result = await _service.RemoveInstalledPackageAsync(_publishedName.Text);
             _status.Text = result.Message + " • Exit code: " + (result.ExitCode?.ToString() ?? "غير متاح");
         }

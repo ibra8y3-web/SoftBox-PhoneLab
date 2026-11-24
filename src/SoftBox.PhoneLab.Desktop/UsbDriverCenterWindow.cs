@@ -21,15 +21,18 @@ public sealed class UsbDriverCenterWindow : Window
     private readonly string[] _deviceHardwareIds;
     private readonly string? _deviceManufacturer;
     private readonly string? _deviceModel;
+    private readonly Func<string, Task<bool>> _authorizeAndAudit;
 
     public UsbDriverCenterWindow(
         string? manufacturer = null,
         string? model = null,
         string detectionSource = "ADB",
-        IReadOnlyList<string>? hardwareIds = null)
+        IReadOnlyList<string>? hardwareIds = null,
+        Func<string, Task<bool>> authorizeAndAudit = null!)
     {
         _deviceManufacturer = manufacturer;
         _deviceModel = model;
+        _authorizeAndAudit = authorizeAndAudit ?? throw new ArgumentNullException(nameof(authorizeAndAudit));
         _deviceHardwareIds = (hardwareIds ?? Array.Empty<string>())
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -268,9 +271,10 @@ public sealed class UsbDriverCenterWindow : Window
         window.ShowDialog();
     }
 
-    private void OpenPackageManager()
+    private async void OpenPackageManager()
     {
-        var window = new DriverPackageManagerWindow(_deviceHardwareIds, _deviceManufacturer, _deviceModel)
+        if (!await _authorizeAndAudit("OpenDriverPackageManager")) return;
+        var window = new DriverPackageManagerWindow(_deviceHardwareIds, _deviceManufacturer, _deviceModel, _authorizeAndAudit)
         { Owner = Owner ?? this };
         window.ShowDialog();
     }
