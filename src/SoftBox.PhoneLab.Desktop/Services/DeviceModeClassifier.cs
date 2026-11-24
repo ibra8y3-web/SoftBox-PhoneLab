@@ -34,6 +34,13 @@ public static class DeviceModeClassifier
             return Hint("Samsung Download Mode", "Explicit Windows descriptor", "Windows USB PnP",
                 "Download Mode is inferred only because the Windows descriptor names it. Odin COM-port ownership and exact phone identity must still be matched independently.");
 
+        if (vendor == "04E8" &&
+            (Contains(text, "modem") || Contains(text, "serial") ||
+             string.Equals(device.Service, "usbser", StringComparison.OrdinalIgnoreCase)))
+            return Hint("Samsung USB service interface (Download Mode unconfirmed)", "Samsung service-interface hint",
+                "Windows USB PnP",
+                "A Samsung modem/serial USB interface is present. It may be a service/Download-mode interface, but Odin mode and COM-port ownership are not proved by this descriptor alone.");
+
         if (Contains(text, "fastboot") || Contains(text, "android bootloader interface"))
             return Hint("Android Bootloader / Fastboot", "Explicit USB descriptor", "Windows USB PnP",
                 "The descriptor indicates a bootloader interface. Read product and serial through Fastboot before using any device-specific workflow.");
