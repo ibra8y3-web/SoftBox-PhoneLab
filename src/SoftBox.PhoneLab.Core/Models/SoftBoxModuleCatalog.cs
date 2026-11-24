@@ -34,7 +34,7 @@ public sealed record SoftBoxModule(
 /// </summary>
 public static class SoftBoxModuleCatalog
 {
-    public const int ExpectedModuleCount = 37;
+    public const int ExpectedModuleCount = 38;
 
     public static IReadOnlyList<SoftBoxModule> All { get; } =
     [
@@ -406,6 +406,17 @@ public static class SoftBoxModuleCatalog
                 new("iphone-functional-checks", "اختبارات الشاشة واللمس والكاميرا والحساسات", "Physical component checks", "يسجل نتائج فحص فعلي يجريه الفني للشاشة واللمس والكاميرات وFace ID والصوت والميكروفون والحساسات ومنفذ الشحن. لا تُملأ النتائج تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenIPhoneFunctionalTests"),
                 new("iphone-airplay", "عرض شاشة iPhone عبر AirPlay", "iPhone AirPlay screen viewing", "يفتح مستقبل AirPlay في نافذة مستقلة ذات مساحة عرض مستقلة عن Android/scrcpy. عرض فقط، ولا يرسل لمسًا أو رمز قفل إلى iPhone.", ModuleImplementationStatus.Implemented),
                 new("iphone-authenticity", "تقييم أدلة هوية الجهاز والأصالة", "Device identity evidence assessment", "يجمع استجابة Apple Lockdown ونتيجة فحص التغطية التي أدخلها الفني وسجل القطع؛ يصدر حالة أدلة متوافقة أو تحتاج مراجعة أو غير كافية، ولا يزعم إثبات أصالة مطلقًا.", ModuleImplementationStatus.InDevelopment, "OpenIPhoneAuthenticityEvidence")
+            ]),
+        new("device-identity-integrity", 38, "التحقق والحماية", "سلامة هوية الجهاز والتعبئة الذكية", "Device Identity Integrity & Smart Auto-Fill",
+            "محرك قراءة مستقل يجمع أدلة Windows USB وADB وFastboot وApple Lockdown، يصنّف أوضاع الاتصال، يكشف تعارضات المعرّفات، ويملأ حقول معلومات الجهاز من المصدر الحقيقي دون تعديل هوية الهاتف.",
+            ModuleImplementationStatus.InDevelopment,
+            [
+                new("live-mode-detection", "اكتشاف وضع الاتصال تلقائيًا", "Live transport-mode detection", "يرصد USB PnP وADB وFastboot كقنوات مستقلة، ويصنّف أوضاع EDL وPreloader/BROM وDownload Mode وRecovery وMTP وADB عند توفر دليل واضح. التلميح لا يُعامل كتعريف موديل أو تصريح وصول.", ModuleImplementationStatus.Tested, "OpenDeviceIdentityIntegrity"),
+                new("identity-source-map", "خريطة مصدر كل معرّف ودرجة الثقة", "Identifier provenance and confidence", "يعرض نوع المعرّف ومصدره ووقت القراءة ودرجة الثقة، ويفصل USB VID/PID عن Serial وADB transport ID وFastboot transport ID وApple Serial/UDID.", ModuleImplementationStatus.Implemented),
+                new("identity-conflict-analysis", "كشف تعارض المعرّفات والبيانات", "Identity conflict analysis", "يقارن فقط المعرّفات المتطابقة في المنصة والنوع والقيمة؛ لا يربط جهازين بتشابه آخر أربعة أرقام أو قرب وقت التوصيل، ويضع اختلاف الموديل/الشركة تحت المراجعة.", ModuleImplementationStatus.Tested),
+                new("smart-device-field-fill", "تعبئة حقول الشركة والموديل والوضع والمعرّف تلقائيًا", "Smart device-field population", "تُملأ حقول مركز الهوية من القراءة الفعلية المختارة مع إخفاء المعرّف افتراضيًا، ويمكن نسخ القيمة الدقيقة صراحةً. لا تُملأ عبارات الموافقة أو تأكيد التفليش.", ModuleImplementationStatus.Implemented),
+                new("identity-evidence-report", "تقرير أدلة الهوية المقنّع", "Masked identity evidence report", "ينسخ تقريرًا بمعلومات المصدر والوضع ودرجة الثقة والحالة مع إخفاء المعرّفات. لا يحفظ أرقامًا خامًا أو يرسلها إلى الشبكة.", ModuleImplementationStatus.Implemented),
+                new("imei-serial-mutation", "تغيير أو تزوير IMEI أو الرقم التسلسلي", "IMEI or serial mutation", "غير مدعوم: لا توجد كتابة IMEI/Serial أو تعديل NVRAM/EFS/مناطق الخدمة أو تغيير هوية الجهاز. إصلاح الهوية المسموح به يكون عبر الشركة المصنّعة أو مركز خدمة معتمد.", ModuleImplementationStatus.Unsupported)
             ])
     ];
 
@@ -419,6 +430,7 @@ public static class SoftBoxModuleCatalog
         "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
         "OpenUniversalDeviceDiscovery", "OpenAirPlayReceiver", "OpenMiracastSetup", "OpenLockRecoveryAssistant", "OpenDiagnosticEvidenceHistory",
         "OpenIPhoneCenter", "OpenIPhonePartsHistory", "OpenIPhoneBatteryHealth", "OpenIPhoneFunctionalTests", "OpenIPhoneAuthenticityEvidence",
+        "OpenDeviceIdentityIntegrity",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement", "OpenDeviceAccessRecoveryCenter"
     };
 
