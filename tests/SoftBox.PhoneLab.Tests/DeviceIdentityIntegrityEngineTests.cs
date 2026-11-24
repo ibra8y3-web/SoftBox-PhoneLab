@@ -16,7 +16,7 @@ public sealed class DeviceIdentityIntegrityEngineTests
 
         var finding = Assert.Single(report.Findings);
         Assert.Equal(DeviceIdentityIntegrityStatus.ConsistentEvidence, finding.Status);
-        Assert.Equal("••••3456A", finding.MaskedIdentifier);
+        Assert.Equal("••••456A", finding.MaskedIdentifier);
         Assert.Equal(2, finding.Sources.Count);
         Assert.Equal(DeviceIdentityIntegrityStatus.ConsistentEvidence, report.OverallStatus);
     }
