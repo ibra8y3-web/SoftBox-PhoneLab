@@ -55,9 +55,11 @@ public sealed class SamsungOdinAssistantWindow : Window
     private readonly string? _downloadModeInstanceId;
     private readonly string? _downloadModeHardwareId;
     private readonly string? _downloadModeModeEvidence;
+    private readonly Func<string, Task<bool>>? _authorizeAndAudit;
     private bool _packagesInspected;
     private int? _inspectedOdinProcessId;
     private string? _inspectedComPort;
+    private bool _startInProgress;
 
     public SamsungOdinAssistantWindow(
         AdbClient? adb = null,
@@ -68,7 +70,8 @@ public sealed class SamsungOdinAssistantWindow : Window
         string? downloadModeComPort = null,
         string? downloadModeInstanceId = null,
         string? downloadModeHardwareId = null,
-        string? downloadModeModeEvidence = null)
+        string? downloadModeModeEvidence = null,
+        Func<string, Task<bool>>? authorizeAndAudit = null)
     {
         _adb = adb;
         _deviceSerial = AdbClient.IsSafeSerial(deviceSerial ?? "") ? deviceSerial : null;
@@ -88,6 +91,7 @@ public sealed class SamsungOdinAssistantWindow : Window
             ? downloadModeHardwareId.Trim().ToUpperInvariant()
             : null;
         _downloadModeModeEvidence = downloadModeModeEvidence;
+        _authorizeAndAudit = authorizeAndAudit;
         if (_deviceSerial is not null &&
             AndroidDeviceToolsService.NormalizeVendor(_deviceManufacturer) != AndroidVendorKind.Samsung)
             throw new UnauthorizedAccessException("تم رفض ربط Odin بجهاز لم يتم تأكيد أنه Samsung.");
@@ -638,6 +642,9 @@ public sealed class SamsungOdinAssistantWindow : Window
 
     private async void StartOdin_Click(object sender, RoutedEventArgs e)
     {
+        if (_startInProgress)
+            return;
+        _startInProgress = true;
         try
         {
             if (!CanInspectOdinSession)
@@ -701,6 +708,11 @@ public sealed class SamsungOdinAssistantWindow : Window
             if (confirmation != MessageBoxResult.Yes)
                 return;
 
+            if (_authorizeAndAudit is null)
+                throw new UnauthorizedAccessException("لا يمكن تنفيذ Start دون ربط مساعد Odin بخدمة الصلاحيات وسجل التدقيق.");
+            if (!await _authorizeAndAudit("ExecuteSamsungOdinFlash"))
+                return;
+
             _startOdinButton.IsEnabled = false;
             var started = _odinAutomation.InvokeStart(
                 _odinExecutable.Text, paths,
@@ -724,6 +736,10 @@ public sealed class SamsungOdinAssistantWindow : Window
             _inspectedComPort = null;
             _status.Text = "تم منع أو تعذر بدء تفليش Odin: " + ex.Message;
             MessageBox.Show(this, ex.Message, "Samsung Odin Assistant", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _startInProgress = false;
         }
     }
 
