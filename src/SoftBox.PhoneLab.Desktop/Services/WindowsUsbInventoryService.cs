@@ -16,7 +16,14 @@ public sealed record WindowsUsbDevice(
     string ProductId,
     int ProblemCode,
     string PnpStatus,
-    UsbHardwareIdentity Identity);
+    UsbHardwareIdentity Identity)
+{
+    /// <summary>
+    /// Ordered SPDRP_HARDWAREID values reported by Windows for this exact PnP instance.
+    /// These values are evidence for INF matching, not a claim that a driver is signed or installable.
+    /// </summary>
+    public IReadOnlyList<string> HardwareIds { get; init; } = Array.Empty<string>();
+}
 
 /// <summary>
 /// Read-only inventory of present Windows PnP devices using SetupAPI and Configuration Manager.
@@ -27,6 +34,7 @@ public sealed class WindowsUsbInventoryService
     private const uint DigcfPresent = 0x00000002;
     private const uint DigcfAllClasses = 0x00000004;
     private const uint SpdrpDevDesc = 0x00000000;
+    private const uint SpdrpHardwareId = 0x00000001;
     private const uint SpdrpClass = 0x00000007;
     private const uint SpdrpMfg = 0x0000000B;
     private const uint SpdrpFriendlyName = 0x0000000C;
@@ -81,6 +89,7 @@ public sealed class WindowsUsbInventoryService
                 }
 
                 var identity = UsbHardwareIdentityCatalog.Classify(vendorId, productId);
+                var hardwareIds = ReadMultiStringProperty(handle, ref data, SpdrpHardwareId);
                 results.Add(new WindowsUsbDevice(
                     instanceId,
                     string.IsNullOrWhiteSpace(friendly) ? instanceId : friendly,
@@ -91,7 +100,10 @@ public sealed class WindowsUsbInventoryService
                     productId ?? "----",
                     problemCode,
                     status,
-                    identity));
+                    identity)
+                {
+                    HardwareIds = hardwareIds
+                });
             }
 
             return results
@@ -137,6 +149,37 @@ public sealed class WindowsUsbInventoryService
             }
 
             return null;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+    }
+
+    private static IReadOnlyList<string> ReadMultiStringProperty(
+        IntPtr handle,
+        ref SpDevInfoData data,
+        uint property)
+    {
+        _ = SetupDiGetDeviceRegistryProperty(
+            handle, ref data, property, out var dataType, IntPtr.Zero, 0, out var requiredBytes);
+        if (requiredBytes == 0 || requiredBytes > 128 * 1024 || dataType != 7)
+            return Array.Empty<string>();
+
+        var buffer = Marshal.AllocHGlobal((int)requiredBytes);
+        try
+        {
+            if (!SetupDiGetDeviceRegistryProperty(
+                    handle, ref data, property, out dataType, buffer, requiredBytes, out var actualBytes) ||
+                dataType != 7 || actualBytes == 0 || actualBytes > requiredBytes)
+                return Array.Empty<string>();
+
+            var value = Marshal.PtrToStringUni(buffer, checked((int)actualBytes / sizeof(char))) ?? string.Empty;
+            return value.Split('\0', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Where(item => item.Length <= 512 && !item.Any(char.IsControl))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(64)
+                .ToArray();
         }
         finally
         {

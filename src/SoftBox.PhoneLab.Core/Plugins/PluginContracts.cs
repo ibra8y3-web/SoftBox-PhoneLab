@@ -132,9 +132,19 @@ public static class PluginManifestValidator
     public static bool IsSafeRelativeAssemblyPath(string? value)
     {
         if (string.IsNullOrWhiteSpace(value) || value.Length > 240 ||
-            Path.IsPathRooted(value) || value.Contains('\\') ||
+            Path.IsPathRooted(value) ||
             !value.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
-            value.Any(char.IsControl))
+            !string.Equals(value, value.Trim(), StringComparison.Ordinal) ||
+            value.Any(character => char.IsControl(character) || "<>:\"/\\|?*".Contains(character)))
+            return false;
+
+        var stem = value[..^4];
+        if (stem.Length == 0 || stem.EndsWith('.') || stem.EndsWith(' '))
+            return false;
+
+        var firstSegment = stem.Split('.')[0];
+        if (Regex.IsMatch(firstSegment, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             return false;
 
         return !value.Split('/').Any(segment => segment is "" or "." or "..");

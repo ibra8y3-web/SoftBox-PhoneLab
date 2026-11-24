@@ -43,13 +43,22 @@ public sealed class FirmwareCenterWindow : Window
     private readonly Button _cancelButton;
     private readonly DeviceSnapshot? _deviceSnapshot;
     private readonly bool _adbAuthorized;
+    private readonly string? _detectedDeviceContext;
     private CancellationTokenSource? _operation;
     private bool _closed;
 
-    public FirmwareCenterWindow(DeviceSnapshot? deviceSnapshot = null, bool adbAuthorized = false)
+    public FirmwareCenterWindow(
+        DeviceSnapshot? deviceSnapshot = null,
+        bool adbAuthorized = false,
+        string? detectedManufacturer = null,
+        string? detectedMode = null,
+        string? detectedHardwareId = null)
     {
         _deviceSnapshot = deviceSnapshot;
         _adbAuthorized = adbAuthorized && deviceSnapshot is not null;
+        _detectedDeviceContext = string.IsNullOrWhiteSpace(detectedMode)
+            ? null
+            : $"Windows USB PnP: {detectedManufacturer ?? "الشركة غير مؤكدة"} • {detectedMode} • {detectedHardwareId ?? "Hardware ID غير متاح"}";
         Title = "SoftBox | مركز Firmware";
         Width = 1120;
         Height = 820;
@@ -70,6 +79,14 @@ public sealed class FirmwareCenterWindow : Window
         _downloadService = new FirmwareDownloadService(_library);
 
         Content = BuildContent();
+        if (!string.IsNullOrWhiteSpace(detectedManufacturer))
+            _manufacturer.Text = detectedManufacturer;
+        if (_detectedDeviceContext is not null)
+        {
+            _model.Text = string.Empty;
+            _notes.Text = _detectedDeviceContext + Environment.NewLine +
+                "الموديل الدقيق لم يُقرأ من وضع الصيانة. أدخله يدويًا من ملصق الجهاز/قاعدة موثوقة قبل تنزيل أو تقييم أي Firmware.";
+        }
         _list.SelectionChanged += (_, _) => ShowSelected();
         Loaded += async (_, _) => await LoadItemsAsync();
         Closed += (_, _) =>
@@ -107,6 +124,20 @@ public sealed class FirmwareCenterWindow : Window
             Margin = new Thickness(0, 8, 0, 0),
             FontSize = 11
         });
+        if (_detectedDeviceContext is not null)
+        {
+            header.Children.Add(new TextBlock
+            {
+                Text = "سياق الجهاز المكتشف: " + _detectedDeviceContext +
+                    Environment.NewLine + "تنبيه: ظهور Download Mode لا يكشف وحده رقم الموديل أو المنطقة أو إصدار Bootloader؛ لم نملأ هذه الحقول بالتخمين.",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = Brush("#F0C9A5"),
+                Background = Brush("#2A211A"),
+                Padding = new Thickness(9),
+                Margin = new Thickness(0, 8, 0, 0),
+                FontSize = 10
+            });
+        }
         DockPanel.SetDock(header, Dock.Top);
         root.Children.Add(header);
 

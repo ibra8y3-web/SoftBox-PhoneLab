@@ -18,6 +18,10 @@ public sealed class PhoneLabSettingsServiceTests
             Assert.True(defaults.AutoInstallAgent);
             Assert.Equal(1.0, defaults.UiScale);
             Assert.Equal("ar", defaults.UiLanguage);
+            Assert.Equal(string.Empty, defaults.AirPlayReceiverExecutablePath);
+            Assert.Equal(string.Empty, defaults.IPhoneToolsDirectory);
+            Assert.True(defaults.AutoStartAirPlayReceiver);
+            Assert.Equal(string.Empty, defaults.FfmpegExecutablePath);
 
             var selected = defaults with
             {
@@ -26,7 +30,11 @@ public sealed class PhoneLabSettingsServiceTests
                 AutoInstallAgent = false,
                 MaximumBatchConcurrency = 5,
                 UiScale = 0.85,
-                UiLanguage = "en"
+                UiLanguage = "en",
+                AirPlayReceiverExecutablePath = @"C:\SoftBox\AirPlay\airplay-windows.exe",
+                IPhoneToolsDirectory = @"C:\SoftBox\AppleTools",
+                AutoStartAirPlayReceiver = false,
+                FfmpegExecutablePath = @"C:\Tools\ffmpeg.exe"
             };
             await store.SaveAsync(selected);
 
@@ -128,4 +136,55 @@ public sealed class PhoneLabSettingsServiceTests
         }
         finally { Directory.Delete(directory, recursive: true); }
     }
+    [Fact]
+    public async Task SaveRejectsAirPlayReceiverPathsLongerThanTheSafeBound()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "softbox-invalid-airplay-path-" + Guid.NewGuid().ToString("N"), "settings.json");
+        try
+        {
+            var store = new PhoneLabSettingsService(path);
+            var invalid = new PhoneLabSettings(AirPlayReceiverExecutablePath: new string('x', 2049));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.SaveAsync(invalid));
+        }
+        finally
+        {
+            var directory = Path.GetDirectoryName(path)!;
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SaveRejectsFfmpegExecutablePathsLongerThanTheSafeBound()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "softbox-invalid-ffmpeg-path-" + Guid.NewGuid().ToString("N"), "settings.json");
+        try
+        {
+            var store = new PhoneLabSettingsService(path);
+            var invalid = new PhoneLabSettings(FfmpegExecutablePath: new string((char)120, 2049));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.SaveAsync(invalid));
+        }
+        finally
+        {
+            var directory = Path.GetDirectoryName(path)!;
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SaveRejectsIPhoneToolsDirectoryLongerThanTheSafeBound()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "softbox-invalid-iphone-tools-" + Guid.NewGuid().ToString("N"), "settings.json");
+        try
+        {
+            var store = new PhoneLabSettingsService(path);
+            var invalid = new PhoneLabSettings(IPhoneToolsDirectory: new string('x', 2049));
+            await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => store.SaveAsync(invalid));
+        }
+        finally
+        {
+            var directory = Path.GetDirectoryName(path)!;
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
 }

@@ -38,6 +38,20 @@ public sealed class NativePluginManifestPolicyTests
         Assert.False(result.IsValid);
     }
 
+    [Theory]
+    [InlineData("C:Native.Plugin.dll")]
+    [InlineData("native:payload.dll")]
+    [InlineData("bad?.dll")]
+    [InlineData("CON.dll")]
+    [InlineData("COM1.dll")]
+    public void RejectsWindowsAlternateStreamsAndReservedDllNames(string entry)
+    {
+        var result = PluginManifestValidator.Validate(NativeManifest() with { EntryAssembly = entry });
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, error => error.Contains("root-level .dll", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ReadOnlyWorkflowKeepsItsSeparateLimitedPermissionContract()
     {

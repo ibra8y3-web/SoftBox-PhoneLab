@@ -10,14 +10,25 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 - Catalog entries: 151 total (36 sections plus 115 child features): 58 Implemented, 5 Tested, 63 Planned, 23 In Development and 2 Unsupported.
 - No item is marked Verified in this snapshot. A successful Windows CI run is not physical-device verification.
 
-### Current additive branch snapshot — encryption and dashboard analytics follow-up
+### Previous additive snapshot — 20 November 2026 (retained for audit history)
 
 - Top-level sections: **36 retained** — all 36 In Development.
 - Child features: **130**; catalog entries including section rows: **166**.
 - Current feature statuses (child features only): **14 Planned, 4 In Development, 96 Implemented, 14 Tested, 0 Verified and 2 Unsupported**.
 - Including 36 section rows (all In Development): **14 Planned, 40 In Development, 96 Implemented, 14 Tested, 0 Verified and 2 Unsupported**.
 - Executable navigation: **56 unique ActionIds**, all routed through the central dispatcher and explicit fail-closed authorization policy; no duplicate executable action IDs.
-- The module catalog still contains **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
+- The module catalog in that earlier snapshot contained **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
+
+### Pre-expansion universal-device branch snapshot — 24 November 2026 (catalog baseline)
+
+- Top-level sections: **38**, all classified In Development.
+- Direct catalog baseline: **199 child features**; **237 total catalog entries** including section rows.
+- Child feature statuses: **2 Planned, 28 In Development, 111 Implemented, 49 Tested, 0 Verified and 9 Unsupported**.
+- This is the catalog snapshot immediately before adding the 13 specialist roadmap sections; later records at the end of this document supersede it.
+- Executable navigation: **93 unique ActionIds**. The internal `ExecuteSamsungOdinFlash` audit action is permission-mapped separately and is not exposed as a navigation button.
+- Device data baseline: **12 curated identity profiles**, one Samsung Galaxy A31 component record, and one generic Android board map. There are currently **no model-specific verified PCB maps**; the generic drawing is never treated as a verified handset layout.
+- The solution contains **six .NET projects**: Core, Desktop, Tests, ReleaseSigner, PluginHost and PluginSdk, alongside the Android Gradle Agent.
+- The catalog deliberately has **zero Verified hardware features** in this branch snapshot. A successful CI run does not prove physical-phone, driver, board or firmware compatibility.
 
 ## Status definitions
 
@@ -30,22 +41,22 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 
 A green build does not make a hardware feature Verified. Unit tests do not substitute for tests on a real handset, USB chipset, driver, fixture or firmware package. Navigation pages read their state from `SoftBoxModuleCatalog`; an unfinished feature never receives an action button.
 
-## The 36 product sections
+## The 51 product sections
 
 | # | Section | Current status | Already present | Important missing work |
 |---:|---|---|---|---|
 | 01 | Dashboard | In Development | Live ADB availability, connected-device selection, persisted device history and notifications; Tested analytics over recorded devices/events/notification categories, 24h/7d/30d counters and 14-day activity trend | A durable background job queue, storage health and signed update-health aggregation |
 | 02 | Device Center | In Development | ADB discovery, multiple-device listing and selection; serial-scoped operations; local device connect/disconnect/authorization history; real Wireless debugging pairing via adb pair/connect with separate IP/port endpoints and one-time code; protocol tests passed | Persistent device sessions, group targeting and independent background job queue; no physical-phone wireless pairing verification yet |
-| 03 | Device Intelligence | In Development | Android property parsing, model-profile matching, community model-code catalog, verified board-map import rules | Per-model capability matrix, richer provenance, protocol/driver compatibility and reviewed device coverage |
+| 03 | Device Intelligence | In Development | Android property parsing and model-profile matching; 12 curated identity profiles plus a separate community model-code feed; source/revision-gated board-map import rules; one Galaxy A31 component record and a generic unverified Android illustration | Broad multi-vendor identity coverage with reviewed provenance; exact model/board-revision component maps and capability matrices from licensed/manufacturer/physical evidence; no model-specific verified board map is bundled yet |
 | 04 | Android Service Center | In Development | Authorized ADB inspection, local Agent bridge, shared-storage browser/transfers, third-party App Manager and Runtime permission actions, fixed read-only command presets, bounded local Logcat failure analysis, Fastboot getvar and confirmed System/Recovery/Fastbootd transitions | Free-form shell, private app-data access, model-specific destructive Fastboot servicing and hardware-proven compatibility remain unsupported |
 | 05 | APK Lab | In Development | Local APK Lab window; SHA-256; readability of every non-directory ZIP entry; text XML and Android Binary XML manifest parsing; permission/version extraction; structural signature metadata detection | Cryptographic signature/certificate validation, resource resolution and DEX/resource analysis; no installation or device action |
-| 06 | Samsung Tools | In Development | Official Samsung USB driver; fixed-key One UI/CSC/PDA/bootloader/Verified Boot reports; Samsung-only ADB Download Mode entry after manufacturer re-check; Odin Assistant validates BL/AP/CP/CSC or HOME_CSC selection and hashes packages before opening a user-provided external Odin executable | SoftBox does not automate Odin controls or claim a completed flash; exact firmware source, model/region and anti-rollback verification remain required |
+| 06 | Samsung Tools | In Development | Official Samsung USB driver; fixed-key One UI/CSC/PDA/bootloader/Verified Boot reports; Samsung-only ADB Download Mode entry after manufacturer re-check; independent Windows PnP Download Mode inventory; Odin Assistant validates BL/AP/CP/CSC or HOME_CSC packages, hashes and same-record COM evidence; final Start requires a separate DeviceOperations permission check, successful local audit write, final confirmation and one guarded UI Automation invocation | Physical Samsung/Odin Hardware-in-the-Loop validation, trusted firmware publisher/model/region/anti-rollback evidence and confirmation of flash/boot outcomes remain required |
 | 07 | Xiaomi Tools | In Development | Xiaomi/Redmi/POCO fixed-key getprop collection for model/build/MIUI-HyperOS/region/Verified Boot with JSON report | Model/region compatibility database and official model-specific Fastboot/recovery workflows |
 | 08 | Android Brands | In Development | Generic read-only Android manufacturer/brand/model/build and Verified Boot property collection | Dedicated, evidenced service protocols for Pixel, Motorola, OnePlus, OPPO, realme, vivo, Huawei, Honor, TECNO, Infinix and others |
 | 09 | Qualcomm Tools | In Development | SoC identification hints plus an automatically opened Windows PnP view filtered to the common 05C6:9008 EDL USB identity hint | EDL protocol, programmer verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
 | 10 | MediaTek Tools | In Development | SoC hints plus an automatically opened Windows PnP view filtered to the common 0E8D:0003 Preloader/BROM USB identity hint | BROM protocol, Download Agent verification, secure-boot compatibility and signed model-specific recovery (not implemented) |
 | 11 | Firmware Center | In Development | Local firmware import/catalogue by vendor/model/region/version, file SHA-256, ZIP/OTA archive inspection and post-import integrity revalidation | Trusted source catalog, signed publisher verification, download manager and device/model/region/rollback compatibility gate |
-| 12 | USB Doctor | In Development | ADB/Fastboot transport inspection; Windows SetupAPI PnP inventory with VID/PID, friendly name, service and problem code; conservative Samsung/Google/Qualcomm/MediaTek mode hints; official Samsung driver entry | Driver package signature verification, controlled install/remove/rollback and OEM driver catalogue; no driver mutation in the current PnP inspector |
+| 12 | USB Doctor | In Development | ADB/Fastboot transport inspection; Windows SetupAPI PnP inventory with VID/PID, friendly name, service and problem code; 33 OEM support/driver resources; Driver Package Manager inventories installed packages and gates INF installation on exact hardware-ID/Windows architecture/build compatibility, CAT Authenticode validity and INF-to-CAT membership via SignTool; export and non-force removal use PnPUtil with UAC | Hardware-in-the-loop compatibility across real Windows builds, OEM devices and signed packages; transactional rollback/restore and broader verified OEM package source/checksum coverage; successful PnPUtil exit still requires device re-enumeration and driver-state verification |
 | 13 | Smart Backup | In Development | ADB shared-storage backup into ZIP with per-file SHA-256; authenticated SBX encryption; verified restore to a unique shared-storage directory; DPAPI-protected schedules for on-connect, daily and weekly encrypted backups; 30-second authorized-device polling while SoftBox is open; pause, resume, delete and run-now controls | Scheduling does not run after SoftBox exits or the Windows user signs out; app-private/system data backup remains unsupported by design |
 | 14 | Phone Link Studio | In Development | Verified scrcpy screen mirroring/control; real MP4/MKV screen recording is wired to the selected authorized ADB device, requires user-chosen new output path and finalizes via WM_CLOSE before validating non-empty output file | Hardware recording validation across Android versions/codecs, multi-session concurrent display and app-side recording library management |
 | 15 | Hardware Diagnostics | In Development | Agent screen/touch/audio/microphone/vibration/sensor checks, Camera2 routes, screen-photo analysis and external meter readings | More model-tested tests, durable per-session evidence, calibrated lab procedures and supported board-level fixtures |
@@ -59,8 +70,8 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 23 | Workshop Manager | In Development | Customers, repair orders, status tracking, QR ticket, printable intake receipts/estimates/invoices, manual quote approval/rejection history, multi-payment ledger, remaining balance and printable payment receipts | External payment settlement/refunds, tax calculation/compliant e-invoicing, intake accessory checklist, photos with consent and multi-user workflow |
 | 24 | Parts Inventory | In Development | SKU catalogue with category/supplier/cost/sale/reorder fields in the dedicated Parts Inventory window; supplier stock receipts record supplier and invoice, quantity and purchase unit cost, update weighted-average cost, and atomically add a purchase receipt plus stock movement; order-linked consumption deducts stock and records parts cost; inventory/movement/purchase CSV exports | Multi-line purchase orders, invoice approval/payment tracking, barcode scanning and multi-branch synchronization |
 | 25 | Service Reports | In Development | Device JSON diagnostics; repair-order HTML/text/UTF-8 CSV; actual workshop analytics for delivered revenue, open estimates, reported symptom descriptions, serviced models, technicians, delivery duration and inventory value; analytics CSV export | Native PDF/Excel, signed report provenance and deeper financial analytics; current values are operating indicators, not profit or tax accounting |
-| 26 | Plugin Store | In Development | Local ZIP/Manifest inspection, permission allow-list validation, Zip Slip/symlink/duplicate-path/size/ratio checks and package SHA-256; install and code execution remain disabled | Publisher signature/trusted-root verification, permission grant UI, dependency manager, install/update/uninstall lifecycle and sandboxed runtime |
-| 27 | Plugin SDK | In Development | Version-1 manifest contract, semantic version validation, known permission identifiers, fail-closed unknown permissions, sample manifest and developer quickstart | Public SDK assembly/contracts, actual host API, runtime IPC, sample executable plugin and compatibility test host |
+| 26 | Plugin Store | In Development | Local ZIP/Manifest inspection with size/path/symlink/duplicate-entry/compression-ratio checks and SHA-256; detached RSA package signatures checked against current-user DPAPI-protected publisher trust roots; signed read-only workflow execution; explicit user confirmation before native DLL execution in a temporary no-capability Windows AppContainer worker with Job Object limits and pre-run sandbox self-test | Public publisher-key distribution/revocation policy, dependency management and complete install/update/uninstall lifecycle; broader Windows-version and third-party-plugin security validation |
+| 27 | Plugin SDK | In Development | Public .NET 10 `SoftBox.PluginSdk` 1.0.0 assembly; typed Manifest v1 contract, JSON writer/validator, permission constants, Native ABI v1 declaration, hardened root-level DLL filename checks, unsigned sample manifest/native ABI header, unit tests and a CI-built NuGet artifact | Signed NuGet publication and compatibility policy, typed host API/IPC client, independently built third-party plugin compatibility matrix and external security review |
 | 28 | Offline Center | In Development | Read-only local package inventory for the SoftBox EXE, ADB, Fastboot, scrcpy, Android Agent APK, Samsung USB Driver and TRACE Boardviewer; actual presence/missing/unreadable state, file size, modified time, executable version metadata and SHA-256; actual file counts and aggregate sizes in device-profile and board-map directories; OS/runtime/network-interface/storage inventory; JSON export; link/Junction paths rejected | Internet reachability validation, expected-source hash/signature verification, package repair/download/install and broader local component discovery remain unimplemented |
 | 29 | Security & Privacy | In Development | ADB argument-list invocation and serial validation; allow-listed read-only shell presets; Agent consent; safe public-storage paths; secret-redacted local support ZIP; masked device history identifiers; DPAPI CurrentUser encryption for account/audit, workshop, activity and notification stores with legacy JSON migration and same-user encrypted workshop backups | Portable cross-account key recovery/sync, signed updater/plugin trust roots, full OS ACL hardening and formal threat model |
 | 30 | User & Technician Management | In Development | First-run administrator bootstrap; mandatory local sign-in; administrator/technician/read-only roles; PBKDF2-HMAC-SHA256 password verifiers; DPAPI-protected account/verifier/audit store with legacy JSON migration; password lockout; account administration; self-service password change; manual session lock/re-authentication; bounded audit | Windows Hello/identity integration; unattended idle timeout; custom per-user permission editor; password recovery policy; full attribution of every internal WorkshopStore mutation and all nested device-operation outcomes; central multi-workstation identity |
@@ -70,6 +81,21 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 34 | Support & Logs | In Development | Bounded Android evidence collection, firmware inspection reports, local support ZIP with system/runtime metadata and user-selected TXT/LOG/JSON files plus password/token/authorization/device-ID redaction | Structured application log pipeline, crash capture and stronger review of non-standard secret formats |
 | 35 | Settings | In Development | Persisted local preferences for ADB discovery interval, screen auto-open, Agent auto-setup, auto-inspection and batch concurrency; workshop currency/locale/time-zone settings remain | App-wide theme, language, keyboard shortcuts, privacy/data retention and storage settings |
 | 36 | About | In Development | Application/Assembly version, runtime, OS/architecture and bundled THIRD-PARTY-NOTICES display | Build provenance, complete dependency/license inventory and official support links |
+
+
+| 39 | Qualcomm EDL & Diag Lab | Planned | No executable service engine yet; planned PnP evidence, signed Firehose validation, rawprogram/patch inspection, verified readback and restore preflight | OEM/model-specific signed programmer catalogue, authorized EDL protocol provider, physical hardware-in-the-loop validation |
+| 40 | MediaTek BROM, Preloader & META Lab | Planned | No executable service engine yet; planned mode evidence, Scatter inspection, DA/Auth validation and read-only META diagnostics | Model-specific signed DA/Auth paths, verified partition maps and physical validation; no generic AUTH bypass |
+| 41 | Unisoc & Spreadtrum Lab | Planned | No executable service engine yet; planned PAC inspection, USB mode evidence, partition maps, device information, recovery preflight | Verified model/loader matrix, trusted PAC sources and physical device tests |
+| 42 | Rockchip & Allwinner Lab | Planned | No executable service engine yet; planned MaskROM/Loader evidence, firmware inspection and image/readback integrity | Signed loader catalogue, supported image formats and model-specific recovery validation |
+| 43 | Huawei & Honor Kirin Lab | Planned | No executable service engine yet; planned USB COM/Fastboot/Upgrade evidence, APP/dload inspection and board/region matching | Official authorized recovery integrations, exact board/region/rollback data and physical validation |
+| 44 | Firmware Engineering Studio | Planned | No separate studio yet; existing Firmware Center remains canonical. Planned multi-format readers, official source catalogue, signature trust, version diff and compatibility ledger | Verified OEM trust roots, source/licence policy, parsers and tested compatibility database |
+| 45 | Partition & Filesystem Lab | Planned | No executable partition lab yet; planned GPT/MBR, Sparse, Super, ext4/F2FS read-only inspection and partition-map comparison | Fuzz-tested parsers, image fixtures and filesystem integrity validation |
+| 46 | eMMC & UFS Memory Lab | Planned | No executable memory-service engine yet; planned adapter inventory, CID/CSD/EXT_CSD/UFS reads, health reporting and image integrity | Supported adapter/protocol matrix, calibrated fixtures and strict write gates |
+| 47 | Boot, Recovery & Rescue Center | Planned | Existing Android reboot and maintenance-mode tools remain canonical; planned unified mode matrix, bootloop diagnostics, official sideload guides and recovery-session evidence | Per-OEM recovery providers, reliable progress/result semantics and real device validation |
+| 48 | Boardview & Component Repair Lab | Planned | Existing BoardView importer and component workspace remain canonical; planned source-backed board-map library, part cross-reference, test-point references and measurement evidence | Licensed verified schematics/boardviews, exact PCB revisions and physical measurements |
+| 49 | Network, Modem & RF Lab | Planned | Existing network diagnostics remain canonical; planned baseband/SIM reads, Wi-Fi/Bluetooth/GPS/NFC tests, carrier status and RF instrument integration | OEM APIs, RF test fixtures/calibration and model-specific result thresholds |
+| 50 | Data Rescue & Migration Lab | Planned | Existing Smart Backup remains canonical; planned owner-authorized selective data migration, encrypted vault, backup integrity and access-boundary reports | Verified app/OS data access, encryption-key handling, restore validation and retention controls |
+| 51 | Service Operations & Automation Center | Planned | Existing workshop, batch and workflow services remain canonical; planned durable job queue, per-device session isolation, workflow templates and per-job evidence bundles | Crash-safe persistence, per-device cancellation/resume, concurrency controls and end-to-end operational tests |
 
 ## Existing tools and their canonical sections
 
@@ -95,7 +121,7 @@ The same implementation is shared and linked from related module pages; it must 
 ## Engineering baseline found in the repository
 
 - Windows UI: WPF on .NET 10; Android companion: Kotlin/Android Agent.
-- Current solution has three .NET projects: Core, Desktop and Tests, plus the separate Android Gradle project.
+- Current solution has six .NET projects: Core, Desktop, Tests, ReleaseSigner, PluginHost and PluginSdk, plus the separate Android Gradle project.
 - ADB process invocation uses argument-list APIs, validates serial values and has a bounded command timeout.
 - APK Lab uses a dependency-free .NET Core inspection service for local ZIP entry-read checks, SHA-256 and text/Android Binary XML manifest parsing; signature data is detected structurally only.
 - Network Diagnostics reads local Windows interface configuration and performs one user-selected DNS/ICMP probe with bounded timeouts; Android-private network observations are still unimplemented.
@@ -408,3 +434,116 @@ See [OEM service and recovery workflows](OEM-RECOVERY-WORKFLOWS.md) for implemen
 - The UI calls these observed strings, not verified effective restrictions. No MDM enrollment, admin role, policy or account is changed or removed.
 - The parser returns empty evidence collections on unavailable/permission-denied dumps. Automated tests cover owner/profile/active-admin components, observed token parsing and collection bounds.
 - Android OEM output and user-specific enforcement still require physical validation.
+
+
+## Cross-platform implementation checkpoint — 23 November 2026
+
+This checkpoint supersedes earlier feature-count snapshots in this document for the current branch. Historical entries above are retained as dated audit history.
+
+### Current catalog inventory
+
+- **38 master sections** in specification order; the original 36 sections are retained, Section 37 is the dedicated iPhone & iPad Center, and Section 38 is Device Identity Integrity & Smart Auto-Fill.
+- **190 child features** across the 38 sections (228 total catalog rows including section rows).
+- Child-feature statuses: **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported, 0 Verified**.
+- **85 unique canonical ActionIds** are registered in the catalog; no duplicate action identifiers.
+- A Hosted CI pass can establish that a software build/test path works in the runner; it does not certify a physical device. No new phone, USB chipset, OEM driver, AirPlay receiver or board-level hardware feature is marked Verified by this change.
+
+### Changes in this implementation wave
+
+| Section | Addition | Current implementation boundary |
+|---|---|---|
+| 02 Device Center | Universal Device Discovery workspace | Displays Windows USB PnP and ADB inventories separately; manufacturer/friendly-name/VID/PID are hints, not exact model proof. It shows a syntactically plausible PnP instance suffix separately as unverified evidence and intentionally does not join a USB instance to an ADB serial by guessing. |
+| 12 USB Doctor | Expanded OEM resource directory, now 33 entries | Mixes dedicated USB driver sources, regional MTP downloads, OEM companion utilities and official support portals. A resource entry is not necessarily a direct driver installer. |
+| 12 USB Doctor | Live OEM source-page reachability check | Performs bounded HTTPS HEAD/GET checks, tracks up to five redirects, rejects HTTP downgrade and reports the HTTP response; does not download the driver payload or claim model compatibility. |
+| 12 USB Doctor | Windows PnP Hardware ID → INF candidate matcher | Reads SPDRP_HARDWAREID from the selected PnP device and compares exact IDs against Manufacturer/Models INF rows with architecture and minimum build decorations; unresolved ProductType/SuiteMask remains Unknown. The result is a candidate INF match, not SetupAPI's final driver-package selection. |
+| 12 USB Doctor | Driver package signature entrypoint | Opens the existing Windows driver signature verifier for a technician-selected local package. Signature validity is not a hardware/model compatibility result. |
+| 14 Phone Link Studio | Separate AirPlay-Windows receiver window | Starts a separately installed GPL-3 receiver in its own top-level window and dedicated native screen host. It never attaches to the Android `PhoneScreenHost`; it is view-only and needs a same-LAN owner-selected AirPlay session. |
+| 14 Phone Link Studio | Windows-native Miracast setup handoff | Opens the Windows Projecting to this PC and Optional Features pages. The actual Wireless Display/Connect receiver runs outside SoftBox and requires Miracast support on both devices. |
+| 14 Phone Link Studio | Actionable scrcpy startup diagnostics | Captures bounded stdout/stderr and distinguishes common ADB authorization/offline/missing/server conflicts, runtime/download/integrity failures and screen-window startup failures. |
+| 15 Hardware Diagnostics | Persistent component evidence history | Stores actual DiagnosticEngine snapshots locally with DPAPI CurrentUser protection, a one-way device fingerprint, masked serial, component status/evidence/source and timestamp; identical consecutive snapshots are deduplicated. |
+| 19 Safe Recovery | Owner-safe forgotten lock assistant | Offers official previous-credential/account/support/erase guidance only when relevant evidence is supplied. It collects no lock credentials and exposes no unlock, FRP, Activation Lock, MDM or factory-reset command. |
+| 37 iPhone & iPad Center | Automatic Apple Lockdown discovery | Reads actual Apple Lockdown information when trusted tools and owner approval are available. Automatic scans do not bypass lock/trust protections; AirPlay remains in its own independent window. |
+| 38 Device Identity Integrity | Cross-transport evidence and smart auto-fill | Classifies Windows USB, ADB, Fastboot and Apple Lockdown reads; shows identifier source/confidence, detects exact-value conflicts and fills its own read-only identity fields. It does not change IMEI/serial or auto-confirm flashing. |
+
+### Multi-vendor and OS compatibility contract
+
+- Android models from Samsung, Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO, Infinix and other vendors may use the Android ADB/scrcpy adapter **only when that model's firmware exposes ADB and the owner authorizes this computer**. Vendor recognition by itself does not make ADB available.
+- iPhone/iPad uses the independent AirPlay receiver for screen viewing. AirPlay does not provide touch control, passcode entry or a generic iOS diagnostic agent.
+- Miracast-capable phones may use Microsoft's optional Wireless Display/Connect receiver on Windows. This is an OS-level viewing route outside the SoftBox screen dock; it requires Miracast support on the PC and phone.
+- MTP, Fastboot, Qualcomm EDL and MediaTek Preloader/BROM are separate transports/modes. Their presence is not a screen stream and does not imply permission to control the Android UI.
+- Proprietary vendor servicing, HarmonyOS projection/service modes and other OEM protocols remain model- and version-specific. Unsupported protocols are not emulated or guessed.
+- The 33 OEM resource entries are not 33 bundled or universally compatible installers. The live HTTP check only proves that the source page responded; it does not prove a direct package exists or that it targets the current phone.
+- The INF analyzer compares actual PnP Hardware IDs against INF model rows and architecture/minimum Windows build decorations. ProductType/SuiteMask decorations it cannot resolve are Unknown. When multiple decorated model sections exist, the result is a candidate match, not a claim about the exact section SetupAPI/Driver Store will select.
+- Exact package compatibility and final driver selection must be confirmed for the model, hardware ID, region, Windows edition/version and architecture. Windows signature verification and hardware compatibility are independent checks.
+
+### Component test and evidence contract
+
+- `Pass` and `Failed` require a named test result from the Agent/approved source, not a simple property read.
+- `DataRead` means the system exposed a value or capability; it is not a hardware-health verdict.
+- `Review`, `Unavailable` and `NotTested` remain distinct states.
+- Board-level PMIC, charging-IC, trace, solder, connector and electrical rail verification still requires the correct model-specific schematic, safe fixture/probes, calibrated measurements or manual inspection.
+- The local evidence store is DPAPI-protected for the current Windows user and is not a portable cross-account backup.
+
+### Remaining work / physical verification
+
+1. Perform real cable/ADB/scrcpy tests on the target Samsung SM-A315G, including unauthorized, offline, cable replug, screen lock/wake, display rotation, audio and screen recording.
+2. Test the AirPlay adapter with an actual iPhone/iPad and PC on the same network; verify the receiver release, discovery, stream lifecycle, audio, Wi-Fi firewall and clean shutdown.
+3. Test representative Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO and Infinix models. A generic Android route is expected only where ADB is actually exposed and authorized.
+4. Validate downloaded driver packages against the target model's actual hardware IDs, Windows edition/architecture, signature and catalog membership before recommending installation.
+5. Expand hardware-specific Agent tests only when the Android API, OEM firmware, user consent and evidence semantics are known. Keep external-only board tests unsupported until a real compatible fixture is available.
+6. Continue auditing every one of the 38 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
+
+
+## Dedicated Apple diagnostics workspace — 23 November 2026
+
+- The navigation catalog now contains **37 sections**, adding Section 37: iPhone & iPad Center. Existing 36 sections and their ActionIds are retained.
+- New child tools: Lockdown identity discovery, Parts & Service History recording, Battery Health/cycle-count recording, physical component checks, independent AirPlay viewing and evidence-based originality review.
+- The Lockdown parser accepts bounded XML plist only, rejects DTD/external entities, masks serials and tests that current charge is not misclassified as battery health.
+- Apple diagnostic utilities must be selected by the operator from a trusted Windows libimobiledevice distribution. No binaries are downloaded or installed automatically.
+- Component evidence uses the existing DPAPI-protected store. Parts/battery values are read by the technician from the iPhone's official settings; the physical test checklist requires actual observation and written evidence.
+- AirPlay now has a dedicated independent native host in its own top-level window. It no longer attaches to the Android `PhoneScreenHost`. The existing Android recording guard, manual priority and MainWindow process shutdown cleanup remain in place.
+- Historical catalog totals at this checkpoint: **38 sections / 190 child features / 228 entries**, with 108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported and 0 Verified; 84 unique canonical ActionIds.
+- Status: implementation committed for CI review; **not yet physically verified on an iPhone or iPad**. No absolute genuine/copy claim is produced.
+- CI on commit `99c1d16714b51c1a481f91783f78f94969803b5a`: Windows build/test/publish succeeded with 722 passed, 0 failed, 0 skipped; Android Agent APK and emulator UI automation jobs succeeded.
+
+
+## Device Identity Integrity & Smart Auto-Fill — 24 November 2026
+
+- Added **Section 38**, preserving all 37 earlier sections. The identity workspace is a separate top-level window and does not replace the Android, iPhone or AirPlay screen hosts.
+- Added `DeviceModeClassifier` to classify evidence-backed USB and ADB states, including Qualcomm 9008, MediaTek Preloader/BROM, Samsung Download Mode when the descriptor explicitly names it, Android Bootloader/Fastboot, Apple USB/Recovery/DFU hints, MTP, ADB authorized/unauthorized/offline and unknown modes.
+- Mode names inferred from VID/PID or descriptor text remain hints. An unknown, locked, unauthorized or unsupported interface stays unknown/pending; no exact model, serial or service capability is fabricated.
+- Added `DeviceIdentityIntegrityEngine`, which validates bounded identifier observations, groups only the exact same platform + identifier kind + identifier value, detects conflicting manufacturer/model evidence, produces one-way identifier fingerprints for UI correlation, and keeps single-source readings distinct from corroborated evidence.
+- The new top-level window reads Windows USB PnP, the live ADB inventory, Fastboot device identifiers and Apple Lockdown identity separately. It reads Fastboot getvar values only through the read-only Fastboot path and only displays properties returned by the handset.
+- Manufacturer/model/mode/identifier fields are populated automatically from the selected real observation; serial/UDID remains masked by default. The exact identifier is copied only after an explicit user action; exported/clipboard evidence reports use masked values.
+- The module does not write IMEI/Serial, EFS, NVRAM, modem/NV areas, or boot/security identifiers. It does not bypass a blacklist. Odin's `FLASH` phrase is prefilled only from the authorized ADB Serial; the PnP suffix is never substituted. Compatibility, backup, COM ownership and the final Start action remain explicit technician confirmations. An official identity/board replacement must be completed by the OEM or authorized service procedure.
+- Windows USB arrival/removal notifications now debounce and accelerate USB/ADB/iPhone discovery. The existing periodic discovery timer remains a fallback. Apple identity checks run only when Windows reports Apple USB and the user-configured trusted Lockdown tools can be resolved; battery GasGauge is not polled repeatedly.
+- Automated tests were added for USB/ADB mode classification, unknown-mode behavior, avoiding false Samsung Download Mode inference from VID alone, same-ID evidence corroboration, exact-ID conflicts, weak USB hints, source separation, masking and input bounds.
+- Historical catalog totals: **38 sections / 190 child features / 228 total entries**, with **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported and 0 Verified** child features; **85 unique canonical ActionIds**.
+- Physical verification is still required on real Android handsets across ADB unauthorized/locked, Fastboot, Samsung Download, Qualcomm EDL, MediaTek Preloader/BROM, real iPhone/iPad Lockdown, Windows driver variations and AirPlay streaming. CI does not certify these physical modes.
+
+
+## Previous implementation snapshot — 24 November 2026 (before 51-section service expansion)
+
+- Master sections: 38.
+- Direct catalog count at the pre-expansion snapshot: 199 child features and 237 total catalogue entries.
+- Child feature statuses at that checkpoint: 2 Planned, 28 In Development, 111 Implemented, 49 Tested, 0 Verified and 9 Unsupported.
+- Unique supported action identifiers: 93.
+- This section is historical; the 51-section catalogue at the end of this document is the current expansion baseline.
+- Child feature statuses: 111 Implemented, 48 Tested, 28 In Development, 2 Planned, 9 Unsupported, 0 Verified.
+
+Newly recorded work: generic vendor USB service/recovery descriptors can be listed as evidence-only records; Apple Recovery/DFU is separated from Android transports; the Samsung Odin hand-off can use selected Download Mode PnP evidence and exact COM comparison when ADB is absent; the Windows Driver Center contains a user-supplied INF/CAT package manager with compatibility, signer and catalog-member checks, UAC install, export and guarded removal; and the public Plugin SDK has a .NET 10 manifest-authoring project.
+
+These are code/catalogue states, not statements that every vendor, proprietary protocol or model was physically tested. There is no physical-device test evidence in this snapshot. Qualcomm EDL still needs a correct OEM-authorized Firehose programmer; MediaTek BROM still needs a compatible DA/Auth path; proprietary Huawei/OPPO and other vendor modes remain evidence-only unless an exact supported toolchain is registered. Board-map scope is still one generic Android map and one detailed Galaxy A31 component record; the curated profile catalogue is still 12 devices.
+
+
+## Current professional service catalogue — 24 November 2026
+
+- Master sections: **51** (38 existing sections retained; 13 new specialist sections added as Planned).
+- Child features: **264** (199 existing catalog features retained; 65 new Planned roadmap features).
+- Total catalog entries: **315** (51 section records plus 264 child features).
+- Child feature statuses: **67 Planned, 28 In Development, 111 Implemented, 49 Tested, 0 Verified and 9 Unsupported**.
+- The 93 existing canonical navigation actions are unchanged. The 13 specialist sections add **no executable ActionIds**.
+- The catalogue describes future areas of work; it does not claim that Qualcomm/MediaTek/Unisoc/Rockchip/Huawei protocol engines, eMMC/UFS programming, universal firmware flashing or board-level automation are already implemented.
+- Build/CI verifies software behavior covered by tests only. Physical device/adapter/protocol certification remains a separate requirement.
+
+See [PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md](PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md) for the full feature inventory and staged implementation plan.

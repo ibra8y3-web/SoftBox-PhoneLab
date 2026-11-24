@@ -34,7 +34,7 @@ public sealed record SoftBoxModule(
 /// </summary>
 public static class SoftBoxModuleCatalog
 {
-    public const int ExpectedModuleCount = 36;
+    public const int ExpectedModuleCount = 51;
 
     public static IReadOnlyList<SoftBoxModule> All { get; } =
     [
@@ -47,10 +47,12 @@ public static class SoftBoxModuleCatalog
                 new("dashboard-reports", "إحصائيات العمليات والتقارير", "Operations analytics", "نافذة تحليلات فعلية من سجل الأجهزة والإشعارات المحلي: عدد الأجهزة المسجلة، أحداث 24 ساعة و7 و30 يومًا، الإشعارات غير المقروءة، أكثر العمليات والفئات تكرارًا، واتجاه النشاط اليومي لآخر 14 يومًا. لا تدّعي وجود طابور مهام خلفي.", ModuleImplementationStatus.Tested, "OpenDashboardAnalytics")
             ]),
         new("device-center", 2, "مركز الأجهزة", "مركز الأجهزة", "Device Center",
-            "اكتشاف أجهزة Android المصرح بها وإظهار حالة اتصال كل جهاز.",
+            "اكتشاف الأجهزة المحمولة عبر Windows USB PnP وADB، وفصل هوية USB عن تصريح نظام الهاتف ومسار الشاشة المدعوم.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("adb-discovery", "اكتشاف ADB تلقائيًا", "Automatic ADB discovery", "فحص دوري كل 3 ثوانٍ مع التمييز بين الجهاز المصرح به وغير المصرح.", ModuleImplementationStatus.Implemented, "RefreshDevices"),
+                new("universal-usb-discovery", "اكتشاف أجهزة USB متعددة الأنظمة والشركات", "Cross-vendor USB device discovery", "يعرض Windows PnP وADB كقناتين منفصلتين، ويستدل على الشركة من Manufacturer/FriendlyName/VID دون ادعاء تحديد الموديل أو ربط USB بـADB بالتخمين. يعرض مسار النقل المعروف وحدود الشاشة والتحكم.", ModuleImplementationStatus.InDevelopment, "OpenUniversalDeviceDiscovery"),
+                new("maintenance-mode-center", "مركز Download وFastboot وEDL وBROM", "Universal service-mode center", "يعرض واجهات Windows PnP حتى عند اختفاء ADB، ويفتح أدوات Samsung/Odin وFastboot وQualcomm وMediaTek بعد فحص الصلاحية وتسجيل التدقيق. التعرف على الواجهة لا يثبت موديل الهاتف أو صلاحية ملفات التفليش.", ModuleImplementationStatus.InDevelopment, "OpenMaintenanceModeCenter"),
                 new("multi-device-list", "عرض أكثر من جهاز", "Multi-device list", "يمكن عرض عدة أجهزة واختيار جهاز للفحص؛ التنفيذ الجماعي المتوازي لم يبدأ.", ModuleImplementationStatus.Implemented),
                 new("wireless-adb", "اتصال ADB لاسلكي", "Wireless ADB pairing", "ينفذ اقتران Android Wireless debugging برمز الهاتف عبر adb pair ثم الاتصال بمنفذ Wireless debugging عبر adb connect. يتطلب Android 11+ وشبكة Wi-Fi مشتركة؛ رمز الاقتران لا يُحفظ في إعدادات SoftBox أو تقاريره. منطق البروتوكول مغطى باختبارات آلية، ولم يُسجل بعد تحقق على هاتف فعلي.", ModuleImplementationStatus.Tested, "OpenWirelessAdbPairing")
             ]),
@@ -99,16 +101,17 @@ public static class SoftBoxModuleCatalog
                 new("apk-version-diff", "مقارنة إصدارين وتحليل فروق الصلاحيات والملفات", "APK version and permission comparison", "يقارن اسم الحزمة وبيانات الإصدار وSHA-256 والصلاحيات وأسماء مدخلات الأرشيف بين ملفين محليين؛ لا يقارن محتوى كل ملف ولا يثبت صحة التوقيع.", ModuleImplementationStatus.Tested)
             ]),
         new("samsung-tools", 6, "الشركات والمعالجات", "أدوات Samsung", "Samsung Tools",
-            "قراءة خصائص Samsung والدخول إلى Download Mode عبر ADB بعد إعادة فحص الهوية، مع فحص حقيقي لبنية حزم TAR/TAR.MD5 وبصمة MD5 الملحقة وملفات الأقسام وSHA-256 قبل فتح نسخة Odin الخارجية. لا يتم تضمين Odin أو أتمتة زر Start.",
+            "قراءة خصائص Samsung والدخول إلى Download Mode عبر ADB بعد إعادة فحص الهوية، مع فحص حقيقي لبنية حزم TAR/TAR.MD5 وبصمة MD5 الملحقة وملفات الأقسام وSHA-256 قبل فتح نسخة Odin الخارجية. لا يتم تضمين Odin؛ أتمتة زر Start لا تعمل إلا عبر UI Automation وبعد التحقق من أدلة الجهاز وCOM والحزم والصلاحيات وسجل التدقيق والتأكيد النهائي.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("samsung-driver", "مثبت تعريف Samsung USB الرسمي الاختياري", "Samsung USB driver installer", "مضمن في حزمة Windows مع تحقق مثبت التعريف؛ مكان تشغيله الأساسي قسم طبيب USB.", ModuleImplementationStatus.Implemented),
                 new("samsung-adb", "قراءة خصائص One UI وCSC وPDA وBootloader", "Samsung vendor property diagnostics", "يقرأ مجموعة getprop ثابتة على الجهاز المصرح به ويعرض الخصائص المتاحة والفارغة مع حفظ تقرير JSON.", ModuleImplementationStatus.Implemented, "OpenSamsungDiagnostics"),
                 new("samsung-download-mode", "الدخول إلى Samsung Download Mode", "Samsung Download Mode entry", "يفتح مركز عمليات Samsung على الجهاز المختار، ويتحقق من هوية Samsung مجددًا قبل إرسال adb reboot download. لا يبدأ التفليش ولا يضمن توفر الأمر على كل إصدار أو موديل.", ModuleImplementationStatus.Implemented, "OpenSamsungServiceOperations"),
-                new("samsung-odin-assistant", "مساعد Odin وتجهيز حزم Firmware", "Samsung Odin handoff assistant", "يفحص وجود حزم BL/AP/CP/CSC أو HOME_CSC، يقرأ عناصر TAR دون استخراج، ويتحقق من MD5 الملحقة في TAR.MD5 وSHA-256 وملفات الأقسام المعروفة، ثم يفتح ملف Odin التنفيذي الذي يحدده المستخدم. التحقق من MD5 يثبت سلامة النقل فقط؛ لا يثبت ناشر الملف أو توافق الموديل/CSC/Anti-Rollback. لا يبدأ التفليش.", ModuleImplementationStatus.Tested, "OpenSamsungOdinAssistant"),
+                new("samsung-odin-assistant", "مساعد Odin وتجهيز حزم Firmware", "Samsung Odin handoff assistant", "يفحص وجود حزم BL/AP/CP/CSC أو HOME_CSC، يقرأ عناصر TAR دون استخراج، ويتحقق من MD5 الملحقة في TAR.MD5 وSHA-256 وملفات الأقسام المعروفة، ثم يفتح ملف Odin التنفيذي الذي يحدده المستخدم. التحقق من MD5 يثبت سلامة النقل فقط؛ لا يثبت ناشر الملف أو توافق الموديل/CSC/Anti-Rollback. لا يبدأ التفليش مباشرة؛ أي بدء فعلي مشروط بتحقق الأدلة والصلاحيات وتسجيل التدقيق والتأكيد النهائي عبر UI Automation.", ModuleImplementationStatus.Tested, "OpenSamsungOdinAssistant"),
                 new("samsung-archive-inspection", "فحص بنية حزمة Odin والتحقق من TAR.MD5", "Read-only Odin TAR and appended MD5 inspection", "اختبارات حقيقية لحزم TAR/TAR.MD5، تطابق MD5، رفض البصمة المعدلة ومسارات TAR غير الآمنة؛ لا يتم استخراج الملفات أو تفليش الهاتف.", ModuleImplementationStatus.Tested),
                 new("samsung-official-resources", "روابط أدوات ودعم Samsung الرسمية", "Samsung official tool directory", "يفتح روابط Samsung Developer والدعم الرسمي ويشرح حدود Odin؛ لا ينسب Odin غير المنشور رسميًا إلى Samsung ولا يحقن أوامر داخل واجهته.", ModuleImplementationStatus.Tested, "OpenSamsungOfficialTools"),
-                new("samsung-service", "أتمتة عمليات Odin وDownload Mode المتقدمة", "Samsung Odin advanced service automation", "يتحقق من مسار Odin والنافذة وحقول الملفات ومنفذ COM وزر Start القابل للاستدعاء، ويطلب تأكيد التوافق والنسخة الاحتياطية قبل Invoke واحد. بعد البدء يقرأ PASS/FAIL ونسبة التقدم من Windows UI Automation دون إرسال أوامر إضافية، ويعرض Unknown عند غياب دليل صريح. لا ينفذ بروتوكول Download Mode خاصًا أو ضغطات إحداثية أو تجاوزًا لمصادقة OEM؛ يلزم اختبار Hardware-in-the-Loop على موديلات ونسخ Odin معتمدة.", ModuleImplementationStatus.InDevelopment)
+                new("samsung-service", "أتمتة عمليات Odin وDownload Mode المتقدمة", "Samsung Odin advanced service automation", "يتحقق من مسار Odin والنافذة وحقول الملفات ومنفذ COM وزر Start القابل للاستدعاء، ويطلب تأكيد التوافق والنسخة الاحتياطية قبل Invoke واحد. بعد البدء يقرأ PASS/FAIL ونسبة التقدم من Windows UI Automation دون إرسال أوامر إضافية، ويعرض Unknown عند غياب دليل صريح. ويتطلب كل تنفيذ Start صلاحية DeviceOperations وتسجيل حدث في التدقيق المحلي قبل الإرسال. لا ينفذ بروتوكول Download Mode خاصًا أو ضغطات إحداثية أو تجاوزًا لمصادقة OEM؛ يلزم اختبار Hardware-in-the-Loop على موديلات ونسخ Odin معتمدة.", ModuleImplementationStatus.InDevelopment),
+                new("samsung-odin-start-authorization", "حماية تنفيذ Start بالصلاحيات وسجل التدقيق", "Odin Start authorization and audit", "يعيد التحقق من صلاحية DeviceOperations بعد التأكيد النهائي ويسجل محاولة تنفيذ Start في سجل التدقيق المحلي؛ يتوقف التنفيذ إذا غابت الصلاحية أو تعذر حفظ السجل. حدث التدقيق يثبت محاولة الاستدعاء المصرح بها ولا يثبت نجاح التفليش أو إقلاع الهاتف.", ModuleImplementationStatus.Tested)
             ]),
         new("xiaomi-tools", 7, "الشركات والمعالجات", "أدوات Xiaomi وRedmi وPOCO", "Xiaomi Tools",
             "يجمع خصائص Xiaomi/Redmi/POCO وMIUI/HyperOS والمنطقة ونسخة البناء وVerified Boot من مفاتيح getprop ثابتة على الهاتف المصرح به. عمليات Xiaomi Fastboot الخاصة بالموديل ما زالت غير مفعّلة.",
@@ -161,7 +164,7 @@ public static class SoftBoxModuleCatalog
                 new("firmware-compatibility", "محرك توافق Firmware قبل الاستخدام", "Fail-closed firmware compatibility gate", "يقارن الشركة والموديل وProduct وBoard/Hardware SKU والمنطقة وAnti-Rollback وسلامة الملف وتوقيع الناشر؛ القيم الناقصة Unknown وتمنع السماح. هذه بوابة معلوماتية ولا تبدأ Flash أو تمنح تفويضًا.", ModuleImplementationStatus.Tested)
             ]),
         new("usb-doctor", 12, "الاتصال والتشخيص", "طبيب USB", "USB Doctor",
-            "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز؛ لا يثبت أو يزيل تعريفات.",
+            "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز. إدارة حزم تعريف Windows متاحة في أداة منفصلة وبفحوص توقيع وتوافق وصلاحيات؛ لا يوجد تثبيت تلقائي لتعريف مجهول.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("usb-transports", "فحص أوضاع ADB وFastboot المتاحة", "ADB and Fastboot transport inspection", "استعلامات قراءة فقط؛ لا تكتشف كل أوضاع الشركات مثل EDL وDownload وPreloader.", ModuleImplementationStatus.Implemented, "UsbTransport"),
@@ -169,10 +172,16 @@ public static class SoftBoxModuleCatalog
                 new("usb-mode-hints", "تمييز مؤشرات Qualcomm وMediaTek وSamsung وGoogle", "Known USB mode hints", "كتالوج محدود لمعرفات VID/PID الشائعة؛ لا يثبت الموديل أو التوافق ولا ينفذ بروتوكول الخدمة.", ModuleImplementationStatus.Implemented),
                 new("usb-setup", "إرشادات وتجهيز اتصال USB", "USB connection setup", "يفتح تعليمات إعداد أدوات USB وADB ولا يثبت تعريفات مجهولة.", ModuleImplementationStatus.Implemented, "SetupUsb"),
                 new("connection-help", "مساعدة توصيل الهاتف وحل اتصال ADB", "USB connection help", "تعليمات الاتصال الحالية في البرنامج.", ModuleImplementationStatus.Implemented),
-                new("oem-driver-center", "مركز موارد تعريفات USB الرسمية لأكثر من 15 شركة", "Official OEM USB driver and support center", "يعرض روابط HTTPS لصفحات الشركات المصنّعة الرسمية المعتمدة في دليل Android Developers، ويختار الشركة الأقرب لهوية الهاتف المقروءة. حزم التعريف قد تختلف حسب الموديل وإصدار Windows؛ لا يثبت ملفات غير موقعة أو تعريفًا عامًا على كل الأجهزة.", ModuleImplementationStatus.Tested, "OpenUsbDriverCenter"),
+                new("oem-driver-center", "مركز 33 موردًا رسميًا لتعريفات وأدوات الشركات", "33 official OEM driver, tool and support resources", "يعرض 33 مصدر HTTPS رسميًا من الشركات وموردي الأنظمة، ويصنف كل مصدر إلى تعريف USB أو MTP إقليمي أو أداة Windows أو بوابة دعم. يفحص وصول صفحة المصدر لحظيًا عبر HTTPS ويعرض رمز HTTP والتحويلات دون تنزيل الحزمة. كما يطابق Hardware IDs التي قرأها Windows مع أقسام Models في INF لتحديد تطابق مرشح للمعمارية وBuild؛ أي زخرفة ProductType/SuiteMask غير محسومة تبقى Unknown. لا يثبت الوصول وجود ملف تعريف مباشر أو أن Windows سيختار هذا القسم؛ يلزم تحقق CAT والتوقيع واختيار SetupAPI النهائي قبل التثبيت.", ModuleImplementationStatus.InDevelopment, "OpenUsbDriverCenter"),
                 new("samsung-driver", "تثبيت تعريف Samsung الرسمي الاختياري", "Samsung official driver", "مضمن في حزمة Windows؛ لا يعني دعم Download Mode أو عمليات صيانة خاصة.", ModuleImplementationStatus.Implemented, "InstallSamsungDriver"),
                 new("windows-driver-health", "فحص حالة PnP ومشكلات تعريف USB", "Windows PnP device health", "يعرض حالة الجهاز ورمز المشكلة المبلغ عنه من Windows؛ لا يتحقق من توقيع التعريف أو يغيره.", ModuleImplementationStatus.Implemented),
-                new("usb-driver-signature", "التحقق من توقيع Windows Authenticode وعضوية CAT لتعريف USB", "Windows USB driver Authenticode and catalog membership verification", "يستخدم WinVerifyTrust لتوقيع الملف المضمّن أو الكتالوج، ويستخدم Microsoft SignTool من Windows SDK بالأمر verify /v /pa /c للتحقق أيضًا من تطابق ملف SYS/INF/DLL مع أحد أعضاء CAT. لا يعتمد العضوية إذا غاب SignTool أو أخفق التحقق؛ يعرض الناشر والبصمة عند توفرهما ولا يثبت تعريفًا أو يغير Driver Store.", ModuleImplementationStatus.InDevelopment, "OpenUsbDriverSignatureVerifier")
+                new("usb-driver-signature", "التحقق من توقيع Windows Authenticode وعضوية CAT لتعريف USB", "Windows USB driver Authenticode and catalog membership verification", "يستخدم WinVerifyTrust لتوقيع الملف المضمّن أو الكتالوج، ويستخدم Microsoft SignTool من Windows SDK بالأمر verify /v /pa /c للتحقق أيضًا من تطابق ملف SYS/INF/DLL مع أحد أعضاء CAT. لا يعتمد العضوية إذا غاب SignTool أو أخفق التحقق؛ يعرض الناشر والبصمة عند توفرهما ولا يثبت تعريفًا أو يغير Driver Store.", ModuleImplementationStatus.InDevelopment, "OpenUsbDriverSignatureVerifier"),
+                new("driver-package-manager", "إدارة حزم تعريفات Windows", "Windows driver package management", "إدارة محلية لحزم INF/CAT عبر PnPUtil بعد مطابقة Hardware IDs وتوقيع الكتالوج وعضوية INF؛ يشمل الجرد والتصدير والتثبيت والإزالة الصريحة دون /force.", ModuleImplementationStatus.InDevelopment, "OpenDriverPackageManager"),
+                new("driver-package-inspection", "فحص حزمة التعريف قبل التثبيت", "Driver package compatibility and trust validation", "يفحص تطابق INF مع Hardware IDs وإصدار Windows والمعمارية، ثم توقيع CAT وعضوية INF قبل السماح بالتثبيت.", ModuleImplementationStatus.InDevelopment, "InspectUsbDriverPackage"),
+                new("driver-package-inventory", "جرد حزم التعريفات المثبتة", "Installed driver package inventory", "يعرض نتائج pnputil /enum-drivers من Windows كما هي دون افتراض صيغة لغة النظام.", ModuleImplementationStatus.InDevelopment, "ListUsbDriverPackages"),
+                new("driver-package-install", "تثبيت أو استعادة حزمة تعريف معتمدة", "Install or restore a verified driver package", "يستخدم pnputil /add-driver /install بعد فحوص التوافق والتوقيع، ويتطلب UAC ولا يدعي سلامة الجهاز قبل إعادة فحصه.", ModuleImplementationStatus.InDevelopment, "InstallUsbDriverPackage"),
+                new("driver-package-export", "تصدير نسخة احتياطية من حزمة تعريف", "Export driver package backup", "يصدر حزمة منشورة بالاسم oemNN.inf إلى مجلد يحدده الفني عبر PnPUtil.", ModuleImplementationStatus.InDevelopment, "ExportUsbDriverPackage"),
+                new("driver-package-remove", "إزالة حزمة تعريف منشورة", "Remove a published driver package", "يتطلب اسمًا مطابقًا للنمط oemNN.inf وتأكيدًا وUAC؛ لا يستخدم /force وقد يرفض Windows الإزالة إذا كانت الحزمة مطلوبة.", ModuleImplementationStatus.InDevelopment, "RemoveUsbDriverPackage")
             ]),
         new("smart-backup", 13, "الاتصال والتشخيص", "النسخ الاحتياطي الذكي", "Smart Backup",
             "نسخ مجلدات التخزين المشترك عبر ADB إلى ZIP مع SHA-256 لكل ملف، وخيار SBX مشفر ومصادق عليه، والتحقق والاستعادة إلى مجلد جديد على الهاتف دون الكتابة فوق ملفات موجودة؛ يدعم الآن جدولة مشفرة عند التوصيل أو يوميًا أو أسبوعيًا أثناء جلسة SoftBox المفتوحة.",
@@ -186,19 +195,22 @@ public static class SoftBoxModuleCatalog
                 new("backup-scheduler", "جدولة النسخ المشفر عند التوصيل أو يوميًا أو أسبوعيًا", "Scheduled automatic encrypted backups", "يحفظ الجداول وكلمات المرور في DPAPI، ويشغّل عامل Windows Task Scheduler كل 5 دقائق حتى بعد إغلاق واجهة SoftBox، بشرط بقاء حساب Windows الحالي مسجلًا واتصال الهاتف وتصريح ADB. يحجز الجداول بين العمليات لمنع التكرار وينفذ ملفات SBX مشفرة. لا يعمل عند تسجيل الخروج أو إيقاف الكمبيوتر، ولا ينسخ بيانات التطبيقات الخاصة أو النظام.", ModuleImplementationStatus.InDevelopment, "OpenAndroidBackupScheduler")
             ]),
         new("phone-link", 14, "الاتصال والتشخيص", "استوديو الهاتف", "Phone Link Studio",
-            "عرض وتحكم مباشر في شاشة Android عبر scrcpy مع تسجيل MP4/MKV إلى ملف محلي؛ إدارة عدة جلسات عرض مستقلة ما زالت غير مكتملة.",
+            "منظومة عرض متعددة المسارات: Android عبر ADB/scrcpy عند التصريح، وiPhone عبر AirPlay مستقل للعرض فقط، ومسار Miracast الأصلي في Windows عند توافق الطرفين. التحكم منفصل عن العرض، وبروتوكولات الشركات الأخرى مرتبطة بدعم النظام والموديل.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("screen-mirror", "عرض والتحكم في شاشة هاتف مصرح به", "Authorized screen mirroring and control", "يستخدم scrcpy الرسمي؛ يحتاج اتصال ADB مصرحًا به.", ModuleImplementationStatus.Implemented, "MirrorScreen"),
                 new("screen-record", "تسجيل شاشة الهاتف الفعلية وحفظ MP4/MKV", "Android screen recording", "يشغّل scrcpy على الجهاز المحدد مع خيار --record إلى مسار يختاره المستخدم؛ عند الإيقاف يتم إرسال WM_CLOSE لإنهاء الحاوية والتحقق من وجود ملف غير فارغ.", ModuleImplementationStatus.Implemented, "OpenScreenRecording"),
                 new("multi-session", "إدارة عدة جلسات عرض مستقلة", "Multi-device screen sessions", "نافذة عرض متعددة حتى أربع جلسات scrcpy مستقلة؛ لكل جهاز عملية ونافذة مدمجة وإيقاف منفصل، مع مراقبة ADB والعملية والنافذة كل 5 ثوانٍ. أُضيف فحص get-state جديد مباشرة قبل إطلاق scrcpy بعد تجهيز الأداة؛ اختبار الهواتف المتعددة فعليًا ما زال مطلوبًا.", ModuleImplementationStatus.InDevelopment, "OpenMultiScreenSessions"),
-                new("session-live-adb-guard", "إعادة التحقق من تصريح ADB عند بدء كل جلسة", "Fresh ADB authorization before each screen session", "يعيد فحص get-state للـSerial المحدد بعد تنزيل/تجهيز scrcpy مباشرة قبل التشغيل؛ يمنع بدء جلسة عند unauthorized أو offline أو فقد الجهاز.", ModuleImplementationStatus.Tested)
+                new("session-live-adb-guard", "إعادة التحقق من تصريح ADB عند بدء كل جلسة", "Fresh ADB authorization before each screen session", "يعيد فحص get-state للـSerial المحدد بعد تنزيل/تجهيز scrcpy مباشرة قبل التشغيل؛ يمنع بدء جلسة عند unauthorized أو offline أو فقد الجهاز.", ModuleImplementationStatus.Tested),
+                new("ios-airplay-view", "عرض شاشة iPhone عبر AirPlay على Windows", "iPhone AirPlay screen viewing on Windows", "يشغّل مستقبل AirPlay-Windows مستقلًا اختاره المستخدم من ملفه الرسمي؛ يحتاج شبكة محلية مشتركة وتأكيد المستخدم من iPhone. مسار عرض فقط ولا يوفر تحكمًا باللمس أو تجاوز رمز القفل. لا يضمّن SoftBox برنامج GPL أو يعيد توزيعه.", ModuleImplementationStatus.InDevelopment, "OpenAirPlayReceiver"),
+                new("windows-miracast-fallback", "إعداد مستقبل Windows Wireless Display لأجهزة Miracast", "Windows Wireless Display / Miracast fallback", "يفتح إعدادات Windows الرسمية لتثبيت ميزة Wireless Display وتهيئة Projecting to this PC. يعمل فقط إذا كان الكمبيوتر والهاتف يدعمان Miracast؛ الاستقبال عبر تطبيق Windows الأصلي خارج لوحة SoftBox ولا يوفر تحكمًا باللمس من SoftBox.", ModuleImplementationStatus.Implemented, "OpenMiracastSetup")
             ]),
         new("hardware-diagnostics", 15, "الاتصال والتشخيص", "تشخيص العتاد", "Hardware Diagnostics",
             "توجد اختبارات Agent وCamera2 وقراءات النظام والقياس الخارجي؛ بعض الفحوص يدوية أو تتطلب معدات.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("agent-tests", "اختبارات الشاشة واللمس والصوت والاهتزاز والحساسات", "Agent hardware screening tests", "اختبارات تتطلب موافقة المستخدم على الهاتف؛ النتائج لا تعادل قياسات معملية معايرة.", ModuleImplementationStatus.Implemented, "OpenPhoneTests"),
+                new("diagnostic-evidence-history", "سجل أدلة نتائج المكونات المشفر محليًا", "Encrypted local component diagnostic evidence history", "يحفظ نتائج DiagnosticEngine الفعلية مع الحالة والدليل ومصدر القراءة/الاختبار والتاريخ، ويستخدم بصمة SHA-256 ورقمًا تسلسليًا مقنّعًا وتشفير Windows DPAPI. الحالات المتطابقة المتكررة تُزال من التكرار؛ عدم الاختبار لا يتحول إلى نجاح.", ModuleImplementationStatus.InDevelopment, "OpenDiagnosticEvidenceHistory"),
                 new("camera-tests", "جرد Camera2 والتقاط صور وفحص AF", "Camera2 route tests", "المسارات التي يكشفها مصنع الجهاز فقط؛ لا يقيس جودة العدسة بصريًا. تُدار اختبارات Agent من نفس شاشة تشخيص العتاد.", ModuleImplementationStatus.Implemented),
                 new("screen-photo", "تحليل صورة فعلية للشاشة", "Physical screen photo analysis", "يعرض مرشحات بكسلات وتفاوت إضاءة، وليس إثباتًا نهائيًا لعيب الشاشة.", ModuleImplementationStatus.Implemented, "AnalyzeScreen"),
                 new("bench-measurements", "قراءات جهاز قياس خارجي متوافق", "External bench measurements", "بروتوكول Serial JSON-Lines للقراءات فقط؛ لا يصدر أوامر طاقة.", ModuleImplementationStatus.Implemented, "MeasurementRig"),
@@ -235,7 +247,8 @@ public static class SoftBoxModuleCatalog
             [
                 new("firmware-precheck", "فحص أولي لبنية ملف Firmware وبصمته", "Firmware pre-inspection", "الفحص المحلي وSHA-256 متاحان في Firmware Center، ولا يثبتان توقيع الناشر أو التوافق.", ModuleImplementationStatus.Implemented),
                 new("recovery-gate", "بوابة فحص الشركة والموديل والتصريح وسلامة الملف والمخاطر", "Conservative recovery preflight", "يعيد حساب SHA-256 قبل التقييم، ويطلب Snapshot مطابقًا للجهاز المصرح به، ويعرض Passed/Failed/Unknown/Blocked مع الأدلة. CanProceed يبقى false لأن سلسلة ثقة الناشر والتوافق وAnti-Rollback وإثبات النسخة غير متاحة.", ModuleImplementationStatus.Implemented),
-                new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported)
+                new("official-recovery", "إجراءات استعادة رسمية حسب الموديل", "Official model-specific recovery", "غير منفذة؛ لا يوجد تفليش أو فتح Bootloader.", ModuleImplementationStatus.Unsupported),
+                new("forgotten-lock-owner-guidance", "مساعد استرداد قفل الشاشة للمالك", "Owner-safe forgotten screen-lock recovery guidance", "يختار إرشادات الشركة الرسمية حسب النظام والموديل وإصدار One UI/OS وتوفر بيانات الحساب والنسخة الاحتياطية وإثبات الملكية. لا يخمن أو يقرأ PIN/Passcode، ولا يتجاوز FRP أو Activation Lock أو MDM، ولا ينفذ إعادة ضبط أو مسح.", ModuleImplementationStatus.InDevelopment, "OpenLockRecoveryAssistant")
             ]),
         new("workflow-automation", 20, "الأتمتة والإنتاجية", "أتمتة سير العمل", "Workflow Automation",
             "إنشاء وحفظ وتشغيل سلاسل فحص Android من خطوات قراءة فقط محددة مسبقًا مع تتبع النتائج والإلغاء.",
@@ -390,7 +403,161 @@ public static class SoftBoxModuleCatalog
             [
                 new("version-info", "عرض الإصدار وبيئة التشغيل", "Version and runtime information", "يقرأ إصدار Assembly و.NET وWindows ومعمارية التطبيق مباشرة من النظام.", ModuleImplementationStatus.Implemented, "OpenAbout"),
                 new("third-party-notices", "عرض إشعارات ومراجع مكونات الطرف الثالث", "Third-party notices", "يعرض ملف THIRD-PARTY-NOTICES المحلي عند تضمينه مع الحزمة، أو يوضح أنه غير موجود في التثبيت الحالي.", ModuleImplementationStatus.Implemented)
+            ]),
+        new("iphone-center", 37, "أجهزة Apple", "مركز iPhone وiPad", "iPhone & iPad Center",
+            "قسم مستقل لأجهزة Apple: قراءة هوية الجهاز عبر Lockdown، سجل القطع الرسمي، بيانات البطارية والفحوص الفيزيائية المسجلة بواسطة الفني. لا يخلط جلسات العرض مع Android.",
+            ModuleImplementationStatus.InDevelopment,
+            [
+                new("iphone-identity", "اكتشاف iPhone وقراءة معلوماته", "iPhone discovery and device information", "يقرأ معلومات plist الفعلية عبر أدوات Apple Lockdown بعد توصيل الجهاز وفتحه والموافقة على الوثوق بالكمبيوتر. لا يقرأ كلمات المرور ولا ينفذ Pair/Restore.", ModuleImplementationStatus.Implemented, "OpenIPhoneCenter"),
+                new("iphone-parts-history", "سجل القطع والإصلاحات", "Parts and Service History", "يسجل الحالة التي يراها الفني في الإعدادات > عام > حول مثل Genuine أو Used أو Unknown أو Unverified؛ غياب السجل لا يثبت أن القطع أصلية.", ModuleImplementationStatus.Implemented, "OpenIPhonePartsHistory"),
+                new("iphone-battery-health", "صحة البطارية ودورات الشحن", "Battery health and cycle count", "يسجل السعة القصوى وعدد الدورات ورسالة الخدمة من إعدادات iPhone الرسمية عند توفرها. نسبة الشحن الحالية لا تستخدم كبديل لصحة البطارية.", ModuleImplementationStatus.Implemented, "OpenIPhoneBatteryHealth"),
+                new("iphone-functional-checks", "اختبارات الشاشة واللمس والكاميرا والحساسات", "Physical component checks", "يسجل نتائج فحص فعلي يجريه الفني للشاشة واللمس والكاميرات وFace ID والصوت والميكروفون والحساسات ومنفذ الشحن. لا تُملأ النتائج تلقائيًا.", ModuleImplementationStatus.Implemented, "OpenIPhoneFunctionalTests"),
+                new("iphone-airplay", "عرض شاشة iPhone عبر AirPlay", "iPhone AirPlay screen viewing", "يفتح مستقبل AirPlay في نافذة مستقلة ذات مساحة عرض مستقلة عن Android/scrcpy. عرض فقط، ولا يرسل لمسًا أو رمز قفل إلى iPhone.", ModuleImplementationStatus.Implemented),
+                new("iphone-hdmi-capture", "التقاط شاشة iPhone عبر HDMI/UVC", "iPhone HDMI/UVC capture", "يفتح مسار التقاط فيديو سلكي عند دعم موديل iPhone لمخرج الفيديو وتوفر محول Apple المناسب وكارت UVC؛ لا يدعم كل الموديلات ولا يوفر تحكم لمس.", ModuleImplementationStatus.InDevelopment, "OpenIPhoneHdmiCapture"),
+                new("iphone-authenticity", "تقييم أدلة هوية الجهاز والأصالة", "Device identity evidence assessment", "يجمع استجابة Apple Lockdown ونتيجة فحص التغطية التي أدخلها الفني وسجل القطع؛ يصدر حالة أدلة متوافقة أو تحتاج مراجعة أو غير كافية، ولا يزعم إثبات أصالة مطلقًا.", ModuleImplementationStatus.InDevelopment, "OpenIPhoneAuthenticityEvidence")
+            ]),
+        new("device-identity-integrity", 38, "التحقق والحماية", "سلامة هوية الجهاز والتعبئة الذكية", "Device Identity Integrity & Smart Auto-Fill",
+            "محرك قراءة مستقل يجمع أدلة Windows USB وADB وFastboot وApple Lockdown، يصنّف أوضاع الاتصال، يكشف تعارضات المعرّفات، ويملأ حقول معلومات الجهاز من المصدر الحقيقي دون تعديل هوية الهاتف.",
+            ModuleImplementationStatus.InDevelopment,
+            [
+                new("live-mode-detection", "اكتشاف وضع الاتصال تلقائيًا", "Live transport-mode detection", "يرصد USB PnP وADB وFastboot كقنوات مستقلة، ويصنّف أوضاع EDL وPreloader/BROM وDownload Mode وRecovery وMTP وADB عند توفر دليل واضح. التلميح لا يُعامل كتعريف موديل أو تصريح وصول.", ModuleImplementationStatus.Tested, "OpenDeviceIdentityIntegrity"),
+                new("identity-source-map", "خريطة مصدر كل معرّف ودرجة الثقة", "Identifier provenance and confidence", "يعرض نوع المعرّف ومصدره ووقت القراءة ودرجة الثقة، ويفصل USB VID/PID عن Serial وADB transport ID وFastboot transport ID وApple Serial/UDID.", ModuleImplementationStatus.Implemented),
+                new("identity-conflict-analysis", "كشف تعارض المعرّفات والبيانات", "Identity conflict analysis", "يقارن فقط المعرّفات المتطابقة في المنصة والنوع والقيمة؛ لا يربط جهازين بتشابه آخر أربعة أرقام أو قرب وقت التوصيل، ويضع اختلاف الموديل/الشركة تحت المراجعة.", ModuleImplementationStatus.Tested),
+                new("smart-device-field-fill", "تعبئة حقول الشركة والموديل والوضع والمعرّف تلقائيًا", "Smart device-field population", "تُملأ حقول مركز الهوية من القراءة الفعلية المختارة مع إخفاء المعرّف افتراضيًا، ويمكن نسخ القيمة الدقيقة صراحةً. في Odin تُملأ عبارة FLASH من آخر أحرف Serial عبر ADB المصرّح فقط؛ تظل موافقات التوافق والنسخة الاحتياطية وCOM والتأكيد النهائي يدوية.", ModuleImplementationStatus.Implemented),
+                new("identity-evidence-report", "تقرير أدلة الهوية المقنّع", "Masked identity evidence report", "ينسخ تقريرًا بمعلومات المصدر والوضع ودرجة الثقة والحالة مع إخفاء المعرّفات. لا يحفظ أرقامًا خامًا أو يرسلها إلى الشبكة.", ModuleImplementationStatus.Implemented),
+                new("imei-serial-mutation", "تغيير أو تزوير IMEI أو الرقم التسلسلي", "IMEI or serial mutation", "غير مدعوم: لا توجد كتابة IMEI/Serial أو تعديل NVRAM/EFS/مناطق الخدمة أو تغيير هوية الجهاز. إصلاح الهوية المسموح به يكون عبر الشركة المصنّعة أو مركز خدمة معتمد.", ModuleImplementationStatus.Unsupported)
+            ]),
+        new("qualcomm-edl-lab", 39, "منصات المعالجات", "مختبر Qualcomm EDL وDiag", "Qualcomm EDL & Diag Lab",
+            "قسم متخصص لأجهزة Qualcomm: تمييز 9008/EDL وقراءة بيانات الخدمة وفحص ملفات Firehose وXML وخطط النسخ والاستعادة. جميع الوظائف الجديدة مخططة وليست أدوات تنفيذ متاحة بعد.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("qcom-transport-evidence", "كشف EDL و9008 وواجهات Diag", "EDL 9008 and DIAG transport discovery", "عند التنفيذ: جمع PnP Hardware IDs وCOM وحالة التعريف ومصدر كل دليل، مع فصل هوية USB عن موديل الهاتف وعدم افتراض أن كل 9008 قابل للبرمجة.", ModuleImplementationStatus.Planned),
+                new("qcom-firehose-validation", "فحص حزمة Firehose وتوافقها", "Firehose package validation", "عند التنفيذ: التحقق من مصدر الحزمة وتوقيعها وبصمتها وربطها بقائمة الموديلات والشرائح المسموح بها. لن يُحمّل Programmer مجهول أو غير متوافق.", ModuleImplementationStatus.Planned),
+                new("qcom-xml-package-inspector", "تحليل rawprogram.xml وpatch.xml", "Rawprogram and patch XML inspection", "عند التنفيذ: قراءة أسماء الأقسام والعناوين والأحجام وترابط الملفات واكتشاف التداخل أو الخروج عن حدود صورة التخزين دون إرسال عمليات كتابة.", ModuleImplementationStatus.Planned),
+                new("qcom-readback-backup", "قراءة معلومات ونسخ احتياطي موثق", "Read-only information and verified backup", "عند التنفيذ: عرض معلومات الجهاز وقراءة البيانات فقط عندما يسمح البروتوكول والتعريف الموثق بذلك، مع بصمات لكل ملف وحفظ مشفر محليًا.", ModuleImplementationStatus.Planned),
+                new("qcom-restore-preflight", "بوابة توافق الاستعادة", "Qualcomm restore preflight", "عند التنفيذ: مقارنة الموديل واللوحة والذاكرة وإصدار الحزمة والتوقيع ومصدر Programmer قبل أي إجراء كتابة؛ أي دليل ناقص يحول الحالة إلى Unknown أو Blocked.", ModuleImplementationStatus.Planned)
+            ]),
+        new("mediatek-brom-lab", 40, "منصات المعالجات", "مختبر MediaTek BROM وPreloader وMETA", "MediaTek BROM, Preloader & META Lab",
+            "قسم MediaTek مستقل لفصل BROM وPreloader وMETA وفحص Scatter وDownload Agent ومتطلبات AUTH. وجود واجهة USB لا يعني أن الهاتف قابل للتفليش.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("mtk-mode-discovery", "تمييز BROM وPreloader وMETA", "BROM, Preloader and META discovery", "عند التنفيذ: تصنيف واجهات USB من أدلة Windows الفعلية مع حفظ VID/PID وخدمة التعريف وحالة الاتصال ودرجة الثقة.", ModuleImplementationStatus.Planned),
+                new("mtk-scatter-inspector", "محلل Scatter وملفات الأقسام", "Scatter and partition inspector", "عند التنفيذ: تحليل مخطط الأقسام وأحجامها وعناوينها وربط كل صورة بموضعها، واكتشاف الملفات الناقصة أو المتضاربة.", ModuleImplementationStatus.Planned),
+                new("mtk-da-auth-validator", "فحص Download Agent وAUTH", "Download Agent and AUTH validation", "عند التنفيذ: التحقق من هوية DA ومصدره وبصمته وتوافقه مع الموديل وإظهار متطلبات SLA/DAA/Auth. لن يتم تجاوز المصادقة أو تحميل DA مجهول.", ModuleImplementationStatus.Planned),
+                new("mtk-meta-inspector", "قراءة تشخيصات META", "META diagnostics", "عند التنفيذ: قراءة المعلومات التي يتيحها وضع META وبناء تقرير مصدره واضح، دون كتابة NVRAM أو تعديل معرّفات الشبكة.", ModuleImplementationStatus.Planned),
+                new("mtk-backup-plan", "خطة نسخ واستعادة MediaTek", "MediaTek backup and restore plan", "عند التنفيذ: إنشاء خطة قراءة ونسخ احتياطي للتحقق من سلامة الملفات، مع منع الكتابة إلى أقسام حساسة دون بروتوكول OEM موثق وتأكيد ملكية الجهاز.", ModuleImplementationStatus.Planned)
+            ]),
+        new("unisoc-spd-lab", 41, "منصات المعالجات", "مختبر Unisoc وSpreadtrum", "Unisoc & Spreadtrum Lab",
+            "قسم مستقل لأجهزة Unisoc/Spreadtrum مع فحص PAC والتعريفات وخرائط الأقسام وإصدارات أدوات الخدمة حسب الموديل.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("unisoc-usb-discovery", "كشف أوضاع USB وDiag", "Unisoc USB and DIAG discovery", "عند التنفيذ: تمييز واجهات Unisoc المعروفة من أدلة PnP، وإظهار حالة التعريف دون تخمين البروتوكول.", ModuleImplementationStatus.Planned),
+                new("unisoc-pac-inspector", "تحليل حزم PAC", "PAC firmware inspection", "عند التنفيذ: قراءة بيانات الحزمة وأسماء الصور والأحجام والبصمات واكتشاف التكرار أو النقص قبل الاستخدام.", ModuleImplementationStatus.Planned),
+                new("unisoc-partition-map", "قراءة خريطة الأقسام", "Unisoc partition map", "عند التنفيذ: تحليل خرائط الأقسام المعروفة ومقارنتها بملفات Firmware المحلية مع إظهار مصدر كل تعريف.", ModuleImplementationStatus.Planned),
+                new("unisoc-device-info", "قراءة معلومات الجهاز وإصدار النظام", "Unisoc device information", "عند التنفيذ: جمع المعلومات المتاحة من قناة خدمة موثقة، وتسجيل الحقول غير المتاحة باعتبارها Unknown بدل ملئها تخمينًا.", ModuleImplementationStatus.Planned),
+                new("unisoc-recovery-gate", "فحص الاستعادة بعد فشل التحديث", "Unisoc recovery preflight", "عند التنفيذ: إعداد مسار استعادة موثق للحزم المتوافقة فقط، مع فحص التوقيع والطراز والمنطقة وإصدار Bootloader قبل الكتابة.", ModuleImplementationStatus.Planned)
+            ]),
+        new("rockchip-allwinner-lab", 42, "منصات المعالجات", "مختبر Rockchip وAllwinner", "Rockchip & Allwinner Lab",
+            "قسم للأجهزة اللوحية والهواتف والأجهزة المدمجة التي تستخدم Rockchip أو Allwinner، مع فحص MaskROM/Loader وحزم الصور.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("rk-maskrom-discovery", "كشف MaskROM وLoader", "MaskROM and Loader discovery", "عند التنفيذ: اكتشاف أوضاع الخدمة المعلنة فعليًا في USB PnP وتمييزها عن وضع MTP أو USB العادي.", ModuleImplementationStatus.Planned),
+                new("rk-firmware-inspector", "فحص حزم Rockchip وAllwinner", "Rockchip and Allwinner firmware inspection", "عند التنفيذ: قراءة بنية الحزم والملفات الوصفية والصور والأحجام والبصمات دون تشغيل عمليات كتابة.", ModuleImplementationStatus.Planned),
+                new("rk-image-partition-map", "تحليل الصور وخرائط الأقسام", "Image and partition map analysis", "عند التنفيذ: عرض حدود الأقسام وصيغ الصور ومقارنة الخريطة مع ملف الموديل المعتمد.", ModuleImplementationStatus.Planned),
+                new("rk-readback-verifier", "التحقق من النسخ المقروءة", "Readback verification", "عند التنفيذ: مقارنة SHA-256 وأحجام القطاعات بين النسخة المقروءة والمصدر المعروف، مع تقرير فروق واضح.", ModuleImplementationStatus.Planned),
+                new("rk-recovery-workflow", "خطة استعادة الأجهزة المتوقفة", "Rockchip and Allwinner recovery workflow", "عند التنفيذ: إرشاد فني لاستعادة موثقة ومطابقة للوحة والذاكرة، مع حظر Loader غير معروف أو غير موقع.", ModuleImplementationStatus.Planned)
+            ]),
+        new("huawei-kirin-lab", 43, "منصات الشركات", "مختبر Huawei وHonor Kirin", "Huawei & Honor Kirin Lab",
+            "قسم Huawei/Honor المتقدم لتمييز Fastboot وUSB COM وRecovery/Upgrade، وتحليل APP/dload، مع الاعتماد على المصادر الرسمية المصرح بها.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("kirin-mode-discovery", "تمييز Fastboot وUSB COM وUpgrade", "Fastboot, USB COM and Upgrade mode discovery", "عند التنفيذ: توثيق الواجهات والأوضاع التي يعلنها الهاتف وWindows، وعدم اعتبار COM وحده دليل موديل أو صلاحية أداة.", ModuleImplementationStatus.Planned),
+                new("kirin-app-dload-inspector", "تحليل حزم APP وdload", "APP and dload package inspector", "عند التنفيذ: فحص البنية والملفات والتوقيع والبصمات والنسخ الإقليمية دون إعادة توزيع حزم غير مرخصة.", ModuleImplementationStatus.Planned),
+                new("kirin-board-region-matrix", "مطابقة اللوحة والمنطقة وإصدار النظام", "Board, region and build compatibility matrix", "عند التنفيذ: مقارنة Board ID والمنطقة وإصدار Bootloader وRollback والنسخة المنشورة من الشركة.", ModuleImplementationStatus.Planned),
+                new("kirin-official-recovery", "مسار الاستعادة الرسمي", "Official Huawei and Honor recovery handoff", "عند التنفيذ: فتح أو أتمتة المسارات الرسمية المدعومة فقط، مع إبقاء المصادقة الخاصة بالشركة خارج أي تجاوز.", ModuleImplementationStatus.Planned),
+                new("kirin-boot-diagnostics", "تشخيص Bootloop وفشل الإقلاع", "Kirin boot-loop diagnostics", "عند التنفيذ: جمع سجلات وأدلة الإقلاع المتاحة وربطها بنسخة Firmware واللوحة، دون تغيير بيانات الجهاز تلقائيًا.", ModuleImplementationStatus.Planned)
+            ]),
+        new("firmware-engineering-studio", 44, "الهندسة والاستعادة", "استوديو هندسة Firmware", "Firmware Engineering Studio",
+            "مركز موحد لمكتبة البرامج الثابتة وتحليل صيغها ومقارنة الإصدارات والتحقق من المصدر والتوقيع والتوافق. يوسّع Firmware Center الحالي دون تكرار محركه.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("firmware-format-readers", "قارئات صيغ Firmware متعددة", "Multi-format firmware readers", "عند التنفيذ: إضافة قارئات منفصلة لـTAR/TAR.MD5 وZIP/OTA وpayload.bin وPAC وScatter وXML وOFP وAPP والصور الخام حسب كل صيغة موثقة.", ModuleImplementationStatus.Planned),
+                new("firmware-source-catalog", "كتالوج مصادر الشركات الرسمية", "Official OEM firmware source catalog", "عند التنفيذ: تسجيل رابط المصدر والمنطقة والموديل وتاريخ النشر وشروط الترخيص؛ لا تُعامل روابط المنتديات أو المرايا كمصدر رسمي.", ModuleImplementationStatus.Planned),
+                new("firmware-signature-trust", "التحقق من التوقيع وسلسلة الثقة", "Firmware signature and trust validation", "عند التنفيذ: التحقق من التوقيع بمفاتيح موثوقة معلنة، وفصل نجاح SHA-256 عن إثبات ناشر الحزمة.", ModuleImplementationStatus.Planned),
+                new("firmware-diff-engine", "مقارنة نسخ Firmware والأقسام", "Firmware version and partition diff", "عند التنفيذ: مقارنة Manifest وأسماء الأقسام وأحجامها وبصماتها وتحديد التغييرات بين إصدارين دون كتابة إلى الهاتف.", ModuleImplementationStatus.Planned),
+                new("firmware-compatibility-ledger", "سجل توافق الموديل والمنطقة واللوحة", "Model, region and board compatibility ledger", "عند التنفيذ: ربط كل حزمة بموديل ورقم لوحة ومنطقة وBootloader وRollback مثبتة، وحظر أي حالة Unknown.", ModuleImplementationStatus.Planned)
+            ]),
+        new("partition-filesystem-lab", 45, "الهندسة والاستعادة", "مختبر الأقسام وأنظمة الملفات", "Partition & Filesystem Lab",
+            "قسم لقراءة خرائط GPT/MBR وصور الأقسام وملفات Android sparse وSuper وملفات الأنظمة للقراءة والتحقق.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("partition-table-reader", "قارئ GPT وMBR", "GPT and MBR reader", "عند التنفيذ: تحليل رؤوس وجداول الأقسام والتحقق من CRC والحدود والتداخل دون تعديل الجدول.", ModuleImplementationStatus.Planned),
+                new("android-sparse-reader", "قارئ Android Sparse وRaw Images", "Android sparse and raw image reader", "عند التنفيذ: قراءة بيانات Sparse وحساب الحجم المنطقي ومقارنة البصمات مع الصور الخام.", ModuleImplementationStatus.Planned),
+                new("super-partition-inspector", "فحص Dynamic وSuper Partitions", "Dynamic and super partition inspector", "عند التنفيذ: عرض Logical Partitions ومجموعات الأحجام والعلاقات بين الصور دون إعادة بناء تخمينية.", ModuleImplementationStatus.Planned),
+                new("filesystem-readonly-inspector", "فحص ext4 وF2FS للقراءة فقط", "Read-only ext4 and F2FS inspection", "عند التنفيذ: فحص معلومات النظام والاتساق والملفات المتاحة من صور مسموح بقراءتها فقط؛ لا يتجاوز تشفير Android.", ModuleImplementationStatus.Planned),
+                new("partition-map-compare", "مقارنة خرائط الأقسام بين الإصدارات", "Partition map comparison", "عند التنفيذ: مقارنة ترتيب الأقسام وأحجامها ومعرّفاتها وإظهار مخاطر اختلاف التخطيط قبل أي خطة استعادة.", ModuleImplementationStatus.Planned)
+            ]),
+        new("emmc-ufs-memory-lab", 46, "الهندسة والاستعادة", "مختبر eMMC وUFS والذاكرة", "eMMC & UFS Memory Lab",
+            "قسم لأعمال الذاكرة والتوصيل الخارجي وقراءة بيانات التعريف والصحة وملفات النسخ، مع دعم أدوات ISP/JTAG الخارجية عند توافر بروتوكول موثق.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("memory-adapter-inventory", "اكتشاف محولات eMMC وUFS وISP", "eMMC, UFS and ISP adapter inventory", "عند التنفيذ: تعريف المحول والواجهة والبرنامج الثابت وإمكانات القراءة/الكتابة التي يعلنها فعليًا.", ModuleImplementationStatus.Planned),
+                new("emmc-ufs-identification", "قراءة CID وCSD وEXT_CSD وUFS descriptors", "Memory identification and descriptors", "عند التنفيذ: قراءة بيانات التعريف التي يتيحها المتحكم وتسجيلها مع مصدر القراءة والوقت.", ModuleImplementationStatus.Planned),
+                new("memory-health-diagnostics", "تشخيص صحة الذاكرة ومؤشرات العمر", "Memory health and lifetime indicators", "عند التنفيذ: تفسير مؤشرات الصحة والعمر التي يعلنها الجهاز أو المحول، دون تحويل مؤشرات غير متاحة إلى نسب تخمينية.", ModuleImplementationStatus.Planned),
+                new("memory-image-integrity", "إدارة صور الذاكرة والتحقق منها", "Memory image integrity manager", "عند التنفيذ: إدارة ملفات Dump وأحجامها وبصماتها وتقسيمها والتحقق من اكتمال القراءة قبل اعتماد النسخة.", ModuleImplementationStatus.Planned),
+                new("memory-write-preflight", "بوابة كتابة واستعادة الذاكرة", "Memory write and restore preflight", "عند التنفيذ: قفل الكتابة افتراضيًا إلى أن تتوفر هوية شريحة دقيقة وخريطة أقسام ونسخة احتياطية وموافقة فني وبروتوكول موثق.", ModuleImplementationStatus.Planned)
+            ]),
+        new("boot-recovery-center", 47, "الهندسة والاستعادة", "مركز Boot وRecovery والإنقاذ", "Boot, Recovery & Rescue Center",
+            "مركز موحد لمتابعة أوضاع الإقلاع والاستعادة عبر Android وApple، مع فصل البروتوكولات الخاصة بكل شركة.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("boot-state-matrix", "خريطة أوضاع الإقلاع المدعومة", "Boot-state and transport matrix", "عند التنفيذ: ربط ADB وFastboot/Fastbootd وRecovery وSideload وSamsung Download وApple Recovery/DFU بأدلتها الفعلية.", ModuleImplementationStatus.Planned),
+                new("bootloop-diagnostics", "تشخيص Bootloop وفشل الإقلاع", "Boot-loop and startup failure diagnostics", "عند التنفيذ: جمع السجلات ومعلومات آخر تحديث وحالة الأقسام المتاحة ثم إعداد تقرير تشخيص دون تنفيذ مسح تلقائي.", ModuleImplementationStatus.Planned),
+                new("official-sideload-guides", "أدلة OTA وSideload الرسمية", "Official OTA and sideload workflows", "عند التنفيذ: تجهيز ملفات OTA ومراجعة مصدرها ومطابقة الموديل ثم تمرير المستخدم عبر المسار الرسمي الذي يدعمه الجهاز.", ModuleImplementationStatus.Planned),
+                new("recovery-session-monitor", "مراقبة جلسة الاستعادة", "Recovery session monitor", "عند التنفيذ: متابعة الاتصال والتقدم والسجلات وإظهار حالة Unknown عند غياب نتيجة صريحة من أداة الشركة.", ModuleImplementationStatus.Planned),
+                new("boot-rescue-report", "تقرير الإنقاذ وسجل ما قبل/بعد", "Boot rescue before-and-after report", "عند التنفيذ: توثيق حالة الجهاز قبل وبعد الإجراء وملفات Firmware وبصماتها وتأكيدات الفني ونتيجة الإقلاع.", ModuleImplementationStatus.Planned)
+            ]),
+        new("board-repair-lab", 48, "الصيانة المادية", "مختبر اللوحات والمكونات", "Boardview & Component Repair Lab",
+            "قسم هندسة اللوحات لربط Boardview والمخططات ومراجع المكونات وقياسات الفني، مع بيانات مصدرها موثق لكل موديل ومراجعة لوحة.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("board-map-library", "مكتبة Boardview وخرائط اللوحات", "Boardview and board map library", "عند التنفيذ: فهرسة خرائط مرتبطة بموديل ومراجعة PCB ومصدر وترخيص ومراجع تحقق واضحة؛ لا تُولد إحداثيات IC افتراضية.", ModuleImplementationStatus.Planned),
+                new("component-cross-reference", "بحث المكونات وأرقام القطع", "Component and part-number cross-reference", "عند التنفيذ: ربط أسماء المكونات وأرقامها ووظائفها ومراجع الاستبدال عندما تتوفر وثائق موثوقة.", ModuleImplementationStatus.Planned),
+                new("test-point-reference", "مراجع Test Point وخطوط القياس", "Test-point and rail references", "عند التنفيذ: عرض نقاط القياس وخطوط الطاقة بقيم ووحدات ومصدر موثق خاص بالمراجعة الدقيقة للوحة.", ModuleImplementationStatus.Planned),
+                new("measurement-evidence", "تسجيل قياسات الفني", "Technician measurement evidence", "عند التنفيذ: إدخال قراءات ملتيميتر/مزود طاقة/محلل USB وربطها بالمكون واللوحة وأداة القياس وحالة المعايرة.", ModuleImplementationStatus.Planned),
+                new("board-repair-history", "تاريخ إصلاح اللوحة والمكونات", "Board and component repair history", "عند التنفيذ: حفظ صور ما قبل/بعد وملاحظات الاستبدال ونتائج القياس وسجل القطع المستخدمة بموافقة العميل.", ModuleImplementationStatus.Planned)
+            ]),
+        new("network-radio-lab", 49, "الصيانة المادية", "مختبر الشبكات والمودم وRF", "Network, Modem & RF Lab",
+            "قسم تشخيص الشبكات والاتصالات الخلوية وWi-Fi وBluetooth وGPS وNFC، مع تجنب تغيير هوية الجهاز أو بيانات الشبكة الحساسة.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("radio-status-reader", "قراءة حالة Baseband وSIM والشبكة", "Baseband, SIM and network status", "عند التنفيذ: عرض حالة المودم وSIM والشبكة والمشغل والبيانات التي يسمح النظام بقراءتها.", ModuleImplementationStatus.Planned),
+                new("connectivity-diagnostics", "اختبارات Wi-Fi وBluetooth وGPS وNFC", "Wi-Fi, Bluetooth, GPS and NFC diagnostics", "عند التنفيذ: اختبارات وظيفية بموافقة المستخدم وتسجل حالة كل اختبار ومصدر النتيجة دون الادعاء بقياس RF معاير.", ModuleImplementationStatus.Planned),
+                new("apn-carrier-check", "فحص APN وحالة قفل الشبكة", "APN and carrier-lock status", "عند التنفيذ: قراءة إعدادات APN وحالة قفل المشغل؛ فتح الشبكة يمر عبر موافقة المشغل أو الشركة المصنعة الرسمية فقط.", ModuleImplementationStatus.Planned),
+                new("modem-log-sanitizer", "تحليل سجلات المودم مع إخفاء البيانات", "Modem log analysis and redaction", "عند التنفيذ: تحليل سجلات مختارة وإخفاء أرقام الهاتف والمعرّفات والبيانات الشخصية قبل الحفظ أو التصدير.", ModuleImplementationStatus.Planned),
+                new("rf-measurement-integration", "ربط أجهزة قياس RF الخارجية", "External RF instrument integration", "عند التنفيذ: استقبال قراءات أجهزة قياس موثقة مع نوع الهوائي والتردد ووحدة القياس ومعايرة الأداة.", ModuleImplementationStatus.Planned)
+            ]),
+        new("data-rescue-migration-lab", 50, "البيانات والعمليات", "مختبر إنقاذ البيانات ونقلها", "Data Rescue & Migration Lab",
+            "مركز لحفظ بيانات العميل ونقلها والتحقق من النسخ عند توفر وصول مصرح وفك تشفير النظام بالطريقة الرسمية، دون تجاوز قفل الجهاز أو التشفير.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("owner-authorized-data-backup", "نسخ بيانات العميل بموافقته", "Owner-authorized data backup", "عند التنفيذ: نسخ الملفات والبيانات التي يتيحها النظام بعد موافقة المالك، مع تقرير بالملفات المقروءة والمتعذرة.", ModuleImplementationStatus.Planned),
+                new("selective-data-migration", "نقل انتقائي بين الأجهزة", "Selective device-to-device migration", "عند التنفيذ: نقل الصور والفيديو والمستندات وجهات الاتصال والملفات المتاحة مع معاينة قائمة البيانات قبل التنفيذ.", ModuleImplementationStatus.Planned),
+                new("backup-integrity-verification", "التحقق من سلامة النسخة الاحتياطية", "Backup integrity verification", "عند التنفيذ: إعادة حساب SHA-256 والتحقق من أعداد الملفات والأحجام وفتح الأرشيف قبل اعتماد النسخة.", ModuleImplementationStatus.Planned),
+                new("encrypted-local-vault", "خزنة محلية مشفرة لبيانات العملاء", "Encrypted local customer vault", "عند التنفيذ: تخزين محلي مشفر بمفاتيح حماية النظام وصلاحيات مستخدم منفصلة وسياسة احتفاظ وحذف موثقة.", ModuleImplementationStatus.Planned),
+                new("data-access-boundary", "تقرير حدود الوصول والتشفير", "Data access and encryption boundary report", "عند التنفيذ: توضيح ما أمكن قراءته وما ظل محميًا بالتشفير أو صلاحيات النظام؛ لا توجد ميزة لتجاوز PIN أو Activation Lock أو تشفير البيانات.", ModuleImplementationStatus.Planned)
+            ]),
+        new("service-automation-center", 51, "البيانات والعمليات", "مركز عمليات الصيانة والأتمتة", "Service Operations & Automation Center",
+            "مركز تشغيل أعمال الصيانة متعددة الأجهزة: طوابير المهام والجلسات الحصرية والقوالب وسجل التدقيق والتقارير، مع ربط الأدوات الموجودة بدل نسخها.",
+            ModuleImplementationStatus.Planned,
+            [
+                new("durable-service-job-queue", "طابور مهام دائم مع إيقاف واستئناف", "Durable service job queue", "عند التنفيذ: حفظ حالة كل مهمة ومعلماتها الآمنة وملفاتها المرجعية، مع Cancel/Resume وسياسة استرداد بعد إغلاق التطبيق.", ModuleImplementationStatus.Planned),
+                new("per-device-session-lock", "جلسة منفصلة وقفل لكل هاتف", "Per-device session isolation", "عند التنفيذ: منع تشغيل عمليتين متعارضتين على الهاتف نفسه، مع السماح بجلسات مستقلة لأجهزة مختلفة.", ModuleImplementationStatus.Planned),
+                new("service-workflow-templates", "قوالب إجراءات حسب الشركة والموديل", "Brand and model service workflow templates", "عند التنفيذ: قوالب مبنية على موديل ووضع اتصال وأداة موثقة، ولا تعرض خطوة غير مدعومة كزر قابل للتنفيذ.", ModuleImplementationStatus.Planned),
+                new("multi-device-orchestration", "تنسيق عمليات عدة أجهزة", "Multi-device operation orchestration", "عند التنفيذ: إدارة التوازي وحدود الموارد والإلغاء لكل جهاز مع تقرير منفصل وعدم مشاركة معرّفات أو ملفات بين الجلسات.", ModuleImplementationStatus.Planned),
+                new("service-evidence-bundle", "حزمة أدلة وتقرير لكل عملية", "Per-operation evidence bundle", "عند التنفيذ: جمع سجل الإجراء والصلاحية والموافقة والإصدارات والبصمات والنتيجة والقيود في تقرير قابل للتدقيق.", ModuleImplementationStatus.Planned)
             ])
+
     ];
 
     public static IReadOnlySet<string> SupportedActionIds { get; } = new HashSet<string>(StringComparer.Ordinal)
@@ -401,6 +568,10 @@ public static class SoftBoxModuleCatalog
         "RepairGuides", "OpenApkLab", "OpenNetworkDiagnostics", "OpenFastbootManager", "OpenAndroidAppManager", "OpenAndroidFileManager", "OpenAndroidCommandCenter", "OpenAndroidBatchTools", "OpenAndroidServiceOperations", "OpenPhoneBackup", "OpenAndroidWorkflow", "OpenWirelessAdbPairing", "OpenUsbDoctor", "OpenUsbDriverSignatureVerifier", "OpenQualcommUsbDiagnostics", "OpenMediaTekUsbDiagnostics", "OpenFirmwareCenter", "OpenDeviceHistory", "OpenNotificationCenter", "OpenDashboardAnalytics", "OpenSupportBundle", "OpenSupportCenter", "OpenHelpCenter", "OpenOfflineCenter", "OpenAbout", "OpenPartsInventory", "OpenSamsungDiagnostics", "OpenSamsungOdinAssistant", "OpenSamsungServiceOperations", "OpenSamsungOfficialTools", "OpenXiaomiFastbootService", "OpenXiaomiOfficialTools", "OpenBrandOfficialTools", "OpenQualcommRecovery", "OpenMediaTekRecovery", "OpenAndroidLogAnalyzer", "OpenAndroidBackupScheduler", "OpenXiaomiDiagnostics", "OpenBrandDiagnostics", "OpenDeviceCapabilityCenter", "OpenPluginStore", "OpenApplicationSettings", "OpenRepairAdvisor", "OpenOneClickDiagnostic", "ExportDeviceReport", "ConnectionHelp", "AgentHelp",
         "UpdateAgent", "SetupUsb", "ImportBoardMap", "OpenBoardView",
         "OpenWorkshopBackup", "OpenWorkshopBackupScheduler", "OpenGlobalWorkshopHistory",
+        "OpenUniversalDeviceDiscovery", "OpenMaintenanceModeCenter", "OpenAirPlayReceiver", "OpenMiracastSetup", "OpenLockRecoveryAssistant", "OpenDiagnosticEvidenceHistory",
+        "OpenIPhoneCenter", "OpenIPhonePartsHistory", "OpenIPhoneBatteryHealth", "OpenIPhoneFunctionalTests", "OpenIPhoneHdmiCapture", "OpenIPhoneAuthenticityEvidence",
+        "OpenDriverPackageManager", "InspectUsbDriverPackage", "ListUsbDriverPackages", "InstallUsbDriverPackage", "ExportUsbDriverPackage", "RemoveUsbDriverPackage",
+        "OpenDeviceIdentityIntegrity",
         "OpenGlobalWorkshopReports", "OpenGlobalWorkshopSettings", "OpenUserManagement", "OpenDeviceAccessRecoveryCenter"
     };
 

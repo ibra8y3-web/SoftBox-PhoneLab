@@ -33,6 +33,21 @@ public sealed record SamsungOdinAutomationDecision(
 /// </summary>
 public static class SamsungOdinAutomationPolicy
 {
+    public static string? NormalizeComPort(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var normalized = value.Trim().ToUpperInvariant();
+        if (!normalized.StartsWith("COM", StringComparison.Ordinal) ||
+            !int.TryParse(normalized.AsSpan(3), out var number) || number is < 1 or > 4096) return null;
+        return "COM" + number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    public static bool IsExpectedComPortMatch(string? expected, string? observed)
+    {
+        var a = NormalizeComPort(expected); var b = NormalizeComPort(observed);
+        return a is not null && b is not null && a.Equals(b, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static SamsungOdinAutomationDecision Evaluate(SamsungOdinAutomationEvidence evidence)
     {
         ArgumentNullException.ThrowIfNull(evidence);

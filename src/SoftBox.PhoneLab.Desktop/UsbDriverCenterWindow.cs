@@ -16,11 +16,29 @@ public sealed class UsbDriverCenterWindow : Window
     private readonly TextBlock _selectedCoverage = new();
     private readonly TextBlock _selectedUrl = new();
     private readonly TextBlock _status = new();
+    private readonly OemResourceAvailabilityService _availabilityService = new();
     private OemUsbDriverResource? _selected;
+    private readonly string[] _deviceHardwareIds;
+    private readonly string? _deviceManufacturer;
+    private readonly string? _deviceModel;
+    private readonly Func<string, Task<bool>> _authorizeAndAudit;
 
-    public UsbDriverCenterWindow(string? manufacturer = null, string? model = null, string detectionSource = "ADB")
+    public UsbDriverCenterWindow(
+        Func<string, Task<bool>> authorizeAndAudit,
+        string? manufacturer = null,
+        string? model = null,
+        string detectionSource = "ADB",
+        IReadOnlyList<string>? hardwareIds = null)
     {
-        Title = "SoftBox | Official OEM USB Driver Center";
+        _deviceManufacturer = manufacturer;
+        _deviceModel = model;
+        _authorizeAndAudit = authorizeAndAudit ?? throw new ArgumentNullException(nameof(authorizeAndAudit));
+        _deviceHardwareIds = (hardwareIds ?? Array.Empty<string>())
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(128)
+            .ToArray();
+        Title = "SoftBox | OEM USB Drivers and Support Resources";
         Width = 940;
         Height = 690;
         MinWidth = 760;
@@ -34,13 +52,13 @@ public sealed class UsbDriverCenterWindow : Window
         var header = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
         header.Children.Add(new TextBlock
         {
-            Text = "مركز تعريفات USB الرسمية",
+            Text = "مركز تعريفات USB وموارد الشركات الرسمية",
             FontSize = 24,
             FontWeight = FontWeights.Bold,
             Foreground = Brush("#7DD3FC")
         });
         header.Children.Add(Text(
-            "موارد وروابط دعم رسمية لأكثر من 15 شركة. اختر الشركة ثم افتح صفحة التنزيل الخاصة بها؛ قد تحتاج إلى تحديد رقم الموديل وإصدار Windows قبل تنزيل الحزمة.",
+            "كتالوج عالمي يضم 33 مصدرًا رسميًا للشركات ومنصات الأجهزة. ليس كل مصدر تعريف USB مستقلًا: بعضه أداة Windows أو صفحة دعم. اختر الموديل والمنطقة وإصدار Windows قبل التنزيل.",
             "#B7C9DE", 11));
         var detected = string.IsNullOrWhiteSpace(manufacturer)
             ? "لم يتم تحديد الشركة من ADB أو Windows USB."
@@ -87,6 +105,7 @@ public sealed class UsbDriverCenterWindow : Window
             var item = new ListBoxItem { Tag = resource, Padding = new Thickness(10, 8, 10, 8), Margin = new Thickness(4, 2, 4, 2) };
             var card = new StackPanel();
             card.Children.Add(Text(resource.Name, "#EAF3FF", 12, true));
+            card.Children.Add(Text(resource.ResourceKind, "#7DD3FC", 8, true));
             card.Children.Add(Text(resource.CoverageNote, "#8FA8C3", 9));
             item.Content = card;
             _resources.Items.Add(item);
@@ -118,8 +137,12 @@ public sealed class UsbDriverCenterWindow : Window
 
         var actions = new WrapPanel();
         actions.Children.Add(ButtonControl("فتح صفحة الشركة", "#14517A", (_, _) => OpenSelected()));
+        actions.Children.Add(ButtonControl("فحص توفر صفحة المصدر", "#14517A", async (_, _) => await CheckSelectedAvailabilityAsync()));
         actions.Children.Add(ButtonControl("نسخ الرابط", "#20364F", (_, _) => CopySelected()));
         actions.Children.Add(ButtonControl("دليل Android OEM", "#20364F", (_, _) => OpenReference()));
+        actions.Children.Add(ButtonControl("فحص توقيع حزمة تم تنزيلها", "#20364F", (_, _) => OpenSignatureVerifier()));
+        actions.Children.Add(ButtonControl("مطابقة INF مع Hardware IDs", "#20364F", (_, _) => OpenInfCompatibility()));
+        actions.Children.Add(ButtonControl("إدارة تثبيت/نسخ/إزالة التعريفات", "#176044", (_, _) => OpenPackageManager()));
         details.Children.Add(actions);
 
         _status.TextWrapping = TextWrapping.Wrap;
@@ -132,6 +155,7 @@ public sealed class UsbDriverCenterWindow : Window
 
         root.Children.Add(body);
         Content = root;
+        Closed += (_, _) => _availabilityService.Dispose();
 
         var preferred = OemUsbDriverCatalog.FindForManufacturer(manufacturer);
         var preferredItem = _resources.Items.Cast<ListBoxItem>()
@@ -143,10 +167,56 @@ public sealed class UsbDriverCenterWindow : Window
     {
         _selected = resource;
         _selectedName.Text = resource.Name;
-        _selectedCoverage.Text = resource.CoverageNote +
-            "\n\nتغطية الموديلات: راجع صفحة الشركة؛ لا يفترض SoftBox أن حزمة واحدة تناسب جميع الأجهزة.";
+        _selectedCoverage.Text = "نوع المصدر: " + resource.ResourceKind + "\\n" + resource.CoverageNote +
+            "\\n\\nحالة توفر الحزمة: لم يتم التحقق من ملف تنزيل مباشر لهذا الموديل. افتح المصدر الرسمي وتحقق من الموديل والمنطقة وإصدار Windows والمعمارية." +
+            "\\n\\nHardware IDs المقروءة من الجهاز المحدد: " + _deviceHardwareIds.Length +
+            (_deviceHardwareIds.Length == 0
+                ? " (غير متاحة؛ لا يمكن إثبات مطابقة الطراز حتى قراءة Hardware IDs من Windows)"
+                : " (متاحة للتحقق من ملف INF)");
+
         _selectedUrl.Text = resource.OfficialUrl;
-        _status.Text = "لم يبدأ أي تنزيل أو تثبيت. استخدم صفحة الشركة لاختيار الحزمة الصحيحة.";
+        _status.Text = "صفحة المصدر لم تُفحص بعد. Windows: " + Environment.OSVersion.VersionString +
+            " • توفر حزمة للموديل وتوافقها: غير محسوم حتى اختيار INF/CAT من حزمة OEM وفحصها مقابل Hardware IDs.";
+    }
+
+    private async Task CheckSelectedAvailabilityAsync()
+    {
+        if (_selected is null)
+        {
+            _status.Text = "اختر مصدر شركة من القائمة أولًا.";
+            return;
+        }
+
+        var selected = _selected;
+        _status.Text = "جارٍ فحص صفحة المصدر الرسمي عبر HTTPS؛ لن يتم تنزيل أو تثبيت تعريف.";
+        _status.Foreground = Brush("#9FC7E8");
+        try
+        {
+            var result = await _availabilityService.CheckAsync(selected.OfficialUrl);
+            var color = result.Status switch
+            {
+                OemResourceAvailabilityStatus.Reachable => "#7DDBAA",
+                OemResourceAvailabilityStatus.AccessRestricted => "#F0C9A5",
+                _ => "#FFB4A6"
+            };
+            _status.Foreground = Brush(color);
+            _status.Text =
+                "حالة صفحة المصدر: " + result.Status +
+                " • HTTP: " + (result.HttpStatusCode is null ? "غير متاح" : ((int)result.HttpStatusCode.Value).ToString()) +
+                " • Method: " + result.MethodUsed +
+                " • Redirects: " + result.RedirectCount + Environment.NewLine +
+                result.Explanation + Environment.NewLine +
+                result.Limitation +
+                (result.FinalUrl.Equals(result.OriginalUrl, StringComparison.OrdinalIgnoreCase)
+                    ? string.Empty
+                    : Environment.NewLine + "Final URL: " + result.FinalUrl);
+        }
+        catch (Exception ex)
+        {
+            _status.Foreground = Brush("#FFB4A6");
+            _status.Text = "تعذر فحص صفحة المصدر الرسمي: " + ex.Message +
+                Environment.NewLine + "هذا لا يثبت عدم وجود تعريف؛ افتح الصفحة يدويًا من المتصفح.";
+        }
     }
 
     private void OpenSelected()
@@ -184,6 +254,41 @@ public sealed class UsbDriverCenterWindow : Window
         catch (Exception ex)
         {
             _status.Text = "تعذر نسخ الرابط: " + ex.Message;
+        }
+    }
+
+    private void OpenInfCompatibility()
+    {
+        if (_deviceHardwareIds.Length == 0)
+        {
+            _status.Text = "لا توجد Hardware IDs موثقة للجهاز المحدد. افتح Universal Device Discovery واختر بطاقة PnP لهذا الهاتف حتى تمرر هويته الحقيقية.";
+            return;
+        }
+
+        var window = new DriverInfCompatibilityWindow(
+            _deviceHardwareIds, _deviceManufacturer, _deviceModel)
+        { Owner = Owner ?? this };
+        window.ShowDialog();
+    }
+
+    private async void OpenPackageManager()
+    {
+        if (!await _authorizeAndAudit("OpenDriverPackageManager")) return;
+        var window = new DriverPackageManagerWindow(_deviceHardwareIds, _deviceManufacturer, _deviceModel, _authorizeAndAudit)
+        { Owner = Owner ?? this };
+        window.ShowDialog();
+    }
+
+    private void OpenSignatureVerifier()
+    {
+        try
+        {
+            var verifier = new UsbDriverSignatureVerifierWindow { Owner = Owner ?? this };
+            verifier.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر فتح مدقق التوقيع: " + ex.Message;
         }
     }
 

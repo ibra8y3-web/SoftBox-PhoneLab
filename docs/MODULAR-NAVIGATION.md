@@ -2,16 +2,16 @@
 
 ## Product rule
 
-The product name remains **SoftBox**. The master navigation follows the 36 sections in the official SoftBox development specification and keeps their numeric order. The sidebar is scrollable; selecting a section opens a dedicated section window with its audited features and implementation states.
+The product name remains **SoftBox**. The master navigation follows the 51 sections in the official SoftBox development specification and keeps their numeric order. The sidebar is scrollable; selecting a section opens a dedicated section window with its audited features and implementation states.
 
 ## Implementation
 
-- \`SoftBox.PhoneLab.Core/Models/SoftBoxModuleCatalog.cs\` is the single source of truth for all 36 modules and their feature metadata.
+- \`SoftBox.PhoneLab.Core/Models/SoftBoxModuleCatalog.cs\` is the single source of truth for all 51 modules and their feature metadata.
 - Each module has a stable ID, specification order, group, Arabic/English names, description, section state and feature-level states.
 - \`MainWindow.xaml\` contains the sidebar navigation entries; each item uses the corresponding stable module ID as its Tag.
 - \`MainWindow.xaml.cs\` routes navigation to \`ModuleSectionWindow\` and maps only declared action IDs to existing commands/windows.
 - \`ModuleSectionWindow\` is a shared page host. It only renders an actionable button when a real existing action is wired. Planned/unsupported entries are status information, not fake controls.
-- \`tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs\` checks the 36-module count/order, unique IDs, feature metadata, valid and unique canonical action identifiers and the absence of actions for Planned/Unsupported features.
+- \`tests/SoftBox.PhoneLab.Tests/SoftBoxModuleCatalogTests.cs\` checks the 51-module count/order, unique IDs, feature metadata, valid and unique canonical action identifiers and the absence of actions for Planned/Unsupported features.
 - \`docs/SOFTBOX-MASTER-MODULE-STATUS.md\` is the audited feature matrix and phase roadmap.
 
 ## Add a section or tool without duplication
@@ -31,12 +31,57 @@ The current catalog enforces a single canonical executable action for each exist
 1. Sections 01–03: Dashboard, Device Center, Device Intelligence.
 2. Sections 04–05: Android Service Center, APK Lab.
 3. Sections 06–10: Samsung, Xiaomi, Android Brands, Qualcomm, MediaTek.
-4. Sections 11–14: Firmware Center, USB Doctor, Smart Backup, Phone Link Studio.
-5. Sections 15–19: Hardware Diagnostics, Network Diagnostics, Smart Repair AI, One-Click Diagnostic, Safe Recovery.
+4. Sections 11–14: Firmware Center, USB Doctor (including 33 OEM resources), Smart Backup, Phone Link Studio (Android ADB/scrcpy, optional iPhone AirPlay viewing and Windows-native Miracast setup handoff).
+5. Sections 15–19: Hardware Diagnostics (with encrypted evidence history), Network Diagnostics, Smart Repair AI, One-Click Diagnostic, Safe Recovery (including owner-safe forgotten-lock guidance).
 6. Sections 20–25: Workflow Automation, Batch Operations, Repair History, Workshop Manager, Parts Inventory, Service Reports.
 7. Sections 26–28: Plugin Store, Plugin SDK, Offline Center.
 8. Sections 29–36: Security & Privacy, User & Technician Management, Update Center, Notification Center, Help Center, Support & Logs, Settings, About.
+9. Section 37: dedicated iPhone & iPad Center (Apple Lockdown identity, Parts & Service History capture, battery-health capture, physical technician checks and evidence review).
+10. Section 38: Device Identity Integrity & Smart Auto-Fill (USB/ADB/Fastboot/Apple evidence correlation, mode detection, conflict review and explicitly copied identifier fields).
+11. Sections 39–43: Qualcomm EDL/Diag, MediaTek BROM/Preloader/META, Unisoc/Spreadtrum, Rockchip/Allwinner, and Huawei/Honor Kirin specialist labs.
+12. Sections 44–47: Firmware Engineering Studio, Partition & Filesystem Lab, eMMC & UFS Memory Lab, and Boot/Recovery/Rescue Center.
+13. Sections 48–51: Boardview & Component Repair Lab, Network/Modem/RF Lab, owner-authorized Data Rescue & Migration, and Service Operations & Automation.
+
+The 13 specialist sections are currently Planned. They are visible as roadmap destinations but expose no Run controls or fake service buttons until real protocol providers, validation, permission gates and tests are implemented.
 
 ## Safety and truthfulness
 
 A model profile is not proof of board compatibility. A data read is not a functional test. Firmware SHA-256 is not publisher authentication. ADF/Fastboot generic discovery is not vendor Download/EDL/Preloader support. No section may be marked Tested or Verified solely because the WPF screen opens or CI builds successfully.
+
+
+## Cross-platform transport ownership
+
+- Section 02 owns the universal PnP/ADB discovery workspace. Windows USB PnP and Android ADB inventories remain separate evidence sources unless an explicit supported identity mapping exists.
+- Section 12 owns OEM resource discovery and the existing local driver-signature verifier. Resource links are not treated as installed drivers or universal model compatibility.
+- Section 14 owns the Android screen dock. Android uses the authorized ADB/scrcpy path. iPhone/iPad AirPlay is launched from Section 37 in a separate top-level receiver window with its own `ScrcpyWindowHost`; it never attaches to the Android screen host and remains view-only.
+- Section 15 owns the DPAPI-protected component evidence history. The existing Agent test center remains the canonical entrypoint for real Android Agent tests.
+- Section 19 owns owner-safe forgotten-lock recovery guidance. It does not provide lock, FRP, Activation Lock, MDM or account bypass actions.
+
+
+## Dedicated Apple workspace (Section 37)
+
+- iPhone discovery uses the user-selected `idevice_id.exe` and `ideviceinfo.exe` pair from a trusted libimobiledevice distribution. SoftBox does not silently download or bundle these utilities.
+- The Lockdown parser accepts bounded XML plist data, rejects DTD/external entities, allow-lists identity/storage/current-charge fields and masks serial/UDID in UI and saved evidence.
+- Parts & Service History, Battery Health and physical checks are separate technician workflows. The technician must read the official on-device screen or perform the physical check; SoftBox does not pretend to trigger these restricted iOS tests.
+- Apple coverage is opened in the browser; the operator enters the serial directly on Apple. SoftBox does not transmit the serial or scrape a coverage verdict.
+- An authenticity evidence summary reports only compatible clues, review flags or insufficient evidence. It does not claim an absolute original/copy verdict.
+- AirPlay has its own window and native host. Android scrcpy remains in the Android panel; opening or stopping AirPlay cannot embed its window in that panel.
+
+
+## Device Identity Integrity & Smart Auto-Fill (Section 38)
+
+- The section is a separate top-level workspace; it does not replace the Android screen dock, iPhone center or AirPlay receiver window.
+- It reads Windows USB PnP/VID-PID, the current ADB inventory, Fastboot device identifiers and Apple Lockdown identity as separate evidence channels.
+- It classifies only modes supported by the actual descriptor or transport state. An unknown mode, unavailable serial, locked/untrusted Apple session or unauthorized ADB channel remains unknown/pending rather than being inferred.
+- Device Identity Integrity groups only exact identifiers with the same platform and identifier type. It never merges devices by the final four characters, vendor name or timing. Conflicting model/manufacturer claims require review.
+- Manufacturer/model/mode/identifier fields in the workspace are filled from the selected read. Windows PnP instance suffixes appear as unverified hints, not confirmed serials. Serial/UDID is masked by default; copying the exact value is an explicit action. The Samsung Odin `FLASH` phrase is prefilled only from a Serial read through authorized ADB; all other flash checks and final confirmation remain manual.
+- The module does not provide IMEI/serial mutation or EFS/NVRAM writing. In the Samsung Odin window, the `FLASH` phrase is prefilled only from the exact Serial read via authorized ADB; it is not derived from USB PnP. Compatibility, backup and COM acknowledgements plus the final Start confirmation remain explicit technician actions.
+
+
+## Professional service platform boundaries
+
+- Existing services remain canonical. The new specialist sections are separate owners for future engines and do not clone existing Samsung Odin, Xiaomi, Qualcomm/MediaTek diagnostics, Firmware Center, Android tools or workshop stores.
+- Every future chipset provider must declare exact model/board/chipset/mode support, protocol and loader version, permission requirements, firmware provenance and last physical validation.
+- Firmware parsing, hashes and package inspection are read-only until an OEM-authorized protocol and model-specific compatibility gate are proven.
+- Account-lock bypass, FRP/Activation Lock/MDM bypass, screen-lock extraction, IMEI/serial mutation, and unknown programmer/DA loading are not product actions. Supported carrier unlock must use the carrier/OEM authorization route.
+- The specialist expansion is a roadmap. Planned features cannot become executable merely because a navigation page is visible.

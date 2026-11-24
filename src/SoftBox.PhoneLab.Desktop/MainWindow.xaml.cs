@@ -18,6 +18,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using System.Windows.Interop;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -29,16 +30,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _processingBackupSchedules;
     private readonly PhoneDiscoveryService _discovery;
     private readonly WindowsUsbInventoryService _usbInventory = new();
+    private readonly IPhoneDeviceDiagnosticsService _iphoneDiagnostics = new();
     private IReadOnlyList<WindowsUsbDevice> _lastUsbDevices = Array.Empty<WindowsUsbDevice>();
+    private IReadOnlyList<IPhoneDeviceScanResult> _lastIPhoneScanResults = Array.Empty<IPhoneDeviceScanResult>();
+    private DateTime _lastIPhoneScanUtc = DateTime.MinValue;
+    private bool _iphoneScanInProgress;
+    private HwndSource? _deviceNotificationSource;
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
     private readonly DeviceProfileCatalog _deviceProfiles = new();
     private readonly ScreenMirrorService _screenMirror;
+    private readonly AirPlayReceiverService _airPlayReceiver = new();
+    private readonly AirPlayReceiverBootstrapService _airPlayBootstrap = new();
+    private IPhoneCenterWindow? _iphoneCenterWindow;
+    private AirPlayReceiverWindow? _airPlayReceiverWindow;
+    private DeviceIdentityIntegrityWindow? _deviceIdentityIntegrityWindow;
     private readonly PhoneLabAgentInstaller _agentInstaller;
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
     private bool _suppressDeviceSelection;
+    private bool _shutdownCleanupComplete;
     private DateTime _lastAutoMirrorAttemptUtc = DateTime.MinValue;
     private string? _lastAutoMirrorAttemptSerial;
     private readonly TraceBoardViewerService _traceBoardViewer = new();
@@ -46,11 +58,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly RepairKnowledgeService _repairKnowledge = new();
     private readonly ReportService _reports = new();
     private readonly LocalActivityStore _activity = new();
+    private readonly DiagnosticEvidenceStore _diagnosticEvidenceStore = new();
     private readonly PhoneLabSettingsService _settingsService = new();
     private readonly SoftBoxAccountService _accountService;
     private AuthenticatedSoftBoxUser _currentUser;
     private PhoneLabSettings _settings = new();
     private readonly DispatcherTimer _timer;
+    private readonly DispatcherTimer _deviceChangeDebounceTimer;
     private bool _busy;
     private bool _dragging;
     private Point _dragOrigin;
@@ -144,6 +158,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _backupSchedulerTimer.Tick += async (_, _) => await ProcessBackupSchedulesAsync();
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
+        _deviceChangeDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(650) };
+        _deviceChangeDebounceTimer.Tick += async (_, _) =>
+        {
+            _deviceChangeDebounceTimer.Stop();
+            await RefreshDevicesAsync();
+        };
+        SourceInitialized += (_, _) => AttachDeviceChangeNotifications();
+        Closed += (_, _) =>
+        {
+            _deviceChangeDebounceTimer.Stop();
+            _deviceNotificationSource?.RemoveHook(DeviceChangeWindowHook);
+            _deviceNotificationSource = null;
+        };
         Loaded += async (_, _) =>
         {
             try
@@ -168,6 +195,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             BuildScene();
             RebuildDiagnostics(); // Show the full Not tested component list before any phone/ADB connection.
             await RefreshDevicesAsync();
+            if (_settings.AutoStartAirPlayReceiver &&
+                SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen"))
+            {
+                OpenAirPlayReceiverWindow(startImmediately: true);
+            }
             if (_settings.AutoDiscoverDevices)
                 _timer.Start();
 
@@ -182,13 +214,42 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
             _ = SyncDeviceCatalogQuietlyAsync();
         };
-        Closed += (_, _) => { _timer.Stop(); _backupSchedulerTimer.Stop(); _screenMirror.Dispose(); };
+        Closing += MainWindow_Closing;
         Notify(nameof(EngineStatus));
         Notify(nameof(DiscoveryHint));
         Notify(nameof(CurrentUserDisplay));
         Notify(nameof(AdbInstallVisibility));
         BuildScene();
         RebuildDiagnostics();
+    }
+
+    private async void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_shutdownCleanupComplete)
+            return;
+
+        // Keep the dispatcher alive until the child receiver has exited cleanly.
+        e.Cancel = true;
+        _timer.Stop();
+        _deviceChangeDebounceTimer.Stop();
+        _backupSchedulerTimer.Stop();
+        _screenMirror.Dispose();
+
+        try
+        {
+            await _airPlayReceiver.DisposeAsync();
+            _shutdownCleanupComplete = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                "تعذر إيقاف مستقبل AirPlay بأمان، لذلك أبقى SoftBox مفتوحًا حتى لا يترك عملية خارجية معلّقة.\n\n" + ex.Message,
+                "إيقاف SoftBox",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private async void LockSession_Click(object sender, RoutedEventArgs e)
@@ -235,10 +296,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             await RefreshUsbRecognitionAsync();
+            _ = RefreshIPhoneDevicesQuietlyAsync();
             if (!_adb.IsAvailable)
             {
                 StatusMessage = "أدوات ADB غير موجودة. " + UsbRecognitionStatus;
-                MirrorStatus = "تم فحص USB، لكن عرض الشاشة يحتاج Android يعمل وتصريح ADB. ثبّت Platform-Tools وتعريف الشركة ثم فعّل USB debugging ووافق على الكمبيوتر.";
+                MirrorStatus = "عرض الشاشة يحتاج Android يعمل وتصريح ADB. أما Download Mode وFastboot وEDL وPreloader فتظهر في مركز أوضاع الصيانة عبر Windows USB PnP ولا تعتمد على ADB.";
                 Notify(nameof(MirrorStatus));
                 Notify(nameof(StatusMessage));
                 return;
@@ -345,7 +407,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (Devices.Count == 0)
             {
                 ClearDevice("لا يوجد جهاز ADB متصل.");
-                MirrorStatus = "بانتظار هاتف Android. سيظهر بث الشاشة بعد تشغيل النظام وتفعيل USB debugging والموافقة على هذا الكمبيوتر.";
+                MirrorStatus = "لا يوجد جهاز ADB حاليًا. إذا كان الهاتف في Download Mode أو Fastboot أو EDL فافتح مركز أوضاع الصيانة؛ هذه الأوضاع لا تظهر في قائمة ADB.";
                 Notify(nameof(MirrorStatus));
                 StatusMessage = "لم يتم رصد قناة ADB. " + UsbRecognitionStatus +
                     " ظهور الهاتف في مستكشف الملفات عبر MTP لا يمنح تصريح تشخيص ADB.";
@@ -375,7 +437,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private async Task EnsureSelectedDeviceReadyAsync(DeviceListItem selected)
     {
         if (!selected.IsAuthorized) return;
-        if (_preparedSerials.Add(selected.Serial) || (_settings.AutoOpenScreenMirror && _screenMirror.ActiveSerial != selected.Serial))
+        if (_preparedSerials.Add(selected.Serial) || (_settings.AutoOpenScreenMirror && _screenMirror.ActiveSerial != selected.Serial && !_airPlayReceiver.IsRunning))
         {
             _preparedSerials.Add(selected.Serial);
             await PrepareConnectedDeviceAsync(selected);
@@ -386,7 +448,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task RetryAutoScreenMirrorAsync(DeviceListItem selected)
     {
-        if (!selected.IsAuthorized ||
+        if (_airPlayReceiver.IsRunning ||
+            !selected.IsAuthorized ||
             !_settings.AutoOpenScreenMirror ||
             !SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen") ||
             (_screenMirror.ActiveSerial == selected.Serial && _screenMirror.IsRunning))
@@ -414,16 +477,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MirrorStatus = "تعذر استرجاع بث الشاشة تلقائيًا: " + ex.Message;
+            var report = ScreenMirrorFailureAnalyzer.Analyze(ex);
+            MirrorStatus = string.Join(Environment.NewLine,
+                "فشل الاسترجاع التلقائي: " + report.Title,
+                report.Cause, report.RecommendedAction, report.TechnicalDetail);
         }
         Notify(nameof(MirrorStatus));
     }
 
     private async Task PrepareConnectedDeviceAsync(DeviceListItem selected)
     {
+        // A user-selected AirPlay session owns the shared screen dock. Automatic ADB setup
+        // must not steal the panel on the next USB discovery tick, but Agent preparation may continue.
         var canControlDevice = (SoftBoxAuthorizationPolicy.PermissionsForRole(_currentUser.Role) &
             SoftBoxAccountPermission.DeviceOperations) == SoftBoxAccountPermission.DeviceOperations;
-        if (_settings.AutoOpenScreenMirror && canControlDevice)
+        if (_airPlayReceiver.IsRunning)
+        {
+            MirrorStatus = "جلسة AirPlay يدوية نشطة؛ تم إيقاف الفتح التلقائي لـscrcpy حتى يختار المستخدم مسار Android يدويًا.";
+        }
+        else if (_settings.AutoOpenScreenMirror && canControlDevice)
         {
             _lastAutoMirrorAttemptSerial = selected.Serial;
             _lastAutoMirrorAttemptUtc = DateTime.UtcNow;
@@ -437,7 +509,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 await _screenMirror.StartEmbeddedAsync(selected.Serial, selected.Model ?? selected.DisplayName, PhoneScreenHost);
                 MirrorStatus = "متصل الآن: " + selected.DisplayName + " — الشاشة مدمجة داخل PhoneLab.";
             }
-            catch (Exception ex) { MirrorStatus = "تعذر فتح العرض داخل البرنامج: " + ex.Message; }
+            catch (Exception ex)
+            {
+                var report = ScreenMirrorFailureAnalyzer.Analyze(ex);
+                MirrorStatus = string.Join(Environment.NewLine,
+                    "تعذر فتح العرض داخل البرنامج: " + report.Title,
+                    report.Cause, report.RecommendedAction, report.TechnicalDetail);
+            }
         }
         else if (!canControlDevice)
         {
@@ -700,6 +778,44 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ComponentsList.SelectedItem = Components.FirstOrDefault(x => x.Id == _selectedComponent?.Id)
             ?? Components.FirstOrDefault();
         BuildScene();
+
+        // Persist only evidence associated with the currently selected, authorized ADB device.
+        // The store masks the serial, uses a one-way fingerprint and protects the local file with DPAPI.
+        _ = PersistDiagnosticEvidenceAsync();
+    }
+
+    private async Task PersistDiagnosticEvidenceAsync()
+    {
+        var selected = SelectedDevice;
+        if (_snapshot is null || selected is not { IsAuthorized: true } ||
+            !_snapshot.Serial.Equals(selected.Serial, StringComparison.Ordinal) ||
+            Components.Count == 0)
+            return;
+
+        const string source = "DiagnosticEngine composite snapshot; each component evidence field identifies its own source";
+
+        try
+        {
+            await _diagnosticEvidenceStore.RecordSnapshotAsync(
+                selected.Serial,
+                _snapshot.Manufacturer,
+                _snapshot.Model,
+                Components.Select(component => component.Diagnostic).ToArray(),
+                source);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = "تعذر حفظ سجل أدلة التشخيص المحلي: " + ex.Message;
+            Notify(nameof(StatusMessage));
+        }
+    }
+
+    private void DiagnosticEvidenceHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireActionPermission("OpenDiagnosticEvidenceHistory", "فتح سجل أدلة الاختبارات")) return;
+        var serial = SelectedDevice is { IsAuthorized: true } device ? device.Serial : null;
+        new DiagnosticEvidenceHistoryWindow(_diagnosticEvidenceStore, serial)
+        { Owner = this }.ShowEmbedded(this);
     }
 
     private void Add(string label, string value) => DeviceFacts.Add(new PropertyLine(label, value));
@@ -713,6 +829,90 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StatusMessage = message;
         Notify(nameof(DeviceTitle)); Notify(nameof(DeviceSubtitle));
         Notify(nameof(ScanStatus)); Notify(nameof(StatusMessage));
+    }
+
+    private void AttachDeviceChangeNotifications()
+    {
+        try
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            _deviceNotificationSource = HwndSource.FromHwnd(handle);
+            _deviceNotificationSource?.AddHook(DeviceChangeWindowHook);
+        }
+        catch (Exception ex)
+        {
+            // Periodic discovery remains active when Windows cannot attach the optional PnP hook.
+            UsbRecognitionStatus = "الإشعار الفوري للأجهزة غير متاح؛ يستمر الفحص الدوري. " + ex.Message;
+            Notify(nameof(UsbRecognitionStatus));
+        }
+    }
+
+    private IntPtr DeviceChangeWindowHook(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        const int WmDeviceChange = 0x0219;
+        const int DbtDevNodesChanged = 0x0007;
+        const int DbtDeviceArrival = 0x8000;
+        const int DbtDeviceRemoveComplete = 0x8004;
+        const int DbtDeviceRemovePending = 0x8003;
+
+        if (message == WmDeviceChange &&
+            wParam.ToInt32() is DbtDevNodesChanged or DbtDeviceArrival or DbtDeviceRemoveComplete or DbtDeviceRemovePending &&
+            _settings.AutoDiscoverDevices &&
+            !_shutdownCleanupComplete)
+        {
+            // Device-change callbacks must stay quick; USB/ADB/Lockdown I/O runs after debounce.
+            _deviceChangeDebounceTimer.Stop();
+            _deviceChangeDebounceTimer.Start();
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private async Task RefreshIPhoneDevicesQuietlyAsync(bool force = false)
+    {
+        // The dedicated iPhone center owns the live Lockdown poll while it is open.
+        // Avoid starting a second idevice_id/ideviceinfo process against the same USB session.
+        if (_iphoneCenterWindow is { IsVisible: true } ||
+            _iphoneScanInProgress || !_settings.AutoDiscoverDevices && !force)
+            return;
+
+        var hasAppleUsb = _lastUsbDevices.Any(device =>
+            device.VendorId.Equals("05AC", StringComparison.OrdinalIgnoreCase) ||
+            device.HardwareIds.Any(id => id.Contains("VID_05AC", StringComparison.OrdinalIgnoreCase)));
+        if (!hasAppleUsb && !force)
+            return;
+
+        if (!force && DateTime.UtcNow - _lastIPhoneScanUtc < TimeSpan.FromSeconds(15))
+            return;
+
+        var toolsDirectory = IPhoneDeviceDiagnosticsService.ResolveToolsDirectory(_settings.IPhoneToolsDirectory);
+        if (toolsDirectory is null)
+            return;
+
+        _iphoneScanInProgress = true;
+        _lastIPhoneScanUtc = DateTime.UtcNow;
+        try
+        {
+            // Identity is polled automatically; battery GasGauge is reserved for an explicit center scan.
+            _lastIPhoneScanResults = await _iphoneDiagnostics.ScanAsync(
+                toolsDirectory,
+                includeBatteryDiagnostics: false);
+            if (_iphoneCenterWindow is { IsVisible: true })
+                _iphoneCenterWindow.ApplyBackgroundScanResults(_lastIPhoneScanResults);
+        }
+        catch
+        {
+            // Do not turn an optional Apple stack failure into an Android/USB discovery failure.
+        }
+        finally
+        {
+            _iphoneScanInProgress = false;
+        }
     }
 
     private async Task RefreshUsbRecognitionAsync()
@@ -737,6 +937,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
     }
+
+    private void OpenMaintenanceModeCenter_Click(object sender, RoutedEventArgs e)
+        => OpenModuleAction("OpenMaintenanceModeCenter");
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
 
@@ -808,12 +1011,107 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var window = new WorkshopCenterWindow { Owner = this };
         window.ShowEmbedded(this);
     }
+
+    private void OpenIPhoneCenter()
+    {
+        if (_iphoneCenterWindow is { IsVisible: true })
+        {
+            _iphoneCenterWindow.Activate();
+            return;
+        }
+
+        // Apple is a separate top-level workspace. It must not share the Android device rail,
+        // Android screen panel, 3D viewer or embedded Android module surface.
+        CloseAllEmbeddedPages();
+        _iphoneCenterWindow = new IPhoneCenterWindow(
+            _settings,
+            _settingsService,
+            _usbInventory,
+            _diagnosticEvidenceStore,
+            OpenModuleAction)
+        { Owner = this };
+        if (_lastIPhoneScanResults.Count > 0)
+            _iphoneCenterWindow.ApplyBackgroundScanResults(_lastIPhoneScanResults);
+        _iphoneCenterWindow.Closed += (_, _) => _iphoneCenterWindow = null;
+        _iphoneCenterWindow.Show();
+    }
+
+    private void OpenDeviceIdentityIntegrity()
+    {
+        if (_deviceIdentityIntegrityWindow is { IsVisible: true })
+        {
+            _deviceIdentityIntegrityWindow.Activate();
+            return;
+        }
+
+        // Device identity is shown in a standalone workspace and never replaces the Android or iPhone screen host.
+        _deviceIdentityIntegrityWindow = new DeviceIdentityIntegrityWindow(
+            _usbInventory,
+            () => Devices.ToArray(),
+            _settings)
+        { Owner = this };
+        _deviceIdentityIntegrityWindow.Closed += (_, _) => _deviceIdentityIntegrityWindow = null;
+        _deviceIdentityIntegrityWindow.Show();
+    }
+
+    private void OpenIPhoneAssessment(IPhoneAssessmentMode mode)
+    {
+        if (_iphoneCenterWindow?.SelectedSnapshot is not { } snapshot)
+        {
+            MessageBox.Show(this,
+                "افتح قسم iPhone، نفّذ قراءة ناجحة لمعلومات الجهاز، ثم اختر أداة الفحص المطلوبة.",
+                "مركز iPhone", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        new IPhoneAssessmentWindow(snapshot, _diagnosticEvidenceStore, mode, _iphoneCenterWindow.SelectedBatteryDiagnostics)
+        { Owner = (Window?)_iphoneCenterWindow ?? this }.ShowDialog();
+    }
+
+    private void OpenAirPlayReceiverWindow(bool startImmediately = false)
+    {
+        if (_airPlayReceiverWindow is { IsVisible: true })
+        {
+            _airPlayReceiverWindow.Activate();
+            if (startImmediately)
+                _ = _airPlayReceiverWindow.StartReceiverFromStartupAsync();
+            return;
+        }
+
+        _airPlayReceiverWindow = new AirPlayReceiverWindow(
+            _settings,
+            _settingsService,
+            _airPlayReceiver,
+            _airPlayBootstrap,
+            async () =>
+            {
+                if (_screenMirror.IsRecording)
+                    throw new InvalidOperationException("أوقف التسجيل الحالي واحفظ ملفه قبل تبديل مسار الشاشة إلى AirPlay.");
+                _screenMirror.Stop();
+                PhoneScreenHost.DetachWindow();
+                MirrorStatus = "جلسة Android توقفت قبل بدء AirPlay اليدوي في نافذته المستقلة.";
+                Notify(nameof(MirrorStatus));
+                await Task.CompletedTask;
+            })
+        { Owner = _iphoneCenterWindow is { IsVisible: true } appleWindow ? appleWindow : this };
+        _airPlayReceiverWindow.Closed += (_, _) => _airPlayReceiverWindow = null;
+        _airPlayReceiverWindow.Show();
+        if (startImmediately)
+            _ = _airPlayReceiverWindow.StartReceiverFromStartupAsync();
+    }
+
     private void ModuleNavigation_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement element || element.Tag is not string moduleId)
             return;
 
-        // Phone Link is a persistent dock, not a full-page overlay.
+        if (moduleId.Equals("iphone-center", StringComparison.OrdinalIgnoreCase))
+        {
+            OpenModuleAction("OpenIPhoneCenter");
+            return;
+        }
+
+        // Phone Link is a persistent Android dock, not a full-page overlay.
         if (moduleId.Equals("phone-link", StringComparison.OrdinalIgnoreCase))
         {
             MirrorScreen_Click(this, new RoutedEventArgs());
@@ -836,7 +1134,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         window.ShowEmbedded(this);
     }
 
-    private async void OpenModuleAction(string actionId)
+    private async Task<bool> AuthorizeAndAuditActionAsync(string actionId)
     {
         if (!SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId))
         {
@@ -851,7 +1149,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     "سجل الأمان • SoftBox",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
-                return;
+                return false;
             }
 
             MessageBox.Show(this,
@@ -859,7 +1157,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 "الصلاحيات • SoftBox",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
-            return;
+            return false;
         }
 
         try
@@ -873,11 +1171,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 "سجل الأمان • SoftBox",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
-            return;
+            return false;
         }
+
+        return true;
+    }
+
+    private async void OpenModuleAction(string actionId)
+    {
+        if (!await AuthorizeAndAuditActionAsync(actionId)) return;
 
         switch (actionId)
         {
+            case "OpenIPhoneCenter":
+                OpenIPhoneCenter();
+                break;
+            case "OpenMaintenanceModeCenter":
+                new MaintenanceModeCenterWindow(_usbInventory, AuthorizeAndAuditActionAsync) { Owner = this }.Show();
+                break;
+            case "OpenIPhonePartsHistory":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.PartsHistory);
+                break;
+            case "OpenIPhoneBatteryHealth":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.BatteryHealth);
+                break;
+            case "OpenIPhoneFunctionalTests":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.FunctionalTests);
+                break;
+            case "OpenIPhoneAuthenticityEvidence":
+                OpenIPhoneAssessment(IPhoneAssessmentMode.AuthenticityEvidence);
+                break;
+            case "OpenDeviceIdentityIntegrity":
+                OpenDeviceIdentityIntegrity();
+                break;
             case "RefreshDevices":
                 _ = RefreshDevicesAsync();
                 break;
@@ -912,9 +1238,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 MirrorScreen_Click(this, new RoutedEventArgs());
                 break;
             case "OpenMultiScreenSessions":
+                await _airPlayReceiver.StopAsync();
                 new MultiScreenSessionsWindow(_adb) { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenScreenRecording":
+                await _airPlayReceiver.StopAsync();
                 OpenScreenRecordingWindow();
                 break;
             case "AnalyzeScreen":
@@ -977,11 +1305,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 var samsungDevice = SelectedDevice;
                 var hasAuthorizedSamsung = samsungDevice is not null && samsungDevice.IsAuthorized &&
                     AndroidDeviceToolsService.NormalizeVendor(samsungDevice.Manufacturer) == AndroidVendorKind.Samsung;
+                var pnpSuffixes = _lastUsbDevices
+                    .Where(device => device.VendorId.Equals("04E8", StringComparison.OrdinalIgnoreCase))
+                    .Select(device => WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(device.InstanceId, out var suffix)
+                        ? suffix
+                        : null)
+                    .Where(suffix => !string.IsNullOrWhiteSpace(suffix))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                var singlePnpSuffix = pnpSuffixes.Length == 1 ? pnpSuffixes[0] : null;
                 new SamsungOdinAssistantWindow(
                     hasAuthorizedSamsung ? _adb : null,
                     hasAuthorizedSamsung ? samsungDevice!.Serial : null,
                     hasAuthorizedSamsung ? samsungDevice!.Manufacturer : null,
-                    hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null)
+                    hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null,
+                    singlePnpSuffix,
+                    authorizeAndAudit: AuthorizeAndAuditActionAsync)
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }
@@ -1117,26 +1456,58 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             case "OpenUsbDriverCenter":
             {
                 var adbManufacturer = SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer;
-                var usbMatch = _lastUsbDevices
+                var adbResource = OemUsbDriverCatalog.FindForManufacturer(adbManufacturer);
+                var usbMatches = _lastUsbDevices
                     .Select(device => new
                     {
                         Device = device,
                         Resource = OemUsbDriverCatalog.FindForUsbIdentity(
                             device.Manufacturer, device.FriendlyName, device.VendorId)
                     })
-                    .FirstOrDefault(match => match.Resource is not null);
+                    .Where(match => match.Resource is not null &&
+                        (adbResource is null || match.Resource.Id.Equals(adbResource.Id, StringComparison.OrdinalIgnoreCase)))
+                    .ToArray();
 
-                var adbResource = OemUsbDriverCatalog.FindForManufacturer(adbManufacturer);
+                // Only pass PnP IDs into the ADB-selected device context when there is exactly
+                // one manufacturer-matching USB record. Multiple same-OEM phones are ambiguous.
+                var usbMatch = usbMatches.Length == 1 ? usbMatches[0] : null;
                 var detectedResource = adbResource ?? usbMatch?.Resource;
                 var manufacturer = detectedResource?.Name ?? adbManufacturer;
                 var model = SelectedDevice?.Model ?? _snapshot?.Model;
                 var source = adbResource is not null ? "ADB" :
-                    usbMatch?.Resource is not null ? "Windows USB / VID" : "غير مؤكد";
+                    usbMatch is not null ? "Windows USB / VID" : "غير مؤكد";
+                var hardwareIds = usbMatch?.Device.HardwareIds ?? Array.Empty<string>();
 
-                new UsbDriverCenterWindow(manufacturer, model, source)
+                new UsbDriverCenterWindow(AuthorizeAndAuditActionAsync, manufacturer, model, source, hardwareIds)
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }
+            case "OpenUniversalDeviceDiscovery":
+                new UniversalDeviceDiscoveryWindow(_usbInventory, () => Devices.ToArray(), AuthorizeAndAuditActionAsync)
+                { Owner = this }.ShowEmbedded(this);
+                break;
+            case "OpenMiracastSetup":
+                new MiracastSetupWindow { Owner = this }.ShowEmbedded(this);
+                break;
+            case "OpenAirPlayReceiver":
+                OpenAirPlayReceiverWindow();
+                break;
+            case "OpenIPhoneHdmiCapture":
+                new IPhoneHdmiCaptureWindow(_settings, _settingsService) { Owner = this }.Show();
+                break;
+            case "OpenDiagnosticEvidenceHistory":
+            {
+                var evidenceSerial = SelectedDevice is { IsAuthorized: true } evidenceDevice ? evidenceDevice.Serial : null;
+                new DiagnosticEvidenceHistoryWindow(_diagnosticEvidenceStore, evidenceSerial)
+                { Owner = this }.ShowEmbedded(this);
+                break;
+            }
+            case "OpenLockRecoveryAssistant":
+                new LockRecoveryAssistantWindow(
+                    SelectedDevice?.Manufacturer ?? _snapshot?.Manufacturer,
+                    SelectedDevice?.Model ?? _snapshot?.Model)
+                { Owner = this }.ShowEmbedded(this);
+                break;
             case "OpenQualcommUsbDiagnostics":
                 new UsbDoctorWindow("qualcomm") { Owner = this }.ShowEmbedded(this);
                 break;
@@ -1182,7 +1553,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new OfflineCenterWindow() { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenApplicationSettings":
-                new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.ShowEmbedded(this);
+                _ = OpenApplicationSettingsWindowAsync();
                 break;
             case "OpenAbout":
                 new AboutWindow { Owner = this }.ShowEmbedded(this);
@@ -1310,7 +1681,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 ? _snapshot.Manufacturer
                 : selected.Manufacturer);
         new AndroidDeviceToolsWindow(
-            _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer)
+            _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer,
+            AuthorizeAndAuditActionAsync)
         { Owner = this }.ShowEmbedded(this);
     }
 
@@ -1461,6 +1833,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             Trace.TraceWarning("SoftBox notification was not persisted: {0}", ex.Message);
+        }
+    }
+
+    private async Task OpenApplicationSettingsWindowAsync()
+    {
+        try
+        {
+            // Tool paths can be saved by their dedicated windows; reload the latest preferences
+            // before opening the settings editor so an older in-memory snapshot cannot overwrite them.
+            _settings = await _settingsService.LoadAsync();
+            new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings)
+            { Owner = this }.ShowEmbedded(this);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تعذر تحميل أحدث إعدادات SoftBox: " + ex.Message,
+                "إعدادات SoftBox", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -1703,17 +2092,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         try
         {
+            await _airPlayReceiver.StopAsync();
             StatusMessage = "جارٍ فتح شاشة الهاتف داخل مساحة العمل...";
             Notify(nameof(StatusMessage));
             await OpenEmbeddedMirrorAsync(selected);
             StatusMessage = "تم دمج شاشة الهاتف الحقيقية داخل PhoneLab.";
         }
-        catch (Exception ex) { StatusMessage = "تعذر تشغيل عرض الشاشة: " + ex.Message; }
+        catch (Exception ex)
+        {
+            var report = ScreenMirrorFailureAnalyzer.Analyze(ex);
+            MirrorStatus = string.Join(Environment.NewLine,
+                report.Title, report.Cause, report.RecommendedAction, report.TechnicalDetail);
+            StatusMessage = "تعذر تشغيل عرض الشاشة: " + report.Title + " — " + report.RecommendedAction;
+            Notify(nameof(MirrorStatus));
+        }
         Notify(nameof(StatusMessage));
     }
 
 
-    private void StopMirror_Click(object sender, RoutedEventArgs e)
+    private async void StopMirror_Click(object sender, RoutedEventArgs e)
     {
         if (!RequireActionPermission("MirrorScreen", "إيقاف عرض شاشة الهاتف")) return;
         if (_screenMirror.IsRecording)
@@ -1724,15 +2121,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         _screenMirror.Stop();
+        await _airPlayReceiver.StopAsync();
         PhoneScreenHost.DetachWindow();
-        MirrorStatus = "تم إيقاف عرض الشاشة. الجهاز ما زال متصلًا؛ اضغط تشغيل / تحديث الشاشة لإعادة الاتصال.";
+        MirrorStatus = "تم إيقاف جلسة عرض الشاشة. الجهاز ما زال متصلًا؛ اضغط تشغيل / تحديث الشاشة لإعادة الاتصال.";
         StatusMessage = "تم إيقاف جلسة عرض الشاشة فقط؛ لم يتم فصل الهاتف أو تغيير بياناته.";
         Notify(nameof(MirrorStatus));
         Notify(nameof(StatusMessage));
     }
 
-    private void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
-        => OpenScreenRecordingWindow();
+    private async void PhoneScreenRecording_Click(object sender, RoutedEventArgs e)
+    {
+        await _airPlayReceiver.StopAsync();
+        OpenScreenRecordingWindow();
+    }
 
     private bool RequireActionPermission(string actionId, string actionName)
     {

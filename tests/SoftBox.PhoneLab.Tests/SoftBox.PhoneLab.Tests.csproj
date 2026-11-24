@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\SoftBox.PhoneLab.Core\SoftBox.PhoneLab.Core.csproj" />
+    <ProjectReference Include="..\..\src\SoftBox.PluginSdk\SoftBox.PluginSdk.csproj" />
     <ProjectReference Include="..\..\src\SoftBox.PhoneLab.Desktop\SoftBox.PhoneLab.Desktop.csproj" />
   </ItemGroup>
 </Project>

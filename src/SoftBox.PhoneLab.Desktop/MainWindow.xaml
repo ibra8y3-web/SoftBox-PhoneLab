@@ -51,12 +51,12 @@
   <Grid Grid.Row="1" Margin="0,14,0,10">
    <Grid.ColumnDefinitions><ColumnDefinition Width="1.05*"/><ColumnDefinition Width="1.08*"/><ColumnDefinition Width="1.65*"/><ColumnDefinition Width="1.45*"/><ColumnDefinition Width="1.30*"/></Grid.ColumnDefinitions>
 
-   <!-- Master navigation: 36 modules in the same order as the SoftBox specification. -->
+   <!-- Master navigation: 38 modules in the same order as the SoftBox specification. -->
    <Border Grid.Column="0" Background="#0D1C2E" BorderBrush="#263D58" BorderThickness="1" CornerRadius="14" Padding="10" Margin="0,0,12,0">
     <DockPanel LastChildFill="True">
      <StackPanel DockPanel.Dock="Top">
       <TextBlock Text="أقسام SoftBox" FontSize="18" FontWeight="Bold" Foreground="#7DD3FC"/>
-      <TextBlock Text="36 قسمًا • كل قسم يفتح داخل نفس الواجهة" FontSize="9" Foreground="#8199B5" Margin="0,4,0,9"/>
+      <TextBlock Text="38 قسمًا • كل قسم يفتح داخل نفس الواجهة" FontSize="9" Foreground="#8199B5" Margin="0,4,0,9"/>
       <TextBlock Text="اختر قسمًا لعرض أدواته وحالة تنفيذها" FontSize="9" Foreground="#9CB3CC" TextWrapping="Wrap" Margin="0,0,0,7"/>
      </StackPanel>
      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -112,6 +112,26 @@
        <Button Content="34  الدعم والسجلات" Tag="support-logs" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
        <Button Content="35  الإعدادات" Tag="settings" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
        <Button Content="36  حول SoftBox" Tag="about" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <TextBlock Text="37 | Apple iPhone / iPad" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="37  مركز iPhone و iPad" Tag="iphone-center" Click="ModuleNavigation_Click" Margin="2" Padding="8,8" FontSize="10.5" HorizontalContentAlignment="Stretch" Background="#173B58"/>
+       <TextBlock Text="38 | سلامة الهوية والتعرّف الذكي" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="38  Device Identity Integrity" Tag="device-identity-integrity" Click="ModuleNavigation_Click" Margin="2" Padding="8,8" FontSize="10.5" HorizontalContentAlignment="Stretch" Background="#173B58"/>
+       <TextBlock Text="39–43 | منصات Qualcomm وMediaTek وUnisoc وRockchip وHuawei" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="39  مختبر Qualcomm EDL وDiag" Tag="qualcomm-edl-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="40  مختبر MediaTek BROM / META" Tag="mediatek-brom-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="41  مختبر Unisoc / Spreadtrum" Tag="unisoc-spd-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="42  مختبر Rockchip / Allwinner" Tag="rockchip-allwinner-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="43  مختبر Huawei / Honor Kirin" Tag="huawei-kirin-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <TextBlock Text="44–47 | Firmware والأقسام والذاكرة والإنقاذ" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="44  استوديو هندسة Firmware" Tag="firmware-engineering-studio" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="45  مختبر الأقسام وأنظمة الملفات" Tag="partition-filesystem-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="46  مختبر eMMC / UFS" Tag="emmc-ufs-memory-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="47  مركز Boot وRecovery والإنقاذ" Tag="boot-recovery-center" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <TextBlock Text="48–51 | اللوحات والشبكات والبيانات والعمليات" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="48  مختبر اللوحات والمكونات" Tag="board-repair-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="49  مختبر الشبكات والمودم وRF" Tag="network-radio-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="50  مختبر إنقاذ البيانات والنقل" Tag="data-rescue-migration-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="51  مركز عمليات الصيانة والأتمتة" Tag="service-automation-center" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
       </StackPanel>
      </ScrollViewer>
     </DockPanel>
@@ -126,8 +146,11 @@
        <TextBlock Text="الأجهزة المتصلة" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="USB / ADB • اكتشاف دوري" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,10"/>
       </StackPanel>
-      <Button DockPanel.Dock="Top" Content="تثبيت ADB تلقائيًا (مطلوب لاكتشاف الهاتف)" Click="InstallAdb_Click"
-       Visibility="{Binding AdbInstallVisibility}" Background="#0F5C8A" Margin="0,0,0,10" Padding="8,8" FontSize="10"/>
+      <Button DockPanel.Dock="Top" Content="تثبيت ADB تلقائيًا (مطلوب لاكتشاف Android)" Click="InstallAdb_Click"
+       Visibility="{Binding AdbInstallVisibility}" Background="#0F5C8A" Margin="0,0,0,6" Padding="8,8" FontSize="10"/>
+      <Button DockPanel.Dock="Top" Content="أجهزة Download / Fastboot / EDL / Preloader" Click="OpenMaintenanceModeCenter_Click"
+       Background="#164A64" Foreground="#EAF3FF" Margin="0,0,0,10" Padding="8,8" FontSize="10"
+       ToolTip="فحص أجهزة Windows USB PnP حتى عندما تختفي قناة ADB في أوضاع الصيانة."/>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding DiscoveryHint}" FontSize="9" Foreground="#8199B5" TextWrapping="Wrap" Margin="2,8,2,0"/>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding UsbRecognitionStatus}" FontSize="9" Foreground="#70C8E8" TextWrapping="Wrap" MaxHeight="42" Margin="2,8,2,0"/>
       <ListBox x:Name="DevicesList" ItemsSource="{Binding Devices}" SelectionChanged="Devices_SelectionChanged">
@@ -155,6 +178,21 @@
        <TextBlock Text="مكونات الهاتف" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="اختر القطعة لرؤية الأدلة" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,9"/>
       </StackPanel>
+      <Border DockPanel.Dock="Bottom" Background="#10243A" BorderBrush="#2D4A68" BorderThickness="1" CornerRadius="10" Padding="9" Margin="0,8,0,0" MaxHeight="156">
+       <StackPanel>
+        <Grid Margin="0,0,0,5">
+         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+         <TextBlock Text="{Binding SelectedPartName}" FontSize="11" FontWeight="Bold" Foreground="#EAF3FF" TextWrapping="Wrap" MaxHeight="34" ToolTip="{Binding SelectedPartName}"/>
+         <TextBlock Grid.Column="1" Text="{Binding SelectedPartStatus}" FontSize="8.5" FontWeight="SemiBold" Foreground="{Binding SelectedPartBrush}" Margin="8,1,0,0" VerticalAlignment="Top"/>
+        </Grid>
+        <TextBlock Text="{Binding SelectedPartDescription}" FontSize="8.5" Foreground="#B6C9DE" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="31" ToolTip="{Binding SelectedPartDescription}"/>
+        <TextBlock Text="{Binding SelectedPartEvidence}" FontSize="8" Foreground="#83A1BF" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="29" Margin="0,4,0,5" ToolTip="{Binding SelectedPartEvidence}"/>
+        <Button Content="فتح اختبارات الهاتف المتاحة" Click="PhoneTests_Click" Padding="7,5" FontSize="8.5" HorizontalAlignment="Stretch" Background="#14517A"
+         ToolTip="يفتح اختبارات Android التي يدعمها PhoneLab Agent بعد تصريح ADB وموافقة التطبيق على الهاتف."/>
+        <Button Content="سجل نتائج وأدلة الاختبارات" Click="DiagnosticEvidenceHistory_Click" Padding="7,5" FontSize="8.5" HorizontalAlignment="Stretch" Margin="0,5,0,0"
+         ToolTip="يعرض النتائج السابقة المحفوظة محليًا بصورة مشفرة، مع بصمة الجهاز والرقم التسلسلي المقنّع ومصدر الدليل."/>
+       </StackPanel>
+      </Border>
       <ListBox x:Name="ComponentsList" ItemsSource="{Binding Components}" SelectionChanged="Components_SelectionChanged">
        <ListBox.ItemTemplate>
         <DataTemplate>
@@ -178,8 +216,8 @@
      <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
       <StackPanel VerticalAlignment="Center">
-       <TextBlock Text="{Binding DeviceTitle}" FontSize="18" FontWeight="Bold"/>
-       <TextBlock Text="{Binding DeviceSubtitle}" FontSize="9.5" Foreground="#8EABC8" Margin="0,5,0,0"/>
+       <TextBlock Text="{Binding DeviceTitle}" FontSize="18" FontWeight="Bold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="46" ToolTip="{Binding DeviceTitle}"/>
+       <TextBlock Text="{Binding DeviceSubtitle}" FontSize="9.5" Foreground="#8EABC8" Margin="0,5,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="32" ToolTip="{Binding DeviceSubtitle}"/>
       </StackPanel>
       <Border Grid.Column="1" Background="#142E46" BorderBrush="#2D607C" BorderThickness="1" CornerRadius="9" Padding="12,7" VerticalAlignment="Center">
        <TextBlock Text="{Binding ScanStatus}" Foreground="#9DDEFB" FontSize="9.5" FontWeight="SemiBold"/>
@@ -241,7 +279,7 @@
       <Border Grid.Row="1" Background="#02060C" BorderBrush="#1D344D" BorderThickness="1" CornerRadius="8" ClipToBounds="True">
        <interop:ScrcpyWindowHost x:Name="PhoneScreenHost"/>
       </Border>
-      <TextBlock Grid.Row="2" Text="عرض وتحكم مباشر عبر ADB + scrcpy • يتطلب أن يعمل Android وأن يوافق المستخدم على USB debugging." FontSize="8" Foreground="#7D94AE" TextWrapping="Wrap" Margin="3,8,3,1"/>
+      <TextBlock Grid.Row="2" Text="Android: ADB + scrcpy (عرض وتحكم بموافقة المستخدم) • iPhone: AirPlay (عرض فقط) • كل مسار يخضع لدعم النظام والموديل." FontSize="8" Foreground="#7D94AE" TextWrapping="Wrap" Margin="3,8,3,1"/>
      </Grid>
     </Border>
    </Grid>

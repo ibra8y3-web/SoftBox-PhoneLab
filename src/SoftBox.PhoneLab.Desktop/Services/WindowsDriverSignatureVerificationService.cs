@@ -78,7 +78,13 @@ public sealed class WindowsDriverSignatureVerificationService
         {
             try
             {
+                // WinVerifyTrust above establishes the trust verdict. This legacy API is used only
+                // to extract the signer certificate embedded in an Authenticode-signed PE/CAT.
+                // X509CertificateLoader.LoadCertificateFromFile reads PEM/DER certificate files;
+                // it does not extract the Authenticode signer from a signed executable or catalog.
+#pragma warning disable SYSLIB0057
                 using var certificate = new X509Certificate2(X509Certificate.CreateFromSignedFile(fullPath));
+#pragma warning restore SYSLIB0057
                 subject = certificate.Subject;
                 thumbprint = certificate.Thumbprint ?? string.Empty;
                 notBefore = new DateTimeOffset(certificate.NotBefore.ToUniversalTime(), TimeSpan.Zero);

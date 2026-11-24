@@ -54,6 +54,7 @@ public sealed class AndroidDeviceToolsWindow : Window
     private readonly Button _rebootBootloaderButton;
     private readonly Button _rebootDownloadModeButton;
     private readonly bool _isSamsungDevice;
+    private readonly Func<string, Task<bool>>? _authorizeAndAudit;
     private readonly Button _commandButton;
     private readonly Button _batchButton;
     private readonly Button _cancelButton;
@@ -64,8 +65,10 @@ public sealed class AndroidDeviceToolsWindow : Window
         IReadOnlyList<string> authorizedSerials,
         int maximumBatchConcurrency = 3,
         int selectedTabIndex = 0,
-        string? manufacturer = null)
+        string? manufacturer = null,
+        Func<string, Task<bool>>? authorizeAndAudit = null)
     {
+        _authorizeAndAudit = authorizeAndAudit;
         if (!AdbClient.IsSafeSerial(serial))
             throw new ArgumentException("معرف ADB غير صالح.", nameof(serial));
         _serial = serial;
@@ -685,6 +688,20 @@ public sealed class AndroidDeviceToolsWindow : Window
         if (confirmation != MessageBoxResult.Yes)
         {
             _status.Text = "أُلغي طلب إعادة التشغيل؛ لم يتم إرسال أمر إلى الهاتف.";
+            return;
+        }
+
+        var auditActionId = target == AndroidRebootTarget.DownloadMode
+            ? "RebootSamsungDownloadMode"
+            : "RebootAndroidServiceMode";
+        if (_authorizeAndAudit is null)
+        {
+            _status.Text = "تم منع العملية: خدمة الصلاحيات وسجل التدقيق غير متصلة. لم يُرسل أي أمر إلى الهاتف.";
+            return;
+        }
+        if (!await _authorizeAndAudit(auditActionId))
+        {
+            _status.Text = "تم منع العملية أو إلغاؤها بواسطة الصلاحيات وسجل التدقيق. لم يُرسل أي أمر إلى الهاتف.";
             return;
         }
 

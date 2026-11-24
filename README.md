@@ -8,6 +8,8 @@ PhoneLab discovers authorized Android phones over ADB, reads available device id
 
 ### Device detection and model profiles
 - ADB auto-discovery every 3 seconds.
+- Windows Plug-and-Play arrival/removal notifications accelerate debounced asynchronous discovery while the periodic scan remains a fallback.
+- Section 38 adds a separate Device Identity Integrity workspace for USB/ADB/Fastboot/Apple evidence, mode classification, PnP instance-suffix hints, conflict review and automatic filling of its own identity fields. Serial/UDID is masked by default and copied only after an explicit action; USB VID/PID and unverified PnP suffixes are never presented as confirmed handset serials.
 - Authenticated Android Wireless debugging pairing through the existing Google Platform-Tools (adb pair then adb connect), with separate pairing/connection IP addresses and ports, one-time code handling and cancellation. Requires Android 11+ and the same Wi-Fi network; see docs/WIRELESS-ADB-PAIRING.md.
 - Reads manufacturer, marketing model, model number, product, device codename, hardware SKU, build fingerprint, board, SoC, bootloader, CPU and ABI.
 - Matches a bundled curated catalog and automatically adds the Apache-2.0 community model-code mapping generated from Google's public Play supported-device list. The community catalog updates upstream daily and is cached locally by PhoneLab.
@@ -30,8 +32,12 @@ The curated catalog is a starter set. The additional community model-code databa
 - Imports model-specific board-map JSON files only when they identify an exact model/codename and include HTTPS source, reviewer and verification timestamp.
 - The only shipped map is a generic educational fallback. No fake IC coordinates are generated for unknown devices.
 
-### Screen and cameras
-- Automatically opens the authorized phone screen inside the PhoneLab workspace using the official scrcpy Windows client. The bundled scrcpy archive is SHA-256 checked during CI packaging.
+### Multi-platform screen viewing and control
+- **Android phones from supported OEMs:** the right-side screen dock uses the official scrcpy Windows client after the selected device is independently confirmed as ADB-authorized. It can display and control the Android UI within the permissions granted by Android and the OEM. The bundled scrcpy archive is SHA-256 checked during CI packaging.
+- **iPhone/iPad:** Section 37 is a dedicated Apple workspace with automatic Lockdown identity polling when the Apple USB interface and trusted tools are available for Lockdown identity reads, Parts & Service History, Battery Health, technician-recorded physical tests and evidence review. AirPlay opens in a separate window with its own native screen host; it never shares the Android/scrcpy display panel. This path is **view-only**.
+- SoftBox does not bundle or redistribute AirPlay-Windows. When needed, it discovers its own previously verified installation or downloads the latest Windows x64 release directly from the official GitHub Releases API, verifies the published SHA-256 digest, and extracts the complete package into the SoftBox user tools directory. The upstream GPL-3.0 licence and notices remain with the separately downloaded component; no EXE picker is required.
+- MTP/USB file-transfer visibility is not screen mirroring or device-control permission. Windows PnP/VID/PID detection identifies a likely USB manufacturer, not necessarily the exact handset model, OS state or a usable screen protocol.
+- Mirroring remains protocol-specific: ADB/scrcpy for Android devices that expose and authorize ADB; AirPlay for compatible Apple devices; the Windows-native Miracast receiver as an optional external viewing fallback; proprietary vendor/cast modes are not assumed to work just because a vendor is recognized.
 - Agent displays uniform color test patterns. A camera photograph of the physical screen can be analyzed for candidate pixel outliers and luminance non-uniformity. This is a screening aid, not a calibrated optical inspection.
 - Android Camera2 enumerates logical camera IDs and exposed physical camera routes, reads lens and autofocus metadata, captures a JPEG for each route, and records the autofocus state separately. This verifies reported AF state, not chart sharpness, stabilization or optical quality.
 
@@ -86,9 +92,9 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - International workshop administration adds per-business locale/currency settings, warranty tracking, technician notes, printable HTML and UTF-8 CSV exports.
 
 
-## SoftBox 36-section product architecture
+## SoftBox 51-section product architecture
 
-- The left navigation follows all 36 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
+- The left navigation follows all 51 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
 - Existing services are shared and linked from the correct section instead of being cloned. Planned features are listed without fake executable buttons.
 - The detailed audit, missing-feature matrix, module ownership and staged implementation order are in [docs/SOFTBOX-MASTER-MODULE-STATUS.md](docs/SOFTBOX-MASTER-MODULE-STATUS.md).
 - Navigation and module addition rules are in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
@@ -108,10 +114,13 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 ## Requirements
 
 - Windows 10/11 x64.
-- Official Android SDK Platform-Tools (adb.exe).
-- Android phone with a data USB cable and USB debugging authorization.
-- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the official Samsung USB driver installer in one download. The Samsung driver is optional and intended only for Samsung phones.
-- The bundled ADB/Fastboot Platform-Tools, scrcpy, TRACE Boardviewer, QR generation library and Agent work offline after downloading this Windows artifact. Internet is needed only for optional model-catalog refreshes and online repair-guide search. USB debugging approval and any required OEM ADB driver remain local setup requirements.
+- Windows 10/11 x64 for the current desktop application.
+- Android Platform-Tools (ADB) for Android device inspection and scrcpy mirroring. An Android handset must expose ADB and the owner must authorize this PC; some vendors require a model/Windows-specific USB driver.
+- iPhone/iPad diagnostics require a trusted, separately selected Windows libimobiledevice toolset containing `idevice_id.exe` and `ideviceinfo.exe`, a USB data connection, an unlocked iPhone and the owner's Trust This Computer approval. Only read-only Lockdown identity fields are queried; no passcodes, pairing changes, backup, restore or device changes are issued.
+- iPhone/iPad AirPlay viewing uses the automatically provisioned official AirPlay-Windows receiver, a compatible Windows build, the same local network and owner-initiated Screen Mirroring. SoftBox detects/downloads/verifies/installs the receiver without asking the user to browse for an EXE. It opens in a separate top-level window with an independent native display host; it does not provide remote iOS control.
+- The Windows package includes Google Platform-Tools (ADB), SHA-256 checked scrcpy, SHA-256 checked TRACE Boardviewer, the Android Agent APK and the optional official Samsung USB driver installer. The Samsung installer is for Samsung only; the expanded OEM center lists 33 official vendor resources, not 33 bundled driver installers.
+- AirPlay-Windows is a separate GPL-3 project and is not bundled or redistributed by SoftBox. SoftBox downloads the official x64 release on first use if no managed copy is available, validates the GitHub-published SHA-256 digest, and stores the extracted tools under the current Windows user profile.
+- The bundled ADB/Fastboot Platform-Tools, scrcpy, TRACE Boardviewer, QR generation library and Agent work offline after downloading this Windows artifact. Internet is needed for optional model-catalog refreshes, online repair-guide search and the initial AirPlay receiver download. USB debugging approval and any required OEM driver remain local setup requirements.
 
 ## Build Windows
 
@@ -129,15 +138,18 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 
 ## Typical workflow
 
-1. Extract the single Windows package and start PhoneLab; ADB, scrcpy, Boardviewer and the Agent APK are included.
-2. Enable USB debugging, unlock the phone and approve the Android system USB debugging trust prompt for this PC. MTP/file-transfer visibility alone is not an ADB diagnostic connection. Some phone brands require their Windows ADB driver.
-3. PhoneLab detects the authorized device, opens the live screen inside its workspace, installs Agent and asks for a second confirmation on the phone. Tap Allow to enable the remote test bridge.
-4. PhoneLab reads the identifiers and offers display, Camera2, touch, audio, flashlight, vibration, sensor and hardware-inventory tests.
-5. Use the physical display photo analyzer with a real camera photo of the screen during a uniform test pattern.
-6. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
-7. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records. Open Global Workshop for searchable operations, warranty tracking, technician history, international center settings and HTML/CSV exports.
-8. Use سجلات Android to save private logs for review, or فحص حزمة Firmware to calculate SHA-256 and inspect OTA metadata without flashing.
-9. Review every component's evidence and export a JSON report.
+1. Extract the Windows package and start PhoneLab. Windows USB PnP inventory and ADB discovery are presented as separate evidence sources.
+2. For Android, enable USB debugging, unlock the phone and approve the Android system trust prompt. MTP visibility alone is not ADB authorization; install only a model-matched official OEM driver when Windows reports a driver problem.
+3. For iPhone/iPad screen viewing, SoftBox automatically finds or provisions the official GPL-3 AirPlay-Windows release and starts the Windows receiver. Connect the Apple device and PC to the same network. The iPhone owner starts Screen Mirroring when the phone can be operated; otherwise use the supported wired HDMI recovery path.
+4. Android uses its own ADB/scrcpy pane with interactive control after authorization. iPhone AirPlay opens a separate receiver window and does not use the Android pane; control remains on the Apple device.
+5. If Android mirroring fails, inspect the classified diagnostic (unauthorized, offline, missing device, ADB server conflict, missing runtime, integrity mismatch or startup timeout) and the bounded scrcpy output included in the message.
+6. Open Hardware Diagnostics and run only the tests the selected device/Agent exposes. The evidence history saves actual states and evidence locally with Windows DPAPI protection; unsupported board-level tests remain untested until external instruments/manual inspection are recorded.
+7. Use the universal OEM resource directory to identify a likely manufacturer resource. Verify exact model, region, Windows edition/architecture and package type before downloading. Use the Windows driver-signature verifier on the specific downloaded package; a valid signature alone does not prove model compatibility.
+8. If the owner forgot their lock credential, use the owner recovery assistant for official previous-credential/account recovery guidance. It never accepts a PIN, bypasses FRP/Activation Lock/MDM or sends reset commands.
+9. Connect a supported, electrically safe serial measurement fixture for USB/battery voltage/current, temperature, optional capacity/internal resistance and named rails. Export the history to CSV.
+10. Open مركز الصيانة to create work orders, record before/after evidence, manage stock, export a QR ticket and back up local records. Open Global Workshop for searchable operations, warranty tracking, technician history, international center settings and HTML/CSV exports.
+11. Use Android logs or firmware inspection for read-only evidence. Review component history and export a JSON diagnostic report.
+12. For a phone without authorized ADB but with Miracast support, open the Miracast setup guide and configure Windows Wireless Display separately. This native Windows session is outside the SoftBox screen dock.
 
 ## Diagnostic color contract
 
@@ -159,7 +171,7 @@ Open the Agent and keep it in the foreground while synchronizing tests from Wind
 - The QR ticket contains only a repair identifier. It is not a cloud lookup link.
 - Log analysis is heuristic and may find false positives or miss events outside the captured log window. Android logs can contain private data.
 - Firmware tools verify local SHA-256, inspect OTA ZIP metadata and Samsung TAR/TAR.MD5 structure, and compare available device/region/board/rollback evidence through a fail-closed compatibility gate. Hashes and appended TAR.MD5 checks do not authenticate the publisher; missing board, region, signature or Anti-Rollback evidence remains unknown and blocks the gate. No automatic flashing, bootloader unlocking or data wipe is implemented.
-- Generic iPhone diagnosis is not implemented.
+- iPhone diagnostics are limited to Apple Lockdown identity fields, technician-entered Parts & Service History and Battery Health values, and manually performed physical checks. Successful Lockdown or serial recognition is not proof of a genuine complete handset; the originality tool reports evidence limits rather than an absolute verdict.
 
 See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DEVICE-IDENTIFICATION.md, docs/SCREEN-AND-CAMERA-TESTS.md, docs/MEASUREMENT-RIG-PROTOCOL.md, docs/BOARDVIEW-IMPORT.md, docs/REMOTE-TEST-CONTROL.md, THIRD-PARTY-NOTICES.md, docs/ARCHITECTURE.md, docs/DIAGNOSTIC-COLORS.md and SECURITY.md.
 
@@ -172,7 +184,7 @@ See docs/PROFESSIONAL-WORKSHOP.md, docs/USB-TRANSPORTS-AND-FORENSICS.md, docs/DE
 
 ## Additional real gap-closure tools — November 2026
 
-- **Samsung Odin workflow:** SoftBox reads TAR entries without extracting them, verifies appended MD5 in TAR.MD5 files, records SHA-256, opens the technician-selected Odin executable and can inspect its Windows UI Automation tree. A guarded Start Invoke is enabled only when the exact process, Odin window, unique enabled Start control, visible selected package names, COM port and explicit technician confirmations are all present. If Odin does not expose the required controls, the action is blocked. This is not a documented Samsung service protocol and does not verify flash completion.
+- **Samsung Odin workflow:** SoftBox reads TAR entries without extracting them, verifies appended MD5 in TAR.MD5 files, records SHA-256, opens the technician-selected Odin executable and can inspect its Windows UI Automation tree. The `FLASH` confirmation phrase is prefilled only from the last four characters of a Samsung Serial read through authorized ADB; a USB PnP suffix is never substituted. A guarded Start Invoke is enabled only when the exact process, Odin window, unique enabled Start control, visible selected package names, COM port and explicit technician confirmations are all present. The final Start action still requires a separate user confirmation; SoftBox does not claim flash completion.
 - **Firmware compatibility gate:** compares known manufacturer/model/product/board/region/rollback evidence and local integrity; any missing publisher signature, board or rollback evidence remains Unknown and blocks the gate.
 - **Xiaomi Fastboot diagnostics:** on a verified Xiaomi/Redmi/POCO ADB phone, SoftBox confirms the current manufacturer, requests a confirmed reboot to Bootloader, waits for the same serial in Fastboot, then reads getvar variables, lock state, Verified Boot and raw Anti-Rollback values. The diagnostic reader remains read-only; separate guarded service actions handle only the explicitly supported flash steps.
 - **Qualcomm / MediaTek transport readiness:** Windows PnP observations for common 9008 and Preloader/BROM USB IDs now produce driver/problem and missing-requirements reports. The tools do not open EDL/BROM or load programmers/Download Agents.
@@ -196,7 +208,7 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - **MediaTek:** scatter/image validation and DA/Auth hashing are implemented, with a recheck before launching the technician-supplied SP Flash Tool. BROM programming, DA signature verification, SLA/DAA authorization and automatic Download are not implemented without a model-specific signed OEM package.
 - **Samsung:** Odin Start uses guarded Windows UI Automation only; no public supported Samsung Odin service API is claimed. Start is blocked if accessibility evidence is incomplete.
 - **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
-- The catalogue contains **36 master sections / 156 child features / 192 total entries**. Child statuses: **99 Implemented, 46 Tested, 6 In Development, 3 Planned, 2 Unsupported, 0 Verified**. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
+- The current catalogue contains **51 master sections / 264 child features / 315 total entries**. Child statuses: **111 Implemented, 49 Tested, 28 In Development, 67 Planned, 9 Unsupported, 0 Verified**. The 13 new specialist sections are Planned and expose no executable actions until real services and tests exist. The 93 canonical action IDs are unique. Physical validation on OEM service modes, Apple Recovery/DFU, driver installation and PCB data remains open.
 
 
 ## OEM service implementation addendum — 21 November 2026
@@ -230,3 +242,58 @@ The Device Access & Recovery screen now shows bounded Device Policy Manager comp
 ## Owner support approvals
 
 See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline Windows/Android Support Key Manager workflow, WhatsApp exchange, protocol verification, and Android public-key provisioning. The Android owner key is not trusted by released clients until it has been exported from the owner's physical phone and pinned in a subsequent client build.
+
+
+## Universal device and owner recovery update — 23 November 2026
+
+- Universal Device Discovery presents Windows USB PnP inventory and Android ADB inventory separately. It uses manufacturer, friendly-name and VID/PID as evidence hints; it does not infer an exact handset model or assume that a USB device and ADB serial are the same phone without independent evidence.
+- The OEM resource center currently contains **33 official vendor resources**. Each entry states whether it is a dedicated driver, an OEM Windows companion/tool, a regional MTP driver or a support portal. Exact installer availability and model/Windows compatibility remain unconfirmed until the technician selects and verifies a package.
+- The owner lock recovery assistant provides official, evidence-based guidance for Apple and Android scenarios, including eligible previous-credential windows and account/backup checks. It collects no credentials and does not bypass screen locks, FRP, Apple Activation Lock, MDM or manufacturer activation services. Factory reset is only described as a possible official route with a clear data-loss warning; SoftBox does not issue a reset command.
+- The component evidence history is retained in a local DPAPI-protected database under the current Windows user. Entries store a masked serial and one-way device fingerprint, component ID/name, status, evidence source and timestamp. Identical repeated snapshots are deduplicated.
+- These additions are code/test work, not a claim of universal hardware certification. Physical validation on target Samsung, Huawei, OPPO, iPhone and other models remains necessary.
+
+
+- Windows Wireless Display/Miracast setup guide: https://support.microsoft.com/en-us/windows/hardware/display-graphics/screen-mirroring-and-projecting-to-your-pc-or-wireless-display
+
+
+### OEM resource availability and model matching
+
+- The 33-entry OEM resource center can check whether an official HTTPS source page responds. It follows at most five HTTPS redirects, blocks HTTPS-to-HTTP downgrade and reports the HTTP response. It never downloads the driver payload or claims a reachable page contains a package for the selected phone.
+- Windows PnP discovery captures the selected device's Hardware IDs. The INF analyzer compares those IDs with OEM Models sections and checks architecture/minimum Windows build decorations. ProductType/SuiteMask it cannot resolve remains unknown.
+- An INF match is a candidate match, not proof of the final package that SetupAPI/Windows Driver Store will select. CAT signature and INF/SYS catalog membership are separate checks; neither alone proves model compatibility.
+
+
+## iPhone diagnostics and transport separation — 23 November 2026
+
+- Added a dedicated **37th section: iPhone & iPad Center**, separated from Android modules.
+- Apple device identity is read from XML plist responses returned by user-selected `ideviceinfo.exe`; output is bounded, Apple's standard plist DOCTYPE is ignored without resolving any external entity, identifiers are masked and the evidence store retains only masked serial plus one-way fingerprint. When the optional `idevicediagnostics.exe` is available, SoftBox also reads GasGauge cycle count/design/full-charge capacity and displays a cautiously estimated capacity percentage with its estimation basis.
+- Added separate workflows for Apple Parts & Service History, Battery Health/cycle count, technician-run physical checks and evidence-based originality review.
+- The originality review does not treat a serial, USB VID or Lockdown response as proof of a genuine handset. Apple coverage is opened for the operator to check directly; SoftBox does not send the serial.
+- AirPlay now owns a separate window and native display host. Android scrcpy remains attached to the Android host only; manual AirPlay still stops an active Android mirror and blocks auto-scrcpy retries while AirPlay runs.
+- The new code requires CI and real iPhone/iPad validation before any feature can be marked Tested or Verified. The toolset and Apple hardware are not bundled or simulated.
+
+
+## iPhone screen recovery and wired HDMI capture
+
+SoftBox provides separate iPhone viewing paths for its AirPlay receiver and optional UVC HDMI capture workflow. See [docs/IPHONE-SCREEN-RECOVERY.md](docs/IPHONE-SCREEN-RECOVERY.md) for connector/model limitations, setup, diagnostics and physical validation. AirPlay can auto-start on Windows and automatically obtain its official receiver when missing; the iPhone must still initiate AirPlay itself. Wired capture works only when the iPhone model supports external video output and a compatible AV adapter is used.
+
+- **Android service-mode discovery:** the Download & Service Mode Center reads Windows USB PnP independently of ADB, so Samsung Download Mode, Fastboot/Bootloader, Qualcomm EDL and MediaTek service interfaces can remain visible after Android's ADB transport disappears. It shows evidence/driver state, and passes only the detected manufacturer/mode to Firmware Center; it never invents a missing model or flashes automatically. See [docs/DOWNLOAD-MODE-RECOGNITION.md](docs/DOWNLOAD-MODE-RECOGNITION.md).
+
+
+## Universal device recognition, service modes and Windows driver packages — 24 November 2026
+
+SoftBox continues to target a Windows service workstation that can identify devices across manufacturers and operating systems, not only Android brands. Windows USB PnP discovery is independent of ADB; the current vendor-ID fallback includes Apple, Huawei, Samsung, OPPO, Xiaomi, Google, HTC, Motorola, LG, Sony, ASUS, Lenovo, ZTE, Qualcomm, MediaTek and other registered USB vendors. A vendor ID remains a manufacturer hint only: it does not determine the exact model, board revision, chipset, firmware or service protocol.
+
+- The Download & Service Mode Center now accepts additional explicitly described OEM service/recovery interfaces and Apple Recovery/DFU as read-only evidence when Windows reports them. Unclassified proprietary modes do not receive a guessed flashing tool.
+- The Samsung Odin hand-off carries the selected Windows PnP instance and COM evidence. The no-ADB path requires the technician to enter the exact model and COM, and Odin must expose the same COM before Start can be enabled. The PnP instance suffix is never converted into a phone serial.
+- The USB Driver Center now has a Windows package manager: INF/Hardware-ID/Windows compatibility analysis; CAT trust verification and INF catalog-membership verification; explicit UAC install; PnPUtil export; installed-package listing; and strict oemNN.inf removal without /force. Each inspection, install, export and removal is sent through the role policy and local audit log. Package staging success still requires a separate device health check.
+- A public .NET 10 SoftBox.PluginSdk project now exposes the Manifest v1 model, permissions, validation and serialization. It does not sign plugins, grant runtime permissions or bypass the trusted-publisher/AppContainer controls.
+- See [docs/UNIVERSAL-DEVICE-COVERAGE.md](docs/UNIVERSAL-DEVICE-COVERAGE.md) and [docs/BOARD-MAP-DATA-GUIDE.md](docs/BOARD-MAP-DATA-GUIDE.md). Only source-backed board and component data may be added; the existing single detailed Galaxy A31 component map is retained.
+- Physical tests on Samsung, Huawei, OPPO, Xiaomi, Qualcomm EDL, MediaTek BROM/DA and Apple hardware have not been performed by this repository change. Qualcomm Firehose and MediaTek DA/Auth remain OEM/model-specific gates; a detected USB interface is not a universal flash capability.
+
+
+## Professional service-platform expansion — 24 November 2026
+
+SoftBox's navigation and audited module catalogue have been expanded from 38 to **51 sections**. The 13 added specialist sections cover Qualcomm EDL/Diag, MediaTek BROM/Preloader/META, Unisoc/Spreadtrum, Rockchip/Allwinner, Huawei/Honor Kirin, Firmware Engineering, Partition/Filesystem inspection, eMMC/UFS, Boot/Recovery, Boardview/Component repair, Network/Modem/RF, owner-authorized Data Rescue and Service Operations Automation.
+
+These are **Planned service areas**, not claims that those engines already exist. Each section is visible in navigation as a roadmap entry, but it has no executable action buttons. The existing Samsung Odin, Xiaomi, Android, Apple, USB and firmware tools remain in their current sections and are not copied or replaced. See [docs/PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md](docs/PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md) for the full service matrix, implementation phases and evidence requirements.

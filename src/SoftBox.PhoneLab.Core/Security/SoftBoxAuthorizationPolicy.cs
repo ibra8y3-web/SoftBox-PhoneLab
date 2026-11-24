@@ -39,7 +39,28 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenDeviceAccessRecoveryCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDoctor"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDriverCenter"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenUniversalDeviceDiscovery"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenMaintenanceModeCenter"] = SoftBoxAccountPermission.DeviceRead,
+            ["RebootSamsungDownloadMode"] = SoftBoxAccountPermission.DeviceOperations,
+            ["RebootAndroidServiceMode"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenAirPlayReceiver"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenIPhoneCenter"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenIPhonePartsHistory"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenIPhoneBatteryHealth"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenIPhoneFunctionalTests"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenIPhoneHdmiCapture"] = SoftBoxAccountPermission.DeviceOperations,
+            ["OpenIPhoneAuthenticityEvidence"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenDeviceIdentityIntegrity"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenMiracastSetup"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenLockRecoveryAssistant"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenDiagnosticEvidenceHistory"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenUsbDriverSignatureVerifier"] = SoftBoxAccountPermission.DeviceRead,
+            ["OpenDriverPackageManager"] = SoftBoxAccountPermission.DeviceRead,
+            ["InspectUsbDriverPackage"] = SoftBoxAccountPermission.DeviceRead,
+            ["ListUsbDriverPackages"] = SoftBoxAccountPermission.DeviceRead,
+            ["InstallUsbDriverPackage"] = SoftBoxAccountPermission.DeviceOperations,
+            ["ExportUsbDriverPackage"] = SoftBoxAccountPermission.DeviceOperations,
+            ["RemoveUsbDriverPackage"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenQualcommUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenMediaTekUsbDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenFirmwareCenter"] = SoftBoxAccountPermission.DeviceOperations,
@@ -57,6 +78,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenSamsungDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenSamsungServiceOperations"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenSamsungOdinAssistant"] = SoftBoxAccountPermission.DeviceOperations,
+            ["ExecuteSamsungOdinFlash"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenSamsungOfficialTools"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenXiaomiDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenXiaomiFastbootService"] = SoftBoxAccountPermission.DeviceOperations,
@@ -132,4 +154,8 @@ public static class SoftBoxAuthorizationPolicy
 
     public static IReadOnlySet<string> SupportedActionIds { get; } =
         new HashSet<string>(Requirements.Keys, StringComparer.Ordinal);
+
+    /// <summary>Protected internal actions that are invoked only by an already-open tool, not by module navigation.</summary>
+    public static IReadOnlySet<string> InternalActionIds { get; } =
+        new HashSet<string>(["ExecuteSamsungOdinFlash", "RebootSamsungDownloadMode", "RebootAndroidServiceMode"], StringComparer.Ordinal);
 }
