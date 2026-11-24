@@ -208,7 +208,7 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - **MediaTek:** scatter/image validation and DA/Auth hashing are implemented, with a recheck before launching the technician-supplied SP Flash Tool. BROM programming, DA signature verification, SLA/DAA authorization and automatic Download are not implemented without a model-specific signed OEM package.
 - **Samsung:** Odin Start uses guarded Windows UI Automation only; no public supported Samsung Odin service API is claimed. Start is blocked if accessibility evidence is incomplete.
 - **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
-- The catalogue contains **37 master sections / 184 child features / 221 total entries**. Child statuses: **108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported, 0 Verified**. The 84 canonical action IDs are unique and retained. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
+- The current catalogue contains **38 master sections / 192 child features / 230 total entries**. Child statuses: **111 Implemented, 48 Tested, 22 In Development, 2 Planned, 9 Unsupported, 0 Verified**. The 87 canonical action IDs are unique. Physical validation on OEM service modes, Apple Recovery/DFU, driver installation and PCB data remains open.
 
 
 ## OEM service implementation addendum — 21 November 2026
@@ -278,3 +278,15 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 SoftBox provides separate iPhone viewing paths for its AirPlay receiver and optional UVC HDMI capture workflow. See [docs/IPHONE-SCREEN-RECOVERY.md](docs/IPHONE-SCREEN-RECOVERY.md) for connector/model limitations, setup, diagnostics and physical validation. AirPlay can auto-start on Windows and automatically obtain its official receiver when missing; the iPhone must still initiate AirPlay itself. Wired capture works only when the iPhone model supports external video output and a compatible AV adapter is used.
 
 - **Android service-mode discovery:** the Download & Service Mode Center reads Windows USB PnP independently of ADB, so Samsung Download Mode, Fastboot/Bootloader, Qualcomm EDL and MediaTek service interfaces can remain visible after Android's ADB transport disappears. It shows evidence/driver state, and passes only the detected manufacturer/mode to Firmware Center; it never invents a missing model or flashes automatically. See [docs/DOWNLOAD-MODE-RECOGNITION.md](docs/DOWNLOAD-MODE-RECOGNITION.md).
+
+
+## Universal device recognition, service modes and Windows driver packages — 24 November 2026
+
+SoftBox continues to target a Windows service workstation that can identify devices across manufacturers and operating systems, not only Android brands. Windows USB PnP discovery is independent of ADB; the current vendor-ID fallback includes Apple, Huawei, Samsung, OPPO, Xiaomi, Google, HTC, Motorola, LG, Sony, ASUS, Lenovo, ZTE, Qualcomm, MediaTek and other registered USB vendors. A vendor ID remains a manufacturer hint only: it does not determine the exact model, board revision, chipset, firmware or service protocol.
+
+- The Download & Service Mode Center now accepts additional explicitly described OEM service/recovery interfaces and Apple Recovery/DFU as read-only evidence when Windows reports them. Unclassified proprietary modes do not receive a guessed flashing tool.
+- The Samsung Odin hand-off carries the selected Windows PnP instance and COM evidence. The no-ADB path requires the technician to enter the exact model and COM, and Odin must expose the same COM before Start can be enabled. The PnP instance suffix is never converted into a phone serial.
+- The USB Driver Center now has a Windows package manager: INF/Hardware-ID/Windows compatibility analysis; CAT trust verification and INF catalog-membership verification; explicit UAC install; PnPUtil export; installed-package listing; and strict oemNN.inf removal without /force. Package staging success still requires a separate device health check.
+- A public .NET 10 SoftBox.PluginSdk project now exposes the Manifest v1 model, permissions, validation and serialization. It does not sign plugins, grant runtime permissions or bypass the trusted-publisher/AppContainer controls.
+- See [docs/UNIVERSAL-DEVICE-COVERAGE.md](docs/UNIVERSAL-DEVICE-COVERAGE.md) and [docs/BOARD-MAP-DATA-GUIDE.md](docs/BOARD-MAP-DATA-GUIDE.md). Only source-backed board and component data may be added; the existing single detailed Galaxy A31 component map is retained.
+- Physical tests on Samsung, Huawei, OPPO, Xiaomi, Qualcomm EDL, MediaTek BROM/DA and Apple hardware have not been performed by this repository change. Qualcomm Firehose and MediaTek DA/Auth remain OEM/model-specific gates; a detected USB interface is not a universal flash capability.

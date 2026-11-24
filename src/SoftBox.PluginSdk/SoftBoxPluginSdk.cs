@@ -85,7 +85,7 @@ public static class SoftBoxPluginManifestWriter
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var permission in manifest.RequestedPermissions)
             {
-                if (string.IsNullOrWhiteSpace(permission) || !SoftBoxPluginPermissions.Allowed.Contains(permission))
+                if (string.IsNullOrWhiteSpace(permission) || permission.Length > 80 || !SoftBoxPluginPermissions.Allowed.Contains(permission))
                     errors.Add("Unknown or forbidden permission: " + (permission ?? "<null>"));
                 else if (!seen.Add(permission))
                     errors.Add("Duplicate permission: " + permission);
