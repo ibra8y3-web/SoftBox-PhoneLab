@@ -228,7 +228,7 @@ public sealed class DeviceIdentityIntegrityWindow : Window
                         var confidence = "Fastboot transport listed the exact device identifier";
                         var warning = "Serial is a Fastboot transport identifier. It is not compared with ADB serial unless the identifier types are explicitly the same.";
 
-                        if (manual && !_fastbootVariableCache.ContainsKey(device.Serial))
+                        if (!_fastbootVariableCache.ContainsKey(device.Serial))
                         {
                             try
                             {
@@ -274,15 +274,16 @@ public sealed class DeviceIdentityIntegrityWindow : Window
                     "Unknown", "لم يتم العثور على fastboot.exe؛ لا يمكن قراءة وضع Bootloader من قناة Fastboot.", 0));
             }
 
-            if (manual && !string.IsNullOrWhiteSpace(_settings.IPhoneToolsDirectory))
+            var appleToolsDirectory = IPhoneDeviceDiagnosticsService.ResolveToolsDirectory(_settings.IPhoneToolsDirectory);
+            if (appleToolsDirectory is not null)
             {
-                if (DateTime.UtcNow - _lastAppleScanUtc >= TimeSpan.FromSeconds(8))
+                if (DateTime.UtcNow - _lastAppleScanUtc >= TimeSpan.FromSeconds(15))
                 {
                     _lastAppleScanUtc = DateTime.UtcNow;
                     try
                     {
                         var apple = await _iphoneDiagnostics.ScanAsync(
-                            _settings.IPhoneToolsDirectory,
+                            appleToolsDirectory,
                             includeBatteryDiagnostics: false);
                         foreach (var item in apple)
                         {
@@ -321,20 +322,18 @@ public sealed class DeviceIdentityIntegrityWindow : Window
                 rows.Add(new DeviceIdentityRow(
                     "Apple", "Apple Lockdown tools not configured", "No identifier exposed", string.Empty,
                     "Apple", string.Empty, "Apple Lockdown",
-                    "Unknown", "اختر مجلد أدوات libimobiledevice من مركز iPhone لقراءة هوية Apple؛ لن يتم تخمين الرقم من USB VID وحده.", 0));
+                    "Unknown", "لم يتم العثور على أدوات libimobiledevice. اختر مجلد الأدوات من مركز iPhone؛ لن يتم تخمين الرقم من USB VID وحده.", 0));
             }
 
             var report = DeviceIdentityIntegrityEngine.Analyze(observations);
             foreach (var finding in report.Findings)
             {
+                // Match on a one-way hash of the full identifier, never on its masked suffix.
                 var existing = rows.FirstOrDefault(item =>
                     item.Platform.Equals(finding.Platform, StringComparison.OrdinalIgnoreCase) &&
                     item.IdentifierKind.Equals(finding.IdentifierKind, StringComparison.OrdinalIgnoreCase) &&
-                    item.RawIdentifier.Equals(observations.FirstOrDefault(observation =>
-                        observation.Platform.Equals(finding.Platform, StringComparison.OrdinalIgnoreCase) &&
-                        observation.IdentifierKind.Equals(finding.IdentifierKind, StringComparison.OrdinalIgnoreCase) &&
-                        DeviceIdentityIntegrityEngine.MaskIdentifier(observation.IdentifierValue) == finding.MaskedIdentifier)?.IdentifierValue ?? string.Empty,
-                        StringComparison.OrdinalIgnoreCase));
+                    DeviceIdentityIntegrityEngine.CreateIdentifierFingerprint(item.RawIdentifier) ==
+                    finding.IdentifierFingerprint);
                 if (existing is null)
                     continue;
                 var updated = existing with
@@ -399,7 +398,7 @@ public sealed class DeviceIdentityIntegrityWindow : Window
             "Windows Problem Code: " + row.ProblemCode,
             "Details:",
             row.Warning,
-            string.Join(Environment.NewLine, row.IntegrityWarnings)
+            string.Join(Environment.NewLine, row.IntegrityWarnings ?? Array.Empty<string>())
         });
     }
 
@@ -561,8 +560,6 @@ public sealed class DeviceIdentityIntegrityWindow : Window
         DeviceIdentityIntegrityStatus IntegrityStatus = DeviceIdentityIntegrityStatus.InsufficientEvidence,
         IReadOnlyList<string>? IntegrityWarnings = null)
     {
-        public IReadOnlyList<string> IntegrityWarnings { get; init; } =
-            IntegrityWarnings ?? Array.Empty<string>();
         public string DisplayLabel =>
             $"{Platform} • {Mode} • {IdentifierKind}: {DeviceIdentityIntegrityEngine.MaskIdentifier(RawIdentifier)}";
     }
