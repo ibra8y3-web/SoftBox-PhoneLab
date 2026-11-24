@@ -24,11 +24,11 @@ public sealed class UsbDriverCenterWindow : Window
     private readonly Func<string, Task<bool>> _authorizeAndAudit;
 
     public UsbDriverCenterWindow(
+        Func<string, Task<bool>> authorizeAndAudit,
         string? manufacturer = null,
         string? model = null,
         string detectionSource = "ADB",
-        IReadOnlyList<string>? hardwareIds = null,
-        Func<string, Task<bool>> authorizeAndAudit = null!)
+        IReadOnlyList<string>? hardwareIds = null)
     {
         _deviceManufacturer = manufacturer;
         _deviceModel = model;

@@ -494,3 +494,16 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 - Automated tests were added for USB/ADB mode classification, unknown-mode behavior, avoiding false Samsung Download Mode inference from VID alone, same-ID evidence corroboration, exact-ID conflicts, weak USB hints, source separation, masking and input bounds.
 - Current catalog totals: **38 sections / 190 child features / 228 total entries**, with **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported and 0 Verified** child features; **85 unique canonical ActionIds**.
 - Physical verification is still required on real Android handsets across ADB unauthorized/locked, Fastboot, Samsung Download, Qualcomm EDL, MediaTek Preloader/BROM, real iPhone/iPad Lockdown, Windows driver variations and AirPlay streaming. CI does not certify these physical modes.
+
+
+## Current implementation snapshot — 24 November 2026 (after universal service-mode and driver package work)
+
+- Master sections: 38.
+- Child features: 198.
+- Total catalogue entries: 236.
+- Unique supported action identifiers: 93.
+- Child feature statuses: 111 Implemented, 48 Tested, 28 In Development, 2 Planned, 9 Unsupported, 0 Verified.
+
+Newly recorded work: generic vendor USB service/recovery descriptors can be listed as evidence-only records; Apple Recovery/DFU is separated from Android transports; the Samsung Odin hand-off can use selected Download Mode PnP evidence and exact COM comparison when ADB is absent; the Windows Driver Center contains a user-supplied INF/CAT package manager with compatibility, signer and catalog-member checks, UAC install, export and guarded removal; and the public Plugin SDK has a .NET 10 manifest-authoring project.
+
+These are code/catalogue states, not statements that every vendor, proprietary protocol or model was physically tested. There is no physical-device test evidence in this snapshot. Qualcomm EDL still needs a correct OEM-authorized Firehose programmer; MediaTek BROM still needs a compatible DA/Auth path; proprietary Huawei/OPPO and other vendor modes remain evidence-only unless an exact supported toolchain is registered. Board-map scope is still one generic Android map and one detailed Galaxy A31 component record; the curated profile catalogue is still 12 devices.

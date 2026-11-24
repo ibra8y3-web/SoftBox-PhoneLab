@@ -1,6 +1,5 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://softbox.invalid/schemas/board-map-v1.schema.json",
   "title": "SoftBox model-specific board map v1",
   "type": "object",
   "additionalProperties": false,
@@ -247,5 +246,37 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "review": {
+            "properties": {
+              "status": {
+                "const": "verified"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          }
+        },
+        "required": [
+          "review"
+        ]
+      },
+      "then": {
+        "properties": {
+          "review": {
+            "required": [
+              "reviewer",
+              "reviewedAt",
+              "evidenceSummary"
+            ]
+          }
+        }
+      }
+    }
+  ]
 }

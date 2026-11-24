@@ -1477,7 +1477,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     usbMatch is not null ? "Windows USB / VID" : "غير مؤكد";
                 var hardwareIds = usbMatch?.Device.HardwareIds ?? Array.Empty<string>();
 
-                new UsbDriverCenterWindow(manufacturer, model, source, hardwareIds, AuthorizeAndAuditActionAsync)
+                new UsbDriverCenterWindow(AuthorizeAndAuditActionAsync, manufacturer, model, source, hardwareIds)
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }

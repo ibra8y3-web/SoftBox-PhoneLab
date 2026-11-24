@@ -163,7 +163,7 @@ public static class SoftBoxModuleCatalog
                 new("firmware-compatibility", "محرك توافق Firmware قبل الاستخدام", "Fail-closed firmware compatibility gate", "يقارن الشركة والموديل وProduct وBoard/Hardware SKU والمنطقة وAnti-Rollback وسلامة الملف وتوقيع الناشر؛ القيم الناقصة Unknown وتمنع السماح. هذه بوابة معلوماتية ولا تبدأ Flash أو تمنح تفويضًا.", ModuleImplementationStatus.Tested)
             ]),
         new("usb-doctor", 12, "الاتصال والتشخيص", "طبيب USB", "USB Doctor",
-            "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز؛ لا يثبت أو يزيل تعريفات.",
+            "يجمع فحص ADB/Fastboot مع جرد Windows PnP لأجهزة USB وVID/PID ورموز مشكلات الجهاز. إدارة حزم تعريف Windows متاحة في أداة منفصلة وبفحوص توقيع وتوافق وصلاحيات؛ لا يوجد تثبيت تلقائي لتعريف مجهول.",
             ModuleImplementationStatus.InDevelopment,
             [
                 new("usb-transports", "فحص أوضاع ADB وFastboot المتاحة", "ADB and Fastboot transport inspection", "استعلامات قراءة فقط؛ لا تكتشف كل أوضاع الشركات مثل EDL وDownload وPreloader.", ModuleImplementationStatus.Implemented, "UsbTransport"),

@@ -52,7 +52,7 @@ The public SoftBox.PluginSdk project targets .NET 10 without WPF dependencies. I
 
 ## Board maps and component evidence
 
-The current bundled data includes one generic Android board-map entry and one detailed Galaxy A31 component record. The curated device-profile catalogue has 12 internal profiles; the separate community catalogue is not a verified board-view database.
+The current bundled data includes one generic Android board-map entry and one detailed Galaxy A31 component record. The curated device-profile catalogue has 12 internal profiles; the separate community catalogue is not a verified board-view database. The current module catalogue has 198 child features across 38 sections and 93 unique action identifiers; this count is a code/catalogue count, not hardware certification.
 
 No PCB coordinates, component references, IC part numbers, thermal images or rail values are invented in this change. A new model-specific map must include the exact commercial model and board revision, dimensions/coordinate unit, component identifiers and coordinates, source provenance/licence and review evidence. See the board-map data guide and JSON Schema for the required structure.
 
