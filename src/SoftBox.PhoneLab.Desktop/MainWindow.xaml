@@ -130,8 +130,11 @@
        <TextBlock Text="الأجهزة المتصلة" FontSize="15" FontWeight="Bold"/>
        <TextBlock Text="USB / ADB • اكتشاف دوري" FontSize="9" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,10"/>
       </StackPanel>
-      <Button DockPanel.Dock="Top" Content="تثبيت ADB تلقائيًا (مطلوب لاكتشاف الهاتف)" Click="InstallAdb_Click"
-       Visibility="{Binding AdbInstallVisibility}" Background="#0F5C8A" Margin="0,0,0,10" Padding="8,8" FontSize="10"/>
+      <Button DockPanel.Dock="Top" Content="تثبيت ADB تلقائيًا (مطلوب لاكتشاف Android)" Click="InstallAdb_Click"
+       Visibility="{Binding AdbInstallVisibility}" Background="#0F5C8A" Margin="0,0,0,6" Padding="8,8" FontSize="10"/>
+      <Button DockPanel.Dock="Top" Content="أجهزة Download / Fastboot / EDL / Preloader" Click="OpenMaintenanceModeCenter_Click"
+       Background="#164A64" Foreground="#EAF3FF" Margin="0,0,0,10" Padding="8,8" FontSize="10"
+       ToolTip="فحص أجهزة Windows USB PnP حتى عندما تختفي قناة ADB في أوضاع الصيانة."/>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding DiscoveryHint}" FontSize="9" Foreground="#8199B5" TextWrapping="Wrap" Margin="2,8,2,0"/>
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding UsbRecognitionStatus}" FontSize="9" Foreground="#70C8E8" TextWrapping="Wrap" MaxHeight="42" Margin="2,8,2,0"/>
       <ListBox x:Name="DevicesList" ItemsSource="{Binding Devices}" SelectionChanged="Devices_SelectionChanged">

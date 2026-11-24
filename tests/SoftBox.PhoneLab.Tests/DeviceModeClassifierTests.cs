@@ -37,14 +37,15 @@ public sealed class DeviceModeClassifierTests
     }
 
     [Fact]
-    public void ClassifiesSamsungModemDescriptorAsServiceHintNotConfirmedDownloadMode()
+    public void ClassifiesSamsungDownloadModeUsingTheKnownCdcCompositeHardwareId()
     {
         var result = DeviceModeClassifier.ClassifyUsb(
-            CreateUsb("04E8", "685D", "Samsung", "Samsung Mobile USB Modem"));
+            CreateUsb("04E8", "685D", "Samsung", "SAMSUNG Mobile USB CDC Composite Device"));
 
-        Assert.Contains("service interface", result.Mode, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("unconfirmed", result.Mode, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("hint", result.Confidence, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Samsung Download Mode", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("04E8:685D", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VID/PID", result.Confidence, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("exact model", result.Limitation, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

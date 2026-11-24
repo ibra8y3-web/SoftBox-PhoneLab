@@ -43,7 +43,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly ScreenMirrorService _screenMirror;
     private readonly AirPlayReceiverService _airPlayReceiver = new();
     private readonly AirPlayReceiverBootstrapService _airPlayBootstrap = new();
-    private readonly AirPlayReceiverBootstrapService _airPlayBootstrap = new();
     private IPhoneCenterWindow? _iphoneCenterWindow;
     private AirPlayReceiverWindow? _airPlayReceiverWindow;
     private DeviceIdentityIntegrityWindow? _deviceIdentityIntegrityWindow;
@@ -301,7 +300,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (!_adb.IsAvailable)
             {
                 StatusMessage = "أدوات ADB غير موجودة. " + UsbRecognitionStatus;
-                MirrorStatus = "تم فحص USB، لكن عرض الشاشة يحتاج Android يعمل وتصريح ADB. ثبّت Platform-Tools وتعريف الشركة ثم فعّل USB debugging ووافق على الكمبيوتر.";
+                MirrorStatus = "عرض الشاشة يحتاج Android يعمل وتصريح ADB. أما Download Mode وFastboot وEDL وPreloader فتظهر في مركز أوضاع الصيانة عبر Windows USB PnP ولا تعتمد على ADB.";
                 Notify(nameof(MirrorStatus));
                 Notify(nameof(StatusMessage));
                 return;
@@ -408,7 +407,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (Devices.Count == 0)
             {
                 ClearDevice("لا يوجد جهاز ADB متصل.");
-                MirrorStatus = "بانتظار هاتف Android. سيظهر بث الشاشة بعد تشغيل النظام وتفعيل USB debugging والموافقة على هذا الكمبيوتر.";
+                MirrorStatus = "لا يوجد جهاز ADB حاليًا. إذا كان الهاتف في Download Mode أو Fastboot أو EDL فافتح مركز أوضاع الصيانة؛ هذه الأوضاع لا تظهر في قائمة ADB.";
                 Notify(nameof(MirrorStatus));
                 StatusMessage = "لم يتم رصد قناة ADB. " + UsbRecognitionStatus +
                     " ظهور الهاتف في مستكشف الملفات عبر MTP لا يمنح تصريح تشخيص ADB.";
@@ -937,6 +936,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Notify(nameof(UsbRecognitionStatus));
             }
         }
+    }
+
+    private void OpenMaintenanceModeCenter_Click(object sender, RoutedEventArgs e)
+    {
+        new MaintenanceModeCenterWindow(_usbInventory)
+        {
+            Owner = this
+        }.Show();
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();

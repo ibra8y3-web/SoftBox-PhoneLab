@@ -276,3 +276,5 @@ See [docs/SUPPORT-KEY-MANAGER.md](docs/SUPPORT-KEY-MANAGER.md) for the offline W
 ## iPhone screen recovery and wired HDMI capture
 
 SoftBox provides separate iPhone viewing paths for its AirPlay receiver and optional UVC HDMI capture workflow. See [docs/IPHONE-SCREEN-RECOVERY.md](docs/IPHONE-SCREEN-RECOVERY.md) for connector/model limitations, setup, diagnostics and physical validation. AirPlay can auto-start on Windows and automatically obtain its official receiver when missing; the iPhone must still initiate AirPlay itself. Wired capture works only when the iPhone model supports external video output and a compatible AV adapter is used.
+
+- **Android service-mode discovery:** the Download & Service Mode Center reads Windows USB PnP independently of ADB, so Samsung Download Mode, Fastboot/Bootloader, Qualcomm EDL and MediaTek service interfaces can remain visible after Android's ADB transport disappears. It shows evidence/driver state, and passes only the detected manufacturer/mode to Firmware Center; it never invents a missing model or flashes automatically. See [docs/DOWNLOAD-MODE-RECOGNITION.md](docs/DOWNLOAD-MODE-RECOGNITION.md).

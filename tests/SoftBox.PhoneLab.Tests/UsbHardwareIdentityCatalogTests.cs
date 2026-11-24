@@ -8,6 +8,7 @@ public sealed class UsbHardwareIdentityCatalogTests
     [Theory]
     [InlineData("05c6", "9008", "Qualcomm", "Qualcomm EDL / 9008 indicator")]
     [InlineData("0E8D", "0003", "MediaTek", "MediaTek Preloader/BROM family indicator")]
+    [InlineData("04E8", "685D", "Samsung", "Samsung Download Mode USB CDC interface")]
     [InlineData("04E8", "6860", "Samsung", "Samsung Android USB interface indicator")]
     [InlineData("18D1", "4EE0", "Google", "Google Fastboot interface indicator")]
     [InlineData("18D1", "4EE7", "Google", "Google ADB interface indicator")]

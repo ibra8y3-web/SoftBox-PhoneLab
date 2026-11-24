@@ -25,7 +25,8 @@ public static class DeviceModeClassifier
                 "This identifies a Qualcomm 9008 USB interface only. It does not prove the handset model, authorized programmer, or that a recovery image is safe.");
 
         if (vendor == "0E8D" &&
-            (Contains(text, "preloader") || Contains(text, "brom") || product == "0003"))
+            (Contains(text, "preloader") || Contains(text, "brom") || Contains(text, "download agent") ||
+             Contains(text, "da usb vcom") || product == "0003"))
             return Hint(Contains(text, "brom") ? "MediaTek BROM (USB hint)" : "MediaTek Preloader (USB hint)",
                 "USB descriptor hint", "Windows USB PnP",
                 "The interface is a MediaTek service-mode clue. Exact SoC, board, Download Agent compatibility and OEM authorization are not established.");
@@ -34,8 +35,12 @@ public static class DeviceModeClassifier
             return Hint("Samsung Download Mode", "Explicit Windows descriptor", "Windows USB PnP",
                 "Download Mode is inferred only because the Windows descriptor names it. Odin COM-port ownership and exact phone identity must still be matched independently.");
 
+        if (vendor == "04E8" && product == "685D")
+            return Hint("Samsung Download Mode (04E8:685D)", "Known Samsung Download-mode VID/PID", "Windows USB PnP",
+                "Windows reports Samsung USB VID/PID 04E8:685D, a Samsung Download-mode CDC interface. This does not identify the exact model, CSC, bootloader binary, or prove that Odin has matched the same handset on its COM port.");
+
         if (vendor == "04E8" &&
-            (Contains(text, "modem") || Contains(text, "serial") ||
+            (Contains(text, "modem") || Contains(text, "serial") || Contains(text, "cdc") ||
              string.Equals(device.Service, "usbser", StringComparison.OrdinalIgnoreCase)))
             return Hint("Samsung USB service interface (Download Mode unconfirmed)", "Samsung service-interface hint",
                 "Windows USB PnP",
