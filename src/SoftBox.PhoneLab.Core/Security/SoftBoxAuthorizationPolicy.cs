@@ -152,4 +152,8 @@ public static class SoftBoxAuthorizationPolicy
 
     public static IReadOnlySet<string> SupportedActionIds { get; } =
         new HashSet<string>(Requirements.Keys, StringComparer.Ordinal);
+
+    /// <summary>Protected internal actions that are invoked only by an already-open tool, not by module navigation.</summary>
+    public static IReadOnlySet<string> InternalActionIds { get; } =
+        new HashSet<string>(["ExecuteSamsungOdinFlash"], StringComparer.Ordinal);
 }
