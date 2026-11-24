@@ -205,7 +205,8 @@ public sealed class MaintenanceModeCenterWindow : Window
                 downloadModeComPort: item.ComPort,
                 downloadModeInstanceId: item.UsbDevice.InstanceId,
                 downloadModeHardwareId: item.HardwareId,
-                downloadModeModeEvidence: item.ModeEvidence.Mode)
+                downloadModeModeEvidence: item.ModeEvidence.Mode,
+                authorizeAndAudit: _authorizeAndAudit)
             { Owner = this }.Show();
         }
         else if (item.IsFastboot)
