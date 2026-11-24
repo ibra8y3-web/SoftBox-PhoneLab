@@ -44,6 +44,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly AirPlayReceiverService _airPlayReceiver = new();
     private IPhoneCenterWindow? _iphoneCenterWindow;
     private AirPlayReceiverWindow? _airPlayReceiverWindow;
+    private DeviceIdentityIntegrityWindow? _deviceIdentityIntegrityWindow;
     private readonly PhoneLabAgentInstaller _agentInstaller;
     private readonly HashSet<string> _preparedSerials = new(StringComparer.Ordinal);
     private bool _refreshing;
@@ -1023,6 +1024,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _iphoneCenterWindow.Show();
     }
 
+    private void OpenDeviceIdentityIntegrity()
+    {
+        if (_deviceIdentityIntegrityWindow is { IsVisible: true })
+        {
+            _deviceIdentityIntegrityWindow.Activate();
+            return;
+        }
+
+        // Device identity is shown in a standalone workspace and never replaces the Android or iPhone screen host.
+        _deviceIdentityIntegrityWindow = new DeviceIdentityIntegrityWindow(
+            _usbInventory,
+            _adb,
+            () => Devices.ToArray(),
+            _settings)
+        { Owner = this };
+        _deviceIdentityIntegrityWindow.Closed += (_, _) => _deviceIdentityIntegrityWindow = null;
+        _deviceIdentityIntegrityWindow.Show();
+    }
+
     private void OpenIPhoneAssessment(IPhoneAssessmentMode mode)
     {
         if (_iphoneCenterWindow?.SelectedSnapshot is not { } snapshot)
@@ -1154,6 +1174,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
             case "OpenIPhoneAuthenticityEvidence":
                 OpenIPhoneAssessment(IPhoneAssessmentMode.AuthenticityEvidence);
+                break;
+            case "OpenDeviceIdentityIntegrity":
+                OpenDeviceIdentityIntegrity();
                 break;
             case "RefreshDevices":
                 _ = RefreshDevicesAsync();
