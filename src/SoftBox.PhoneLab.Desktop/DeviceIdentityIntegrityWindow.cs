@@ -335,21 +335,22 @@ public sealed class DeviceIdentityIntegrityWindow : Window
             foreach (var finding in report.Findings)
             {
                 // Match on a one-way hash of the full identifier, never on its masked suffix.
-                var existing = rows.FirstOrDefault(item =>
-                    item.Platform.Equals(finding.Platform, StringComparison.OrdinalIgnoreCase) &&
-                    item.IdentifierKind.Equals(finding.IdentifierKind, StringComparison.OrdinalIgnoreCase) &&
-                    DeviceIdentityIntegrityEngine.CreateIdentifierFingerprint(item.RawIdentifier) ==
-                    finding.IdentifierFingerprint);
-                if (existing is null)
-                    continue;
-                var updated = existing with
+                // Apply one finding to every matching USB interface row because VID/PID can repeat.
+                for (var index = 0; index < rows.Count; index++)
                 {
-                    IntegrityStatus = finding.Status,
-                    IntegrityWarnings = finding.Warnings
-                };
-                var index = rows.IndexOf(existing);
-                if (index >= 0)
-                    rows[index] = updated;
+                    var item = rows[index];
+                    if (!item.Platform.Equals(finding.Platform, StringComparison.OrdinalIgnoreCase) ||
+                        !item.IdentifierKind.Equals(finding.IdentifierKind, StringComparison.OrdinalIgnoreCase) ||
+                        DeviceIdentityIntegrityEngine.CreateIdentifierFingerprint(item.RawIdentifier) !=
+                        finding.IdentifierFingerprint)
+                        continue;
+
+                    rows[index] = item with
+                    {
+                        IntegrityStatus = finding.Status,
+                        IntegrityWarnings = finding.Warnings
+                    };
+                }
             }
 
             // No transport is merged with another transport by timing, vendor name or a similar suffix.
