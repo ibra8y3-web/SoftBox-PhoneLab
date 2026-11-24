@@ -8,6 +8,8 @@ PhoneLab discovers authorized Android phones over ADB, reads available device id
 
 ### Device detection and model profiles
 - ADB auto-discovery every 3 seconds.
+- Windows Plug-and-Play arrival/removal notifications accelerate debounced asynchronous discovery while the periodic scan remains a fallback.
+- Section 38 adds a separate Device Identity Integrity workspace for USB/ADB/Fastboot/Apple evidence, mode classification, conflict review and automatic filling of its own identity fields. Serial/UDID is masked by default and copied only after an explicit action; USB VID/PID is never presented as a serial.
 - Authenticated Android Wireless debugging pairing through the existing Google Platform-Tools (adb pair then adb connect), with separate pairing/connection IP addresses and ports, one-time code handling and cancellation. Requires Android 11+ and the same Wi-Fi network; see docs/WIRELESS-ADB-PAIRING.md.
 - Reads manufacturer, marketing model, model number, product, device codename, hardware SKU, build fingerprint, board, SoC, bootloader, CPU and ABI.
 - Matches a bundled curated catalog and automatically adds the Apache-2.0 community model-code mapping generated from Google's public Play supported-device list. The community catalog updates upstream daily and is cached locally by PhoneLab.
@@ -32,7 +34,7 @@ The curated catalog is a starter set. The additional community model-code databa
 
 ### Multi-platform screen viewing and control
 - **Android phones from supported OEMs:** the right-side screen dock uses the official scrcpy Windows client after the selected device is independently confirmed as ADB-authorized. It can display and control the Android UI within the permissions granted by Android and the OEM. The bundled scrcpy archive is SHA-256 checked during CI packaging.
-- **iPhone/iPad:** Section 37 is a dedicated Apple workspace for Lockdown identity reads, Parts & Service History, Battery Health, technician-recorded physical tests and evidence review. AirPlay opens in a separate window with its own native screen host; it never shares the Android/scrcpy display panel. This path is **view-only**.
+- **iPhone/iPad:** Section 37 is a dedicated Apple workspace with automatic Lockdown identity polling when the Apple USB interface and trusted tools are available for Lockdown identity reads, Parts & Service History, Battery Health, technician-recorded physical tests and evidence review. AirPlay opens in a separate window with its own native screen host; it never shares the Android/scrcpy display panel. This path is **view-only**.
 - SoftBox does not bundle, copy or redistribute the GPL-3 AirPlay-Windows executable. The user selects their own independently downloaded `airplay-windows.exe`; SoftBox displays its SHA-256 fingerprint as a file identifier, not as proof of publisher identity. Review the upstream licence and release before use.
 - MTP/USB file-transfer visibility is not screen mirroring or device-control permission. Windows PnP/VID/PID detection identifies a likely USB manufacturer, not necessarily the exact handset model, OS state or a usable screen protocol.
 - Mirroring remains protocol-specific: ADB/scrcpy for Android devices that expose and authorize ADB; AirPlay for compatible Apple devices; the Windows-native Miracast receiver as an optional external viewing fallback; proprietary vendor/cast modes are not assumed to work just because a vendor is recognized.
@@ -90,9 +92,9 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - International workshop administration adds per-business locale/currency settings, warranty tracking, technician notes, printable HTML and UTF-8 CSV exports.
 
 
-## SoftBox 37-section product architecture
+## SoftBox 38-section product architecture
 
-- The left navigation follows all 37 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
+- The left navigation follows all 38 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
 - Existing services are shared and linked from the correct section instead of being cloned. Planned features are listed without fake executable buttons.
 - The detailed audit, missing-feature matrix, module ownership and staged implementation order are in [docs/SOFTBOX-MASTER-MODULE-STATUS.md](docs/SOFTBOX-MASTER-MODULE-STATUS.md).
 - Navigation and module addition rules are in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
