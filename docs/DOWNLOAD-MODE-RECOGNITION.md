@@ -32,3 +32,6 @@ The discovery center does not install or replace drivers automatically. It does 
 ## Verification status
 
 Unit tests cover recognized interface classification, separation of Samsung normal USB `04E8:6860` from Download Mode `04E8:685D`, service-mode inventory selection and COM-port parsing. Real-phone validation still requires physical Samsung, Fastboot, Qualcomm and MediaTek devices with the relevant Windows drivers installed.
+## Start authorization and audit
+
+The Download Mode entry point passes the same authorization-and-audit service into the Odin Assistant. The irreversible Start action performs a second, dedicated `ExecuteSamsungOdinFlash` permission check after final confirmation; the action is recorded in SoftBox's local security audit store before UI Automation is allowed to invoke Odin. Missing authorization, a failed audit write, or an unconnected audit service blocks Start. This remains independent of ADB and does not weaken the same-record PnP/COM evidence requirement.
