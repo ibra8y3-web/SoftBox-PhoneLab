@@ -206,7 +206,7 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - **MediaTek:** scatter/image validation and DA/Auth hashing are implemented, with a recheck before launching the technician-supplied SP Flash Tool. BROM programming, DA signature verification, SLA/DAA authorization and automatic Download are not implemented without a model-specific signed OEM package.
 - **Samsung:** Odin Start uses guarded Windows UI Automation only; no public supported Samsung Odin service API is claimed. Start is blocked if accessibility evidence is incomplete.
 - **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
-- The catalogue contains **37 master sections / 162 child features / 199 total entries**. Child statuses: **104 Implemented, 46 Tested, 7 In Development, 3 Planned, 2 Unsupported, 0 Verified**. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
+- The catalogue contains **37 master sections / 184 child features / 221 total entries**. Child statuses: **108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported, 0 Verified**. The 84 canonical action IDs are unique and retained. Physical Xiaomi/Qualcomm/MediaTek validation, multi-phone cable/codec/hotplug validation and a signed production release remain open.
 
 
 ## OEM service implementation addendum — 21 November 2026
