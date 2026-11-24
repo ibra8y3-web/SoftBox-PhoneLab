@@ -426,7 +426,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 
 | Section | Addition | Current implementation boundary |
 |---|---|---|
-| 02 Device Center | Universal Device Discovery workspace | Displays Windows USB PnP and ADB inventories separately; manufacturer/friendly-name/VID/PID are hints, not exact model proof. It intentionally does not join a USB instance to an ADB serial by guessing. |
+| 02 Device Center | Universal Device Discovery workspace | Displays Windows USB PnP and ADB inventories separately; manufacturer/friendly-name/VID/PID are hints, not exact model proof. It shows a syntactically plausible PnP instance suffix separately as unverified evidence and intentionally does not join a USB instance to an ADB serial by guessing. |
 | 12 USB Doctor | Expanded OEM resource directory, now 33 entries | Mixes dedicated USB driver sources, regional MTP downloads, OEM companion utilities and official support portals. A resource entry is not necessarily a direct driver installer. |
 | 12 USB Doctor | Live OEM source-page reachability check | Performs bounded HTTPS HEAD/GET checks, tracks up to five redirects, rejects HTTP downgrade and reports the HTTP response; does not download the driver payload or claim model compatibility. |
 | 12 USB Doctor | Windows PnP Hardware ID → INF candidate matcher | Reads SPDRP_HARDWAREID from the selected PnP device and compares exact IDs against Manufacturer/Models INF rows with architecture and minimum build decorations; unresolved ProductType/SuiteMask remains Unknown. The result is a candidate INF match, not SetupAPI's final driver-package selection. |
