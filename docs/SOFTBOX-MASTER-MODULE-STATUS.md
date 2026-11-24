@@ -502,7 +502,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 - Apple diagnostic utilities must be selected by the operator from a trusted Windows libimobiledevice distribution. No binaries are downloaded or installed automatically.
 - Component evidence uses the existing DPAPI-protected store. Parts/battery values are read by the technician from the iPhone's official settings; the physical test checklist requires actual observation and written evidence.
 - AirPlay now has a dedicated independent native host in its own top-level window. It no longer attaches to the Android `PhoneScreenHost`. The existing Android recording guard, manual priority and MainWindow process shutdown cleanup remain in place.
-- Current catalog totals at this checkpoint: **38 sections / 190 child features / 228 entries**, with 108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported and 0 Verified; 84 unique canonical ActionIds.
+- Historical catalog totals at this checkpoint: **38 sections / 190 child features / 228 entries**, with 108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported and 0 Verified; 84 unique canonical ActionIds.
 - Status: implementation committed for CI review; **not yet physically verified on an iPhone or iPad**. No absolute genuine/copy claim is produced.
 - CI on commit `99c1d16714b51c1a481f91783f78f94969803b5a`: Windows build/test/publish succeeded with 722 passed, 0 failed, 0 skipped; Android Agent APK and emulator UI automation jobs succeeded.
 
@@ -518,16 +518,17 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 - The module does not write IMEI/Serial, EFS, NVRAM, modem/NV areas, or boot/security identifiers. It does not bypass a blacklist. Odin's `FLASH` phrase is prefilled only from the authorized ADB Serial; the PnP suffix is never substituted. Compatibility, backup, COM ownership and the final Start action remain explicit technician confirmations. An official identity/board replacement must be completed by the OEM or authorized service procedure.
 - Windows USB arrival/removal notifications now debounce and accelerate USB/ADB/iPhone discovery. The existing periodic discovery timer remains a fallback. Apple identity checks run only when Windows reports Apple USB and the user-configured trusted Lockdown tools can be resolved; battery GasGauge is not polled repeatedly.
 - Automated tests were added for USB/ADB mode classification, unknown-mode behavior, avoiding false Samsung Download Mode inference from VID alone, same-ID evidence corroboration, exact-ID conflicts, weak USB hints, source separation, masking and input bounds.
-- Current catalog totals: **38 sections / 190 child features / 228 total entries**, with **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported and 0 Verified** child features; **85 unique canonical ActionIds**.
+- Historical catalog totals: **38 sections / 190 child features / 228 total entries**, with **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported and 0 Verified** child features; **85 unique canonical ActionIds**.
 - Physical verification is still required on real Android handsets across ADB unauthorized/locked, Fastboot, Samsung Download, Qualcomm EDL, MediaTek Preloader/BROM, real iPhone/iPad Lockdown, Windows driver variations and AirPlay streaming. CI does not certify these physical modes.
 
 
-## Current implementation snapshot — 24 November 2026 (after universal service-mode and driver package work)
+## Previous implementation snapshot — 24 November 2026 (before 51-section service expansion)
 
 - Master sections: 38.
-- Child features: 198.
-- Total catalogue entries: 236.
+- Direct catalog count at the pre-expansion snapshot: 199 child features and 237 total catalogue entries.
+- Child feature statuses at that checkpoint: 2 Planned, 28 In Development, 111 Implemented, 49 Tested, 0 Verified and 9 Unsupported.
 - Unique supported action identifiers: 93.
+- This section is historical; the 51-section catalogue at the end of this document is the current expansion baseline.
 - Child feature statuses: 111 Implemented, 48 Tested, 28 In Development, 2 Planned, 9 Unsupported, 0 Verified.
 
 Newly recorded work: generic vendor USB service/recovery descriptors can be listed as evidence-only records; Apple Recovery/DFU is separated from Android transports; the Samsung Odin hand-off can use selected Download Mode PnP evidence and exact COM comparison when ADB is absent; the Windows Driver Center contains a user-supplied INF/CAT package manager with compatibility, signer and catalog-member checks, UAC install, export and guarded removal; and the public Plugin SDK has a .NET 10 manifest-authoring project.
