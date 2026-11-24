@@ -18,6 +18,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using System.Windows.Interop;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -29,7 +30,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _processingBackupSchedules;
     private readonly PhoneDiscoveryService _discovery;
     private readonly WindowsUsbInventoryService _usbInventory = new();
+    private readonly IPhoneDeviceDiagnosticsService _iphoneDiagnostics = new();
     private IReadOnlyList<WindowsUsbDevice> _lastUsbDevices = Array.Empty<WindowsUsbDevice>();
+    private IReadOnlyList<IPhoneDeviceScanResult> _lastIPhoneScanResults = Array.Empty<IPhoneDeviceScanResult>();
+    private DateTime _lastIPhoneScanUtc = DateTime.MinValue;
+    private bool _iphoneScanInProgress;
+    private HwndSource? _deviceNotificationSource;
     private readonly DeviceInspectionEngine _inspection;
     private readonly AgentBridgeClient _agentBridge;
     private readonly BoardMapCatalog _maps = new();
@@ -56,6 +62,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private AuthenticatedSoftBoxUser _currentUser;
     private PhoneLabSettings _settings = new();
     private readonly DispatcherTimer _timer;
+    private readonly DispatcherTimer _deviceChangeDebounceTimer;
     private bool _busy;
     private bool _dragging;
     private Point _dragOrigin;
@@ -149,6 +156,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _backupSchedulerTimer.Tick += async (_, _) => await ProcessBackupSchedulesAsync();
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _timer.Tick += async (_, _) => await RefreshDevicesAsync();
+        _deviceChangeDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(650) };
+        _deviceChangeDebounceTimer.Tick += async (_, _) =>
+        {
+            _deviceChangeDebounceTimer.Stop();
+            await RefreshDevicesAsync();
+        };
+        SourceInitialized += (_, _) => AttachDeviceChangeNotifications();
+        Closed += (_, _) =>
+        {
+            _deviceChangeDebounceTimer.Stop();
+            _deviceNotificationSource?.RemoveHook(DeviceChangeWindowHook);
+            _deviceNotificationSource = null;
+        };
         Loaded += async (_, _) =>
         {
             try
@@ -204,6 +224,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Keep the dispatcher alive until the child receiver has exited cleanly.
         e.Cancel = true;
         _timer.Stop();
+        _deviceChangeDebounceTimer.Stop();
         _backupSchedulerTimer.Stop();
         _screenMirror.Dispose();
 
@@ -268,6 +289,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             await RefreshUsbRecognitionAsync();
+            _ = RefreshIPhoneDevicesQuietlyAsync();
             if (!_adb.IsAvailable)
             {
                 StatusMessage = "أدوات ADB غير موجودة. " + UsbRecognitionStatus;
@@ -802,6 +824,87 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Notify(nameof(ScanStatus)); Notify(nameof(StatusMessage));
     }
 
+    private void AttachDeviceChangeNotifications()
+    {
+        try
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            _deviceNotificationSource = HwndSource.FromHwnd(handle);
+            _deviceNotificationSource?.AddHook(DeviceChangeWindowHook);
+        }
+        catch (Exception ex)
+        {
+            // Periodic discovery remains active when Windows cannot attach the optional PnP hook.
+            UsbRecognitionStatus = "الإشعار الفوري للأجهزة غير متاح؛ يستمر الفحص الدوري. " + ex.Message;
+            Notify(nameof(UsbRecognitionStatus));
+        }
+    }
+
+    private IntPtr DeviceChangeWindowHook(
+        IntPtr hwnd,
+        int message,
+        IntPtr wParam,
+        IntPtr lParam,
+        ref bool handled)
+    {
+        const int WmDeviceChange = 0x0219;
+        const int DbtDevNodesChanged = 0x0007;
+        const int DbtDeviceArrival = 0x8000;
+        const int DbtDeviceRemoveComplete = 0x8004;
+        const int DbtDeviceRemovePending = 0x8003;
+
+        if (message == WmDeviceChange &&
+            wParam.ToInt32() is DbtDevNodesChanged or DbtDeviceArrival or DbtDeviceRemoveComplete or DbtDeviceRemovePending &&
+            _settings.AutoDiscoverDevices &&
+            !_shutdownCleanupComplete)
+        {
+            // Device-change callbacks must stay quick; USB/ADB/Lockdown I/O runs after debounce.
+            _deviceChangeDebounceTimer.Stop();
+            _deviceChangeDebounceTimer.Start();
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private async Task RefreshIPhoneDevicesQuietlyAsync(bool force = false)
+    {
+        if (_iphoneScanInProgress || !_settings.AutoDiscoverDevices && !force)
+            return;
+
+        var hasAppleUsb = _lastUsbDevices.Any(device =>
+            device.VendorId.Equals("05AC", StringComparison.OrdinalIgnoreCase) ||
+            device.HardwareIds.Any(id => id.Contains("VID_05AC", StringComparison.OrdinalIgnoreCase)));
+        if (!hasAppleUsb && !force)
+            return;
+
+        if (!force && DateTime.UtcNow - _lastIPhoneScanUtc < TimeSpan.FromSeconds(15))
+            return;
+
+        var toolsDirectory = IPhoneDeviceDiagnosticsService.ResolveToolsDirectory(_settings.IPhoneToolsDirectory);
+        if (toolsDirectory is null)
+            return;
+
+        _iphoneScanInProgress = true;
+        _lastIPhoneScanUtc = DateTime.UtcNow;
+        try
+        {
+            // Identity is polled automatically; battery GasGauge is reserved for an explicit center scan.
+            _lastIPhoneScanResults = await _iphoneDiagnostics.ScanAsync(
+                toolsDirectory,
+                includeBatteryDiagnostics: false);
+            if (_iphoneCenterWindow is { IsVisible: true })
+                _iphoneCenterWindow.ApplyBackgroundScanResults(_lastIPhoneScanResults);
+        }
+        catch
+        {
+            // Do not turn an optional Apple stack failure into an Android/USB discovery failure.
+        }
+        finally
+        {
+            _iphoneScanInProgress = false;
+        }
+    }
+
     private async Task RefreshUsbRecognitionAsync()
     {
         try
@@ -914,6 +1017,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _diagnosticEvidenceStore,
             OpenModuleAction)
         { Owner = this };
+        if (_lastIPhoneScanResults.Count > 0)
+            _iphoneCenterWindow.ApplyBackgroundScanResults(_lastIPhoneScanResults);
         _iphoneCenterWindow.Closed += (_, _) => _iphoneCenterWindow = null;
         _iphoneCenterWindow.Show();
     }
