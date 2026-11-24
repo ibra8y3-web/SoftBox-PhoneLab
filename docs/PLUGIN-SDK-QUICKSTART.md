@@ -22,6 +22,7 @@ Inspection alone never executes code. The Plugin Store requires an explicit user
 - Contract model: SoftBoxPluginManifestV1 (same manifest fields and execution modes as the core v1 contract).
 - Contract writer: SoftBoxPluginManifestWriter.Serialize.
 - Contract validator: SoftBoxPluginManifestWriter.Validate.
+- CI package: the Windows workflow builds `SoftBox.PluginSdk.1.0.0.nupkg` and uploads it as the `SoftBox-PluginSdk-NuGet` Actions artifact (unsigned; not yet published to nuget.org).
 
 ## Manifest field contract
 
@@ -49,10 +50,10 @@ SHA-256 is an integrity identifier, not proof of publisher identity. A valid man
 
 ## Still requiring release-level validation
 
-1. Public NuGet/package publication and a versioned compatibility policy.
-2. Publisher key enrollment and revocation lifecycle.
-3. Full Windows AppContainer integration run on a real supported Windows installation.
+1. Signing the SDK NuGet package, publishing it to a public feed and maintaining a versioned compatibility policy.
+2. A documented external publisher-key distribution/revocation policy beyond the current local current-user trust-store add/remove operations.
+3. Full Windows AppContainer integration coverage across supported Windows editions and hardened environments; hosted CI is not a substitute for every target machine.
 4. Compatibility tests against independent third-party plugin builds.
-5. Security review and an expanded malicious-package test corpus.
+5. Independent security review and an expanded malicious-package test corpus.
 
 The Plugin Store includes an AppContainer self-test action. Native launch also runs this self-test automatically before loading plugin code. If the worker token does not report TokenIsAppContainer = 1, native execution is refused before plugin execution.
