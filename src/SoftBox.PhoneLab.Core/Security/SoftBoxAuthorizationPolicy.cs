@@ -42,6 +42,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenUniversalDeviceDiscovery"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenMaintenanceModeCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["RebootSamsungDownloadMode"] = SoftBoxAccountPermission.DeviceOperations,
+            ["RebootAndroidServiceMode"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenAirPlayReceiver"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenIPhoneCenter"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenIPhonePartsHistory"] = SoftBoxAccountPermission.DeviceRead,
@@ -156,5 +157,5 @@ public static class SoftBoxAuthorizationPolicy
 
     /// <summary>Protected internal actions that are invoked only by an already-open tool, not by module navigation.</summary>
     public static IReadOnlySet<string> InternalActionIds { get; } =
-        new HashSet<string>(["ExecuteSamsungOdinFlash", "RebootSamsungDownloadMode"], StringComparer.Ordinal);
+        new HashSet<string>(["ExecuteSamsungOdinFlash", "RebootSamsungDownloadMode", "RebootAndroidServiceMode"], StringComparer.Ordinal);
 }
