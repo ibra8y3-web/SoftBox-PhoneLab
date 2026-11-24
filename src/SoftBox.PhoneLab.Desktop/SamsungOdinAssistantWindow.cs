@@ -20,6 +20,7 @@ public sealed class SamsungOdinAssistantWindow : Window
     private readonly TextBox _odinExecutable = new();
     private readonly TextBox _inspection = new();
     private readonly TextBlock _status = new();
+    private readonly TextBlock _deviceIdentitySummary = new();
     private readonly Dictionary<SamsungOdinSlot, TextBox> _slotPaths = [];
     private readonly Dictionary<SamsungOdinSlot, string> _inspectedHashes = [];
     private readonly Button _inspectButton;
@@ -102,6 +103,15 @@ public sealed class SamsungOdinAssistantWindow : Window
         header.Children.Add(TextBlock(
             "إدارة حزم BL / AP / CP / CSC، وربط Download Mode، وفحص واجهة Odin عبر Windows UI Automation. لا يستخدم SoftBox نقرات إحداثية أو أوامر غير موثقة.",
             12, "#B7C9DE"));
+        _deviceIdentitySummary.Text = _deviceSerial is null
+            ? "الهوية المقروءة تلقائيًا: غير متاحة من ADB موثوق. وجود منفذ COM وحده لا يكفي لإثبات الرقم التسلسلي أو ربطه بالهاتف."
+            : $"هوية الجهاز المقروءة تلقائيًا من ADB المُصرّح: {(_deviceManufacturer ?? "غير معروف")} / {(_deviceModel ?? "غير معروف")} • Serial: {MaskSerialForDisplay(_deviceSerial)}";
+        _deviceIdentitySummary.Foreground = Brush("#9BD3F5");
+        _deviceIdentitySummary.Background = Brush("#10283B");
+        _deviceIdentitySummary.Padding = new Thickness(9);
+        _deviceIdentitySummary.TextWrapping = TextWrapping.Wrap;
+        _deviceIdentitySummary.Margin = new Thickness(0, 6, 0, 8);
+        header.Children.Add(_deviceIdentitySummary);
         header.Children.Add(TextBlock(
             "تنبيه: اختيار ملف أو حساب SHA-256 لا يثبت صحة المصدر أو توافق Firmware مع موديل الهاتف أو المنطقة أو Anti-Rollback. لا تبدأ التفليش إلا بعد مراجعة هذه المعلومات ووجود نسخة احتياطية.",
             11, "#F0C9A5"));
@@ -633,6 +643,14 @@ public sealed class SamsungOdinAssistantWindow : Window
         };
         button.Click += handler;
         return button;
+    }
+
+    private static string MaskSerialForDisplay(string value)
+    {
+        var normalized = new string(value.Where(char.IsLetterOrDigit).ToArray());
+        if (normalized.Length == 0)
+            return "غير متاح";
+        return "••••" + normalized[^Math.Min(4, normalized.Length)..];
     }
 
     private static SolidColorBrush Brush(string color)
