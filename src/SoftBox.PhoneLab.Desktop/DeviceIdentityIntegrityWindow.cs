@@ -173,6 +173,26 @@ public sealed class DeviceIdentityIntegrityWindow : Window
                 foreach (var device in usbDevices)
                 {
                     var mode = DeviceModeClassifier.ClassifyUsb(device);
+                    if (WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(device.InstanceId, out var pnpSuffix))
+                    {
+                        var platform = device.VendorId.Equals("05AC", StringComparison.OrdinalIgnoreCase)
+                            ? "Apple"
+                            : device.VendorId is "04E8" or "18D1" or "0E8D" or "05C6" or "2717"
+                                ? "Android"
+                                : "USB";
+                        const string suffixKind = "PnP instance suffix";
+                        const string suffixConfidence = "Windows PnP instance suffix hint — not confirmed as an OEM serial";
+                        const string suffixWarning = "This value is the final Windows PnP instance-path component. Some OEMs use a device serial here; others use a port or interface token. SoftBox does not call it IMEI or confirmed Serial and never uses it to join another transport automatically.";
+                        observations.Add(new DeviceIdentityObservation(
+                            platform, mode.Mode, suffixKind, pnpSuffix,
+                            device.Manufacturer, string.Empty,
+                            "Windows SetupAPI PnP instance", suffixConfidence));
+                        rows.Add(new DeviceIdentityRow(
+                            platform, mode.Mode, suffixKind, pnpSuffix,
+                            device.Manufacturer, string.Empty, "USB PnP instance",
+                            suffixConfidence, suffixWarning, device.ProblemCode));
+                    }
+
                     if (!device.VendorId.Equals("----", StringComparison.OrdinalIgnoreCase) &&
                         !device.ProductId.Equals("----", StringComparison.OrdinalIgnoreCase))
                     {
