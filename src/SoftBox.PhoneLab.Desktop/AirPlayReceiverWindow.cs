@@ -39,10 +39,8 @@ public sealed class AirPlayReceiverWindow : Window
         Func<Task> stopExistingScreenSession)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
-        _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
         _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
         _stopExistingScreenSession = stopExistingScreenSession ?? throw new ArgumentNullException(nameof(stopExistingScreenSession));
         Title = "SoftBox | iPhone AirPlay Screen Receiver";
@@ -243,36 +241,6 @@ public sealed class AirPlayReceiverWindow : Window
         if (!IsVisible || !IsLoaded || !_screenHost.IsLoaded)
             return;
         await StartReceiverAsync(automatic: true);
-    }
-
-    private async Task EnsureReceiverInstalledAsync()
-    {
-        _start.IsEnabled = false;
-        _status.Text = "جارٍ البحث عن مستقبل AirPlay-Windows في أدوات SoftBox والتثبيتات المعروفة...";
-        try
-        {
-            var installation = await _bootstrap.EnsureInstalledAsync(_executablePath.Text);
-            var latest = await _settingsService.LoadAsync();
-            _settings = PhoneLabSettingsService.Validate(latest with
-            {
-                AirPlayReceiverExecutablePath = installation.ExecutablePath
-            });
-            await _settingsService.SaveAsync(_settings);
-            _executablePath.Text = installation.ExecutablePath;
-            _fingerprint.Text = installation.Version +
-                (installation.InstalledNow ? " • تم تنزيل الحزمة والتحقق من SHA-256" : " • تم العثور على تثبيت موجود");
-            _status.Text = installation.InstalledNow
-                ? "تم تنزيل AirPlay-Windows من المصدر الرسمي والتحقق من بصمة ZIP ثم فك ملفات المكوّن تلقائيًا."
-                : "تم اكتشاف تثبيت AirPlay-Windows موجود وحفظ مساره. لا يلزم اختيار ملف يدويًا.";
-        }
-        catch (Exception ex)
-        {
-            _status.Text = "تعذر تجهيز مستقبل AirPlay تلقائيًا: " + ex.Message;
-        }
-        finally
-        {
-            _start.IsEnabled = !_receiver.IsRunning;
-        }
     }
 
     private async Task EnsureReceiverInstalledAsync()

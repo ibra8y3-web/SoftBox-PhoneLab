@@ -1139,7 +1139,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         window.ShowEmbedded(this);
     }
 
-    private async void OpenModuleAction(string actionId)
+    private async Task<bool> AuthorizeAndAuditActionAsync(string actionId)
     {
         if (!SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, actionId))
         {
@@ -1154,7 +1154,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     "سجل الأمان • SoftBox",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
-                return;
+                return false;
             }
 
             MessageBox.Show(this,
@@ -1162,7 +1162,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 "الصلاحيات • SoftBox",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
-            return;
+            return false;
         }
 
         try
@@ -1176,8 +1176,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 "سجل الأمان • SoftBox",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
-            return;
+            return false;
         }
+
+        return true;
+    }
+
+    private async void OpenModuleAction(string actionId)
+    {
+        if (!await AuthorizeAndAuditActionAsync(actionId)) return;
 
         switch (actionId)
         {
