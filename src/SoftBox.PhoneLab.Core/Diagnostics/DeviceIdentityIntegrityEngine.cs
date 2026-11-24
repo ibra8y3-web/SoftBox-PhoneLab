@@ -1,4 +1,7 @@
-using System.Security.Cryptography;\nusing System.Text;\n\nnamespace SoftBox.PhoneLab.Core.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace SoftBox.PhoneLab.Core.Diagnostics;
 
 public enum DeviceIdentityIntegrityStatus
 {
