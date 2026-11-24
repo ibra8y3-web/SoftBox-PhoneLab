@@ -92,9 +92,9 @@ Fuel-gauge data is not a certified battery-capacity test. A real capacity estima
 - International workshop administration adds per-business locale/currency settings, warranty tracking, technician notes, printable HTML and UTF-8 CSV exports.
 
 
-## SoftBox 38-section product architecture
+## SoftBox 51-section product architecture
 
-- The left navigation follows all 38 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
+- The left navigation follows all 51 sections of the SoftBox master specification in order; each opens an independent section workspace with current tools and per-feature status.
 - Existing services are shared and linked from the correct section instead of being cloned. Planned features are listed without fake executable buttons.
 - The detailed audit, missing-feature matrix, module ownership and staged implementation order are in [docs/SOFTBOX-MASTER-MODULE-STATUS.md](docs/SOFTBOX-MASTER-MODULE-STATUS.md).
 - Navigation and module addition rules are in [docs/MODULAR-NAVIGATION.md](docs/MODULAR-NAVIGATION.md).
@@ -208,7 +208,7 @@ See [OEM service and recovery workflows](docs/OEM-RECOVERY-WORKFLOWS.md) for imp
 - **MediaTek:** scatter/image validation and DA/Auth hashing are implemented, with a recheck before launching the technician-supplied SP Flash Tool. BROM programming, DA signature verification, SLA/DAA authorization and automatic Download are not implemented without a model-specific signed OEM package.
 - **Samsung:** Odin Start uses guarded Windows UI Automation only; no public supported Samsung Odin service API is claimed. Start is blocked if accessibility evidence is incomplete.
 - **Android OEM directory:** supported official links are surfaced for Google/Motorola and vendor documentation; a link is not a per-model compatibility guarantee.
-- The current catalogue contains **38 master sections / 198 child features / 236 total entries**. Child statuses: **111 Implemented, 48 Tested, 28 In Development, 2 Planned, 9 Unsupported, 0 Verified**. The 93 canonical action IDs are unique. Physical validation on OEM service modes, Apple Recovery/DFU, driver installation and PCB data remains open.
+- The current catalogue contains **51 master sections / 264 child features / 315 total entries**. Child statuses: **111 Implemented, 49 Tested, 28 In Development, 67 Planned, 9 Unsupported, 0 Verified**. The 13 new specialist sections are Planned and expose no executable actions until real services and tests exist. The 93 canonical action IDs are unique. Physical validation on OEM service modes, Apple Recovery/DFU, driver installation and PCB data remains open.
 
 
 ## OEM service implementation addendum — 21 November 2026
@@ -290,3 +290,10 @@ SoftBox continues to target a Windows service workstation that can identify devi
 - A public .NET 10 SoftBox.PluginSdk project now exposes the Manifest v1 model, permissions, validation and serialization. It does not sign plugins, grant runtime permissions or bypass the trusted-publisher/AppContainer controls.
 - See [docs/UNIVERSAL-DEVICE-COVERAGE.md](docs/UNIVERSAL-DEVICE-COVERAGE.md) and [docs/BOARD-MAP-DATA-GUIDE.md](docs/BOARD-MAP-DATA-GUIDE.md). Only source-backed board and component data may be added; the existing single detailed Galaxy A31 component map is retained.
 - Physical tests on Samsung, Huawei, OPPO, Xiaomi, Qualcomm EDL, MediaTek BROM/DA and Apple hardware have not been performed by this repository change. Qualcomm Firehose and MediaTek DA/Auth remain OEM/model-specific gates; a detected USB interface is not a universal flash capability.
+
+
+## Professional service-platform expansion — 24 November 2026
+
+SoftBox's navigation and audited module catalogue have been expanded from 38 to **51 sections**. The 13 added specialist sections cover Qualcomm EDL/Diag, MediaTek BROM/Preloader/META, Unisoc/Spreadtrum, Rockchip/Allwinner, Huawei/Honor Kirin, Firmware Engineering, Partition/Filesystem inspection, eMMC/UFS, Boot/Recovery, Boardview/Component repair, Network/Modem/RF, owner-authorized Data Rescue and Service Operations Automation.
+
+These are **Planned service areas**, not claims that those engines already exist. Each section is visible in navigation as a roadmap entry, but it has no executable action buttons. The existing Samsung Odin, Xiaomi, Android, Apple, USB and firmware tools remain in their current sections and are not copied or replaced. See [docs/PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md](docs/PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md) for the full service matrix, implementation phases and evidence requirements.
