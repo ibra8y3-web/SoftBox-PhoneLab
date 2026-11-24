@@ -31,7 +31,7 @@ public sealed class DeviceIdentityIntegrityWindow : Window
     private readonly TextBox _mode = new();
     private readonly TextBox _identifier = new();
     private readonly Button _copyIdentifier = new();
-    private readonly Button _refresh = new();
+    private Button _refresh = new();
     private readonly DispatcherTimer _timer;
     private readonly SemaphoreSlim _scanGate = new(1, 1);
     private readonly Dictionary<string, string> _fastbootVariableCache = new(StringComparer.Ordinal);
