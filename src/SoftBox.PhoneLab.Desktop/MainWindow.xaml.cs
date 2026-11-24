@@ -1035,7 +1035,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Device identity is shown in a standalone workspace and never replaces the Android or iPhone screen host.
         _deviceIdentityIntegrityWindow = new DeviceIdentityIntegrityWindow(
             _usbInventory,
-            _adb,
             () => Devices.ToArray(),
             _settings)
         { Owner = this };
