@@ -9,6 +9,7 @@ using SoftBox.PhoneLab.Desktop.Services;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace SoftBox.PhoneLab.Desktop;
 
@@ -28,6 +29,9 @@ public sealed class IPhoneCenterWindow : Window
     private readonly TextBlock _status = new();
     private readonly TextBlock _details = new();
     private readonly HashSet<string> _recordedEvidence = new(StringComparer.Ordinal);
+    private readonly DispatcherTimer _autoScanTimer;
+    private IReadOnlyList<IPhoneDeviceScanResult> _lastResults = Array.Empty<IPhoneDeviceScanResult>();
+    private bool _scanInProgress;
     private PhoneLabSettings _settings;
 
     public IPhoneDeviceInfoSnapshot? SelectedSnapshot
@@ -64,6 +68,19 @@ public sealed class IPhoneCenterWindow : Window
         _status.TextWrapping = TextWrapping.Wrap;
         _details.TextWrapping = TextWrapping.Wrap;
         _devices.SelectionChanged += Devices_SelectionChanged;
+        _autoScanTimer = new DispatcherTimer
+        {
+            // Keep the live identity view responsive without repeatedly running battery diagnostics.
+            Interval = TimeSpan.FromSeconds(Math.Max(10, settings.DiscoveryIntervalSeconds * 2))
+        };
+        _autoScanTimer.Tick += async (_, _) => await ScanDevicesAsync(includeBatteryDiagnostics: false);
+        Loaded += async (_, _) =>
+        {
+            await ScanDevicesAsync();
+            if (settings.AutoDiscoverDevices)
+                _autoScanTimer.Start();
+        };
+        Closed += (_, _) => _autoScanTimer.Stop();
         Content = BuildContent();
     }
 
@@ -165,8 +182,11 @@ public sealed class IPhoneCenterWindow : Window
         return root;
     }
 
-    private async Task ScanDevicesAsync()
+    private async Task ScanDevicesAsync(bool includeBatteryDiagnostics = true)
     {
+        if (_scanInProgress)
+            return;
+        _scanInProgress = true;
         _scanButton.IsEnabled = false;
         _devices.ItemsSource = null;
         _recordedEvidence.Clear();
@@ -192,7 +212,24 @@ public sealed class IPhoneCenterWindow : Window
             _toolsDirectory.Text = toolsDirectory;
             _settings = _settings with { IPhoneToolsDirectory = toolsDirectory };
             await _settingsService.SaveAsync(_settings);
-            var results = await _diagnostics.ScanAsync(toolsDirectory);
+            var results = await _diagnostics.ScanAsync(
+                toolsDirectory,
+                includeBatteryDiagnostics: includeBatteryDiagnostics);
+            if (!includeBatteryDiagnostics && _lastResults.Count > 0)
+            {
+                var previous = _lastResults.ToDictionary(
+                    item => item.MaskedIdentifier,
+                    StringComparer.OrdinalIgnoreCase);
+                results = results.Select(item =>
+                    previous.TryGetValue(item.MaskedIdentifier, out var prior)
+                        ? item with
+                        {
+                            BatteryDiagnostics = item.BatteryDiagnostics ?? prior.BatteryDiagnostics,
+                            BatteryDiagnosticsError = item.BatteryDiagnosticsError ?? prior.BatteryDiagnosticsError
+                        }
+                        : item).ToArray();
+            }
+            _lastResults = results;
             _devices.ItemsSource = results;
             if (results.Count == 0)
             {
@@ -216,6 +253,7 @@ public sealed class IPhoneCenterWindow : Window
         finally
         {
             _scanButton.IsEnabled = true;
+            _scanInProgress = false;
         }
     }
 
