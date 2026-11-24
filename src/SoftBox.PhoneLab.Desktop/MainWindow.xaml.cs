@@ -869,7 +869,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async Task RefreshIPhoneDevicesQuietlyAsync(bool force = false)
     {
-        if (_iphoneScanInProgress || !_settings.AutoDiscoverDevices && !force)
+        // The dedicated iPhone center owns the live Lockdown poll while it is open.
+        // Avoid starting a second idevice_id/ideviceinfo process against the same USB session.
+        if (_iphoneCenterWindow is { IsVisible: true } ||
+            _iphoneScanInProgress || !_settings.AutoDiscoverDevices && !force)
             return;
 
         var hasAppleUsb = _lastUsbDevices.Any(device =>
