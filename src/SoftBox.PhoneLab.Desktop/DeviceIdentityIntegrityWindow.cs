@@ -17,7 +17,6 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class DeviceIdentityIntegrityWindow : Window
 {
     private readonly WindowsUsbInventoryService _usbInventory;
-    private readonly AdbClient _adb;
     private readonly Func<IReadOnlyList<DeviceListItem>> _adbDevicesProvider;
     private readonly FastbootService _fastboot = new();
     private readonly IPhoneDeviceDiagnosticsService _iphoneDiagnostics = new();
@@ -40,12 +39,10 @@ public sealed class DeviceIdentityIntegrityWindow : Window
 
     public DeviceIdentityIntegrityWindow(
         WindowsUsbInventoryService usbInventory,
-        AdbClient adb,
         Func<IReadOnlyList<DeviceListItem>> adbDevicesProvider,
         PhoneLabSettings settings)
     {
         _usbInventory = usbInventory ?? throw new ArgumentNullException(nameof(usbInventory));
-        _adb = adb ?? throw new ArgumentNullException(nameof(adb));
         _adbDevicesProvider = adbDevicesProvider ?? throw new ArgumentNullException(nameof(adbDevicesProvider));
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
