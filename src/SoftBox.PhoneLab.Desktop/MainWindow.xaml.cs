@@ -1319,7 +1319,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     hasAuthorizedSamsung ? samsungDevice!.Serial : null,
                     hasAuthorizedSamsung ? samsungDevice!.Manufacturer : null,
                     hasAuthorizedSamsung ? samsungDevice!.Model ?? samsungDevice.DisplayName : null,
-                    singlePnpSuffix)
+                    singlePnpSuffix,
+                    authorizeAndAudit: AuthorizeAndAuditActionAsync)
                 { Owner = this }.ShowEmbedded(this);
                 break;
             }
