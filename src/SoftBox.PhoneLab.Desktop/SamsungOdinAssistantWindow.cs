@@ -118,7 +118,7 @@ public sealed class SamsungOdinAssistantWindow : Window
             ? "Samsung USB PnP suffix: غير متاح"
             : $"Samsung USB PnP suffix: {MaskSerialForDisplay(_pnpInstanceSuffix)} (مرشح غير موثّق، وليس Serial مؤكدًا)";
         _deviceIdentitySummary.Text = adbIdentity + Environment.NewLine + pnpIdentity +
-            Environment.NewLine + "لا يتم ربط PnP suffix بمنفذ COM أو استخدامه كشرط تأكيد Flash دون دليل مستقل.";
+            Environment.NewLine + "عبارة FLASH تُملأ فقط من Serial المقروء عبر ADB المصرّح؛ لا يُستخدم PnP suffix كبديل ولا يتم ربطه بمنفذ COM.";
         _deviceIdentitySummary.Foreground = Brush("#9BD3F5");
         _deviceIdentitySummary.Background = Brush("#10283B");
         _deviceIdentitySummary.Padding = new Thickness(9);
@@ -172,7 +172,18 @@ public sealed class SamsungOdinAssistantWindow : Window
         _flashConfirmation.Background = Brush("#071625");
         _flashConfirmation.Foreground = Brush("#DCEBFA");
         _flashConfirmation.BorderBrush = Brush("#263D58");
-        _flashConfirmation.ToolTip = "اكتب FLASH ثم آخر أربعة أحرف من Serial للجهاز المحدد";
+        if (_deviceSerial is not null)
+        {
+            // Auto-fill from the authenticated ADB transport serial only.
+            // A USB PnP suffix is a hint and must never satisfy the Odin flash confirmation.
+            var confirmationSuffix = _deviceSerial.Length > 4 ? _deviceSerial[^4..] : _deviceSerial;
+            _flashConfirmation.Text = "FLASH " + confirmationSuffix;
+            _flashConfirmation.ToolTip = "تمت التعبئة من Serial المقروء عبر ADB المصرّح. راجع الجهاز ثم أكّد يدويًا كل فحوص التفليش.";
+        }
+        else
+        {
+            _flashConfirmation.ToolTip = "غير متاح: يلزم Serial من اتصال ADB مُصرّح؛ لا يُستخدم PnP suffix كبديل.";
+        }
         content.Children.Add(_flashConfirmation);
         content.Children.Add(TextBlock(
             "زر Start لن يتفعّل إلا إذا استطاع Windows قراءة نافذة Odin وزر Start الوحيد وأسماء كل الحزم ومنفذ COM. عند غياب أي دليل ستُرفض الأتمتة. الضغط على Start لا يثبت نجاح التفليش.",
@@ -487,7 +498,7 @@ public sealed class SamsungOdinAssistantWindow : Window
                 Environment.NewLine + "Blockers:" + Environment.NewLine +
                 string.Join(Environment.NewLine, report.Decision.Blockers.Select(x => "  - " + x)));
             _status.Text = report.Decision.CanInvokeStart
-                ? "اكتملت أدلة واجهة Odin. لا يبدأ التفليش حتى تكتب عبارة التأكيد النهائية."
+                ? "اكتملت أدلة واجهة Odin. تمت تعبئة عبارة التأكيد من ADB. لا يبدأ التفليش إلا بعد مراجعة الجهاز وتأكيد زر Start النهائي يدويًا."
                 : "تم منع Start بسبب عدم اكتمال أدلة Windows UI Automation. راجع أسباب المنع.";
         }
         catch (Exception ex)
