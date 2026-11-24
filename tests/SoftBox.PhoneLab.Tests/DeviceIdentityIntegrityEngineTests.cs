@@ -61,6 +61,20 @@ public sealed class DeviceIdentityIntegrityEngineTests
     }
 
     [Fact]
+    public void RepeatedUsbHardwareIdsDoNotCountAsIndependentDeviceIdentityEvidence()
+    {
+        var report = DeviceIdentityIntegrityEngine.Analyze(
+        [
+            Observation("USB", "Samsung USB", "USB VID/PID", "04E8:6860", "Samsung", "", "Windows USB PnP", "VID/PID hint"),
+            Observation("USB", "Samsung USB", "USB VID/PID", "04E8:6860", "Samsung", "", "Windows USB PnP", "VID/PID hint")
+        ]);
+
+        var finding = Assert.Single(report.Findings);
+        Assert.Equal(DeviceIdentityIntegrityStatus.ReviewRequired, finding.Status);
+        Assert.Contains(finding.Warnings, warning => warning.Contains("قد يتكرر"));
+    }
+
+    [Fact]
     public void DifferentTransportIdentifiersAreNotJoinedByGuessing()
     {
         var report = DeviceIdentityIntegrityEngine.Analyze(
