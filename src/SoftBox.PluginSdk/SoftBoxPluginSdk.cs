@@ -165,7 +165,20 @@ public static class SoftBoxPluginManifestWriter
         => !string.IsNullOrWhiteSpace(value) && value.Length <= 80 && SemVerPattern.IsMatch(value);
 
     private static bool IsRootDll(string? value)
-        => !string.IsNullOrWhiteSpace(value) && value.Length <= 240 &&
-           !Path.IsPathRooted(value) && value.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) &&
-           !value.Contains('/') && !value.Contains('\\') && !value.Any(char.IsControl);
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length > 240 ||
+            Path.IsPathRooted(value) ||
+            !value.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(value, value.Trim(), StringComparison.Ordinal) ||
+            value.Any(character => char.IsControl(character) || "<>:\"/\\|?*".Contains(character)))
+            return false;
+
+        var stem = value[..^4];
+        if (stem.Length == 0 || stem.EndsWith('.') || stem.EndsWith(' '))
+            return false;
+
+        var firstSegment = stem.Split('.')[0];
+        return !Regex.IsMatch(firstSegment, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    }
 }
