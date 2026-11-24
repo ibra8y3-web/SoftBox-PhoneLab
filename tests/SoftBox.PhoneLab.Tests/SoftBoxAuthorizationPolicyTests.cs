@@ -13,8 +13,12 @@ public sealed class SoftBoxAuthorizationPolicyTests
             .Where(x => x.ActionId is not null).Select(x => x.ActionId!).ToArray();
 
         Assert.Equal(actions.Length, actions.Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(SoftBoxAuthorizationPolicy.SupportedActionIds.OrderBy(x => x, StringComparer.Ordinal),
+        var navigationActions = SoftBoxAuthorizationPolicy.SupportedActionIds
+            .Except(SoftBoxAuthorizationPolicy.InternalActionIds, StringComparer.Ordinal);
+        Assert.Equal(navigationActions.OrderBy(x => x, StringComparer.Ordinal),
             actions.OrderBy(x => x, StringComparer.Ordinal));
+        Assert.All(SoftBoxAuthorizationPolicy.InternalActionIds,
+            action => Assert.Contains(action, SoftBoxAuthorizationPolicy.SupportedActionIds));
         Assert.All(actions, action =>
         {
             Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission(action, out var permission));
