@@ -39,6 +39,23 @@ public sealed class SoftBoxPluginSdkTests
             error => error.Contains("root-level DLL", StringComparison.Ordinal));
     }
 
+    [Theory]
+    [InlineData("C:Plugin.dll")]
+    [InlineData("plugin:payload.dll")]
+    [InlineData("plugin?.dll")]
+    [InlineData("CON.dll")]
+    [InlineData("LPT1.dll")]
+    [InlineData("plugin .dll ")]
+    public void NativeManifestRejectsUnsafeWindowsDllNames(string entryAssembly)
+    {
+        var manifest = new SoftBoxPluginManifestV1(1, "org.example.audit", "Audit sample",
+            "1.0.0", "1.0.0", "0.1.0", entryAssembly, "Example Publisher",
+            "Read-only sample.", Array.Empty<string>());
+
+        Assert.Contains(SoftBoxPluginManifestWriter.Validate(manifest),
+            error => error.Contains("root-level DLL", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void ReadOnlyWorkflowAllowsOnlyReadPermissions()
     {
