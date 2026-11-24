@@ -19,12 +19,12 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 - Executable navigation: **56 unique ActionIds**, all routed through the central dispatcher and explicit fail-closed authorization policy; no duplicate executable action IDs.
 - The module catalog in that earlier snapshot contained **no Verified entries**; hosted CI validates code paths but does not constitute physical-device verification.
 
-### Current universal-device branch snapshot — 24 November 2026
+### Pre-expansion universal-device branch snapshot — 24 November 2026 (catalog baseline)
 
 - Top-level sections: **38**, all classified In Development.
-- Child features: **204**; catalog records including section rows: **242**.
-- Child feature statuses: **3 Planned, 29 In Development, 112 Implemented, 50 Tested, 0 Verified and 10 Unsupported**.
-- Including the 38 section rows: **3 Planned, 67 In Development, 112 Implemented, 50 Tested, 0 Verified and 10 Unsupported**.
+- Direct catalog baseline: **199 child features**; **237 total catalog entries** including section rows.
+- Child feature statuses: **2 Planned, 28 In Development, 111 Implemented, 49 Tested, 0 Verified and 9 Unsupported**.
+- This is the catalog snapshot immediately before adding the 13 specialist roadmap sections; later records at the end of this document supersede it.
 - Executable navigation: **93 unique ActionIds**. The internal `ExecuteSamsungOdinFlash` audit action is permission-mapped separately and is not exposed as a navigation button.
 - Device data baseline: **12 curated identity profiles**, one Samsung Galaxy A31 component record, and one generic Android board map. There are currently **no model-specific verified PCB maps**; the generic drawing is never treated as a verified handset layout.
 - The solution contains **six .NET projects**: Core, Desktop, Tests, ReleaseSigner, PluginHost and PluginSdk, alongside the Android Gradle Agent.
@@ -41,7 +41,7 @@ This document maps the supplied **SoftBox – Universal Smart Device Service & R
 
 A green build does not make a hardware feature Verified. Unit tests do not substitute for tests on a real handset, USB chipset, driver, fixture or firmware package. Navigation pages read their state from `SoftBoxModuleCatalog`; an unfinished feature never receives an action button.
 
-## The 38 product sections
+## The 51 product sections
 
 | # | Section | Current status | Already present | Important missing work |
 |---:|---|---|---|---|
@@ -81,6 +81,21 @@ A green build does not make a hardware feature Verified. Unit tests do not subst
 | 34 | Support & Logs | In Development | Bounded Android evidence collection, firmware inspection reports, local support ZIP with system/runtime metadata and user-selected TXT/LOG/JSON files plus password/token/authorization/device-ID redaction | Structured application log pipeline, crash capture and stronger review of non-standard secret formats |
 | 35 | Settings | In Development | Persisted local preferences for ADB discovery interval, screen auto-open, Agent auto-setup, auto-inspection and batch concurrency; workshop currency/locale/time-zone settings remain | App-wide theme, language, keyboard shortcuts, privacy/data retention and storage settings |
 | 36 | About | In Development | Application/Assembly version, runtime, OS/architecture and bundled THIRD-PARTY-NOTICES display | Build provenance, complete dependency/license inventory and official support links |
+
+
+| 39 | Qualcomm EDL & Diag Lab | Planned | No executable service engine yet; planned PnP evidence, signed Firehose validation, rawprogram/patch inspection, verified readback and restore preflight | OEM/model-specific signed programmer catalogue, authorized EDL protocol provider, physical hardware-in-the-loop validation |
+| 40 | MediaTek BROM, Preloader & META Lab | Planned | No executable service engine yet; planned mode evidence, Scatter inspection, DA/Auth validation and read-only META diagnostics | Model-specific signed DA/Auth paths, verified partition maps and physical validation; no generic AUTH bypass |
+| 41 | Unisoc & Spreadtrum Lab | Planned | No executable service engine yet; planned PAC inspection, USB mode evidence, partition maps, device information, recovery preflight | Verified model/loader matrix, trusted PAC sources and physical device tests |
+| 42 | Rockchip & Allwinner Lab | Planned | No executable service engine yet; planned MaskROM/Loader evidence, firmware inspection and image/readback integrity | Signed loader catalogue, supported image formats and model-specific recovery validation |
+| 43 | Huawei & Honor Kirin Lab | Planned | No executable service engine yet; planned USB COM/Fastboot/Upgrade evidence, APP/dload inspection and board/region matching | Official authorized recovery integrations, exact board/region/rollback data and physical validation |
+| 44 | Firmware Engineering Studio | Planned | No separate studio yet; existing Firmware Center remains canonical. Planned multi-format readers, official source catalogue, signature trust, version diff and compatibility ledger | Verified OEM trust roots, source/licence policy, parsers and tested compatibility database |
+| 45 | Partition & Filesystem Lab | Planned | No executable partition lab yet; planned GPT/MBR, Sparse, Super, ext4/F2FS read-only inspection and partition-map comparison | Fuzz-tested parsers, image fixtures and filesystem integrity validation |
+| 46 | eMMC & UFS Memory Lab | Planned | No executable memory-service engine yet; planned adapter inventory, CID/CSD/EXT_CSD/UFS reads, health reporting and image integrity | Supported adapter/protocol matrix, calibrated fixtures and strict write gates |
+| 47 | Boot, Recovery & Rescue Center | Planned | Existing Android reboot and maintenance-mode tools remain canonical; planned unified mode matrix, bootloop diagnostics, official sideload guides and recovery-session evidence | Per-OEM recovery providers, reliable progress/result semantics and real device validation |
+| 48 | Boardview & Component Repair Lab | Planned | Existing BoardView importer and component workspace remain canonical; planned source-backed board-map library, part cross-reference, test-point references and measurement evidence | Licensed verified schematics/boardviews, exact PCB revisions and physical measurements |
+| 49 | Network, Modem & RF Lab | Planned | Existing network diagnostics remain canonical; planned baseband/SIM reads, Wi-Fi/Bluetooth/GPS/NFC tests, carrier status and RF instrument integration | OEM APIs, RF test fixtures/calibration and model-specific result thresholds |
+| 50 | Data Rescue & Migration Lab | Planned | Existing Smart Backup remains canonical; planned owner-authorized selective data migration, encrypted vault, backup integrity and access-boundary reports | Verified app/OS data access, encryption-key handling, restore validation and retention controls |
+| 51 | Service Operations & Automation Center | Planned | Existing workshop, batch and workflow services remain canonical; planned durable job queue, per-device session isolation, workflow templates and per-job evidence bundles | Crash-safe persistence, per-device cancellation/resume, concurrency controls and end-to-end operational tests |
 
 ## Existing tools and their canonical sections
 
@@ -518,3 +533,16 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 Newly recorded work: generic vendor USB service/recovery descriptors can be listed as evidence-only records; Apple Recovery/DFU is separated from Android transports; the Samsung Odin hand-off can use selected Download Mode PnP evidence and exact COM comparison when ADB is absent; the Windows Driver Center contains a user-supplied INF/CAT package manager with compatibility, signer and catalog-member checks, UAC install, export and guarded removal; and the public Plugin SDK has a .NET 10 manifest-authoring project.
 
 These are code/catalogue states, not statements that every vendor, proprietary protocol or model was physically tested. There is no physical-device test evidence in this snapshot. Qualcomm EDL still needs a correct OEM-authorized Firehose programmer; MediaTek BROM still needs a compatible DA/Auth path; proprietary Huawei/OPPO and other vendor modes remain evidence-only unless an exact supported toolchain is registered. Board-map scope is still one generic Android map and one detailed Galaxy A31 component record; the curated profile catalogue is still 12 devices.
+
+
+## Current professional service catalogue — 24 November 2026
+
+- Master sections: **51** (38 existing sections retained; 13 new specialist sections added as Planned).
+- Child features: **264** (199 existing catalog features retained; 65 new Planned roadmap features).
+- Total catalog entries: **315** (51 section records plus 264 child features).
+- Child feature statuses: **67 Planned, 28 In Development, 111 Implemented, 49 Tested, 0 Verified and 9 Unsupported**.
+- The 93 existing canonical navigation actions are unchanged. The 13 specialist sections add **no executable ActionIds**.
+- The catalogue describes future areas of work; it does not claim that Qualcomm/MediaTek/Unisoc/Rockchip/Huawei protocol engines, eMMC/UFS programming, universal firmware flashing or board-level automation are already implemented.
+- Build/CI verifies software behavior covered by tests only. Physical device/adapter/protocol certification remains a separate requirement.
+
+See [PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md](PROFESSIONAL-SERVICE-PLATFORM-EXPANSION.md) for the full feature inventory and staged implementation plan.
