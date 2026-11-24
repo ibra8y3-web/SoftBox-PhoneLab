@@ -1,4 +1,4 @@
-namespace SoftBox.PhoneLab.Core.Diagnostics;
+using System.Security.Cryptography;\nusing System.Text;\n\nnamespace SoftBox.PhoneLab.Core.Diagnostics;
 
 public enum DeviceIdentityIntegrityStatus
 {
@@ -27,6 +27,7 @@ public sealed record DeviceIdentityIntegrityFinding(
     string Model,
     IReadOnlyList<string> Sources,
     string Confidence,
+    string IdentifierFingerprint,
     DeviceIdentityIntegrityStatus Status,
     IReadOnlyList<string> Warnings);
 
@@ -113,6 +114,7 @@ public static class DeviceIdentityIntegrityEngine
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                     .First(),
+                CreateIdentifierFingerprint(first.IdentifierValue),
                 status,
                 warnings));
         }
@@ -158,6 +160,17 @@ public static class DeviceIdentityIntegrityEngine
 
         return IsOptionalLabel(observation.Manufacturer, 96) &&
                IsOptionalLabel(observation.Model, 128);
+    }
+
+    public static bool IsSafeIdentifierForUi(string? value) => IsSafeIdentifier(value);
+
+    /// <summary>Stable one-way key for matching a UI row back to its exact evidence group.</summary>
+    public static string CreateIdentifierFingerprint(string? value)
+    {
+        if (!IsSafeIdentifier(value))
+            return string.Empty;
+        var normalized = value!.Trim().ToUpperInvariant();
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)));
     }
 
     public static string MaskIdentifier(string? value)
