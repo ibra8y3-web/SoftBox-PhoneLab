@@ -68,6 +68,25 @@ public sealed class SoftBoxAuthorizationPolicyTests
     }
 
     [Fact]
+    public void SamsungDownloadModeRebootIsInternalAuditedDeviceOperation()
+    {
+        const string actionId = "RebootSamsungDownloadMode";
+
+        Assert.Contains(actionId, SoftBoxAuthorizationPolicy.InternalActionIds);
+        Assert.DoesNotContain(
+            SoftBoxModuleCatalog.All.SelectMany(module => module.Features)
+                .Where(feature => feature.ActionId is not null)
+                .Select(feature => feature.ActionId!),
+            actionId);
+
+        Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission(actionId, out var permission));
+        Assert.Equal(SoftBoxAccountPermission.DeviceOperations, permission);
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Administrator, actionId));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, actionId));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, actionId));
+    }
+
+    [Fact]
     public void SamsungOdinStartRequiresDeviceOperationsAndIsExplicitlyAuthorized()
     {
         Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission("ExecuteSamsungOdinFlash", out var permission));
