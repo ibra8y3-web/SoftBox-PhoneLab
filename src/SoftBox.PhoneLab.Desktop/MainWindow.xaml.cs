@@ -1538,7 +1538,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 new OfflineCenterWindow() { Owner = this }.ShowEmbedded(this);
                 break;
             case "OpenApplicationSettings":
-                new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings) { Owner = this }.ShowEmbedded(this);
+                _ = OpenApplicationSettingsWindowAsync();
                 break;
             case "OpenAbout":
                 new AboutWindow { Owner = this }.ShowEmbedded(this);
@@ -1817,6 +1817,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             Trace.TraceWarning("SoftBox notification was not persisted: {0}", ex.Message);
+        }
+    }
+
+    private async Task OpenApplicationSettingsWindowAsync()
+    {
+        try
+        {
+            // Tool paths can be saved by their dedicated windows; reload the latest preferences
+            // before opening the settings editor so an older in-memory snapshot cannot overwrite them.
+            _settings = await _settingsService.LoadAsync();
+            new ApplicationSettingsWindow(_settingsService, _settings, ApplyApplicationSettings)
+            { Owner = this }.ShowEmbedded(this);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "تعذر تحميل أحدث إعدادات SoftBox: " + ex.Message,
+                "إعدادات SoftBox", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

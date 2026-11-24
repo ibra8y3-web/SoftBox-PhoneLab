@@ -215,7 +215,16 @@ public sealed class AirPlayReceiverWindow : Window
             try
             {
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-                await ready.Task.WaitAsync(timeout.Token);
+                try
+                {
+                    await ready.Task.WaitAsync(timeout.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (IsVisible)
+                        _status.Text = "لم تجهز نافذة العرض خلال المهلة؛ لم يبدأ مستقبل AirPlay. افتح النافذة مجددًا ثم أعد المحاولة.";
+                    return;
+                }
             }
             finally
             {
