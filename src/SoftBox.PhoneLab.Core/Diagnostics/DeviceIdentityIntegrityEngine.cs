@@ -76,7 +76,13 @@ public static class DeviceIdentityIntegrityEngine
                 .ToArray();
 
             var warnings = new List<string>();
-            var status = observations.Length > 1
+            var distinctSources = observations.Select(item => item.Source.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+            var isNonUniqueHardwareHint =
+                group.Key.Kind.Contains("VID/PID", StringComparison.OrdinalIgnoreCase) ||
+                group.Key.Kind.Contains("HARDWARE ID", StringComparison.OrdinalIgnoreCase);
+            var status = distinctSources > 1 && !isNonUniqueHardwareHint
                 ? DeviceIdentityIntegrityStatus.ConsistentEvidence
                 : DeviceIdentityIntegrityStatus.InsufficientEvidence;
 
@@ -85,13 +91,18 @@ public static class DeviceIdentityIntegrityEngine
                 status = DeviceIdentityIntegrityStatus.ConflictDetected;
                 warnings.Add("نفس المعرّف الدقيق ظهر مع أسماء شركة أو موديلات مختلفة بين مصادر القراءة؛ لا يتم حسم الهوية تلقائيًا.");
             }
-            else if (observations.Length > 1)
+            else if (isNonUniqueHardwareHint)
             {
-                warnings.Add("أكثر من مصدر قرأ نفس المعرّف. هذا يعزز اتساق القراءة فقط ولا يثبت أصالة اللوحة أو القطع.");
+                status = DeviceIdentityIntegrityStatus.ReviewRequired;
+                warnings.Add("VID/PID أو Hardware ID قد يتكرر بين أجهزة متعددة؛ لا يصلح كرقم تسلسلي ولا كدليل ربط لهاتف بعينه.");
+            }
+            else if (distinctSources > 1)
+            {
+                warnings.Add("مصادر مستقلة قرأت نفس المعرّف الدقيق من نفس النوع. هذا يعزز اتساق القراءة فقط ولا يثبت أصالة اللوحة أو القطع.");
             }
             else
             {
-                warnings.Add("مصدر واحد فقط قدم هذا المعرّف؛ لا يوجد تأييد مستقل كافٍ.");
+                warnings.Add("مصدر مستقل واحد فقط قدم هذا المعرّف؛ لا يوجد تأييد مستقل كافٍ.");
             }
 
             if (observations.Any(item => IsWeakConfidence(item.Confidence)))
