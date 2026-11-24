@@ -15,16 +15,19 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
 {
     private readonly WindowsUsbInventoryService _inventory;
     private readonly Func<IReadOnlyList<DeviceListItem>> _adbDevicesProvider;
+    private readonly Func<string, Task<bool>> _authorizeAndAudit;
     private readonly StackPanel _usbResults = new();
     private readonly StackPanel _adbResults = new();
     private readonly TextBlock _status = new();
 
     public UniversalDeviceDiscoveryWindow(
         WindowsUsbInventoryService inventory,
-        Func<IReadOnlyList<DeviceListItem>> adbDevicesProvider)
+        Func<IReadOnlyList<DeviceListItem>> adbDevicesProvider,
+        Func<string, Task<bool>> authorizeAndAudit)
     {
         _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
         _adbDevicesProvider = adbDevicesProvider ?? throw new ArgumentNullException(nameof(adbDevicesProvider));
+        _authorizeAndAudit = authorizeAndAudit ?? throw new ArgumentNullException(nameof(authorizeAndAudit));
         Title = "SoftBox | Universal Device Discovery";
         Width = 1040;
         Height = 780;
@@ -55,7 +58,7 @@ public sealed class UniversalDeviceDiscoveryWindow : Window
         var actions = new WrapPanel { Margin = new Thickness(0, 8, 0, 0) };
         actions.Children.Add(Button("إعادة فحص USB", "#14517A", async (_, _) => await RefreshAsync()));
         actions.Children.Add(Button("فتح مركز تعريفات الشركات", "#20364F", (_, _) =>
-            new UsbDriverCenterWindow { Owner = Owner ?? this }.ShowDialog()));
+            new UsbDriverCenterWindow(_authorizeAndAudit) { Owner = Owner ?? this }.ShowDialog()));
         actions.Children.Add(Button("إعداد Miracast في Windows", "#20364F", (_, _) =>
             new MiracastSetupWindow { Owner = Owner ?? this }.ShowDialog()));
         header.Children.Add(actions);

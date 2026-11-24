@@ -101,7 +101,7 @@ public sealed class WindowsDriverPackageManagerService
     public async Task<DriverPackageInstallValidation> ValidateInstallCandidateAsync(
         string infPath,
         string catalogPath,
-        IReadOnlyCollection<string> targetHardwareIds,
+        IReadOnlyCollection<string>? targetHardwareIds,
         CancellationToken cancellationToken = default)
     {
         EnsureWindows();
@@ -121,14 +121,15 @@ public sealed class WindowsDriverPackageManagerService
         if (!string.Equals(infDirectory, catDirectory, StringComparison.OrdinalIgnoreCase))
             blockers.Add("يجب اختيار INF وCAT من مجلد الحزمة نفسها؛ لا يتم دمج ملفات تعريف من مصادر مختلفة.");
 
-        if (targetHardwareIds is null || targetHardwareIds.Count == 0)
+        var safeHardwareIds = targetHardwareIds ?? Array.Empty<string>();
+        if (safeHardwareIds.Count == 0)
             blockers.Add("لا توجد Hardware IDs فعلية للجهاز المستهدف. لا يمكن إثبات توافق تعريف عام باسم الشركة أو الموديل فقط.");
 
         DriverInfCompatibilityReport? compatibility = null;
         if (blockers.Count == 0)
         {
             compatibility = await DriverInfCompatibilityAnalyzer.AnalyzeFileAsync(
-                inf, targetHardwareIds, WindowsDriverTarget.Current, cancellationToken);
+                inf, safeHardwareIds, WindowsDriverTarget.Current, cancellationToken);
             if (compatibility.Status != DriverInfMatchStatus.Compatible)
                 blockers.Add("لم يثبت توافق INF مع Hardware IDs وإصدار Windows والمعمارية الحالية: " +
                     compatibility.Status + " — " + compatibility.Explanation);
@@ -155,7 +156,7 @@ public sealed class WindowsDriverPackageManagerService
     public async Task<DriverPackageOperationResult> InstallVerifiedAsync(
         string infPath,
         string catalogPath,
-        IReadOnlyCollection<string> targetHardwareIds,
+        IReadOnlyCollection<string>? targetHardwareIds,
         CancellationToken cancellationToken = default)
     {
         var validation = await ValidateInstallCandidateAsync(
