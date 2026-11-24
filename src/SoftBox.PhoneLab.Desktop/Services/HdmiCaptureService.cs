@@ -310,7 +310,7 @@ public sealed class HdmiCaptureService : IAsyncDisposable
             if (!cancellationToken.IsCancellationRequested &&
                 ReferenceEquals(Volatile.Read(ref _process), process))
             {
-                Interlocked.CompareExchange(ref _process, null, process);
+                // Keep the Process reference until StopCoreAsync disposes it and its redirected streams.
                 AddOutput("FFmpeg capture process exited unexpectedly with code " + process.ExitCode + ".");
             }
         }

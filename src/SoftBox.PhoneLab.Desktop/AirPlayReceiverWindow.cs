@@ -200,8 +200,34 @@ public sealed class AirPlayReceiverWindow : Window
         }
     }
 
-    /// <summary>Starts the saved receiver during SoftBox startup without opening a file picker.</summary>
-    public Task StartReceiverFromStartupAsync() => StartReceiverAsync(automatic: true);
+    /// <summary>Starts the saved receiver after its independent WPF screen host has completed loading.</summary>
+    public async Task StartReceiverFromStartupAsync()
+    {
+        if (!IsLoaded || !_screenHost.IsLoaded)
+        {
+            var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            RoutedEventHandler? onLoaded = null;
+            EventHandler? onClosed = null;
+            onLoaded = (_, _) => ready.TrySetResult(true);
+            onClosed = (_, _) => ready.TrySetCanceled();
+            _screenHost.Loaded += onLoaded;
+            Closed += onClosed;
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                await ready.Task.WaitAsync(timeout.Token);
+            }
+            finally
+            {
+                _screenHost.Loaded -= onLoaded;
+                Closed -= onClosed;
+            }
+        }
+
+        if (!IsVisible || !IsLoaded || !_screenHost.IsLoaded)
+            return;
+        await StartReceiverAsync(automatic: true);
+    }
 
     private async Task StartReceiverAsync(bool automatic = false)
     {

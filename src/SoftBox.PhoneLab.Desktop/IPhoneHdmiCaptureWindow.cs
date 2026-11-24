@@ -27,6 +27,7 @@ public sealed class IPhoneHdmiCaptureWindow : Window
     private readonly TextBlock _status = new();
     private readonly TextBox _log = new();
     private bool _receivedFrame;
+    private int _frameDispatchPending;
 
     public IPhoneHdmiCaptureWindow(PhoneLabSettings settings, PhoneLabSettingsService settingsService)
     {
@@ -258,6 +259,11 @@ public sealed class IPhoneHdmiCaptureWindow : Window
 
     private void OnFrameReceived(byte[] jpeg)
     {
+        // Keep at most one UI render queued. Slow computers drop stale frames instead of
+        // accumulating an unbounded dispatcher queue and showing a delayed image.
+        if (Interlocked.CompareExchange(ref _frameDispatchPending, 1, 0) != 0)
+            return;
+
         _ = Dispatcher.InvokeAsync(() =>
         {
             try
@@ -282,6 +288,10 @@ public sealed class IPhoneHdmiCaptureWindow : Window
             {
                 AppendLog("Could not render captured JPEG frame: " + ex.Message);
                 _status.Text = "وصل إطار من كارت الالتقاط لكن تعذر فك الصورة: " + ex.Message;
+            }
+            finally
+            {
+                Volatile.Write(ref _frameDispatchPending, 0);
             }
         });
     }
