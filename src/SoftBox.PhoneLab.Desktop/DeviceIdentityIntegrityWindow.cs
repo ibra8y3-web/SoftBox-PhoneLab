@@ -228,29 +228,33 @@ public sealed class DeviceIdentityIntegrityWindow : Window
                         var confidence = "Fastboot transport listed the exact device identifier";
                         var warning = "Serial is a Fastboot transport identifier. It is not compared with ADB serial unless the identifier types are explicitly the same.";
 
-                        if (!_fastbootVariableCache.ContainsKey(device.Serial))
+                        if (!_fastbootVariableCache.TryGetValue(device.Serial, out var raw))
                         {
                             try
                             {
-                                var raw = await _fastboot.ReadAllVariablesAsync(device.Serial);
+                                raw = await _fastboot.ReadAllVariablesAsync(device.Serial);
                                 _fastbootVariableCache[device.Serial] = raw;
-                                var parsed = SoftBox.PhoneLab.Core.Fastboot.FastbootVariableParser.Parse(raw);
-                                var fields = new[]
-                                {
-                                    parsed.Product is null ? null : "product=" + parsed.Product,
-                                    parsed.Variant is null ? null : "variant=" + parsed.Variant,
-                                    parsed.HardwareRevision is null ? null : "hardware-revision=" + parsed.HardwareRevision
-                                }.Where(value => value is not null);
-                                details = string.Join("; ", fields);
-                                if (string.IsNullOrWhiteSpace(details))
-                                    details = device.Details;
-                                confidence = "Fastboot device list + read-only getvar all";
-                                warning += " Product/hardware strings are raw Bootloader claims and still need model verification.";
                             }
                             catch (Exception ex)
                             {
                                 warning += " Read-only getvar failed: " + SafeMessage(ex);
                             }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(raw))
+                        {
+                            var parsed = SoftBox.PhoneLab.Core.Fastboot.FastbootVariableParser.Parse(raw);
+                            var fields = new[]
+                            {
+                                parsed.Product is null ? null : "product=" + parsed.Product,
+                                parsed.Variant is null ? null : "variant=" + parsed.Variant,
+                                parsed.HardwareRevision is null ? null : "hardware-revision=" + parsed.HardwareRevision
+                            }.Where(value => value is not null);
+                            var parsedDetails = string.Join("; ", fields);
+                            if (!string.IsNullOrWhiteSpace(parsedDetails))
+                                details = parsedDetails;
+                            confidence = "Fastboot device list + read-only getvar all";
+                            warning += " Product/hardware strings are raw Bootloader claims and still need model verification.";
                         }
 
                         observations.Add(new DeviceIdentityObservation(
