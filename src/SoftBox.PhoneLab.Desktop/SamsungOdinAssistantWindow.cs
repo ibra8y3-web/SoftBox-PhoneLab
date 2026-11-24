@@ -47,6 +47,7 @@ public sealed class SamsungOdinAssistantWindow : Window
     private readonly string? _deviceSerial;
     private readonly string? _deviceManufacturer;
     private readonly string? _deviceModel;
+    private readonly string? _pnpInstanceSuffix;
     private bool _packagesInspected;
     private int? _inspectedOdinProcessId;
     private string? _inspectedComPort;
@@ -55,12 +56,18 @@ public sealed class SamsungOdinAssistantWindow : Window
         AdbClient? adb = null,
         string? deviceSerial = null,
         string? deviceManufacturer = null,
-        string? deviceModel = null)
+        string? deviceModel = null,
+        string? pnpInstanceSuffix = null)
     {
         _adb = adb;
         _deviceSerial = AdbClient.IsSafeSerial(deviceSerial ?? "") ? deviceSerial : null;
         _deviceManufacturer = deviceManufacturer;
         _deviceModel = deviceModel;
+        _pnpInstanceSuffix = WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(
+            pnpInstanceSuffix is null ? string.Empty : @"USB\\VID_04E8&PID_0000\\" + pnpInstanceSuffix,
+            out var parsedPnpSuffix)
+            ? parsedPnpSuffix
+            : null;
         if (_deviceSerial is not null &&
             AndroidDeviceToolsService.NormalizeVendor(_deviceManufacturer) != AndroidVendorKind.Samsung)
             throw new UnauthorizedAccessException("تم رفض ربط Odin بجهاز لم يتم تأكيد أنه Samsung.");
@@ -103,9 +110,14 @@ public sealed class SamsungOdinAssistantWindow : Window
         header.Children.Add(TextBlock(
             "إدارة حزم BL / AP / CP / CSC، وربط Download Mode، وفحص واجهة Odin عبر Windows UI Automation. لا يستخدم SoftBox نقرات إحداثية أو أوامر غير موثقة.",
             12, "#B7C9DE"));
-        _deviceIdentitySummary.Text = _deviceSerial is null
-            ? "الهوية المقروءة تلقائيًا: غير متاحة من ADB موثوق. وجود منفذ COM وحده لا يكفي لإثبات الرقم التسلسلي أو ربطه بالهاتف."
-            : $"هوية الجهاز المقروءة تلقائيًا من ADB المُصرّح: {(_deviceManufacturer ?? "غير معروف")} / {(_deviceModel ?? "غير معروف")} • Serial: {MaskSerialForDisplay(_deviceSerial)}";
+        var adbIdentity = _deviceSerial is null
+            ? "ADB Serial: غير متاح من اتصال ADB مُصرّح"
+            : $"ADB Serial (قراءة موثوقة من النقل): {MaskSerialForDisplay(_deviceSerial)} • {(_deviceManufacturer ?? "غير معروف")} / {(_deviceModel ?? "غير معروف")}";
+        var pnpIdentity = _pnpInstanceSuffix is null
+            ? "Samsung USB PnP suffix: غير متاح"
+            : $"Samsung USB PnP suffix: {MaskSerialForDisplay(_pnpInstanceSuffix)} (مرشح غير موثّق، وليس Serial مؤكدًا)";
+        _deviceIdentitySummary.Text = adbIdentity + Environment.NewLine + pnpIdentity +
+            Environment.NewLine + "لا يتم ربط PnP suffix بمنفذ COM أو استخدامه كشرط تأكيد Flash دون دليل مستقل.";
         _deviceIdentitySummary.Foreground = Brush("#9BD3F5");
         _deviceIdentitySummary.Background = Brush("#10283B");
         _deviceIdentitySummary.Padding = new Thickness(9);
