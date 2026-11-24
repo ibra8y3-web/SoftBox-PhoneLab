@@ -118,17 +118,19 @@ public sealed class DeviceIdentityIntegrityWindow : Window
         body.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.35, GridUnitType.Star) });
 
         var listPanel = Panel("الأجهزة والأوضاع التي تم رصدها");
+        var listContent = (StackPanel)listPanel.Child;
         _devices.Margin = new Thickness(0, 6, 0, 0);
-        listPanel.Children.Add(_devices);
+        listContent.Children.Add(_devices);
         Grid.SetColumn(listPanel, 0);
         body.Children.Add(listPanel);
 
         var detailPanel = Panel("حقول الهوية المقروءة تلقائيًا");
-        detailPanel.Children.Add(Field("الشركة المصنّعة", _manufacturer));
-        detailPanel.Children.Add(Field("الموديل", _model));
-        detailPanel.Children.Add(Field("وضع الجهاز", _mode));
-        detailPanel.Children.Add(Field("المعرّف (مقنّع)", _identifier));
-        detailPanel.Children.Add(Text("مصدر القراءة ودرجة الثقة والتحذيرات", 12, "#7DD3FC", true));
+        var detailContent = (StackPanel)detailPanel.Child;
+        detailContent.Children.Add(Field("الشركة المصنّعة", _manufacturer));
+        detailContent.Children.Add(Field("الموديل", _model));
+        detailContent.Children.Add(Field("وضع الجهاز", _mode));
+        detailContent.Children.Add(Field("المعرّف (مقنّع)", _identifier));
+        detailContent.Children.Add(Text("مصدر القراءة ودرجة الثقة والتحذيرات", 12, "#7DD3FC", true));
         _details.IsReadOnly = true;
         _details.AcceptsReturn = true;
         _details.TextWrapping = TextWrapping.Wrap;
@@ -138,7 +140,7 @@ public sealed class DeviceIdentityIntegrityWindow : Window
         _details.Foreground = Brush("#DCEBFA");
         _details.BorderBrush = Brush("#263D58");
         _details.Padding = new Thickness(10);
-        detailPanel.Children.Add(_details);
+        detailContent.Children.Add(_details);
         Grid.SetColumn(detailPanel, 1);
         body.Children.Add(detailPanel);
 
