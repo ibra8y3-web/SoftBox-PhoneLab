@@ -1681,7 +1681,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 ? _snapshot.Manufacturer
                 : selected.Manufacturer);
         new AndroidDeviceToolsWindow(
-            _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer)
+            _adb, selected.Serial, authorized, _settings.MaximumBatchConcurrency, selectedTabIndex, manufacturer,
+            AuthorizeAndAuditActionAsync)
         { Owner = this }.ShowEmbedded(this);
     }
 
