@@ -77,6 +77,12 @@ public static class DeviceModeClassifier
             return Hint("MTP / file-transfer interface", "Windows class/name hint", "Windows USB PnP",
                 "MTP visibility does not authorize ADB, unlock the device, or expose bootloader/service-mode identifiers.");
 
+        if (!string.Equals(device.Identity.Category, "Unknown", StringComparison.OrdinalIgnoreCase) &&
+            HasVendorServiceModeDescriptor(text))
+            return Hint(device.Identity.Category + " USB service/recovery interface (protocol unconfirmed)",
+                "Vendor ID + explicit service descriptor", "Windows USB PnP",
+                "A vendor-specific recovery/download/service descriptor is visible. SoftBox has not identified a supported OEM protocol, exact model, signed loader, authorization state or compatible firmware. This record is informational only.");
+
         if (!string.Equals(device.Identity.Category, "Unknown", StringComparison.OrdinalIgnoreCase))
             return Hint(device.Identity.ModeHint, "Known VID/PID family hint", "Windows USB PnP",
                 "This is a hardware-interface family hint only. Exact model, boot state and supported operations remain unverified.");
@@ -102,6 +108,12 @@ public static class DeviceModeClassifier
                 "No recognized ADB transport state was supplied.")
         };
     }
+
+    private static bool HasVendorServiceModeDescriptor(string text)
+        => new[] { "download mode", "emergency download", "bootloader", "fastboot", "recovery",
+            "rescue mode", "preloader", "brom", "edl", "9008", "firehose", "download agent",
+            "usb download", "vcom", "usbser", "service mode" }
+            .Any(term => Contains(text, term));
 
     private static DeviceModeEvidence Hint(string mode, string confidence, string source, string limitation)
         => new(mode, confidence, source, limitation);

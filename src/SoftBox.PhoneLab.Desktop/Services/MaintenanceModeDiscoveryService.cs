@@ -24,6 +24,10 @@ public sealed record MaintenanceModeDevice(
         ModeEvidence.Mode.Contains("Qualcomm EDL", StringComparison.OrdinalIgnoreCase);
     public bool IsMediaTekService =>
         ModeEvidence.Mode.Contains("MediaTek", StringComparison.OrdinalIgnoreCase);
+    public bool IsAppleRecoveryOrDfu =>
+        ModeEvidence.Mode.Contains("Apple Recovery / DFU", StringComparison.OrdinalIgnoreCase);
+    public bool IsUnclassifiedVendorServiceMode =>
+        ModeEvidence.Mode.Contains("USB service/recovery interface", StringComparison.OrdinalIgnoreCase);
 
     public string Details => string.Join(Environment.NewLine,
     [
@@ -92,6 +96,8 @@ public static class MaintenanceModeDiscoveryService
                item.IsFastboot ||
                item.IsQualcommEdl ||
                item.IsMediaTekService ||
+               item.IsAppleRecoveryOrDfu ||
+               item.IsUnclassifiedVendorServiceMode ||
                (vendor.Equals("04E8", StringComparison.OrdinalIgnoreCase) &&
                 (text.Contains("download mode", StringComparison.OrdinalIgnoreCase) ||
                  text.Contains("cdc", StringComparison.OrdinalIgnoreCase) ||
@@ -108,6 +114,8 @@ public static class MaintenanceModeDiscoveryService
                  text.Contains("brom", StringComparison.OrdinalIgnoreCase) ||
                  text.Contains("vcom", StringComparison.OrdinalIgnoreCase))) ||
                evidence.Mode.Contains("Download Mode", StringComparison.OrdinalIgnoreCase) ||
-               evidence.Mode.Contains("EDL", StringComparison.OrdinalIgnoreCase);
+               evidence.Mode.Contains("EDL", StringComparison.OrdinalIgnoreCase) ||
+               evidence.Mode.Contains("Recovery / DFU", StringComparison.OrdinalIgnoreCase) ||
+               evidence.Mode.Contains("service/recovery interface", StringComparison.OrdinalIgnoreCase);
     }
 }

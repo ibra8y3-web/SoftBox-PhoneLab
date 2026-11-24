@@ -24,6 +24,17 @@ public sealed class DeviceModeClassifierTests
         Assert.False(string.IsNullOrWhiteSpace(result.Limitation));
     }
 
+    [Fact]
+    public void RecognizesHuaweiEmergencyDownloadDescriptorWithoutGuessingProtocol()
+    {
+        var result = DeviceModeClassifier.ClassifyUsb(
+            CreateUsb("12D1", "FFFF", "Huawei", "HUAWEI Emergency Download Interface"));
+
+        Assert.Contains("Huawei USB service/recovery interface", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("protocol unconfirmed", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("informational only", result.Limitation, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Theory]
     [InlineData("device", "ADB authorized")]
     [InlineData("unauthorized", "authorization pending")]

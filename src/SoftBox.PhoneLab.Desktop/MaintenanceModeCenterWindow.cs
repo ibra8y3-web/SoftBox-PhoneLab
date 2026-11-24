@@ -65,7 +65,7 @@ public sealed class MaintenanceModeCenterWindow : Window
             Foreground = Brush("#7DD3FC")
         });
         header.Children.Add(Text(
-            "اكتشاف مستقل من Windows USB PnP؛ لا يعتمد على ADB. يعرض Samsung Download Mode وFastboot وQualcomm EDL وواجهات MediaTek عند ظهورها فعليًا في Windows. لا يبدّل وضع الهاتف ولا يبدأ التفليش.",
+            "اكتشاف مستقل من Windows USB PnP لجميع الشركات؛ لا يعتمد على ADB. يعرض أوضاع Samsung وFastboot وQualcomm وMediaTek وواجهات Recovery/Download التي تعلنها شركات أخرى وApple DFU/Recovery كأدلة منفصلة. الواجهة غير المعروفة تظهر للقراءة فقط دون اختيار بروتوكول تخميني.",
             "#B7C9DE", 10));
         var actions = new WrapPanel { Margin = new Thickness(0, 10, 0, 0) };
         actions.Children.Add(ButtonControl("إعادة فحص USB الآن", "#20364F", async (_, _) => await RefreshAsync()));
@@ -112,7 +112,7 @@ public sealed class MaintenanceModeCenterWindow : Window
         root.Children.Add(body);
 
         var footer = Text(
-            "حدود مهمة: Samsung 04E8:685D دليل على واجهة Download Mode، وليس موديل الهاتف. Fastboot/EDL/Preloader تظهر كواجهات خدمة؛ لا توجد عملية فتح قفل أو تجاوز حساب أو اختيار programmer أو Flash تلقائي.",
+            "حدود مهمة: معرّف USB قد يحدد الشركة أو الواجهة فقط. Huawei/OPPO/Xiaomi/Apple وغيرها تظهر في وضع الخدمة عند إعلان Windows قرينة صريحة؛ البروتوكولات الخاصة لا تتحول تلقائيًا إلى أدوات تفليش. لا يوجد تجاوز قفل أو اختيار Programmer/DA أو Flash تلقائي.",
             "#F0C9A5", 10);
         footer.Margin = new Thickness(0, 10, 0, 0);
         DockPanel.SetDock(footer, Dock.Bottom);
@@ -167,6 +167,8 @@ public sealed class MaintenanceModeCenterWindow : Window
             item.IsFastboot ? "فتح Fastboot Manager" :
             item.IsQualcommEdl ? "فتح Qualcomm USB Doctor" :
             item.IsMediaTekService ? "فتح MediaTek USB Doctor" :
+            item.IsAppleRecoveryOrDfu ? "Apple Recovery/DFU — عرض الأدلة فقط" :
+            item.IsUnclassifiedVendorServiceMode ? "واجهة خدمة غير مصنفة — عرض الأدلة فقط" :
             "لا توجد أداة خدمة محددة";
     }
 

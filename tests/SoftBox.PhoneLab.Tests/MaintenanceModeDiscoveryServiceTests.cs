@@ -53,6 +53,31 @@ public sealed class MaintenanceModeDiscoveryServiceTests
     }
 
     [Fact]
+    public void DiscoversHuaweiServiceInterfaceAsReadOnlyWhenAdbIsAbsent()
+    {
+        var found = MaintenanceModeDiscoveryService.Discover(
+            [Create("12D1", "FFFF", "Huawei", "HUAWEI Emergency Download Interface", "")]);
+
+        var device = Assert.Single(found);
+        Assert.True(device.IsUnclassifiedVendorServiceMode);
+        Assert.False(device.IsSamsungDownloadMode);
+        Assert.False(device.IsQualcommEdl);
+        Assert.False(device.IsMediaTekService);
+    }
+
+    [Fact]
+    public void DiscoversAppleDfuEvidenceWithoutOfferingAnAndroidTool()
+    {
+        var found = MaintenanceModeDiscoveryService.Discover(
+            [Create("05AC", "1227", "Apple Inc.", "Apple Mobile Device USB DFU", "")]);
+
+        var device = Assert.Single(found);
+        Assert.True(device.IsAppleRecoveryOrDfu);
+        Assert.False(device.IsFastboot);
+        Assert.False(device.IsSamsungDownloadMode);
+    }
+
+    [Fact]
     public void PreservesWindowsComPortHintWithoutTreatingItAsPhoneSerial()
     {
         var found = MaintenanceModeDiscoveryService.Discover(
