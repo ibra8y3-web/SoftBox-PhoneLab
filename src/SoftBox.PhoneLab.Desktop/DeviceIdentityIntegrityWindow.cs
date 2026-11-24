@@ -141,12 +141,13 @@ public sealed class DeviceIdentityIntegrityWindow : Window
         Grid.SetColumn(detailPanel, 1);
         body.Children.Add(detailPanel);
 
-        root.Children.Add(body);
         var footer = Notice(
             "التعبئة الذكية هنا تملأ حقول SoftBox من بيانات القراءة المؤكدة. النسخ إلى تطبيق آخر يتطلب ضغط زر النسخ. لا يتم تعبئة عبارة تأكيد التفليش أو الضغط على Start تلقائيًا؛ هذا حاجز موافقة مستقل.",
             "#10283B", "#2F6687", "#CDEBFF");
         DockPanel.SetDock(footer, Dock.Bottom);
         root.Children.Add(footer);
+        // DockPanel fills its last child; keep the main body last so the footer remains docked at the bottom.
+        root.Children.Add(body);
 
         return root;
     }
