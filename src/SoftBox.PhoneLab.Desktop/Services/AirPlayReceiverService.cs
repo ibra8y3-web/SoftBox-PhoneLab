@@ -7,8 +7,9 @@ using SoftBox.PhoneLab.Desktop.Interop;
 namespace SoftBox.PhoneLab.Desktop.Services;
 
 /// <summary>
-/// Starts a separately installed AirPlay-Windows receiver and docks its native viewing window
-/// into the existing SoftBox phone-screen host. SoftBox does not bundle or redistribute it.
+/// Starts the official AirPlay-Windows receiver provisioned by AirPlayReceiverBootstrapService
+/// and docks its native viewing window into the existing SoftBox phone-screen host. SoftBox downloads
+/// the separate upstream GPL-3 component at runtime and does not redistribute it in its own package.
 /// All start/stop operations are serialized so two UI actions cannot launch or tear down
 /// overlapping receiver processes.
 /// </summary>
@@ -51,11 +52,11 @@ public sealed class AirPlayReceiverService : IAsyncDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         if (!OperatingSystem.IsWindows())
-            throw new PlatformNotSupportedException("The selected AirPlay-Windows receiver runs on Windows only.");
+            throw new PlatformNotSupportedException("AirPlay-Windows runs on Windows only.");
 
         var fullPath = Path.GetFullPath(path);
         if (!Path.GetFileName(fullPath).Equals("airplay-windows.exe", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("اختر airplay-windows.exe من إصدار AirPlay-Windows الرسمي، وليس ملفًا تنفيذيًا آخر.", nameof(path));
+            throw new ArgumentException("المسار لا يشير إلى ملف airplay-windows.exe صالح.", nameof(path));
         if (!File.Exists(fullPath))
             throw new FileNotFoundException("ملف AirPlay receiver غير موجود.", fullPath);
         return fullPath;

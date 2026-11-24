@@ -19,6 +19,8 @@ public sealed class AirPlayReceiverWindow : Window
     private const string UpstreamUrl = "https://github.com/moieric11/AirPlay-Windows";
     private readonly PhoneLabSettingsService _settingsService;
     private readonly AirPlayReceiverService _receiver;
+    private readonly AirPlayReceiverBootstrapService _bootstrap;
+    private PhoneLabSettings _settings;
     private readonly SoftBox.PhoneLab.Desktop.Interop.ScrcpyWindowHost _screenHost = new();
     private readonly Func<Task> _stopExistingScreenSession;
     private readonly TextBox _executablePath = new();
@@ -33,10 +35,15 @@ public sealed class AirPlayReceiverWindow : Window
         PhoneLabSettings settings,
         PhoneLabSettingsService settingsService,
         AirPlayReceiverService receiver,
+        AirPlayReceiverBootstrapService bootstrap,
         Func<Task> stopExistingScreenSession)
     {
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
         _receiver = receiver ?? throw new ArgumentNullException(nameof(receiver));
+        _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
+        _bootstrap = bootstrap ?? throw new ArgumentNullException(nameof(bootstrap));
         _stopExistingScreenSession = stopExistingScreenSession ?? throw new ArgumentNullException(nameof(stopExistingScreenSession));
         Title = "SoftBox | iPhone AirPlay Screen Receiver";
         Width = 900;
@@ -114,7 +121,7 @@ public sealed class AirPlayReceiverWindow : Window
             Padding = new Thickness(11),
             Margin = new Thickness(0, 12, 0, 12),
             Child = Text(
-                "ملاحظة ترخيص: SoftBox لا يضمّن أو ينسخ مستقبل AirPlay. استخدم الإصدار المستقل من المشروع المفتوح AirPlay-Windows (GPL-3.0) بعد تنزيله بنفسك من مصدره، واقرأ الترخيص وإشعارات الأطراف الثالثة. لا تنزّل ملفات EXE من مواقع وسيطة.",
+                "SoftBox يبحث تلقائيًا عن مستقبل AirPlay-Windows، وإذا لم يجده ينزّل أحدث حزمة Windows x64 من مستودع المطور الرسمي، ويتحقق من SHA-256 المنشور في GitHub قبل فكها. المكوّن مستقل ومفتوح المصدر GPL-3.0 وتُحفظ ملفاته في مجلد أدوات SoftBox؛ لا تحتاج لاختيار EXE أو تنزيله يدويًا.",
                 "#FFE0B7", 10)
         };
         root.Children.Add(license);
@@ -125,12 +132,12 @@ public sealed class AirPlayReceiverWindow : Window
         _executablePath.Foreground = Brush("#EAF3FF");
         _executablePath.BorderBrush = Brush("#36516D");
         pathRow.Children.Add(_executablePath);
-        var browse = Button("اختيار ملف المستقبل", (_, _) => BrowseReceiver());
+        var browse = Button("اكتشاف / تثبيت المستقبل تلقائيًا", async (_, _) => await EnsureReceiverInstalledAsync());
         DockPanel.SetDock(browse, Dock.Left);
         pathRow.Children.Add(browse);
         root.Children.Add(pathRow);
 
-        root.Children.Add(Text("بصمة SHA-256 للملف المختار (للتعرّف على الملف فقط؛ ليست إثبات ناشر)", "#7DD3FC", 10));
+        root.Children.Add(Text("الإصدار ومصدر التثبيت", "#7DD3FC", 10));
         _fingerprint.Padding = new Thickness(8);
         _fingerprint.Background = Brush("#0F1E32");
         _fingerprint.Foreground = Brush("#AFC7DF");
@@ -160,12 +167,12 @@ public sealed class AirPlayReceiverWindow : Window
 
         root.Children.Add(Text("خطوات الاتصال", "#7DD3FC", 12));
         root.Children.Add(Text(
-            "1) ثبّت مستقبل AirPlay-Windows المستقل وفك ملفات الإصدار كاملة.\n" +
+            "1) SoftBox يكتشف المستقبل أو يحمّله ويثبت ملفاته تلقائيًا عند الحاجة.\n" +
             "2) اجعل iPhone والكمبيوتر على شبكة Wi-Fi المحلية نفسها.\n" +
-            "3) شغّل المستقبل من هنا، ثم افتح Control Center على iPhone واختر Screen Mirroring ثم AirPlay-Windows.\n" +
-            "4) نافذة المستقبل تعرض الصورة والصوت فقط؛ التحكم يظل من شاشة iPhone نفسها.\n" +
-            "5) تظهر صورة iPhone في المساحة الجانبية الثابتة داخل SoftBox؛ تبقى الأوامر واللمس على الهاتف نفسه.\n" +
-            "6) لا تتوقع عرض تطبيقات البث التي تستخدم FairPlay DRM؛ دعمها خارج نطاق مستقبل الشاشة المذكور.",
+            "3) يبدأ مستقبل Windows تلقائيًا عند فتح SoftBox إذا كان الخيار مفعّلًا.\n" +
+            "4) إذا كانت شاشة iPhone واللمس يعملان، ابدأ Screen Mirroring من الهاتف. إذا كان اللمس لا يعمل، استخدم مسار HDMI Capture إذا كان الموديل يدعمه.\n" +
+            "5) نافذة AirPlay تعرض الصورة والصوت فقط؛ ولا ترسل لمسًا أو رمز قفل إلى iPhone.\n" +
+            "6) لا تتوقع عرض تطبيقات البث المحمية بـFairPlay DRM.",
             "#B7C9DE", 10));
 
         root.Children.Add(Text("سجل المستقبل", "#7DD3FC", 11));
@@ -238,6 +245,66 @@ public sealed class AirPlayReceiverWindow : Window
         await StartReceiverAsync(automatic: true);
     }
 
+    private async Task EnsureReceiverInstalledAsync()
+    {
+        _start.IsEnabled = false;
+        _status.Text = "جارٍ البحث عن مستقبل AirPlay-Windows في أدوات SoftBox والتثبيتات المعروفة...";
+        try
+        {
+            var installation = await _bootstrap.EnsureInstalledAsync(_executablePath.Text);
+            var latest = await _settingsService.LoadAsync();
+            _settings = PhoneLabSettingsService.Validate(latest with
+            {
+                AirPlayReceiverExecutablePath = installation.ExecutablePath
+            });
+            await _settingsService.SaveAsync(_settings);
+            _executablePath.Text = installation.ExecutablePath;
+            _fingerprint.Text = installation.Version +
+                (installation.InstalledNow ? " • تم تنزيل الحزمة والتحقق من SHA-256" : " • تم العثور على تثبيت موجود");
+            _status.Text = installation.InstalledNow
+                ? "تم تنزيل AirPlay-Windows من المصدر الرسمي والتحقق من بصمة ZIP ثم فك ملفات المكوّن تلقائيًا."
+                : "تم اكتشاف تثبيت AirPlay-Windows موجود وحفظ مساره. لا يلزم اختيار ملف يدويًا.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تجهيز مستقبل AirPlay تلقائيًا: " + ex.Message;
+        }
+        finally
+        {
+            _start.IsEnabled = !_receiver.IsRunning;
+        }
+    }
+
+    private async Task EnsureReceiverInstalledAsync()
+    {
+        _start.IsEnabled = false;
+        _status.Text = "جارٍ البحث عن مستقبل AirPlay-Windows في أدوات SoftBox والتثبيتات المعروفة...";
+        try
+        {
+            var installation = await _bootstrap.EnsureInstalledAsync(_executablePath.Text);
+            var latest = await _settingsService.LoadAsync();
+            _settings = PhoneLabSettingsService.Validate(latest with
+            {
+                AirPlayReceiverExecutablePath = installation.ExecutablePath
+            });
+            await _settingsService.SaveAsync(_settings);
+            _executablePath.Text = installation.ExecutablePath;
+            _fingerprint.Text = installation.Version +
+                (installation.InstalledNow ? " • تم تنزيل الحزمة والتحقق من SHA-256" : " • تم العثور على تثبيت موجود");
+            _status.Text = installation.InstalledNow
+                ? "تم تنزيل AirPlay-Windows من المصدر الرسمي والتحقق من بصمة ZIP ثم فك ملفات المكوّن تلقائيًا."
+                : "تم اكتشاف تثبيت AirPlay-Windows موجود وحفظ مساره. لا يلزم اختيار ملف يدويًا.";
+        }
+        catch (Exception ex)
+        {
+            _status.Text = "تعذر تجهيز مستقبل AirPlay تلقائيًا: " + ex.Message;
+        }
+        finally
+        {
+            _start.IsEnabled = !_receiver.IsRunning;
+        }
+    }
+
     private async Task StartReceiverAsync(bool automatic = false)
     {
         if (_starting)
@@ -251,8 +318,18 @@ public sealed class AirPlayReceiverWindow : Window
             : "جارٍ التحقق من ملف المستقبل وتجهيز مسار العرض...";
         try
         {
-            // Validate the selected file before stopping any active Android screen session.
-            var receiverPath = AirPlayReceiverService.ValidateReceiverPath(_executablePath.Text);
+            // Locate or install the official receiver before stopping any active Android screen session.
+            var installation = await _bootstrap.EnsureInstalledAsync(_executablePath.Text);
+            var latestSettings = await _settingsService.LoadAsync();
+            _settings = PhoneLabSettingsService.Validate(latestSettings with
+            {
+                AirPlayReceiverExecutablePath = installation.ExecutablePath
+            });
+            await _settingsService.SaveAsync(_settings);
+            _executablePath.Text = installation.ExecutablePath;
+            _fingerprint.Text = installation.Version +
+                (installation.InstalledNow ? " • تم التحقق من SHA-256" : " • تثبيت موجود");
+            var receiverPath = AirPlayReceiverService.ValidateReceiverPath(installation.ExecutablePath);
             if (_receiver.IsRunning)
             {
                 _status.Text = "مستقبل AirPlay يعمل بالفعل؛ لم يتم إيقافه أو فصل نافذته. استخدم زر الإيقاف أولًا إذا أردت إعادة التشغيل.";

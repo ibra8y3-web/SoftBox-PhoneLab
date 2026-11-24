@@ -4,7 +4,7 @@
 
 SoftBox provides two independent ways to view an iPhone display on Windows:
 
-1. **AirPlay receiver** — network-based viewing. SoftBox can start the configured Windows receiver automatically at application startup and monitor its process, but it cannot silently start an iPhone's Screen Mirroring session.
+1. **AirPlay receiver** — network-based viewing. SoftBox automatically searches its managed tools directory and saved installation path; when no copy exists, it downloads the latest Windows x64 release from the official GitHub Releases API, verifies the official SHA-256 digest, safely extracts the package, saves the discovered path and starts the receiver. No EXE file picker is required. It monitors the receiver process, but it cannot silently start an iPhone's Screen Mirroring session.
 2. **HDMI capture** — a wired video path for cases where a damaged touch panel makes opening Control Center impossible. It uses a compatible Apple AV video-output adapter, an HDMI cable, a UVC HDMI capture card, and an operator-supplied FFmpeg build with DirectShow support.
 
 These paths are not interchangeable. The HDMI viewer is a real capture pipeline; it does not generate placeholder frames. A blank preview means no valid frame reached the capture process.
@@ -40,7 +40,7 @@ Apple's adapter guidance says the adapter must match the device connector (USB-C
 
 ## FFmpeg and device discovery
 
-SoftBox does not bundle or silently download FFmpeg or third-party receiver binaries. The operator chooses a local **ffmpeg.exe** built with the DirectShow input. SoftBox enumerates real Windows DirectShow video devices, starts the selected capture input, parses MJPEG frames from FFmpeg stdout, and logs stderr/process failures. No frames are invented.
+SoftBox does not bundle or silently download FFmpeg. The operator chooses a local **ffmpeg.exe** built with the DirectShow input. SoftBox enumerates real Windows DirectShow video devices, starts the selected capture input, parses MJPEG frames from FFmpeg stdout, and logs stderr/process failures. No frames are invented.
 
 If no capture card appears:
 - Confirm it is connected directly to a working USB port and visible in Windows Device Manager under Cameras or Imaging devices.
@@ -53,7 +53,7 @@ If a device appears but no image arrives, check the iPhone AV adapter, cable, HD
 
 ## Auto-start AirPlay
 
-When the user saves a valid **airplay-windows.exe** path and leaves **Auto-start AirPlay receiver** enabled, SoftBox starts the Windows receiver on application startup. This does not claim that an iPhone is streaming. The iPhone must still initiate AirPlay itself. If the iPhone's touch panel is unusable, use a compatible wired HDMI output path when that model supports it.
+When **Auto-start AirPlay receiver** is enabled, SoftBox searches for its managed receiver at startup. If no managed or previously saved receiver is available, it fetches the latest Windows x64 release metadata from the official GitHub API, requires a valid SHA-256 digest, downloads the official ZIP, verifies its digest before extraction, safely extracts the complete package into the SoftBox user tools directory, and stores the executable path automatically. If the network is unavailable and no previously installed copy exists, the window reports the failure instead of pretending the receiver started. This starts only the Windows receiver; it does not claim that an iPhone is streaming. The iPhone must still initiate AirPlay itself. If the iPhone's touch panel is unusable, use a compatible wired HDMI output path when that model supports it.
 
 ## Verification status
 

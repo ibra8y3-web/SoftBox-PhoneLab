@@ -42,6 +42,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly DeviceProfileCatalog _deviceProfiles = new();
     private readonly ScreenMirrorService _screenMirror;
     private readonly AirPlayReceiverService _airPlayReceiver = new();
+    private readonly AirPlayReceiverBootstrapService _airPlayBootstrap = new();
+    private readonly AirPlayReceiverBootstrapService _airPlayBootstrap = new();
     private IPhoneCenterWindow? _iphoneCenterWindow;
     private AirPlayReceiverWindow? _airPlayReceiverWindow;
     private DeviceIdentityIntegrityWindow? _deviceIdentityIntegrityWindow;
@@ -195,7 +197,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             RebuildDiagnostics(); // Show the full Not tested component list before any phone/ADB connection.
             await RefreshDevicesAsync();
             if (_settings.AutoStartAirPlayReceiver &&
-                File.Exists(_settings.AirPlayReceiverExecutablePath) &&
                 SoftBoxAuthorizationPolicy.IsAllowed(_currentUser.Role, "MirrorScreen"))
             {
                 OpenAirPlayReceiverWindow(startImmediately: true);
@@ -1079,6 +1080,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _settings,
             _settingsService,
             _airPlayReceiver,
+            _airPlayBootstrap,
             async () =>
             {
                 if (_screenMirror.IsRecording)

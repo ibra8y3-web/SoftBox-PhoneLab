@@ -46,3 +46,12 @@ PhoneLab integrates or downloads the following third-party software/data. Downlo
 - NuGet package: https://www.nuget.org/packages/QRCoder/1.6.0
 - License: MIT.
 - Used locally to encode a repair-ticket identifier as a PNG QR code. QR payloads do not include customer names or phone numbers.
+
+
+## AirPlay-Windows (separately provisioned component)
+
+- Project: https://github.com/moieric11/AirPlay-Windows
+- License: GNU General Public License v3.0 (GPL-3.0).
+- SoftBox does not include the AirPlay-Windows executable in its source or Windows package. When enabled, SoftBox retrieves the current official Windows x64 release from the upstream GitHub Releases API, verifies the asset SHA-256 digest published by GitHub, then extracts and runs that separate component under the current Windows user's LocalAppData directory.
+- The downloaded release retains its upstream LICENSE and THIRD_PARTY_NOTICES files. The component is not modified by the bootstrapper.
+- Users can remove the separately downloaded component by deleting %LOCALAPPDATA%\\SoftBox\\PhoneLab\\Tools\\AirPlay-Windows after closing SoftBox.
