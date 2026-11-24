@@ -114,6 +114,10 @@ public sealed class SamsungOdinAssistantWindow : Window
         _monitorOdinButton.IsEnabled = false;
         _downloadModeButton.IsEnabled = _adb is not null && _deviceSerial is not null;
         _targetComPortInput.Text = _downloadModeComPort ?? string.Empty;
+        _targetComPortInput.IsReadOnly = _deviceSerial is null;
+        _targetComPortInput.ToolTip = _deviceSerial is null
+            ? "يُقرأ COM من سجل Windows USB المحدد نفسه. إذا لم يعلنه السجل، لا يسمح SoftBox بالتفليش عبر COM مخمّن."
+            : "أدخل منفذ COM الذي يخص هاتف Samsung المحدد ثم طابقه مع Odin.";
         _targetModelInput.Text = _deviceModel ?? string.Empty;
         _targetComPortInput.TextChanged += (_, _) =>
         {
@@ -203,7 +207,11 @@ public sealed class SamsungOdinAssistantWindow : Window
         _targetModelInput.BorderBrush = Brush("#263D58");
         _targetModelInput.IsReadOnly = _deviceModel is not null;
         content.Children.Add(_targetModelInput);
-        content.Children.Add(TextBlock("منفذ COM المستهدف من Windows PnP/Device Manager؛ يجب أن يطابق COM الظاهر داخل Odin:", 10, "#9FC7E8"));
+        content.Children.Add(TextBlock(
+            _deviceSerial is null
+                ? "منفذ COM المستخرج من سجل Windows USB لنفس واجهة Download Mode المختارة؛ لا يمكن تعديله يدويًا أو استبداله بمنفذ آخر."
+                : "منفذ COM للجهاز المحدد؛ يجب أن يطابق COM الظاهر داخل نافذة Odin.",
+            10, "#9FC7E8"));
         _targetComPortInput.Margin = new Thickness(4);
         _targetComPortInput.Padding = new Thickness(8);
         _targetComPortInput.Background = Brush("#071625");
@@ -211,6 +219,12 @@ public sealed class SamsungOdinAssistantWindow : Window
         _targetComPortInput.BorderBrush = Brush("#263D58");
         _targetComPortInput.MaxLength = 8;
         content.Children.Add(_targetComPortInput);
+        if (_deviceSerial is null && _downloadModeComPort is null)
+        {
+            content.Children.Add(TextBlock(
+                "لم يعلن سجل USB المحدد عن منفذ COM. سيظل Start محجوبًا؛ لن يستخدم SoftBox منفذًا يكتبه الفني أو لاحقة PnP كبديل عن دليل Windows.",
+                10, "#FFB4A6"));
+        }
         content.Children.Add(_confirmCompatibility);
         content.Children.Add(_confirmBackup);
         content.Children.Add(_confirmComPort);
@@ -719,15 +733,28 @@ public sealed class SamsungOdinAssistantWindow : Window
     private bool HasDownloadModeEvidence => _downloadModeHardwareId is not null &&
         _downloadModeHardwareId.StartsWith("04E8:", StringComparison.OrdinalIgnoreCase) &&
         _downloadModeInstanceId is not null &&
-        _downloadModeModeEvidence?.Contains("Samsung Download Mode", StringComparison.OrdinalIgnoreCase) == true;
+        _downloadModeModeEvidence?.Contains("Samsung Download Mode", StringComparison.OrdinalIgnoreCase) == true &&
+        _downloadModeComPort is not null;
 
     private bool CanInspectOdinSession => HasSamsungAdbIdentity || HasDownloadModeEvidence;
 
     private string? ResolveTargetComPort()
     {
-        if (!string.IsNullOrWhiteSpace(_targetComPortInput.Text))
-            return SamsungOdinAutomationPolicy.NormalizeComPort(_targetComPortInput.Text);
-        return _downloadModeComPort;
+        if (_deviceSerial is null)
+        {
+            // In Download Mode the ADB transport is gone. Accept only the COM value
+            // extracted from the selected USB PnP record; never trust a manually typed port.
+            var pnpPort = SamsungOdinAutomationPolicy.NormalizeComPort(_downloadModeComPort);
+            var displayedPort = SamsungOdinAutomationPolicy.NormalizeComPort(_targetComPortInput.Text);
+            return pnpPort is not null &&
+                   displayedPort is not null &&
+                   pnpPort.Equals(displayedPort, StringComparison.OrdinalIgnoreCase)
+                ? pnpPort
+                : null;
+        }
+
+        return SamsungOdinAutomationPolicy.NormalizeComPort(_targetComPortInput.Text) ??
+               SamsungOdinAutomationPolicy.NormalizeComPort(_downloadModeComPort);
     }
 
     private string[] SelectedPackagePaths()
