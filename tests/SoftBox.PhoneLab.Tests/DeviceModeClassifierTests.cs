@@ -49,6 +49,17 @@ public sealed class DeviceModeClassifierTests
     }
 
     [Fact]
+    public void ClassifiesMediaTekDownloadAgentSeparatelyFromPreloader()
+    {
+        var result = DeviceModeClassifier.ClassifyUsb(
+            CreateUsb("0E8D", "2001", "MediaTek", "MediaTek DA USB VCOM"));
+
+        Assert.Contains("Download Agent", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Preloader", result.Mode, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("stage hint", result.Confidence, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void DoesNotGuessDownloadModeFromSamsungVendorIdAlone()
     {
         var result = DeviceModeClassifier.ClassifyUsb(

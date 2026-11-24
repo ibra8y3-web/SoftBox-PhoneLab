@@ -25,11 +25,19 @@ public static class DeviceModeClassifier
                 "This identifies a Qualcomm 9008 USB interface only. It does not prove the handset model, authorized programmer, or that a recovery image is safe.");
 
         if (vendor == "0E8D" &&
-            (Contains(text, "preloader") || Contains(text, "brom") || Contains(text, "download agent") ||
-             Contains(text, "da usb vcom") || product == "0003"))
-            return Hint(Contains(text, "brom") ? "MediaTek BROM (USB hint)" : "MediaTek Preloader (USB hint)",
-                "USB descriptor hint", "Windows USB PnP",
+            (Contains(text, "download agent") || Contains(text, "da usb vcom")))
+            return Hint("MediaTek Download Agent USB interface (stage hint)", "USB descriptor hint", "Windows USB PnP",
+                "Windows exposes a MediaTek Download Agent/VCOM interface. This does not identify the exact SoC, board, signed DA package, authorization state or compatible firmware.");
+
+        if (vendor == "0E8D" &&
+            (Contains(text, "preloader") || Contains(text, "brom") || product == "0003"))
+        {
+            var mode = Contains(text, "brom") || (product == "0003" && !Contains(text, "preloader"))
+                ? "MediaTek BROM (USB hint)"
+                : "MediaTek Preloader (USB hint)";
+            return Hint(mode, "USB descriptor / VID-PID hint", "Windows USB PnP",
                 "The interface is a MediaTek service-mode clue. Exact SoC, board, Download Agent compatibility and OEM authorization are not established.");
+        }
 
         if (Contains(text, "download mode") && Contains(text, "samsung"))
             return Hint("Samsung Download Mode", "Explicit Windows descriptor", "Windows USB PnP",
