@@ -525,6 +525,16 @@ public sealed class SamsungOdinAssistantWindow : Window
         if (answer != MessageBoxResult.Yes)
             return;
 
+        // Rebooting a handset into a service mode changes device state. Require both the
+        // role permission and a successful audit write before sending the ADB command.
+        if (_authorizeAndAudit is null)
+        {
+            _status.Text = "تم منع إعادة التشغيل: مساعد الصلاحيات وسجل التدقيق غير متصل بهذه الجلسة.";
+            return;
+        }
+        if (!await _authorizeAndAudit("RebootSamsungDownloadMode"))
+            return;
+
         _downloadModeButton.IsEnabled = false;
         try
         {
