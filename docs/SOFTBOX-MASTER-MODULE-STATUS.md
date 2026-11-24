@@ -416,9 +416,10 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 
 ### Current catalog inventory
 
-- **36 master sections** retained in the original specification order.
-- **178 child features** across the 36 sections.
-- Child-feature statuses: **103 Implemented, 46 Tested, 19 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
+- **37 master sections** in specification order; the original 36 sections are retained and Section 37 is the dedicated iPhone & iPad Center.
+- **184 child features** across the 37 sections (221 total catalog rows including section rows).
+- Child-feature statuses: **108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
+- **84 unique canonical ActionIds** are registered in the catalog; no duplicate action identifiers.
 - **79 unique canonical ActionIds** are listed in the master catalog. The current feature-action references are unique and all are present in the catalog's supported-action set.
 - A Hosted CI pass can establish that a software build/test path works in the runner; it does not certify a physical device. No new phone, USB chipset, OEM driver, AirPlay receiver or board-level hardware feature is marked Verified by this change.
 
@@ -463,7 +464,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 3. Test representative Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO and Infinix models. A generic Android route is expected only where ADB is actually exposed and authorized.
 4. Validate downloaded driver packages against the target model's actual hardware IDs, Windows edition/architecture, signature and catalog membership before recommending installation.
 5. Expand hardware-specific Agent tests only when the Android API, OEM firmware, user consent and evidence semantics are known. Keep external-only board tests unsupported until a real compatible fixture is available.
-6. Continue auditing every one of the 36 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
+6. Continue auditing every one of the 37 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
 
 
 ## Dedicated Apple diagnostics workspace — 23 November 2026
@@ -474,4 +475,6 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 - Apple diagnostic utilities must be selected by the operator from a trusted Windows libimobiledevice distribution. No binaries are downloaded or installed automatically.
 - Component evidence uses the existing DPAPI-protected store. Parts/battery values are read by the technician from the iPhone's official settings; the physical test checklist requires actual observation and written evidence.
 - AirPlay now has a dedicated independent native host in its own top-level window. It no longer attaches to the Android `PhoneScreenHost`. The existing Android recording guard, manual priority and MainWindow process shutdown cleanup remain in place.
+- Current catalog totals at this checkpoint: **37 sections / 184 child features / 221 entries**, with 108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported and 0 Verified; 84 unique canonical ActionIds.
 - Status: implementation committed for CI review; **not yet physically verified on an iPhone or iPad**. No absolute genuine/copy claim is produced.
+- CI on commit `99c1d16714b51c1a481f91783f78f94969803b5a`: Windows build/test/publish succeeded with 722 passed, 0 failed, 0 skipped; Android Agent APK and emulator UI automation jobs succeeded.
