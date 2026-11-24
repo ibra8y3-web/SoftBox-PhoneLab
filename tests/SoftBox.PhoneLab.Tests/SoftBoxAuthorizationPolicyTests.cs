@@ -74,11 +74,29 @@ public sealed class SoftBoxAuthorizationPolicyTests
 
         Assert.Contains(actionId, SoftBoxAuthorizationPolicy.InternalActionIds);
         Assert.DoesNotContain(
+            actionId,
             SoftBoxModuleCatalog.All.SelectMany(module => module.Features)
                 .Where(feature => feature.ActionId is not null)
-                .Select(feature => feature.ActionId!),
-            actionId);
+                .Select(feature => feature.ActionId!));
 
+        Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission(actionId, out var permission));
+        Assert.Equal(SoftBoxAccountPermission.DeviceOperations, permission);
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Administrator, actionId));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, actionId));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, actionId));
+    }
+
+    [Fact]
+    public void GenericAndroidServiceModeRebootIsAuditedForAllAndroidManufacturers()
+    {
+        const string actionId = "RebootAndroidServiceMode";
+
+        Assert.Contains(actionId, SoftBoxAuthorizationPolicy.InternalActionIds);
+        Assert.DoesNotContain(
+            actionId,
+            SoftBoxModuleCatalog.All.SelectMany(module => module.Features)
+                .Where(feature => feature.ActionId is not null)
+                .Select(feature => feature.ActionId!));
         Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission(actionId, out var permission));
         Assert.Equal(SoftBoxAccountPermission.DeviceOperations, permission);
         Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Administrator, actionId));
