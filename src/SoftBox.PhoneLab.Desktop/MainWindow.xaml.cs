@@ -939,12 +939,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 
     private void OpenMaintenanceModeCenter_Click(object sender, RoutedEventArgs e)
-    {
-        new MaintenanceModeCenterWindow(_usbInventory)
-        {
-            Owner = this
-        }.Show();
-    }
+        => OpenModuleAction("OpenMaintenanceModeCenter");
 
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshDevicesAsync();
 
@@ -1190,6 +1185,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             case "OpenIPhoneCenter":
                 OpenIPhoneCenter();
+                break;
+            case "OpenMaintenanceModeCenter":
+                new MaintenanceModeCenterWindow(_usbInventory, AuthorizeAndAuditActionAsync) { Owner = this }.Show();
                 break;
             case "OpenIPhonePartsHistory":
                 OpenIPhoneAssessment(IPhoneAssessmentMode.PartsHistory);

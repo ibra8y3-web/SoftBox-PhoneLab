@@ -14,6 +14,7 @@ namespace SoftBox.PhoneLab.Desktop;
 public sealed class MaintenanceModeCenterWindow : Window
 {
     private readonly WindowsUsbInventoryService _inventory;
+    private readonly Func<string, Task<bool>> _authorizeAndAudit;
     private readonly ObservableCollection<MaintenanceModeDevice> _devices = [];
     private readonly ListBox _deviceList = new();
     private readonly TextBox _details = new();
@@ -23,9 +24,10 @@ public sealed class MaintenanceModeCenterWindow : Window
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(2) };
     private bool _refreshing;
 
-    public MaintenanceModeCenterWindow(WindowsUsbInventoryService inventory)
+    public MaintenanceModeCenterWindow(WindowsUsbInventoryService inventory, Func<string, Task<bool>> authorizeAndAudit)
     {
         _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        _authorizeAndAudit = authorizeAndAudit ?? throw new ArgumentNullException(nameof(authorizeAndAudit));
         Title = "SoftBox | Download & Service Mode Center";
         Width = 1060;
         Height = 760;
@@ -168,13 +170,14 @@ public sealed class MaintenanceModeCenterWindow : Window
             "لا توجد أداة خدمة محددة";
     }
 
-    private void OpenFirmware_Click(object sender, RoutedEventArgs e)
+    private async void OpenFirmware_Click(object sender, RoutedEventArgs e)
     {
         if (_deviceList.SelectedItem is not MaintenanceModeDevice item)
         {
             _status.Text = "حدد واجهة USB أولًا.";
             return;
         }
+        if (!await _authorizeAndAudit("OpenFirmwareCenter")) return;
         new FirmwareCenterWindow(
             deviceSnapshot: null,
             adbAuthorized: false,
@@ -184,33 +187,38 @@ public sealed class MaintenanceModeCenterWindow : Window
         { Owner = this }.Show();
     }
 
-    private void OpenTool_Click(object sender, RoutedEventArgs e)
+    private async void OpenTool_Click(object sender, RoutedEventArgs e)
     {
         if (_deviceList.SelectedItem is not MaintenanceModeDevice item)
             return;
 
         if (item.IsSamsungDownloadMode)
         {
+            if (!await _authorizeAndAudit("OpenSamsungOdinAssistant")) return;
             var suffix = WindowsUsbInstanceIdentifierParser.TryExtractInstanceSuffix(
                 item.UsbDevice.InstanceId, out var parsed) ? parsed : null;
             new SamsungOdinAssistantWindow(
-                adb: null,
-                deviceSerial: null,
-                deviceManufacturer: "Samsung",
-                deviceModel: null,
-                pnpInstanceSuffix: suffix)
+                adb: null, deviceSerial: null, deviceManufacturer: "Samsung", deviceModel: null,
+                pnpInstanceSuffix: suffix,
+                downloadModeComPort: item.ComPort,
+                downloadModeInstanceId: item.UsbDevice.InstanceId,
+                downloadModeHardwareId: item.HardwareId,
+                downloadModeModeEvidence: item.ModeEvidence.Mode)
             { Owner = this }.Show();
         }
         else if (item.IsFastboot)
         {
+            if (!await _authorizeAndAudit("OpenFastbootManager")) return;
             new FastbootManagerWindow { Owner = this }.Show();
         }
         else if (item.IsQualcommEdl)
         {
+            if (!await _authorizeAndAudit("OpenQualcommUsbDiagnostics")) return;
             new UsbDoctorWindow("qualcomm") { Owner = this }.Show();
         }
         else if (item.IsMediaTekService)
         {
+            if (!await _authorizeAndAudit("OpenMediaTekUsbDiagnostics")) return;
             new UsbDoctorWindow("mediatek") { Owner = this }.Show();
         }
     }
