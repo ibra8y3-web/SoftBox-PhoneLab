@@ -416,11 +416,10 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 
 ### Current catalog inventory
 
-- **37 master sections** in specification order; the original 36 sections are retained and Section 37 is the dedicated iPhone & iPad Center.
-- **184 child features** across the 37 sections (221 total catalog rows including section rows).
-- Child-feature statuses: **108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported, 0 Verified**.
-- **84 unique canonical ActionIds** are registered in the catalog; no duplicate action identifiers.
-- **79 unique canonical ActionIds** are listed in the master catalog. The current feature-action references are unique and all are present in the catalog's supported-action set.
+- **38 master sections** in specification order; the original 36 sections are retained, Section 37 is the dedicated iPhone & iPad Center, and Section 38 is Device Identity Integrity & Smart Auto-Fill.
+- **190 child features** across the 38 sections (228 total catalog rows including section rows).
+- Child-feature statuses: **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported, 0 Verified**.
+- **85 unique canonical ActionIds** are registered in the catalog; no duplicate action identifiers.
 - A Hosted CI pass can establish that a software build/test path works in the runner; it does not certify a physical device. No new phone, USB chipset, OEM driver, AirPlay receiver or board-level hardware feature is marked Verified by this change.
 
 ### Changes in this implementation wave
@@ -432,11 +431,13 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 | 12 USB Doctor | Live OEM source-page reachability check | Performs bounded HTTPS HEAD/GET checks, tracks up to five redirects, rejects HTTP downgrade and reports the HTTP response; does not download the driver payload or claim model compatibility. |
 | 12 USB Doctor | Windows PnP Hardware ID → INF candidate matcher | Reads SPDRP_HARDWAREID from the selected PnP device and compares exact IDs against Manufacturer/Models INF rows with architecture and minimum build decorations; unresolved ProductType/SuiteMask remains Unknown. The result is a candidate INF match, not SetupAPI's final driver-package selection. |
 | 12 USB Doctor | Driver package signature entrypoint | Opens the existing Windows driver signature verifier for a technician-selected local package. Signature validity is not a hardware/model compatibility result. |
-| 14 Phone Link Studio | AirPlay-Windows view adapter in the existing screen dock | Starts a separately installed GPL-3 receiver and docks its native window in the shared screen host. It is view-only, needs a same-LAN owner-selected AirPlay session, and is not bundled by SoftBox. |
+| 14 Phone Link Studio | Separate AirPlay-Windows receiver window | Starts a separately installed GPL-3 receiver in its own top-level window and dedicated native screen host. It never attaches to the Android `PhoneScreenHost`; it is view-only and needs a same-LAN owner-selected AirPlay session. |
 | 14 Phone Link Studio | Windows-native Miracast setup handoff | Opens the Windows Projecting to this PC and Optional Features pages. The actual Wireless Display/Connect receiver runs outside SoftBox and requires Miracast support on both devices. |
 | 14 Phone Link Studio | Actionable scrcpy startup diagnostics | Captures bounded stdout/stderr and distinguishes common ADB authorization/offline/missing/server conflicts, runtime/download/integrity failures and screen-window startup failures. |
 | 15 Hardware Diagnostics | Persistent component evidence history | Stores actual DiagnosticEngine snapshots locally with DPAPI CurrentUser protection, a one-way device fingerprint, masked serial, component status/evidence/source and timestamp; identical consecutive snapshots are deduplicated. |
 | 19 Safe Recovery | Owner-safe forgotten lock assistant | Offers official previous-credential/account/support/erase guidance only when relevant evidence is supplied. It collects no lock credentials and exposes no unlock, FRP, Activation Lock, MDM or factory-reset command. |
+| 37 iPhone & iPad Center | Automatic Apple Lockdown discovery | Reads actual Apple Lockdown information when trusted tools and owner approval are available. Automatic scans do not bypass lock/trust protections; AirPlay remains in its own independent window. |
+| 38 Device Identity Integrity | Cross-transport evidence and smart auto-fill | Classifies Windows USB, ADB, Fastboot and Apple Lockdown reads; shows identifier source/confidence, detects exact-value conflicts and fills its own read-only identity fields. It does not change IMEI/serial or auto-confirm flashing. |
 
 ### Multi-vendor and OS compatibility contract
 
@@ -464,7 +465,7 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 3. Test representative Huawei, OPPO, realme, vivo, Xiaomi, HONOR, TECNO and Infinix models. A generic Android route is expected only where ADB is actually exposed and authorized.
 4. Validate downloaded driver packages against the target model's actual hardware IDs, Windows edition/architecture, signature and catalog membership before recommending installation.
 5. Expand hardware-specific Agent tests only when the Android API, OEM firmware, user consent and evidence semantics are known. Keep external-only board tests unsupported until a real compatible fixture is available.
-6. Continue auditing every one of the 37 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
+6. Continue auditing every one of the 38 sections against its actual ActionId, implementation, tests and hardware boundary; do not treat the status table as proof that every feature is complete.
 
 
 ## Dedicated Apple diagnostics workspace — 23 November 2026
@@ -475,6 +476,21 @@ This checkpoint supersedes earlier feature-count snapshots in this document for 
 - Apple diagnostic utilities must be selected by the operator from a trusted Windows libimobiledevice distribution. No binaries are downloaded or installed automatically.
 - Component evidence uses the existing DPAPI-protected store. Parts/battery values are read by the technician from the iPhone's official settings; the physical test checklist requires actual observation and written evidence.
 - AirPlay now has a dedicated independent native host in its own top-level window. It no longer attaches to the Android `PhoneScreenHost`. The existing Android recording guard, manual priority and MainWindow process shutdown cleanup remain in place.
-- Current catalog totals at this checkpoint: **37 sections / 184 child features / 221 entries**, with 108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported and 0 Verified; 84 unique canonical ActionIds.
+- Current catalog totals at this checkpoint: **38 sections / 190 child features / 228 entries**, with 108 Implemented, 46 Tested, 20 In Development, 2 Planned, 8 Unsupported and 0 Verified; 84 unique canonical ActionIds.
 - Status: implementation committed for CI review; **not yet physically verified on an iPhone or iPad**. No absolute genuine/copy claim is produced.
 - CI on commit `99c1d16714b51c1a481f91783f78f94969803b5a`: Windows build/test/publish succeeded with 722 passed, 0 failed, 0 skipped; Android Agent APK and emulator UI automation jobs succeeded.
+
+
+## Device Identity Integrity & Smart Auto-Fill — 24 November 2026
+
+- Added **Section 38**, preserving all 37 earlier sections. The identity workspace is a separate top-level window and does not replace the Android, iPhone or AirPlay screen hosts.
+- Added `DeviceModeClassifier` to classify evidence-backed USB and ADB states, including Qualcomm 9008, MediaTek Preloader/BROM, Samsung Download Mode when the descriptor explicitly names it, Android Bootloader/Fastboot, Apple USB/Recovery/DFU hints, MTP, ADB authorized/unauthorized/offline and unknown modes.
+- Mode names inferred from VID/PID or descriptor text remain hints. An unknown, locked, unauthorized or unsupported interface stays unknown/pending; no exact model, serial or service capability is fabricated.
+- Added `DeviceIdentityIntegrityEngine`, which validates bounded identifier observations, groups only the exact same platform + identifier kind + identifier value, detects conflicting manufacturer/model evidence, produces one-way identifier fingerprints for UI correlation, and keeps single-source readings distinct from corroborated evidence.
+- The new top-level window reads Windows USB PnP, the live ADB inventory, Fastboot device identifiers and Apple Lockdown identity separately. It reads Fastboot getvar values only through the read-only Fastboot path and only displays properties returned by the handset.
+- Manufacturer/model/mode/identifier fields are populated automatically from the selected real observation; serial/UDID remains masked by default. The exact identifier is copied only after an explicit user action; exported/clipboard evidence reports use masked values.
+- The module does not write IMEI/Serial, EFS, NVRAM, modem/NV areas, or boot/security identifiers. It does not bypass a blacklist or automatically type Odin's FLASH confirmation / press Start. An official identity/board replacement must be completed by the OEM or authorized service procedure.
+- Windows USB arrival/removal notifications now debounce and accelerate USB/ADB/iPhone discovery. The existing periodic discovery timer remains a fallback. Apple identity checks run only when Windows reports Apple USB and the user-configured trusted Lockdown tools can be resolved; battery GasGauge is not polled repeatedly.
+- Automated tests were added for USB/ADB mode classification, unknown-mode behavior, avoiding false Samsung Download Mode inference from VID alone, same-ID evidence corroboration, exact-ID conflicts, weak USB hints, source separation, masking and input bounds.
+- Current catalog totals: **38 sections / 190 child features / 228 total entries**, with **111 Implemented, 48 Tested, 20 In Development, 2 Planned, 9 Unsupported and 0 Verified** child features; **85 unique canonical ActionIds**.
+- Physical verification is still required on real Android handsets across ADB unauthorized/locked, Fastboot, Samsung Download, Qualcomm EDL, MediaTek Preloader/BROM, real iPhone/iPad Lockdown, Windows driver variations and AirPlay streaming. CI does not certify these physical modes.
