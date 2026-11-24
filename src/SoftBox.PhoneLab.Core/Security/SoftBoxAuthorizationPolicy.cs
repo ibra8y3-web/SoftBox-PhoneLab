@@ -76,6 +76,7 @@ public static class SoftBoxAuthorizationPolicy
             ["OpenSamsungDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenSamsungServiceOperations"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenSamsungOdinAssistant"] = SoftBoxAccountPermission.DeviceOperations,
+            ["ExecuteSamsungOdinFlash"] = SoftBoxAccountPermission.DeviceOperations,
             ["OpenSamsungOfficialTools"] = SoftBoxAccountPermission.ViewWorkspace,
             ["OpenXiaomiDiagnostics"] = SoftBoxAccountPermission.DeviceRead,
             ["OpenXiaomiFastbootService"] = SoftBoxAccountPermission.DeviceOperations,
