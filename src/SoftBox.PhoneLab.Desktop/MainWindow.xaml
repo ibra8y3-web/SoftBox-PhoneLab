@@ -116,6 +116,22 @@
        <Button Content="37  مركز iPhone و iPad" Tag="iphone-center" Click="ModuleNavigation_Click" Margin="2" Padding="8,8" FontSize="10.5" HorizontalContentAlignment="Stretch" Background="#173B58"/>
        <TextBlock Text="38 | سلامة الهوية والتعرّف الذكي" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
        <Button Content="38  Device Identity Integrity" Tag="device-identity-integrity" Click="ModuleNavigation_Click" Margin="2" Padding="8,8" FontSize="10.5" HorizontalContentAlignment="Stretch" Background="#173B58"/>
+       <TextBlock Text="39–43 | منصات Qualcomm وMediaTek وUnisoc وRockchip وHuawei" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="39  مختبر Qualcomm EDL وDiag" Tag="qualcomm-edl-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="40  مختبر MediaTek BROM / META" Tag="mediatek-brom-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="41  مختبر Unisoc / Spreadtrum" Tag="unisoc-spd-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="42  مختبر Rockchip / Allwinner" Tag="rockchip-allwinner-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="43  مختبر Huawei / Honor Kirin" Tag="huawei-kirin-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <TextBlock Text="44–47 | Firmware والأقسام والذاكرة والإنقاذ" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="44  استوديو هندسة Firmware" Tag="firmware-engineering-studio" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="45  مختبر الأقسام وأنظمة الملفات" Tag="partition-filesystem-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="46  مختبر eMMC / UFS" Tag="emmc-ufs-memory-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="47  مركز Boot وRecovery والإنقاذ" Tag="boot-recovery-center" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <TextBlock Text="48–51 | اللوحات والشبكات والبيانات والعمليات" Foreground="#83CBEA" FontWeight="Bold" FontSize="10" Margin="4,15,4,4"/>
+       <Button Content="48  مختبر اللوحات والمكونات" Tag="board-repair-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="49  مختبر الشبكات والمودم وRF" Tag="network-radio-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="50  مختبر إنقاذ البيانات والنقل" Tag="data-rescue-migration-lab" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
+       <Button Content="51  مركز عمليات الصيانة والأتمتة" Tag="service-automation-center" Click="ModuleNavigation_Click" Margin="2" Padding="7,6" FontSize="10" HorizontalContentAlignment="Stretch"/>
       </StackPanel>
      </ScrollViewer>
     </DockPanel>
