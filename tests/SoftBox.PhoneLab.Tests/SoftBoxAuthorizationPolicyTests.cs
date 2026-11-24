@@ -64,6 +64,16 @@ public sealed class SoftBoxAuthorizationPolicyTests
     }
 
     [Fact]
+    public void SamsungOdinStartRequiresDeviceOperationsAndIsExplicitlyAuthorized()
+    {
+        Assert.True(SoftBoxAuthorizationPolicy.TryGetRequiredPermission("ExecuteSamsungOdinFlash", out var permission));
+        Assert.Equal(SoftBoxAccountPermission.DeviceOperations, permission);
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Administrator, "ExecuteSamsungOdinFlash"));
+        Assert.True(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.Technician, "ExecuteSamsungOdinFlash"));
+        Assert.False(SoftBoxAuthorizationPolicy.IsAllowed(SoftBoxUserRole.ReadOnly, "ExecuteSamsungOdinFlash"));
+    }
+
+    [Fact]
     public void UnknownActionIdsAreDeniedForEveryRole()
     {
         foreach (var role in Enum.GetValues<SoftBoxUserRole>())
